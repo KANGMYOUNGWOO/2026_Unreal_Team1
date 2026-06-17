@@ -3,3 +3,8 @@
 
 #include "SubSystem/DataSubsystem.h"
 
+void UDataSubsystem::InitializeData()
+{
+	
+	
+}
