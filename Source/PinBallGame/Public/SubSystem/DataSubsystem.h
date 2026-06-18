@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "DataStruct/BallDataStruct.h"
 #include "DataSubsystem.generated.h"
 
 /**
@@ -18,6 +19,9 @@ public :
 	void InitializeData();
 
 private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> BallDataTable;
 	
+	TMap<int32, const FBallDataStruct*> BallDataMap;
 
 };
