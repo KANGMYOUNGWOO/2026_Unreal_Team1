@@ -11,7 +11,7 @@
 /**
  * 
  */
-DECLARE_DELEGATE(FOnCardImagesLoaded)
+DECLARE_DELEGATE(FOnBallImagesLoaded)
 
 UCLASS()
 class PINBALLGAME_API UAssetStreamingSubsystem : public UGameInstanceSubsystem
@@ -24,12 +24,12 @@ class PINBALLGAME_API UAssetStreamingSubsystem : public UGameInstanceSubsystem
 	
 public:
 	void PreLoadBallImage(const TArray<TSoftObjectPtr<UTexture2D>>& BallImages,
-		FOnCardImagesLoaded OnLoaded
+		FOnBallImagesLoaded OnLoaded
 		);
 	
 	UTexture2D* GetLoadedTexture(const TSoftObjectPtr<UTexture2D>& BallImage) const;
 	
-	void ReleaseCardImages();
+	void ReleaseBallImages();
 	
 private :
 	TSharedPtr<FStreamableHandle> BallImageLoadHandle;
@@ -40,7 +40,7 @@ private :
 	
 private:
 	
-	void OnCardImagesLoaded(
+	void OnBallImagesLoaded(
 		TArray<FSoftObjectPath> LoadedPaths,
-		FOnCardImagesLoaded OnLoaded);
+		FOnBallImagesLoaded OnLoaded);
 };

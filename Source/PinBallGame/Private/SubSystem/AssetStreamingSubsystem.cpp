@@ -6,14 +6,14 @@
 
 void UAssetStreamingSubsystem::Deinitialize()
 {
-	ReleaseCardImages();
+	ReleaseBallImages();
 	Super::Deinitialize();
 }
 
 void UAssetStreamingSubsystem::PreLoadBallImage(const TArray<TSoftObjectPtr<UTexture2D>>& BallImages,
-	FOnCardImagesLoaded OnLoaded)
+	FOnBallImagesLoaded OnLoaded)
 {
-	ReleaseCardImages();
+	ReleaseBallImages();
 	
 	TArray<FSoftObjectPath> Paths;
 
@@ -37,7 +37,7 @@ void UAssetStreamingSubsystem::PreLoadBallImage(const TArray<TSoftObjectPtr<UTex
 	FStreamableManager& StreamableManager = UAssetManager::GetStreamableManager();
 
 	BallImageLoadHandle = StreamableManager.RequestAsyncLoad(Paths,FStreamableDelegate::CreateUObject(
-		this,&UAssetStreamingSubsystem::OnCardImagesLoaded,
+		this,&UAssetStreamingSubsystem::OnBallImagesLoaded,
 		Paths,
 		OnLoaded)
 		);
@@ -53,7 +53,7 @@ UTexture2D* UAssetStreamingSubsystem::GetLoadedTexture(const TSoftObjectPtr<UTex
 	return nullptr;
 }
 
-void UAssetStreamingSubsystem::ReleaseCardImages()
+void UAssetStreamingSubsystem::ReleaseBallImages()
 {
 	LoadedBallImages.Empty();
 
@@ -64,7 +64,7 @@ void UAssetStreamingSubsystem::ReleaseCardImages()
 	}
 }
 
-void UAssetStreamingSubsystem::OnCardImagesLoaded(TArray<FSoftObjectPath> LoadedPaths, FOnCardImagesLoaded OnLoaded)
+void UAssetStreamingSubsystem::OnBallImagesLoaded(TArray<FSoftObjectPath> LoadedPaths, FOnBallImagesLoaded OnLoaded)
 {
 	LoadedBallImages.Empty();
 
