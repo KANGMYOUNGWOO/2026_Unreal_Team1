@@ -13,13 +13,13 @@ struct FBallGaugeState
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gauge", meta = (ToolTip = "Scaled by 1000. 0.001 is stored as 1."))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gauge")
 	int32 CurrentRaw = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gauge", meta = (ToolTip = "Scaled by 1000. 0.001 is stored as 1."))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gauge")
 	int32 MaxRaw = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gauge", meta = (ToolTip = "Scaled by 1000. 0.001 per second is stored as 1."))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gauge")
 	int32 RegenPerSecondRaw = 0;
 
 	double RegenRawRemainder = 0.0;

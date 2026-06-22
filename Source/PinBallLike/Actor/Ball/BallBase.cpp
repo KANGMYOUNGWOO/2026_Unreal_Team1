@@ -3,6 +3,7 @@
 
 #include "BallBase.h"
 
+#include "Component/PBBallComboComponent.h"
 #include "Component/PBBallGaugeComponent.h"
 #include "Component/PBBallStatComponent.h"
 #include "Component/PinballBallMovementComponent.h"
@@ -31,6 +32,9 @@ ABallBase::ABallBase()
 
 	// Gauge
 	GaugeComponent = CreateDefaultSubobject<UPBBallGaugeComponent>(TEXT("GaugeComponent"));
+
+	// Combo
+	ComboComponent = CreateDefaultSubobject<UPBBallComboComponent>(TEXT("ComboComponent"));
 	
 	DisplayName = "BaseBall";
 }
@@ -114,6 +118,31 @@ bool ABallBase::CanConsumeGauge(EBallGaugeType Type, float Cost) const
 bool ABallBase::ConsumeGauge(EBallGaugeType Type, float Cost)
 {
 	return GaugeComponent->Consume(Type, Cost);
+}
+
+int32 ABallBase::GetCombo() const
+{
+	return ComboComponent->GetCombo();
+}
+
+void ABallBase::SetCombo(int32 Value)
+{
+	ComboComponent->SetCombo(Value);
+}
+
+void ABallBase::AddCombo(int32 Delta)
+{
+	ComboComponent->AddCombo(Delta);
+}
+
+bool ABallBase::TryConsumeCombo(int32 Cost)
+{
+	return ComboComponent->TryConsumeCombo(Cost);
+}
+
+void ABallBase::ResetCombo()
+{
+	ComboComponent->ResetCombo();
 }
 
 void ABallBase::TakeDamage(int32 Damage)
