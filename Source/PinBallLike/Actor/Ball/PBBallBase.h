@@ -14,6 +14,7 @@
 class UPBBallStatComponent;
 class UPBBallGaugeComponent;
 class UPBBallComboComponent;
+class UPBBallCollisionComponent;
 class USphereComponent;
 class UPBBallPhysicsComponent;
 
@@ -70,6 +71,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Combo")
 	TObjectPtr<UPBBallComboComponent> ComboComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
+	TObjectPtr<UPBBallCollisionComponent> CollisionComponent;
 	
 	FString DisplayName;
 };
