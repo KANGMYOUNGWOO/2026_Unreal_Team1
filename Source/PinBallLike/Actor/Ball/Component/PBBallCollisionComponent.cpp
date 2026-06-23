@@ -28,10 +28,10 @@ void UPBBallCollisionComponent::BeginPlay()
 		return;
 	}
 
-	MovementComponent = Owner->FindComponentByClass<UPBBallPhysicsComponent>();
-	if (MovementComponent)
+	PhysicsComponent = Owner->FindComponentByClass<UPBBallPhysicsComponent>();
+	if (PhysicsComponent)
 	{
-		MovementComponent->OnBallMovementHit.AddDynamic(this, &UPBBallCollisionComponent::HandleMovementHit);
+		PhysicsComponent->OnBallMovementHit.AddDynamic(this, &UPBBallCollisionComponent::HandleMovementHit);
 	}
 
 	CollisionPrimitive = Cast<UPrimitiveComponent>(Owner->GetRootComponent());

@@ -39,7 +39,7 @@ private:
 	void MarkContactProcessed(AActor* OtherActor);
 
 	UPROPERTY(Transient)
-	TObjectPtr<UPBBallPhysicsComponent> MovementComponent;
+	TObjectPtr<UPBBallPhysicsComponent> PhysicsComponent;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPrimitiveComponent> CollisionPrimitive;
