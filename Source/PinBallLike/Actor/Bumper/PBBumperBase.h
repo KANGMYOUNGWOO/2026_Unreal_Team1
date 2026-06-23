@@ -1,0 +1,79 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "PinBallLike/Struct/Bumper/PBBumperTypes.h"
+#include "PBBumperBase.generated.h"
+
+class ABallBase;
+
+UCLASS(Abstract, Blueprintable)
+class PINBALLLIKE_API APBBumperBase : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	APBBumperBase();
+
+	UFUNCTION(BlueprintCallable, Category = "Bumper")
+	void ActivateBumper(ABallBase* Ball);
+
+	UFUNCTION(BlueprintCallable, Category = "Bumper")
+	void FinishActivation();
+
+	UFUNCTION(BlueprintCallable, Category = "Bumper")
+	void ResetTriggerCount();
+
+	UFUNCTION(BlueprintCallable, Category = "Bumper")
+	void SetIsEnabled(bool IsNewEnabled);
+
+	UFUNCTION(BlueprintPure, Category = "Bumper")
+	bool CanActivate() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper")
+	bool CanAccumulateTrigger() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper")
+	FPBBumperRuntimeData GetBumperData() const { return BumperData; }
+
+	UFUNCTION(BlueprintPure, Category = "Bumper")
+	int32 GetCurrentTriggerCount() const { return CurrentTriggerCount; }
+
+protected:
+	void IncreaseTriggerCount(AActor* OtherActor, int32 Amount = 1);
+	
+	UFUNCTION(BlueprintCallable, Category = "Bumper", meta = (BlueprintProtected = "true"))
+	void AddTriggerCount(ABallBase* Ball, int32 Amount = 1);
+
+#pragma region Blueprint Events
+	UFUNCTION(BlueprintNativeEvent, Category = "Bumper")
+	void ApplyBumperEffect(ABallBase* Ball);
+	virtual void ApplyBumperEffect_Implementation(ABallBase* Ball);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
+	void OnBumperReady();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
+	void OnTriggerCountChanged(int32 InCurrentTriggerCount, int32 InRequiredTriggerCount);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
+	void OnBumperActivated(ABallBase* Ball);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
+	void OnBumperFinished();
+#pragma endregion
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
+	FPBBumperRuntimeData BumperData;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
+	int32 CurrentTriggerCount = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
+	bool IsEnabled = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
+	bool IsActivating = false;
+};
