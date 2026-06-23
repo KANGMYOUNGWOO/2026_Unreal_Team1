@@ -67,6 +67,7 @@ void APBBallBase::ApplyStat(EBallStatType Type, int32 Delta)
 	}
 	
 	StatComponent->ApplyStat(Type, Delta);
+	ApplyStatToComponents(Type);
 }
 
 bool APBBallBase::HasGauge(EBallGaugeType Type) const
@@ -149,6 +150,36 @@ void APBBallBase::ResetCombo()
 	ComboComponent->ResetCombo();
 }
 
+FVector APBBallBase::GetVelocity() const
+{
+	return PhysicsComponent->GetVelocity();
+}
+
+void APBBallBase::AddImpulse(FVector Impulse)
+{
+	PhysicsComponent->AddImpulse(Impulse);
+}
+
+void APBBallBase::StopMovement()
+{
+	PhysicsComponent->Stop();
+}
+
+void APBBallBase::PauseMovement()
+{
+	PhysicsComponent->PauseMovement();
+}
+
+void APBBallBase::ResumeMovement()
+{
+	PhysicsComponent->ResumeMovement();
+}
+
+bool APBBallBase::IsMovementPaused() const
+{
+	return PhysicsComponent->IsMovementPaused();
+}
+
 void APBBallBase::TakeDamage(int32 Damage)
 {
 	if (Damage <= 0)
@@ -162,4 +193,27 @@ void APBBallBase::TakeDamage(int32 Damage)
 bool APBBallBase::IsDead() const
 {
 	return GetGaugeCurrent(EBallGaugeType::EGT_HP) <= 0.0f;
+}
+
+void APBBallBase::ApplyStatToComponents(EBallStatType Type)
+{
+	const int32 StatValue = GetStat(Type);
+
+	switch (Type)
+	{
+	case EBallStatType::EST_WEIGHT:
+		PhysicsComponent->SetMass(static_cast<float>(StatValue));
+		break;
+
+	case EBallStatType::EST_BOUNCINESS:
+		PhysicsComponent->SetBounceDamping(static_cast<float>(StatValue) / 100.0f);
+		break;
+
+	case EBallStatType::EST_SIZE:
+		CollisionSphere->SetSphereRadius(FMath::Max(static_cast<float>(StatValue), 1.0f), true);
+		break;
+
+	default:
+		break;
+	}
 }

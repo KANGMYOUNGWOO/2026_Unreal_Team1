@@ -9,6 +9,7 @@
 #include "PinBallLike/Interface/BallStat.h"
 #include "PinBallLike/Interface/Comboable.h"
 #include "PinBallLike/Interface/Damageable.h"
+#include "PinBallLike/Interface/Movable.h"
 #include "PBBallBase.generated.h"
 
 class UPBBallStatComponent;
@@ -19,7 +20,7 @@ class USphereComponent;
 class UPBBallPhysicsComponent;
 
 UCLASS()
-class PINBALLLIKE_API APBBallBase : public AActor, public IBallStat, public IBallGauge, public IComboable, public IDamageable
+class PINBALLLIKE_API APBBallBase : public AActor, public IBallStat, public IBallGauge, public IComboable, public IMovable, public IDamageable
 {
 	GENERATED_BODY()
 
@@ -53,10 +54,19 @@ public:
 	virtual bool TryConsumeCombo(int32 Cost) override;
 	virtual void ResetCombo() override;
 
+	virtual FVector GetVelocity() const override;
+	virtual void AddImpulse(FVector Impulse) override;
+	virtual void StopMovement() override;
+	virtual void PauseMovement() override;
+	virtual void ResumeMovement() override;
+	virtual bool IsMovementPaused() const override;
+
 	virtual void TakeDamage(int32 Damage) override;
 	virtual bool IsDead() const override;
 	
 private:
+	void ApplyStatToComponents(EBallStatType Type);
+
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
 	TObjectPtr<USphereComponent> CollisionSphere;
 

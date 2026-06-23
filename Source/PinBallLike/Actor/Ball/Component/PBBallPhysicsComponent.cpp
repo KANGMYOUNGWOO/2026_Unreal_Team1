@@ -31,7 +31,7 @@ void UPBBallPhysicsComponent::TickComponent(
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (DeltaTime <= 0.0f)
+	if (DeltaTime <= 0.0f || bMovementPaused)
 	{
 		return;
 	}
@@ -48,11 +48,43 @@ void UPBBallPhysicsComponent::SetVelocity(FVector NewVelocity)
 	Velocity = NewVelocity;
 }
 
+FVector UPBBallPhysicsComponent::GetVelocity() const
+{
+	return Velocity;
+}
+
+void UPBBallPhysicsComponent::SetMass(float NewMass)
+{
+	Mass = FMath::Max(NewMass, 0.001f);
+}
+
+float UPBBallPhysicsComponent::GetMass() const
+{
+	return Mass;
+}
+
+void UPBBallPhysicsComponent::SetBounceDamping(float NewBounceDamping)
+{
+	BounceDamping = FMath::Clamp(NewBounceDamping, 0.0f, 1.0f);
+}
+
+float UPBBallPhysicsComponent::GetBounceDamping() const
+{
+	return BounceDamping;
+}
+
 void UPBBallPhysicsComponent::AddVelocity(FVector VelocityToAdd)
 {
 	VelocityToAdd.Z = 0.0f;
 	Velocity += VelocityToAdd;
 	Velocity.Z = 0.0f;
+}
+
+void UPBBallPhysicsComponent::AddImpulse(FVector Impulse)
+{
+	Impulse.Z = 0.0f;
+	const float SafeMass = FMath::Max(Mass, 0.001f);
+	AddVelocity(Impulse / SafeMass);
 }
 
 void UPBBallPhysicsComponent::Launch(FVector Direction, const float Strength)
@@ -65,6 +97,21 @@ void UPBBallPhysicsComponent::Launch(FVector Direction, const float Strength)
 void UPBBallPhysicsComponent::Stop()
 {
 	Velocity = FVector::ZeroVector;
+}
+
+void UPBBallPhysicsComponent::PauseMovement()
+{
+	bMovementPaused = true;
+}
+
+void UPBBallPhysicsComponent::ResumeMovement()
+{
+	bMovementPaused = false;
+}
+
+bool UPBBallPhysicsComponent::IsMovementPaused() const
+{
+	return bMovementPaused;
 }
 
 void UPBBallPhysicsComponent::MoveWithSweep(const float DeltaTime)
