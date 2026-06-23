@@ -7,6 +7,7 @@
 #include "PBCollisionBumper.generated.h"
 
 class ABallBase;
+class UPBBumperReactionComponent;
 class UPrimitiveComponent;
 
 UCLASS()
@@ -29,6 +30,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Collision", meta = (ClampMin = "0.0", Units = "cm/s"))
 	float BounceVelocityStrength = 1200.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Reaction")
+	TObjectPtr<UPBBumperReactionComponent> ReactionComponent;
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Collision")
 	void RegisterTaggedCollisionAreas();

@@ -4,11 +4,14 @@
 #include "PBCollisionBumper.h"
 
 #include "Components/PrimitiveComponent.h"
+#include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
 #include "PinBallLike/Actor/Ball/BallBase.h"
 
 APBCollisionBumper::APBCollisionBumper()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	ReactionComponent = CreateDefaultSubobject<UPBBumperReactionComponent>(TEXT("ReactionComponent"));
 
 	BumperData.TriggerType = EPBBumperTriggerType::HitCount;
 }
@@ -76,8 +79,14 @@ void APBCollisionBumper::HandleComponentHit(
 		return;
 	}
 	//TODO 콤보 누적 횟수 증가
-
+	
 	AddBounceVelocityToBall(Ball, Hit);
+
+	if (IsValid(ReactionComponent))
+	{
+		ReactionComponent->PlayImpactReaction(Hit);
+	}
+
 	OnCollisionBumperHit(Ball, Hit);
 	AddTriggerCount(Ball);
 }
