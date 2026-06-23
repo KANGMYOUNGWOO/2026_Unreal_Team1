@@ -27,11 +27,6 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Gate")
 	TArray<TObjectPtr<UPrimitiveComponent>> GateAreas;
 
-	UFUNCTION(BlueprintCallable, Category = "Bumper|Gate")
-	void RegisterTaggedGateAreas();
-
-	UFUNCTION(BlueprintCallable, Category = "Bumper|Gate")
-	void RegisterGateArea(UPrimitiveComponent* GateArea);
 
 #pragma region Blueprint Events
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Gate")
@@ -43,7 +38,10 @@ private:
 	TMap<TWeakObjectPtr<ABallBase>, float> PassingBallEntrySides;
 
 	float CalculateGateSide(const UPrimitiveComponent* GateArea, const ABallBase* Ball) const;
-
+	
+	void RegisterTaggedAreas();
+	void SetupTriggerArea(UPrimitiveComponent* GateArea);
+	
 	UFUNCTION()
 	void HandleGateBeginOverlap(
 		UPrimitiveComponent* OverlappedComponent,

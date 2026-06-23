@@ -19,34 +19,7 @@ void APBGateBumper::BeginPlay()
 {
 	Super::BeginPlay();
 
-	RegisterTaggedGateAreas();
-}
-
-void APBGateBumper::RegisterTaggedGateAreas()
-{
-	// BP에서 게이트 모양을 자유롭게 만들고, Component Tag로 통과 판정 영역만 수집한다.
-	TArray<UActorComponent*> TaggedComponents = GetComponentsByTag(
-		UPrimitiveComponent::StaticClass(),
-		GateAreaTag);
-
-	for (UActorComponent* TaggedComponent : TaggedComponents)
-	{
-		RegisterGateArea(Cast<UPrimitiveComponent>(TaggedComponent));
-	}
-}
-
-void APBGateBumper::RegisterGateArea(UPrimitiveComponent* GateArea)
-{
-	if (!IsValid(GateArea) || GateAreas.Contains(GateArea))
-	{
-		return;
-	}
-
-	// 같은 컴포넌트가 여러 번 등록되어도 Overlap 이벤트가 중복 호출되지 않게 한다.
-	GateArea->SetGenerateOverlapEvents(true);
-	GateArea->OnComponentBeginOverlap.AddUniqueDynamic(this, &APBGateBumper::HandleGateBeginOverlap);
-	GateArea->OnComponentEndOverlap.AddUniqueDynamic(this, &APBGateBumper::HandleGateEndOverlap);
-	GateAreas.Add(GateArea);
+	RegisterTaggedAreas();
 }
 
 // 볼이 게이트 기준 어느 면에 있는지 계산한다.
@@ -59,6 +32,33 @@ float APBGateBumper::CalculateGateSide(const UPrimitiveComponent* GateArea, cons
 
 	const FVector DirectionToBall = Ball->GetActorLocation() - GateArea->GetComponentLocation();
 	return FVector::DotProduct(DirectionToBall, GateArea->GetForwardVector());
+}
+
+void APBGateBumper::RegisterTaggedAreas()
+{
+	// BP에서 게이트 모양을 자유롭게 만들고, Component Tag로 통과 판정 영역만 수집한다.
+	TArray<UActorComponent*> TaggedComponents = GetComponentsByTag(
+		UPrimitiveComponent::StaticClass(),
+		GateAreaTag);
+
+	for (UActorComponent* TaggedComponent : TaggedComponents)
+	{
+		SetupTriggerArea(Cast<UPrimitiveComponent>(TaggedComponent));
+	}
+}
+
+void APBGateBumper::SetupTriggerArea(UPrimitiveComponent* GateArea)
+{
+	if (!IsValid(GateArea) || GateAreas.Contains(GateArea))
+	{
+		return;
+	}
+
+	// 같은 컴포넌트가 여러 번 등록되어도 Overlap 이벤트가 중복 호출되지 않게 한다.
+	GateArea->SetGenerateOverlapEvents(true);
+	GateArea->OnComponentBeginOverlap.AddUniqueDynamic(this, &APBGateBumper::HandleGateBeginOverlap);
+	GateArea->OnComponentEndOverlap.AddUniqueDynamic(this, &APBGateBumper::HandleGateEndOverlap);
+	GateAreas.Add(GateArea);
 }
 
 void APBGateBumper::HandleGateBeginOverlap(
