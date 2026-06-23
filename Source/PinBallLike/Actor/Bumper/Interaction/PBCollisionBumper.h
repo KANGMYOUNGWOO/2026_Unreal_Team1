@@ -23,7 +23,7 @@ protected:
 
 	// 이 태그를 가진 PrimitiveComponent를 충돌 판정 영역으로 자동 등록한다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Collision")
-	FName CollisionAreaTag = TEXT("BumperCollision");
+	FName CollisionAreaTag = TEXT("BumperTrigger");
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Collision")
 	TArray<TObjectPtr<UPrimitiveComponent>> CollisionAreas;
