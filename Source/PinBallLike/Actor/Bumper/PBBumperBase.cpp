@@ -18,20 +18,19 @@ void APBBumperBase::AddTriggerCount(ABallBase* Ball, const int32 Amount)
 	}
 
 	const int32 RequiredTriggerCount = FMath::Max(BumperData.RequiredTriggerCount, 1);
+	const int32 PreviousTriggerCount = CurrentTriggerCount;
 	CurrentTriggerCount = FMath::Clamp(
-		CurrentTriggerCount + Amount,
-		0,
-		RequiredTriggerCount);
+		CurrentTriggerCount + Amount,0,RequiredTriggerCount);
 	OnTriggerCountChanged(CurrentTriggerCount, RequiredTriggerCount);
 
-	const bool IsAlreadyReady = IsReady;
-	IsReady = CurrentTriggerCount >= RequiredTriggerCount;
-	if (IsReady && !IsAlreadyReady)
+	// 이번 누적으로 처음 조건을 만족했을 때만 Ready 이벤트를 보낸다.
+	const bool IsTriggerCountReached = CurrentTriggerCount >= RequiredTriggerCount;
+	if (PreviousTriggerCount < RequiredTriggerCount && IsTriggerCountReached)
 	{
 		OnBumperReady();
 	}
 
-	if (CanActivate())
+	if (IsTriggerCountReached)
 	{
 		ActivateBumper(Ball);
 	}
@@ -39,13 +38,12 @@ void APBBumperBase::AddTriggerCount(ABallBase* Ball, const int32 Amount)
 
 void APBBumperBase::ActivateBumper(ABallBase* Ball)
 {
-	if (!CanActivate())
+	if (IsActivating)
 	{
 		return;
 	}
-
+	
 	IsActivating = true;
-	IsReady = false;
 	ResetTriggerCount();
 
 	OnBumperActivated(Ball);
@@ -66,7 +64,6 @@ void APBBumperBase::FinishActivation()
 void APBBumperBase::ResetTriggerCount()
 {
 	CurrentTriggerCount = 0;
-	IsReady = false;
 	OnTriggerCountChanged(CurrentTriggerCount, FMath::Max(BumperData.RequiredTriggerCount, 1));
 }
 
@@ -94,5 +91,6 @@ bool APBBumperBase::CanAccumulateTrigger() const
 
 void APBBumperBase::ApplyBumperEffect_Implementation(ABallBase* Ball)
 {
+	// 자식에서 범퍼 활성 효과를 구현하지 않은 경우 즉시 종료한다.
 	FinishActivation();
 }

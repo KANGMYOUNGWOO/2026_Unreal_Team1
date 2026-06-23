@@ -74,7 +74,4 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
 	bool IsActivating = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
-	bool IsReady = false;
 };
