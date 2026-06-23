@@ -1,11 +1,11 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "PBCollisionBumper.h"
 
 #include "Components/PrimitiveComponent.h"
-#include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
 #include "PinBallLike/Actor/Ball/BallBase.h"
+#include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
 
 APBCollisionBumper::APBCollisionBumper()
 {
@@ -20,23 +20,32 @@ void APBCollisionBumper::BeginPlay()
 {
 	Super::BeginPlay();
 
-	RegisterTaggedCollisionAreas();
+	RegisterTaggedAreas();
 }
 
-void APBCollisionBumper::RegisterTaggedCollisionAreas()
+void APBCollisionBumper::RegisterTaggedAreas()
 {
-	// 범퍼마다 다른 콜리전 모양을 BP에서 구성하고, Component Tag로 판정 영역만 수집한다.
-	TArray<UActorComponent*> TaggedComponents = GetComponentsByTag(
+	// BP에서 만든 물리 충돌 영역과 발동 트리거 영역을 태그 기준으로 자동 수집한다.
+	TArray<UActorComponent*> TaggedCollisionComponents = GetComponentsByTag(
 		UPrimitiveComponent::StaticClass(),
 		CollisionAreaTag);
 
-	for (UActorComponent* TaggedComponent : TaggedComponents)
+	for (UActorComponent* TaggedComponent : TaggedCollisionComponents)
 	{
-		RegisterCollisionArea(Cast<UPrimitiveComponent>(TaggedComponent));
+		SetupCollisionArea(Cast<UPrimitiveComponent>(TaggedComponent));
+	}
+
+	TArray<UActorComponent*> TaggedTriggerComponents = GetComponentsByTag(
+		UPrimitiveComponent::StaticClass(),
+		TriggerAreaTag);
+
+	for (UActorComponent* TaggedComponent : TaggedTriggerComponents)
+	{
+		SetupTriggerArea(Cast<UPrimitiveComponent>(TaggedComponent));
 	}
 }
 
-void APBCollisionBumper::RegisterCollisionArea(UPrimitiveComponent* CollisionArea)
+void APBCollisionBumper::SetupCollisionArea(UPrimitiveComponent* CollisionArea)
 {
 	if (!IsValid(CollisionArea) || CollisionAreas.Contains(CollisionArea))
 	{
@@ -49,6 +58,20 @@ void APBCollisionBumper::RegisterCollisionArea(UPrimitiveComponent* CollisionAre
 	CollisionAreas.Add(CollisionArea);
 }
 
+void APBCollisionBumper::SetupTriggerArea(UPrimitiveComponent* TriggerArea)
+{
+	if (!IsValid(TriggerArea) || TriggerAreas.Contains(TriggerArea))
+	{
+		return;
+	}
+
+	// 트리거 영역은 볼이 유효 발동 면 안에 있는지 기록하는 용도로만 사용한다.
+	TriggerArea->SetGenerateOverlapEvents(true);
+	TriggerArea->OnComponentBeginOverlap.AddUniqueDynamic(this, &APBCollisionBumper::HandleTriggerBeginOverlap);
+	TriggerArea->OnComponentEndOverlap.AddUniqueDynamic(this, &APBCollisionBumper::HandleTriggerEndOverlap);
+	TriggerAreas.Add(TriggerArea);
+}
+
 void APBCollisionBumper::AddBounceVelocityToBall(ABallBase* Ball, const FHitResult& Hit) const
 {
 	if (!IsValid(Ball))
@@ -56,14 +79,14 @@ void APBCollisionBumper::AddBounceVelocityToBall(ABallBase* Ball, const FHitResu
 		return;
 	}
 
-	int32 ballBounce = Ball->GetStat(EBallStatType::EST_BOUNCINESS);
-	int32 bounceForce = ballBounce + BounceVelocityStrength;
+	const float BallBounce = Ball->GetStat(EBallStatType::EST_BOUNCINESS);
+	const float BounceForce = BallBounce + BounceVelocityStrength;
 
-	if (bounceForce <= 0)
+	if (BounceForce <= 0.0f)
 	{
 		return;
 	}
-	
+
 	FVector BounceDirection = Hit.ImpactNormal;
 	BounceDirection.Z = 0.0f;
 	if (!BounceDirection.Normalize())
@@ -71,7 +94,14 @@ void APBCollisionBumper::AddBounceVelocityToBall(ABallBase* Ball, const FHitResu
 		return;
 	}
 
-	Ball->AddVelocity(BounceDirection * (bounceForce));
+	Ball->AddVelocity(BounceDirection * BounceForce);
+}
+
+bool APBCollisionBumper::IsBallInTriggerArea(ABallBase* Ball) const
+{
+	const TWeakObjectPtr<ABallBase> BallKey = Ball;
+	const int32* OverlapCount = TriggeringBallOverlapCounts.Find(BallKey);
+	return OverlapCount != nullptr && *OverlapCount > 0;
 }
 
 void APBCollisionBumper::HandleComponentHit(
@@ -81,14 +111,13 @@ void APBCollisionBumper::HandleComponentHit(
 	FVector NormalImpulse,
 	const FHitResult& Hit)
 {
-	IncreaseTriggerCount(OtherActor);
-	
 	ABallBase* Ball = Cast<ABallBase>(OtherActor);
-	if (!IsValid(Ball))
+	if (!IsValid(Ball) || !IsBallInTriggerArea(Ball))
 	{
 		return;
 	}
-	
+
+	IncreaseTriggerCount(OtherActor);
 	AddBounceVelocityToBall(Ball, Hit);
 
 	if (IsValid(ReactionComponent))
@@ -98,4 +127,51 @@ void APBCollisionBumper::HandleComponentHit(
 
 	OnCollisionBumperHit(Ball, Hit);
 	AddTriggerCount(Ball);
+}
+
+void APBCollisionBumper::HandleTriggerBeginOverlap(
+	UPrimitiveComponent* OverlappedComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex,
+	bool IsFromSweep,
+	const FHitResult& SweepResult)
+{
+	ABallBase* Ball = Cast<ABallBase>(OtherActor);
+	if (!IsValid(Ball))
+	{
+		return;
+	}
+
+	const TWeakObjectPtr<ABallBase> BallKey = Ball;
+	int32& OverlapCount = TriggeringBallOverlapCounts.FindOrAdd(BallKey);
+	++OverlapCount;
+}
+
+void APBCollisionBumper::HandleTriggerEndOverlap(
+	UPrimitiveComponent* OverlappedComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex)
+{
+	ABallBase* Ball = Cast<ABallBase>(OtherActor);
+	if (!IsValid(Ball))
+	{
+		return;
+	}
+
+	const TWeakObjectPtr<ABallBase> BallKey = Ball;
+	int32* OverlapCount = TriggeringBallOverlapCounts.Find(BallKey);
+	if (OverlapCount == nullptr)
+	{
+		return;
+	}
+
+	--(*OverlapCount);
+	if (*OverlapCount > 0)
+	{
+		return;
+	}
+
+	TriggeringBallOverlapCounts.Remove(BallKey);
 }

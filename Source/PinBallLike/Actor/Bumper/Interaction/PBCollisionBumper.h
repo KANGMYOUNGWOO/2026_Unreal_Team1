@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -21,12 +21,19 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	// 이 태그를 가진 PrimitiveComponent를 충돌 판정 영역으로 자동 등록한다.
+	// 이 태그를 가진 PrimitiveComponent를 실제 충돌 영역으로 자동 등록한다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Collision")
-	FName CollisionAreaTag = TEXT("BumperTrigger");
+	FName CollisionAreaTag = TEXT("BumperCollision");
+
+	// 이 태그를 가진 PrimitiveComponent 안에서 발생한 충돌만 범퍼 발동으로 처리한다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Collision")
+	FName TriggerAreaTag = TEXT("BumperTrigger");
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Collision")
 	TArray<TObjectPtr<UPrimitiveComponent>> CollisionAreas;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Collision")
+	TArray<TObjectPtr<UPrimitiveComponent>> TriggerAreas;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Collision", meta = (ClampMin = "0.0", Units = "cm/s"))
 	float BounceVelocityStrength = 1200.0f;
@@ -34,20 +41,22 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Reaction")
 	TObjectPtr<UPBBumperReactionComponent> ReactionComponent;
 
-	UFUNCTION(BlueprintCallable, Category = "Bumper|Collision")
-	void RegisterTaggedCollisionAreas();
-
-	UFUNCTION(BlueprintCallable, Category = "Bumper|Collision")
-	void RegisterCollisionArea(UPrimitiveComponent* CollisionArea);
-
 #pragma region Blueprint Events
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Collision")
 	void OnCollisionBumperHit(ABallBase* Ball, const FHitResult& Hit);
 #pragma endregion
 
 private:
+	TMap<TWeakObjectPtr<ABallBase>, int32> TriggeringBallOverlapCounts;
+
+	void RegisterTaggedAreas();
+	void SetupCollisionArea(UPrimitiveComponent* CollisionArea);
+	void SetupTriggerArea(UPrimitiveComponent* TriggerArea);
+
 	// 충돌 노멀 방향으로 볼에 추가 속도를 부여한다.
 	void AddBounceVelocityToBall(ABallBase* Ball, const FHitResult& Hit) const;
+
+	bool IsBallInTriggerArea(ABallBase* Ball) const;
 
 	UFUNCTION()
 	void HandleComponentHit(
@@ -56,4 +65,20 @@ private:
 		UPrimitiveComponent* OtherComp,
 		FVector NormalImpulse,
 		const FHitResult& Hit);
+
+	UFUNCTION()
+	void HandleTriggerBeginOverlap(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool IsFromSweep,
+		const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void HandleTriggerEndOverlap(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex);
 };
