@@ -8,22 +8,22 @@
 #include "PinBallLike/Interface/BallGauge.h"
 #include "PinBallLike/Interface/BallStat.h"
 #include "PinBallLike/Interface/Comboable.h"
-#include "PinBallLike/Interface/Damagable.h"
-#include "BallBase.generated.h"
+#include "PinBallLike/Interface/Damageable.h"
+#include "PBBallBase.generated.h"
 
 class UPBBallStatComponent;
 class UPBBallGaugeComponent;
 class UPBBallComboComponent;
 class USphereComponent;
-class UPinballBallMovementComponent;
+class UPBBallPhysicsComponent;
 
 UCLASS()
-class PINBALLLIKE_API ABallBase : public AActor, public IBallStat, public IBallGauge, public IComboable, public IDamagable
+class PINBALLLIKE_API APBBallBase : public AActor, public IBallStat, public IBallGauge, public IComboable, public IDamageable
 {
 	GENERATED_BODY()
 
 public:
-	ABallBase();
+	APBBallBase();
 
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void LaunchBall(FVector Impulse);
@@ -59,8 +59,8 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
 	TObjectPtr<USphereComponent> CollisionSphere;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Movement", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UPinballBallMovementComponent> MovementComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Physics", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPBBallPhysicsComponent> PhysicsComponent;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Stat")
 	TObjectPtr<UPBBallStatComponent> StatComponent;

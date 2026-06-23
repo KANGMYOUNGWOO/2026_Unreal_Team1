@@ -4,19 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "Damagable.generated.h"
+#include "Damageable.generated.h"
 
 // This class does not need to be modified.
 UINTERFACE()
-class UDamagable : public UInterface
+class UDamageable : public UInterface
 {
 	GENERATED_BODY()
 };
 
-/**
- * 
- */
-class PINBALLLIKE_API IDamagable
+class PINBALLLIKE_API IDamageable
 {
 	GENERATED_BODY()
 public:

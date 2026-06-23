@@ -2,19 +2,19 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "PinballBallMovementComponent.generated.h"
+#include "PBBallPhysicsComponent.generated.h"
 
 class UPrimitiveComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBallMovementHit, const FHitResult&, Hit);
 
 UCLASS(ClassGroup = (PinBall), meta = (BlueprintSpawnableComponent))
-class PINBALLLIKE_API UPinballBallMovementComponent : public UActorComponent
+class PINBALLLIKE_API UPBBallPhysicsComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
-	UPinballBallMovementComponent();
+	UPBBallPhysicsComponent();
 
 	virtual void BeginPlay() override;
 	virtual void TickComponent(
