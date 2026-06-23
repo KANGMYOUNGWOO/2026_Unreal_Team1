@@ -42,6 +42,8 @@ public:
 	int32 GetCurrentTriggerCount() const { return CurrentTriggerCount; }
 
 protected:
+	void IncreaseTriggerCount(AActor* OtherActor, int32 Amount = 1);
+	
 	UFUNCTION(BlueprintCallable, Category = "Bumper", meta = (BlueprintProtected = "true"))
 	void AddTriggerCount(ABallBase* Ball, int32 Amount = 1);
 

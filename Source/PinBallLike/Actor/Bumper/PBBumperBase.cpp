@@ -10,6 +10,15 @@ APBBumperBase::APBBumperBase()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
+void APBBumperBase::IncreaseTriggerCount(AActor* OtherActor, int32 Amount)
+{
+	if (IComboable* Comboable = Cast<IComboable>(OtherActor))
+	{
+		Comboable->AddCombo(Amount);
+		//UE_LOG(LogTemp, Warning, TEXT("combo = %d"), Comboable->GetCombo());
+	}
+}
+
 void APBBumperBase::AddTriggerCount(ABallBase* Ball, const int32 Amount)
 {
 	if (!IsValid(Ball) || !CanAccumulateTrigger() || Amount <= 0)

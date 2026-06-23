@@ -73,12 +73,13 @@ void APBCollisionBumper::HandleComponentHit(
 	FVector NormalImpulse,
 	const FHitResult& Hit)
 {
+	IncreaseTriggerCount(OtherActor);
+	
 	ABallBase* Ball = Cast<ABallBase>(OtherActor);
 	if (!IsValid(Ball))
 	{
 		return;
 	}
-	//TODO 콤보 누적 횟수 증가
 	
 	AddBounceVelocityToBall(Ball, Hit);
 
