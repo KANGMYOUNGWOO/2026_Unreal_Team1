@@ -51,11 +51,19 @@ void APBCollisionBumper::RegisterCollisionArea(UPrimitiveComponent* CollisionAre
 
 void APBCollisionBumper::AddBounceVelocityToBall(ABallBase* Ball, const FHitResult& Hit) const
 {
-	if (BounceVelocityStrength <= 0.0f || !IsValid(Ball))
+	if (!IsValid(Ball))
 	{
 		return;
 	}
 
+	int32 ballBounce = Ball->GetStat(EBallStatType::EST_BOUNCINESS);
+	int32 bounceForce = ballBounce + BounceVelocityStrength;
+
+	if (bounceForce <= 0)
+	{
+		return;
+	}
+	
 	FVector BounceDirection = Hit.ImpactNormal;
 	BounceDirection.Z = 0.0f;
 	if (!BounceDirection.Normalize())
@@ -63,7 +71,7 @@ void APBCollisionBumper::AddBounceVelocityToBall(ABallBase* Ball, const FHitResu
 		return;
 	}
 
-	Ball->AddVelocity(BounceDirection * BounceVelocityStrength);
+	Ball->AddVelocity(BounceDirection * (bounceForce));
 }
 
 void APBCollisionBumper::HandleComponentHit(
