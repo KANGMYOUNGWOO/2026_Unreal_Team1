@@ -1,16 +1,16 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "BallBase.h"
+#include "PBBallBase.h"
 
 #include "Component/PBBallComboComponent.h"
 #include "Component/PBBallGaugeComponent.h"
 #include "Component/PBBallStatComponent.h"
-#include "Component/PinballBallMovementComponent.h"
+#include "Component/PBBallMovementComponent.h"
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
 
-ABallBase::ABallBase()
+APBBallBase::APBBallBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -25,7 +25,7 @@ ABallBase::ABallBase()
 	CollisionSphere->SetNotifyRigidBodyCollision(true);
 
 	// Movement
-	MovementComponent = CreateDefaultSubobject<UPinballBallMovementComponent>(TEXT("MovementComponent"));
+	MovementComponent = CreateDefaultSubobject<UPBBallMovementComponent>(TEXT("MovementComponent"));
 	
 	// Stat
 	StatComponent = CreateDefaultSubobject<UPBBallStatComponent>(TEXT("StatComponent"));
@@ -39,23 +39,23 @@ ABallBase::ABallBase()
 	DisplayName = "BaseBall";
 }
 
-void ABallBase::LaunchBall(const FVector Impulse)
+void APBBallBase::LaunchBall(const FVector Impulse)
 {
 	MovementComponent->Launch(Impulse, Impulse.Size2D());
 }
 
-void ABallBase::AddVelocity(const FVector VelocityToAdd)
+void APBBallBase::AddVelocity(const FVector VelocityToAdd)
 {
 	UE_LOG(LogTemp, Warning, TEXT("AddVelocity %s"), *VelocityToAdd.ToString());
 	MovementComponent->AddVelocity(VelocityToAdd);
 }
 
-int32 ABallBase::GetStat(EBallStatType Type) const
+int32 APBBallBase::GetStat(EBallStatType Type) const
 {
 	return StatComponent->GetStat(Type);
 }
 
-void ABallBase::ApplyStat(EBallStatType Type, int32 Delta)
+void APBBallBase::ApplyStat(EBallStatType Type, int32 Delta)
 {
 	if (Delta == 0)
 	{
@@ -65,87 +65,87 @@ void ABallBase::ApplyStat(EBallStatType Type, int32 Delta)
 	StatComponent->ApplyStat(Type, Delta);
 }
 
-bool ABallBase::HasGauge(EBallGaugeType Type) const
+bool APBBallBase::HasGauge(EBallGaugeType Type) const
 {
 	return GaugeComponent->HasGauge(Type);
 }
 
-float ABallBase::GetGaugeCurrent(EBallGaugeType Type) const
+float APBBallBase::GetGaugeCurrent(EBallGaugeType Type) const
 {
 	return GaugeComponent->GetCurrent(Type);
 }
 
-float ABallBase::GetGaugeMax(EBallGaugeType Type) const
+float APBBallBase::GetGaugeMax(EBallGaugeType Type) const
 {
 	return GaugeComponent->GetMax(Type);
 }
 
-float ABallBase::GetGaugeRatio(EBallGaugeType Type) const
+float APBBallBase::GetGaugeRatio(EBallGaugeType Type) const
 {
 	return GaugeComponent->GetRatio(Type);
 }
 
-void ABallBase::SetGauge(EBallGaugeType Type, float Current, float Max)
+void APBBallBase::SetGauge(EBallGaugeType Type, float Current, float Max)
 {
 	GaugeComponent->SetGauge(Type, Current, Max);
 }
 
-void ABallBase::SetGaugeCurrent(EBallGaugeType Type, float Value)
+void APBBallBase::SetGaugeCurrent(EBallGaugeType Type, float Value)
 {
 	GaugeComponent->SetCurrent(Type, Value);
 }
 
-void ABallBase::SetGaugeMax(EBallGaugeType Type, float Value, bool bFillCurrent)
+void APBBallBase::SetGaugeMax(EBallGaugeType Type, float Value, bool bFillCurrent)
 {
 	GaugeComponent->SetMax(Type, Value, bFillCurrent);
 }
 
-void ABallBase::SetGaugeRegenPerSecond(EBallGaugeType Type, float Value)
+void APBBallBase::SetGaugeRegenPerSecond(EBallGaugeType Type, float Value)
 {
 	GaugeComponent->SetRegenPerSecond(Type, Value);
 }
 
-void ABallBase::ApplyGaugeDelta(EBallGaugeType Type, float Delta)
+void APBBallBase::ApplyGaugeDelta(EBallGaugeType Type, float Delta)
 {
 	GaugeComponent->ApplyDelta(Type, Delta);
 }
 
-bool ABallBase::CanConsumeGauge(EBallGaugeType Type, float Cost) const
+bool APBBallBase::CanConsumeGauge(EBallGaugeType Type, float Cost) const
 {
 	return GaugeComponent->CanConsume(Type, Cost);
 }
 
-bool ABallBase::ConsumeGauge(EBallGaugeType Type, float Cost)
+bool APBBallBase::ConsumeGauge(EBallGaugeType Type, float Cost)
 {
 	return GaugeComponent->Consume(Type, Cost);
 }
 
-int32 ABallBase::GetCombo() const
+int32 APBBallBase::GetCombo() const
 {
 	return ComboComponent->GetCombo();
 }
 
-void ABallBase::SetCombo(int32 Value)
+void APBBallBase::SetCombo(int32 Value)
 {
 	ComboComponent->SetCombo(Value);
 }
 
-void ABallBase::AddCombo(int32 Delta)
+void APBBallBase::AddCombo(int32 Delta)
 {
 	ComboComponent->AddCombo(Delta);
 }
 
-bool ABallBase::TryConsumeCombo(int32 Cost)
+bool APBBallBase::TryConsumeCombo(int32 Cost)
 {
 	return ComboComponent->TryConsumeCombo(Cost);
 }
 
-void ABallBase::ResetCombo()
+void APBBallBase::ResetCombo()
 {
 	ComboComponent->ResetCombo();
 }
 
-void ABallBase::TakeDamage(int32 Damage)
+void APBBallBase::TakeDamage(int32 Damage)
 {
 	if (Damage <= 0)
 	{
@@ -155,7 +155,7 @@ void ABallBase::TakeDamage(int32 Damage)
 	ApplyGaugeDelta(EBallGaugeType::EGT_HP, -Damage);
 }
 
-bool ABallBase::IsDead() const
+bool APBBallBase::IsDead() const
 {
 	return GetGaugeCurrent(EBallGaugeType::EGT_HP) <= 0.0f;
 }

@@ -9,21 +9,21 @@
 #include "PinBallLike/Interface/BallStat.h"
 #include "PinBallLike/Interface/Comboable.h"
 #include "PinBallLike/Interface/Damagable.h"
-#include "BallBase.generated.h"
+#include "PBBallBase.generated.h"
 
 class UPBBallStatComponent;
 class UPBBallGaugeComponent;
 class UPBBallComboComponent;
 class USphereComponent;
-class UPinballBallMovementComponent;
+class UPBBallMovementComponent;
 
 UCLASS()
-class PINBALLLIKE_API ABallBase : public AActor, public IBallStat, public IBallGauge, public IComboable, public IDamagable
+class PINBALLLIKE_API APBBallBase : public AActor, public IBallStat, public IBallGauge, public IComboable, public IDamagable
 {
 	GENERATED_BODY()
 
 public:
-	ABallBase();
+	APBBallBase();
 
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void LaunchBall(FVector Impulse);
@@ -60,7 +60,7 @@ private:
 	TObjectPtr<USphereComponent> CollisionSphere;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Movement", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UPinballBallMovementComponent> MovementComponent;
+	TObjectPtr<UPBBallMovementComponent> MovementComponent;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Stat")
 	TObjectPtr<UPBBallStatComponent> StatComponent;

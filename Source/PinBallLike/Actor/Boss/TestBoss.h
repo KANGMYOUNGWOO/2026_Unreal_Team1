@@ -6,7 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "TestBoss.generated.h"
 
-class ABallBase;
+class APBBallBase;
 class UPrimitiveComponent;
 class USphereComponent;
 
@@ -30,7 +30,7 @@ protected:
 		const FHitResult& Hit);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Hittable", meta = (DisplayName = "On Hit By Ball"))
-	void ReceiveHitByBall(ABallBase* Ball, const FHitResult& Hit);
+	void ReceiveHitByBall(APBBallBase* Ball, const FHitResult& Hit);
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hittable", meta = (AllowPrivateAccess = "true"))

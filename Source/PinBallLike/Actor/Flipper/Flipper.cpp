@@ -9,7 +9,7 @@
 #include "DrawDebugHelpers.h"
 #endif
 #include "Math/UnrealMathUtility.h"
-#include "PinBallLike/Actor/Ball/BallBase.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 
 AFlipper::AFlipper()
 {
@@ -164,11 +164,11 @@ void AFlipper::ApplyForceToBalls(const float DeltaTime, const float MotionAlpha)
 
 	// 플리퍼가 움직일때만 ball이 충돌하는지 연산함.
 	TArray<AActor*> OverlappingActors;
-	BallDetectTrigger->GetOverlappingActors(OverlappingActors, ABallBase::StaticClass());
+	BallDetectTrigger->GetOverlappingActors(OverlappingActors, APBBallBase::StaticClass());
 
 	for (AActor* OverlappingActor : OverlappingActors)
 	{
-		ABallBase* Ball = Cast<ABallBase>(OverlappingActor);
+		APBBallBase* Ball = Cast<APBBallBase>(OverlappingActor);
 		if (!IsValid(Ball))
 		{
 			continue;

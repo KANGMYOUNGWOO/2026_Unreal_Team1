@@ -1,16 +1,16 @@
-#include "PinballBallMovementComponent.h"
+#include "PBBallMovementComponent.h"
 
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Actor.h"
 
-UPinballBallMovementComponent::UPinballBallMovementComponent()
+UPBBallMovementComponent::UPBBallMovementComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 	bAutoActivate = true;
 }
 
-void UPinballBallMovementComponent::BeginPlay()
+void UPBBallMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -24,7 +24,7 @@ void UPinballBallMovementComponent::BeginPlay()
 	}
 }
 
-void UPinballBallMovementComponent::TickComponent(
+void UPBBallMovementComponent::TickComponent(
 	const float DeltaTime,
 	const ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
@@ -42,32 +42,32 @@ void UPinballBallMovementComponent::TickComponent(
 	MoveWithSweep(DeltaTime);
 }
 
-void UPinballBallMovementComponent::SetVelocity(FVector NewVelocity)
+void UPBBallMovementComponent::SetVelocity(FVector NewVelocity)
 {
 	NewVelocity.Z = 0.0f;
 	Velocity = NewVelocity;
 }
 
-void UPinballBallMovementComponent::AddVelocity(FVector VelocityToAdd)
+void UPBBallMovementComponent::AddVelocity(FVector VelocityToAdd)
 {
 	VelocityToAdd.Z = 0.0f;
 	Velocity += VelocityToAdd;
 	Velocity.Z = 0.0f;
 }
 
-void UPinballBallMovementComponent::Launch(FVector Direction, const float Strength)
+void UPBBallMovementComponent::Launch(FVector Direction, const float Strength)
 {
 	Direction.Z = 0.0f;
 	const FVector NormalizedDirection = Direction.GetSafeNormal();
 	Velocity = NormalizedDirection * FMath::Max(Strength, 0.0f);
 }
 
-void UPinballBallMovementComponent::Stop()
+void UPBBallMovementComponent::Stop()
 {
 	Velocity = FVector::ZeroVector;
 }
 
-void UPinballBallMovementComponent::MoveWithSweep(const float DeltaTime)
+void UPBBallMovementComponent::MoveWithSweep(const float DeltaTime)
 {
 	// Tick에서 한 프레임 동안 이동할 전체 거리를 계산한다.
 	// 이 함수는 위치를 직접 순간이동시키지 않고 Root Primitive를 Sweep 이동시킨다.
@@ -144,7 +144,7 @@ void UPinballBallMovementComponent::MoveWithSweep(const float DeltaTime)
 	ClampVelocityToSpeedRange();
 }
 
-UPrimitiveComponent* UPinballBallMovementComponent::ResolveCollisionComponent()
+UPrimitiveComponent* UPBBallMovementComponent::ResolveCollisionComponent()
 {
 	// 캐시된 컴포넌트가 없으면 Owner의 Root에서 다시 찾는다.
 	if (IsValid(CollisionComponent))
@@ -157,7 +157,7 @@ UPrimitiveComponent* UPinballBallMovementComponent::ResolveCollisionComponent()
 	return CollisionComponent;
 }
 
-float UPinballBallMovementComponent::CalculateImpactDamping(
+float UPBBallMovementComponent::CalculateImpactDamping(
 	const FVector IncomingDirection,
 	const FVector ImpactNormal) const
 {
@@ -168,7 +168,7 @@ float UPinballBallMovementComponent::CalculateImpactDamping(
 	return FMath::Lerp(1.0f, BounceDamping, ImpactStrength);
 }
 
-void UPinballBallMovementComponent::ClampVelocityToSpeedRange()
+void UPBBallMovementComponent::ClampVelocityToSpeedRange()
 {
 	// 이동 방향은 유지하면서 속력만 MinSpeed와 MaxSpeed 범위로 제한한다.
 	Velocity.Z = 0.0f;

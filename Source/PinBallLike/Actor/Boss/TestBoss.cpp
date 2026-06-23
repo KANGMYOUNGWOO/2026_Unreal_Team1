@@ -4,7 +4,7 @@
 #include "TestBoss.h"
 
 #include "Components/SphereComponent.h"
-#include "PinBallLike/Actor/Ball/BallBase.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 
 ATestBoss::ATestBoss()
 {
@@ -27,7 +27,7 @@ void ATestBoss::HandleCollisionHit(
 	FVector NormalImpulse,
 	const FHitResult& Hit)
 {
-	if (ABallBase* Ball = Cast<ABallBase>(OtherActor))
+	if (APBBallBase* Ball = Cast<APBBallBase>(OtherActor))
 	{
 		ReceiveHitByBall(Ball, Hit);
 	}
