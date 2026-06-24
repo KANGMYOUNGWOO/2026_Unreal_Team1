@@ -4,7 +4,7 @@
 #include "PBGateBumper.h"
 
 #include "Components/PrimitiveComponent.h"
-#include "PinBallLike/Actor/Ball/BallBase.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 
 APBGateBumper::APBGateBumper()
 {
@@ -50,7 +50,7 @@ void APBGateBumper::RegisterGateArea(UPrimitiveComponent* GateArea)
 }
 
 // 볼이 게이트 기준 어느 면에 있는지 계산한다.
-float APBGateBumper::CalculateGateSide(const UPrimitiveComponent* GateArea, const ABallBase* Ball) const
+float APBGateBumper::CalculateGateSide(const UPrimitiveComponent* GateArea, const APBBallBase* Ball) const
 {
 	if (!IsValid(GateArea) || !IsValid(Ball))
 	{
@@ -69,13 +69,13 @@ void APBGateBumper::HandleGateBeginOverlap(
 	bool IsFromSweep,
 	const FHitResult& SweepResult)
 {
-	ABallBase* Ball = Cast<ABallBase>(OtherActor);
+	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
 	if (!IsValid(Ball))
 	{
 		return;
 	}
 
-	const TWeakObjectPtr<ABallBase> BallKey = Ball;
+	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
 	int32& OverlapCount = PassingBallOverlapCounts.FindOrAdd(BallKey);
 	++OverlapCount;
 
@@ -94,13 +94,13 @@ void APBGateBumper::HandleGateEndOverlap(
 {
 	IncreaseTriggerCount(OtherActor);
 	
-	ABallBase* Ball = Cast<ABallBase>(OtherActor);
+	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
 	if (!IsValid(Ball))
 	{
 		return;
 	}
 
-	const TWeakObjectPtr<ABallBase> BallKey = Ball;
+	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
 	int32* OverlapCount = PassingBallOverlapCounts.Find(BallKey);
 	if (OverlapCount == nullptr)
 	{

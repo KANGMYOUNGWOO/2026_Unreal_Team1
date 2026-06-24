@@ -6,7 +6,7 @@
 #include "PinBallLike/Actor/Bumper/PBBumperBase.h"
 #include "PBGateBumper.generated.h"
 
-class ABallBase;
+class APBBallBase;
 class UPrimitiveComponent;
 
 UCLASS()
@@ -35,14 +35,14 @@ protected:
 
 #pragma region Blueprint Events
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Gate")
-	void OnGateBumperPassed(ABallBase* Ball);
+	void OnGateBumperPassed(APBBallBase* Ball);
 #pragma endregion
 
 private:
-	TMap<TWeakObjectPtr<ABallBase>, int32> PassingBallOverlapCounts;
-	TMap<TWeakObjectPtr<ABallBase>, float> PassingBallEntrySides;
+	TMap<TWeakObjectPtr<APBBallBase>, int32> PassingBallOverlapCounts;
+	TMap<TWeakObjectPtr<APBBallBase>, float> PassingBallEntrySides;
 
-	float CalculateGateSide(const UPrimitiveComponent* GateArea, const ABallBase* Ball) const;
+	float CalculateGateSide(const UPrimitiveComponent* GateArea, const APBBallBase* Ball) const;
 
 	UFUNCTION()
 	void HandleGateBeginOverlap(

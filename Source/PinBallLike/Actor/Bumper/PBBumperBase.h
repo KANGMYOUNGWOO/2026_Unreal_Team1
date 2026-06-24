@@ -7,7 +7,8 @@
 #include "PinBallLike/Struct/Bumper/PBBumperTypes.h"
 #include "PBBumperBase.generated.h"
 
-class ABallBase;
+
+class APBBallBase;
 
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API APBBumperBase : public AActor
@@ -18,7 +19,7 @@ public:
 	APBBumperBase();
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
-	void ActivateBumper(ABallBase* Ball);
+	void ActivateBumper(APBBallBase* Ball);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
 	void FinishActivation();
@@ -45,12 +46,12 @@ protected:
 	void IncreaseTriggerCount(AActor* OtherActor, int32 Amount = 1);
 	
 	UFUNCTION(BlueprintCallable, Category = "Bumper", meta = (BlueprintProtected = "true"))
-	void AddTriggerCount(ABallBase* Ball, int32 Amount = 1);
+	void AddTriggerCount(APBBallBase* Ball, int32 Amount = 1);
 
 #pragma region Blueprint Events
 	UFUNCTION(BlueprintNativeEvent, Category = "Bumper")
-	void ApplyBumperEffect(ABallBase* Ball);
-	virtual void ApplyBumperEffect_Implementation(ABallBase* Ball);
+	void ApplyBumperEffect(APBBallBase* Ball);
+	virtual void ApplyBumperEffect_Implementation(APBBallBase* Ball);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
 	void OnBumperReady();
@@ -59,7 +60,7 @@ protected:
 	void OnTriggerCountChanged(int32 InCurrentTriggerCount, int32 InRequiredTriggerCount);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
-	void OnBumperActivated(ABallBase* Ball);
+	void OnBumperActivated(APBBallBase* Ball);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
 	void OnBumperFinished();

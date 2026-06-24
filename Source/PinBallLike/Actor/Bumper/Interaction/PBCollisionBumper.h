@@ -6,7 +6,7 @@
 #include "PinBallLike/Actor/Bumper/PBBumperBase.h"
 #include "PBCollisionBumper.generated.h"
 
-class ABallBase;
+class APBBallBase;
 class UPBBumperReactionComponent;
 class UPrimitiveComponent;
 
@@ -42,12 +42,12 @@ protected:
 
 #pragma region Blueprint Events
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Collision")
-	void OnCollisionBumperHit(ABallBase* Ball, const FHitResult& Hit);
+	void OnCollisionBumperHit(APBBallBase* Ball, const FHitResult& Hit);
 #pragma endregion
 
 private:
 	// 충돌 노멀 방향으로 볼에 추가 속도를 부여한다.
-	void AddBounceVelocityToBall(ABallBase* Ball, const FHitResult& Hit) const;
+	void AddBounceVelocityToBall(APBBallBase* Ball, const FHitResult& Hit) const;
 
 	UFUNCTION()
 	void HandleComponentHit(

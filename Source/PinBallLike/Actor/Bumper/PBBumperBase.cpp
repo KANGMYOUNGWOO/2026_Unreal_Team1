@@ -3,7 +3,8 @@
 
 #include "PBBumperBase.h"
 
-#include "PinBallLike/Actor/Ball/BallBase.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Interface/Comboable.h"
 
 APBBumperBase::APBBumperBase()
 {
@@ -19,7 +20,7 @@ void APBBumperBase::IncreaseTriggerCount(AActor* OtherActor, int32 Amount)
 	}
 }
 
-void APBBumperBase::AddTriggerCount(ABallBase* Ball, const int32 Amount)
+void APBBumperBase::AddTriggerCount(APBBallBase* Ball, const int32 Amount)
 {
 	if (!IsValid(Ball) || !CanAccumulateTrigger() || Amount <= 0)
 	{
@@ -45,7 +46,7 @@ void APBBumperBase::AddTriggerCount(ABallBase* Ball, const int32 Amount)
 	}
 }
 
-void APBBumperBase::ActivateBumper(ABallBase* Ball)
+void APBBumperBase::ActivateBumper(APBBallBase* Ball)
 {
 	if (IsActivating)
 	{
@@ -98,7 +99,7 @@ bool APBBumperBase::CanAccumulateTrigger() const
 	return IsEnabled && !IsActivating;
 }
 
-void APBBumperBase::ApplyBumperEffect_Implementation(ABallBase* Ball)
+void APBBumperBase::ApplyBumperEffect_Implementation(APBBallBase* Ball)
 {
 	// 자식에서 범퍼 활성 효과를 구현하지 않은 경우 즉시 종료한다.
 	FinishActivation();

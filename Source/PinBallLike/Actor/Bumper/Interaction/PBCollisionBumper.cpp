@@ -5,7 +5,8 @@
 
 #include "Components/PrimitiveComponent.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
-#include "PinBallLike/Actor/Ball/BallBase.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Common/Componenet/Stat/PBStatTypes.h"
 
 APBCollisionBumper::APBCollisionBumper()
 {
@@ -49,14 +50,14 @@ void APBCollisionBumper::RegisterCollisionArea(UPrimitiveComponent* CollisionAre
 	CollisionAreas.Add(CollisionArea);
 }
 
-void APBCollisionBumper::AddBounceVelocityToBall(ABallBase* Ball, const FHitResult& Hit) const
+void APBCollisionBumper::AddBounceVelocityToBall(APBBallBase* Ball, const FHitResult& Hit) const
 {
 	if (!IsValid(Ball))
 	{
 		return;
 	}
 
-	int32 ballBounce = Ball->GetStat(EBallStatType::EST_BOUNCINESS);
+	int32 ballBounce = Ball->GetStat(PBStatNames::Bounciness);
 	int32 bounceForce = ballBounce + BounceVelocityStrength;
 
 	if (bounceForce <= 0)
@@ -83,7 +84,7 @@ void APBCollisionBumper::HandleComponentHit(
 {
 	IncreaseTriggerCount(OtherActor);
 	
-	ABallBase* Ball = Cast<ABallBase>(OtherActor);
+	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
 	if (!IsValid(Ball))
 	{
 		return;
