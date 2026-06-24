@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "PinBallLike/Interface/BossInterface.h"
-#include "PinBallLike/Interface/Damagable.h"
+#include "PinBallLike/Interface/Damageable.h"
 #include "TimerManager.h"
 #include "PBBossBase.generated.h"
 
@@ -12,7 +12,6 @@ class UPBBossPatternComponent;
 class UPBBossStatComponent;
 class UPBBossWeaknessComponent;
 class UStateTreeComponent;
-class ABallBase;
 class UPrimitiveComponent;
 class USphereComponent;
 
@@ -27,7 +26,7 @@ enum class EPBBossState : uint8
 };
 
 UCLASS()
-class PINBALLLIKE_API APBBossBase : public APawn, public IBossInterface, public IDamagable
+class PINBALLLIKE_API APBBossBase : public APawn, public IBossInterface, public IDamageable
 {
 	GENERATED_BODY()
 

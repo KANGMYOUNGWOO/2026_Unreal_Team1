@@ -1,6 +1,6 @@
 #include "PBBossBase.h"
 
-#include "PinBallLike/Actor/Ball/BallBase.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Interface/BallDamageSource.h"
 #include "Component/PBBossGroggyComponent.h"
 #include "Component/PBBossPatternComponent.h"
@@ -331,7 +331,7 @@ bool APBBossBase::IsValidDamageSource(AActor* OtherActor, UPrimitiveComponent* O
 		return false;
 	}
 
-	if (Cast<ABallBase>(OtherActor))
+	if (Cast<APBBallBase>(OtherActor))
 	{
 		return true;
 	}
