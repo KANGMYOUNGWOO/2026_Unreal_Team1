@@ -5,9 +5,11 @@
 
 #include "Component/PBBallCollisionComponent.h"
 #include "Component/PBBallComboComponent.h"
-#include "Component/PBBallGaugeComponent.h"
-#include "Component/PBBallStatComponent.h"
 #include "Component/PBBallPhysicsComponent.h"
+#include "PinBallLike/Actor/Common/Componenet/Resource/PBBaseResourceComponent.h"
+#include "PinBallLike/Actor/Common/Componenet/Resource/PBResourceTypes.h"
+#include "PinBallLike/Actor/Common/Componenet/Stat/PBBaseStatComponent.h"
+#include "PinBallLike/Actor/Common/Componenet/Stat/PBStatTypes.h"
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
 
@@ -29,17 +31,30 @@ APBBallBase::APBBallBase()
 	PhysicsComponent = CreateDefaultSubobject<UPBBallPhysicsComponent>(TEXT("PhysicsComponent"));
 	
 	// Stat
-	StatComponent = CreateDefaultSubobject<UPBBallStatComponent>(TEXT("StatComponent"));
+	StatComponent = CreateDefaultSubobject<UPBBaseStatComponent>(TEXT("StatComponent"));
 
-	// Gauge
-	GaugeComponent = CreateDefaultSubobject<UPBBallGaugeComponent>(TEXT("GaugeComponent"));
+	// Resource
+	ResourceComponent = CreateDefaultSubobject<UPBBaseResourceComponent>(TEXT("ResourceComponent"));
 
 	// Combo
 	ComboComponent = CreateDefaultSubobject<UPBBallComboComponent>(TEXT("ComboComponent"));
 
 	// Collision Rule
 	CollisionComponent = CreateDefaultSubobject<UPBBallCollisionComponent>(TEXT("CollisionComponent"));
+
+	DefaultStats.Emplace(PBStatNames::Mass, 1);
+	DefaultStats.Emplace(PBStatNames::Bounciness, 30);
+	DefaultStats.Emplace(PBStatNames::Size, 25);
+	DefaultStats.Emplace(PBStatNames::Attack, 0);
+	DefaultStats.Emplace(PBStatNames::StaggerPower, 0);
+	DefaultStats.Emplace(PBStatNames::ManaRegen, 0);
+
+	DefaultResources.Emplace(PBResourceNames::Health, 100.0f, 100.0f, 0.0f);
+	DefaultResources.Emplace(PBResourceNames::Mana, 50.0f, 50.0f, 1.0f);
 	
+	InitializeDefaultStats();
+	InitializeDefaultResources();
+
 	DisplayName = "BaseBall";
 }
 
@@ -54,75 +69,113 @@ void APBBallBase::AddVelocity(const FVector VelocityToAdd)
 	PhysicsComponent->AddVelocity(VelocityToAdd);
 }
 
-int32 APBBallBase::GetStat(EBallStatType Type) const
+void APBBallBase::ApplyStatData(const TArray<FPBBallStatData>& StatData)
 {
-	return StatComponent->GetStat(Type);
+	for (const FPBBallStatData& Stat : StatData)
+	{
+		if (Stat.StatName.IsNone())
+		{
+			continue;
+		}
+
+		SetStat(Stat.StatName, Stat.Value);
+	}
 }
 
-void APBBallBase::ApplyStat(EBallStatType Type, int32 Delta)
+void APBBallBase::ApplyResourceData(const TArray<FPBBallResourceData>& ResourceData)
+{
+	for (const FPBBallResourceData& Resource : ResourceData)
+	{
+		if (Resource.ResourceName.IsNone())
+		{
+			continue;
+		}
+
+		SetResource(Resource.ResourceName, Resource.Current, Resource.Max);
+		SetResourceRegenPerSecond(Resource.ResourceName, Resource.RegenPerSecond);
+	}
+}
+
+bool APBBallBase::HasStat(FName StatName) const
+{
+	return StatComponent->HasStat(StatName);
+}
+
+int32 APBBallBase::GetStat(FName StatName) const
+{
+	return StatComponent->GetStat(StatName);
+}
+
+void APBBallBase::SetStat(FName StatName, int32 Value)
+{
+	StatComponent->SetStat(StatName, Value);
+	ApplyStatToComponents(StatName);
+}
+
+void APBBallBase::ApplyStat(FName StatName, int32 Delta)
 {
 	if (Delta == 0)
 	{
 		return;
 	}
 	
-	StatComponent->ApplyStat(Type, Delta);
-	ApplyStatToComponents(Type);
+	StatComponent->ApplyStat(StatName, Delta);
+	ApplyStatToComponents(StatName);
 }
 
-bool APBBallBase::HasGauge(EBallGaugeType Type) const
+bool APBBallBase::HasResource(FName ResourceName) const
 {
-	return GaugeComponent->HasGauge(Type);
+	return ResourceComponent->HasResource(ResourceName);
 }
 
-float APBBallBase::GetGaugeCurrent(EBallGaugeType Type) const
+float APBBallBase::GetResourceCurrent(FName ResourceName) const
 {
-	return GaugeComponent->GetCurrent(Type);
+	return ResourceComponent->GetCurrent(ResourceName);
 }
 
-float APBBallBase::GetGaugeMax(EBallGaugeType Type) const
+float APBBallBase::GetResourceMax(FName ResourceName) const
 {
-	return GaugeComponent->GetMax(Type);
+	return ResourceComponent->GetMax(ResourceName);
 }
 
-float APBBallBase::GetGaugeRatio(EBallGaugeType Type) const
+float APBBallBase::GetResourceRatio(FName ResourceName) const
 {
-	return GaugeComponent->GetRatio(Type);
+	return ResourceComponent->GetRatio(ResourceName);
 }
 
-void APBBallBase::SetGauge(EBallGaugeType Type, float Current, float Max)
+void APBBallBase::SetResource(FName ResourceName, float Current, float Max)
 {
-	GaugeComponent->SetGauge(Type, Current, Max);
+	ResourceComponent->SetResource(ResourceName, Current, Max);
 }
 
-void APBBallBase::SetGaugeCurrent(EBallGaugeType Type, float Value)
+void APBBallBase::SetResourceCurrent(FName ResourceName, float Value)
 {
-	GaugeComponent->SetCurrent(Type, Value);
+	ResourceComponent->SetCurrent(ResourceName, Value);
 }
 
-void APBBallBase::SetGaugeMax(EBallGaugeType Type, float Value, bool bFillCurrent)
+void APBBallBase::SetResourceMax(FName ResourceName, float Value, bool bFillCurrent)
 {
-	GaugeComponent->SetMax(Type, Value, bFillCurrent);
+	ResourceComponent->SetMax(ResourceName, Value, bFillCurrent);
 }
 
-void APBBallBase::SetGaugeRegenPerSecond(EBallGaugeType Type, float Value)
+void APBBallBase::SetResourceRegenPerSecond(FName ResourceName, float Value)
 {
-	GaugeComponent->SetRegenPerSecond(Type, Value);
+	ResourceComponent->SetRegenPerSecond(ResourceName, Value);
 }
 
-void APBBallBase::ApplyGaugeDelta(EBallGaugeType Type, float Delta)
+void APBBallBase::ApplyResourceDelta(FName ResourceName, float Delta)
 {
-	GaugeComponent->ApplyDelta(Type, Delta);
+	ResourceComponent->ApplyDelta(ResourceName, Delta);
 }
 
-bool APBBallBase::CanConsumeGauge(EBallGaugeType Type, float Cost) const
+bool APBBallBase::CanConsumeResource(FName ResourceName, float Cost) const
 {
-	return GaugeComponent->CanConsume(Type, Cost);
+	return ResourceComponent->CanConsume(ResourceName, Cost);
 }
 
-bool APBBallBase::ConsumeGauge(EBallGaugeType Type, float Cost)
+bool APBBallBase::ConsumeResource(FName ResourceName, float Cost)
 {
-	return GaugeComponent->Consume(Type, Cost);
+	return ResourceComponent->Consume(ResourceName, Cost);
 }
 
 int32 APBBallBase::GetCombo() const
@@ -187,33 +240,38 @@ void APBBallBase::TakeDamage(int32 Damage)
 		return;
 	}
 
-	ApplyGaugeDelta(EBallGaugeType::EGT_HP, -Damage);
+	ApplyResourceDelta(PBResourceNames::Health, -Damage);
 }
 
 bool APBBallBase::IsDead() const
 {
-	return GetGaugeCurrent(EBallGaugeType::EGT_HP) <= 0.0f;
+	return GetResourceCurrent(PBResourceNames::Health) <= 0.0f;
 }
 
-void APBBallBase::ApplyStatToComponents(EBallStatType Type)
+void APBBallBase::InitializeDefaultStats()
 {
-	const int32 StatValue = GetStat(Type);
+	ApplyStatData(DefaultStats);
+}
 
-	switch (Type)
+void APBBallBase::InitializeDefaultResources()
+{
+	ApplyResourceData(DefaultResources);
+}
+
+void APBBallBase::ApplyStatToComponents(FName StatName)
+{
+	const int32 StatValue = GetStat(StatName);
+
+	if (StatName == PBStatNames::Mass)
 	{
-	case EBallStatType::EST_WEIGHT:
 		PhysicsComponent->SetMass(static_cast<float>(StatValue));
-		break;
-
-	case EBallStatType::EST_BOUNCINESS:
+	}
+	else if (StatName == PBStatNames::Bounciness)
+	{
 		PhysicsComponent->SetBounceDamping(static_cast<float>(StatValue) / 100.0f);
-		break;
-
-	case EBallStatType::EST_SIZE:
+	}
+	else if (StatName == PBStatNames::Size)
+	{
 		CollisionSphere->SetSphereRadius(FMath::Max(static_cast<float>(StatValue), 1.0f), true);
-		break;
-
-	default:
-		break;
 	}
 }
