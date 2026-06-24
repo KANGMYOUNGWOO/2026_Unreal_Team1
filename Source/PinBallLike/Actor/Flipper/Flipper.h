@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Flipper.generated.h"
 
-class ABallBase;
+class APBBallBase;
 class UBoxComponent;
 class USceneComponent;
 
