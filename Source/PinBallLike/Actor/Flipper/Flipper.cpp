@@ -10,6 +10,8 @@
 #endif
 #include "Math/UnrealMathUtility.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 AFlipper::AFlipper()
 {
@@ -169,7 +171,8 @@ void AFlipper::ApplyForceToBalls(const float DeltaTime, const float MotionAlpha)
 	for (AActor* OverlappingActor : OverlappingActors)
 	{
 		APBBallBase* Ball = Cast<APBBallBase>(OverlappingActor);
-		if (!IsValid(Ball))
+		IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
+		if (!IsValid(Ball) || !Movable)
 		{
 			continue;
 		}
@@ -186,8 +189,7 @@ void AFlipper::ApplyForceToBalls(const float DeltaTime, const float MotionAlpha)
 		const float FinalPower = LaunchPower * MotionAlpha * DistanceMultiplier;
 		const FVector VelocityToAdd = ForceDirection * FinalPower * DeltaTime;
 
-		// Ball이 상태와 실제 이동 컴포넌트 처리를 담당한다.
-		Ball->AddVelocity(VelocityToAdd);
+		Movable->AddVelocity(VelocityToAdd);
 	}
 }
 

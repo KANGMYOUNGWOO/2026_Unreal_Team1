@@ -6,7 +6,10 @@
 #include "Components/PrimitiveComponent.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
-#include "PinBallLike/Actor/Common/Componenet/Stat/PBStatTypes.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
+#include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Interface/StatProvider.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBCollisionBumper::APBCollisionBumper()
 {
@@ -57,7 +60,14 @@ void APBCollisionBumper::AddBounceVelocityToBall(APBBallBase* Ball, const FHitRe
 		return;
 	}
 
-	int32 ballBounce = Ball->GetStat(PBStatNames::Bounciness);
+	const IStatProvider* StatProvider = PBInterfaceUtils::FindInterface<IStatProvider>(Ball);
+	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
+	if (!StatProvider || !Movable)
+	{
+		return;
+	}
+
+	const int32 ballBounce = StatProvider->GetStat(PBStatNames::Bounciness);
 	int32 bounceForce = ballBounce + BounceVelocityStrength;
 
 	if (bounceForce <= 0)
@@ -72,7 +82,7 @@ void APBCollisionBumper::AddBounceVelocityToBall(APBBallBase* Ball, const FHitRe
 		return;
 	}
 
-	Ball->AddVelocity(BounceDirection * (bounceForce));
+	Movable->AddVelocity(BounceDirection * bounceForce);
 }
 
 void APBCollisionBumper::HandleComponentHit(
