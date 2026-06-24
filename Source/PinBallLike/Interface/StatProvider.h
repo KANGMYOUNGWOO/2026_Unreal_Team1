@@ -21,6 +21,4 @@ class PINBALLLIKE_API IStatProvider
 public:
 	virtual bool HasStat(FName StatName) const = 0;
 	virtual int32 GetStat(FName StatName) const = 0;
-	virtual void SetStat(FName StatName, int32 Value) = 0;
-	virtual void ApplyStat(FName StatName, int32 Delta) = 0;
 };

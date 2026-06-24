@@ -4,19 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "PinBallLike/Interface/ResourceProvider.h"
-#include "PinBallLike/Interface/StatProvider.h"
-#include "PinBallLike/Interface/Comboable.h"
-#include "PinBallLike/Interface/Damageable.h"
-#include "PinBallLike/Interface/Movable.h"
 #include "PBBallBase.generated.h"
 
 class UPBBaseStatComponent;
 class UPBBaseResourceComponent;
 class UPBBallComboComponent;
-class UPBBallCollisionComponent;
-class USphereComponent;
+class UPBBallHitReactionComponent;
 class UPBBallPhysicsComponent;
+class USphereComponent;
 
 USTRUCT(BlueprintType)
 struct FPBBallStatData
@@ -61,62 +56,26 @@ struct FPBBallResourceData
 };
 
 UCLASS()
-class PINBALLLIKE_API APBBallBase : public AActor, public IStatProvider, public IResourceProvider, public IComboable, public IMovable, public IDamageable
+class PINBALLLIKE_API APBBallBase : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	APBBallBase();
 
-	UFUNCTION(BlueprintCallable, Category = "Ball")
-	void LaunchBall(FVector Impulse);
-
-	UFUNCTION(BlueprintCallable, Category = "Ball")
-	void AddVelocity(FVector VelocityToAdd);
-
 	UFUNCTION(BlueprintCallable, Category = "Ball|Stat")
 	void ApplyStatData(const TArray<FPBBallStatData>& StatData);
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Resource")
 	void ApplyResourceData(const TArray<FPBBallResourceData>& ResourceData);
-
-	virtual bool HasStat(FName StatName) const override;
-	virtual int32 GetStat(FName StatName) const override;
-	virtual void SetStat(FName StatName, int32 Value) override;
-	virtual void ApplyStat(FName StatName, int32 Delta) override;
-
-	virtual bool HasResource(FName ResourceName) const override;
-	virtual float GetResourceCurrent(FName ResourceName) const override;
-	virtual float GetResourceMax(FName ResourceName) const override;
-	virtual float GetResourceRatio(FName ResourceName) const override;
-	virtual void SetResource(FName ResourceName, float Current, float Max) override;
-	virtual void SetResourceCurrent(FName ResourceName, float Value) override;
-	virtual void SetResourceMax(FName ResourceName, float Value, bool bFillCurrent) override;
-	virtual void SetResourceRegenPerSecond(FName ResourceName, float Value) override;
-	virtual void ApplyResourceDelta(FName ResourceName, float Delta) override;
-	virtual bool CanConsumeResource(FName ResourceName, float Cost) const override;
-	virtual bool ConsumeResource(FName ResourceName, float Cost) override;
-
-	virtual int32 GetCombo() const override;
-	virtual void SetCombo(int32 Value) override;
-	virtual void AddCombo(int32 Delta) override;
-	virtual bool TryConsumeCombo(int32 Cost) override;
-	virtual void ResetCombo() override;
-
-	virtual FVector GetVelocity() const override;
-	virtual void AddImpulse(FVector Impulse) override;
-	virtual void StopMovement() override;
-	virtual void PauseMovement() override;
-	virtual void ResumeMovement() override;
-	virtual bool IsMovementPaused() const override;
-
-	virtual void TakeDamage(int32 Damage) override;
-	virtual bool IsDead() const override;
+	
+protected:
+	virtual void BeginPlay() override;
 	
 private:
 	void InitializeDefaultStats();
 	void InitializeDefaultResources();
-	void ApplyStatToComponents(FName StatName);
+	void HandleStatChanged(FName StatName, int32 NewValue);
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
 	TObjectPtr<USphereComponent> CollisionSphere;
@@ -134,7 +93,7 @@ private:
 	TObjectPtr<UPBBallComboComponent> ComboComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
-	TObjectPtr<UPBBallCollisionComponent> CollisionComponent;
+	TObjectPtr<UPBBallHitReactionComponent> HitReactionComponent;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Ball|Stat")
 	TArray<FPBBallStatData> DefaultStats;
