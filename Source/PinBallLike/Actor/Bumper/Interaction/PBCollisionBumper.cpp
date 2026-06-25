@@ -122,8 +122,11 @@ void APBCollisionBumper::HandleComponentHit(
 	FVector NormalImpulse,
 	const FHitResult& Hit)
 {
-	IncreaseComboCount(OtherActor);
-	
+	if (GetBumperState() != EPBBumperState::Idle)
+	{
+		return;
+	}
+
 	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
 	if (!IsValid(Ball) || !IsBallInTriggerArea(Ball))
 	{
@@ -150,6 +153,11 @@ void APBCollisionBumper::HandleTriggerBeginOverlap(
 	bool IsFromSweep,
 	const FHitResult& SweepResult)
 {
+	if (GetBumperState() != EPBBumperState::Idle)
+	{
+		return;
+	}
+
 	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
 	if (!IsValid(Ball))
 	{

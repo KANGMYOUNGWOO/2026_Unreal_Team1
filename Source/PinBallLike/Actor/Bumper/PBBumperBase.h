@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Struct/Bumper/PBBumperState.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTypes.h"
 #include "PBBumperBase.generated.h"
 
@@ -14,6 +15,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	FPBBumperTriggerCountChangedSignature,
 	int32, CurrentCount,
 	int32, RequiredCount);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FPBBumperStateChangedSignature,
+	EPBBumperState, PreviousState,
+	EPBBumperState, NewState);
 
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API APBBumperBase : public AActor
@@ -33,7 +39,7 @@ public:
 	void ResetTriggerCount();
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
-	void SetIsEnabled(bool IsNewEnabled);
+	void SetBumperState(EPBBumperState NewState);
 
 	UFUNCTION(BlueprintPure, Category = "Bumper")
 	bool CanActivate() const;
@@ -50,9 +56,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper")
 	int32 GetRequiredTriggerCount() const;
 
+	UFUNCTION(BlueprintPure, Category = "Bumper")
+	EPBBumperState GetBumperState() const;
+
 	//TODO GameMessage 형태로 수정 필요.
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
 	FPBBumperTriggerCountChangedSignature OnBumperTriggerCountChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
+	FPBBumperStateChangedSignature OnBumperStateChanged;
 
 protected:
 	void IncreaseComboCount(AActor* OtherActor, int32 Amount = 1);
@@ -84,11 +96,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
 	int32 CurrentTriggerCount = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
-	bool IsEnabled = true;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
-	bool IsActivating = false;
+	EPBBumperState CurrentState = EPBBumperState::Idle;
 
 private:
 	void NotifyTriggerCountChanged();

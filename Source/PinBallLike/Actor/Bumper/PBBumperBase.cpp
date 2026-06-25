@@ -51,12 +51,12 @@ void APBBumperBase::AddTriggerCount(APBBallBase* Ball, const int32 Amount)
 
 void APBBumperBase::ActivateBumper(APBBallBase* Ball)
 {
-	if (IsActivating)
+	if (!IsValid(Ball) || CurrentState != EPBBumperState::Idle)
 	{
 		return;
 	}
-	
-	IsActivating = true;
+
+	SetBumperState(EPBBumperState::Activated);
 	ResetTriggerCount();
 
 	OnBumperActivated(Ball);
@@ -65,12 +65,12 @@ void APBBumperBase::ActivateBumper(APBBallBase* Ball)
 
 void APBBumperBase::FinishActivation()
 {
-	if (!IsActivating)
+	if (CurrentState != EPBBumperState::Activated)
 	{
 		return;
 	}
 
-	IsActivating = false;
+	SetBumperState(EPBBumperState::Idle);
 	OnBumperFinished();
 }
 
@@ -80,26 +80,27 @@ void APBBumperBase::ResetTriggerCount()
 	NotifyTriggerCountChanged();
 }
 
-void APBBumperBase::SetIsEnabled(const bool IsNewEnabled)
+void APBBumperBase::SetBumperState(const EPBBumperState NewState)
 {
-	IsEnabled = IsNewEnabled;
-	if (!IsEnabled)
+	if (CurrentState == NewState)
 	{
-		ResetTriggerCount();
-		IsActivating = false;
+		return;
 	}
+
+	const EPBBumperState PreviousState = CurrentState;
+	CurrentState = NewState;
+	OnBumperStateChanged.Broadcast(PreviousState, CurrentState);
 }
 
 bool APBBumperBase::CanActivate() const
 {
-	return IsEnabled
-		&& !IsActivating
+	return CurrentState == EPBBumperState::Idle
 		&& CurrentTriggerCount >= FMath::Max(BumperData.RequiredTriggerCount, 1);
 }
 
 bool APBBumperBase::CanAccumulateTrigger() const
 {
-	return IsEnabled && !IsActivating;
+	return CurrentState == EPBBumperState::Idle;
 }
 
 FPBBumperRuntimeData APBBumperBase::GetBumperData() const
@@ -115,6 +116,11 @@ int32 APBBumperBase::GetCurrentTriggerCount() const
 int32 APBBumperBase::GetRequiredTriggerCount() const
 {
 	return FMath::Max(BumperData.RequiredTriggerCount, 1);
+}
+
+EPBBumperState APBBumperBase::GetBumperState() const
+{
+	return CurrentState;
 }
 
 void APBBumperBase::NotifyTriggerCountChanged()

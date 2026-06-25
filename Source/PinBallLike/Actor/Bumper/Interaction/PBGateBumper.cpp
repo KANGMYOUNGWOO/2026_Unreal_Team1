@@ -69,6 +69,11 @@ void APBGateBumper::HandleGateBeginOverlap(
 	bool IsFromSweep,
 	const FHitResult& SweepResult)
 {
+	if (GetBumperState() != EPBBumperState::Idle)
+	{
+		return;
+	}
+
 	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
 	if (!IsValid(Ball))
 	{
@@ -92,8 +97,6 @@ void APBGateBumper::HandleGateEndOverlap(
 	UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex)
 {
-	IncreaseComboCount(OtherActor);
-	
 	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
 	if (!IsValid(Ball))
 	{
@@ -120,7 +123,7 @@ void APBGateBumper::HandleGateEndOverlap(
 	float EntrySide = 0.0f;
 	const bool IsEntrySideFound = PassingBallEntrySides.RemoveAndCopyValue(BallKey, EntrySide);
 
-	if (!IsEntrySideFound)
+	if (GetBumperState() != EPBBumperState::Idle || !IsEntrySideFound)
 	{
 		return;
 	}
@@ -132,6 +135,7 @@ void APBGateBumper::HandleGateEndOverlap(
 		return;
 	}
 
+	IncreaseComboCount(OtherActor);
 	OnGateBumperPassed(Ball);
 	AddTriggerCount(Ball);
 }
