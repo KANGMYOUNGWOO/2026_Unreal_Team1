@@ -1,6 +1,8 @@
 #include "PBBossBase.h"
 
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 #include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 #include "PinBallLike/Interface/BallDamageSource.h"
 #include "Component/PBBossGroggyComponent.h"
@@ -199,12 +201,14 @@ void APBBossBase::HandleCollisionHit(
 	}
 
 	const FName GroggyPointName = ResolveGroggyPointName(HitComponent);
+	const int32 DamageAmount = GetPinballHitDamage(OtherActor);
 
-	UE_LOG(LogTemp, Warning, TEXT("Boss Hit Component: %s, GroggyPoint: %s"),
+	UE_LOG(LogTemp, Warning, TEXT("Boss Hit Component: %s, GroggyPoint: %s, Damage: %d"),
 		HitComponent ? *HitComponent->GetName() : TEXT("None"),
-		*GroggyPointName.ToString());
+		*GroggyPointName.ToString(),
+		DamageAmount);
 
-	IBossInterface::Execute_TakeBossDamage(this, GroggyPointName, PinballHitDamage);
+	IBossInterface::Execute_TakeBossDamage(this, GroggyPointName, DamageAmount);
 }
 
 void APBBossBase::BindBossCollisionEvents()
@@ -389,6 +393,17 @@ bool APBBossBase::IsValidDamageSource(AActor* OtherActor, UPrimitiveComponent* O
 	const bool IsComponentTagged = OtherComponent && OtherComponent->ComponentHasTag(DamageSourceTagName);
 
 	return IsActorTagged || IsComponentTagged;
+}
+
+int32 APBBossBase::GetPinballHitDamage(AActor* OtherActor) const
+{
+	if (!OtherActor)
+	{
+		return 0;
+	}
+
+	const UPBBaseStatComponent* StatComponent = OtherActor->FindComponentByClass<UPBBaseStatComponent>();
+	return StatComponent ? StatComponent->GetStat(PBStatNames::Attack) : 0;
 }
 
 FName APBBossBase::ResolveGroggyPointName(UPrimitiveComponent* HitComponent) const

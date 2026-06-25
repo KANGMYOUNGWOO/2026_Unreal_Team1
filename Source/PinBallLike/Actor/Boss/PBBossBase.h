@@ -88,6 +88,7 @@ protected:
 	bool IsWeaknessCollisionComponent(const UPrimitiveComponent* PrimitiveComponent) const;
 	bool IsWeaknessHitBlocked(FName HitPointName) const;
 	bool IsValidDamageSource(AActor* OtherActor, UPrimitiveComponent* OtherComponent) const;
+	int32 GetPinballHitDamage(AActor* OtherActor) const;
 	FName ResolveGroggyPointName(UPrimitiveComponent* HitComponent) const;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Collision")
