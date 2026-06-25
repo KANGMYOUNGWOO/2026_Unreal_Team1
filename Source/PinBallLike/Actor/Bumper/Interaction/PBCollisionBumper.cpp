@@ -122,7 +122,7 @@ void APBCollisionBumper::HandleComponentHit(
 	FVector NormalImpulse,
 	const FHitResult& Hit)
 {
-	IncreaseTriggerCount(OtherActor);
+	IncreaseComboCount(OtherActor);
 	
 	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
 	if (!IsValid(Ball) || !IsBallInTriggerArea(Ball))
@@ -130,7 +130,7 @@ void APBCollisionBumper::HandleComponentHit(
 		return;
 	}
 
-	IncreaseTriggerCount(OtherActor);
+	IncreaseComboCount(OtherActor);
 	AddBounceVelocityToBall(Ball, Hit);
 
 	if (IsValid(ReactionComponent))

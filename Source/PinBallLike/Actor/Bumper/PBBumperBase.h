@@ -10,6 +10,11 @@
 
 class APBBallBase;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FPBBumperTriggerCountChangedSignature,
+	int32, CurrentCount,
+	int32, RequiredCount);
+
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API APBBumperBase : public AActor
 {
@@ -37,13 +42,20 @@ public:
 	bool CanAccumulateTrigger() const;
 
 	UFUNCTION(BlueprintPure, Category = "Bumper")
-	FPBBumperRuntimeData GetBumperData() const { return BumperData; }
+	FPBBumperRuntimeData GetBumperData() const;
 
 	UFUNCTION(BlueprintPure, Category = "Bumper")
-	int32 GetCurrentTriggerCount() const { return CurrentTriggerCount; }
+	int32 GetCurrentTriggerCount() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper")
+	int32 GetRequiredTriggerCount() const;
+
+	//TODO GameMessage 형태로 수정 필요.
+	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
+	FPBBumperTriggerCountChangedSignature OnBumperTriggerCountChanged;
 
 protected:
-	void IncreaseTriggerCount(AActor* OtherActor, int32 Amount = 1);
+	void IncreaseComboCount(AActor* OtherActor, int32 Amount = 1);
 	
 	UFUNCTION(BlueprintCallable, Category = "Bumper", meta = (BlueprintProtected = "true"))
 	void AddTriggerCount(APBBallBase* Ball, int32 Amount = 1);
@@ -77,4 +89,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
 	bool IsActivating = false;
+
+private:
+	void NotifyTriggerCountChanged();
 };

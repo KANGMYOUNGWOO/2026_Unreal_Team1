@@ -12,7 +12,7 @@ APBBumperBase::APBBumperBase()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-void APBBumperBase::IncreaseTriggerCount(AActor* OtherActor, int32 Amount)
+void APBBumperBase::IncreaseComboCount(AActor* OtherActor, int32 Amount)
 {
 	if (IComboable* Comboable = PBInterfaceUtils::FindInterface<IComboable>(OtherActor))
 	{
@@ -32,7 +32,9 @@ void APBBumperBase::AddTriggerCount(APBBallBase* Ball, const int32 Amount)
 	const int32 PreviousTriggerCount = CurrentTriggerCount;
 	CurrentTriggerCount = FMath::Clamp(
 		CurrentTriggerCount + Amount,0,RequiredTriggerCount);
-	OnTriggerCountChanged(CurrentTriggerCount, RequiredTriggerCount);
+
+
+	NotifyTriggerCountChanged();
 
 	// 이번 누적으로 처음 조건을 만족했을 때만 Ready 이벤트를 보낸다.
 	const bool IsTriggerCountReached = CurrentTriggerCount >= RequiredTriggerCount;
@@ -75,7 +77,7 @@ void APBBumperBase::FinishActivation()
 void APBBumperBase::ResetTriggerCount()
 {
 	CurrentTriggerCount = 0;
-	OnTriggerCountChanged(CurrentTriggerCount, FMath::Max(BumperData.RequiredTriggerCount, 1));
+	NotifyTriggerCountChanged();
 }
 
 void APBBumperBase::SetIsEnabled(const bool IsNewEnabled)
@@ -98,6 +100,28 @@ bool APBBumperBase::CanActivate() const
 bool APBBumperBase::CanAccumulateTrigger() const
 {
 	return IsEnabled && !IsActivating;
+}
+
+FPBBumperRuntimeData APBBumperBase::GetBumperData() const
+{
+	return BumperData;
+}
+
+int32 APBBumperBase::GetCurrentTriggerCount() const
+{
+	return CurrentTriggerCount;
+}
+
+int32 APBBumperBase::GetRequiredTriggerCount() const
+{
+	return FMath::Max(BumperData.RequiredTriggerCount, 1);
+}
+
+void APBBumperBase::NotifyTriggerCountChanged()
+{
+	const int32 RequiredTriggerCount = GetRequiredTriggerCount();
+	OnBumperTriggerCountChanged.Broadcast(CurrentTriggerCount, RequiredTriggerCount);
+	OnTriggerCountChanged(CurrentTriggerCount, RequiredTriggerCount);
 }
 
 void APBBumperBase::ApplyBumperEffect_Implementation(APBBallBase* Ball)

@@ -92,7 +92,7 @@ void APBGateBumper::HandleGateEndOverlap(
 	UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex)
 {
-	IncreaseTriggerCount(OtherActor);
+	IncreaseComboCount(OtherActor);
 	
 	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
 	if (!IsValid(Ball))
