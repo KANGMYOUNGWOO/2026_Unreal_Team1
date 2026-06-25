@@ -28,7 +28,7 @@ struct FPBResourceState
 	double RegenRawRemainder = 0.0;
 };
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(PinBall), meta=(BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBaseResourceComponent : public UActorComponent, public IResourceProvider, public IDamageable
 {
 	GENERATED_BODY()

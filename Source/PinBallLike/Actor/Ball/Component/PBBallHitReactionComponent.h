@@ -12,7 +12,7 @@ class UPBBallPhysicsComponent;
 class IComboable;
 class IDamageable;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(PinBall), meta=(BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBallHitReactionComponent : public UActorComponent
 {
 	GENERATED_BODY()
