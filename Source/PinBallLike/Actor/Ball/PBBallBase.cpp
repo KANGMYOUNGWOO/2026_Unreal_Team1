@@ -82,7 +82,7 @@ void APBBallBase::ApplyResourceData(const TArray<FPBBallResourceData>& ResourceD
 	{
 		if (Resource.ResourceName.IsNone())
 		{
-			continue;
+			continue;   
 		}
 		ResourceComponent->SetResource(Resource.ResourceName, Resource.Current, Resource.Max);
 		ResourceComponent->SetResourceRegenPerSecond(Resource.ResourceName, Resource.RegenPerSecond);
