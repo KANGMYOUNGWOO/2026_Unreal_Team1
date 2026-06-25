@@ -10,49 +10,16 @@ UPBBossProjectilePattern::UPBBossProjectilePattern()
 	ProjectileClass = APBBossProjectile::StaticClass();
 }
 
-void UPBBossProjectilePattern::StartPattern_Implementation(APBBossBase* Boss)
+bool UPBBossProjectilePattern::CanExecute_Implementation(APBBossBase* Boss) const
 {
-	if (!Boss || !ProjectileClass || ProjectileCount <= 0)
-	{
-		FinishPattern();
-		return;
-	}
-
-	OwnerBoss = Boss;
-	FiredProjectileCount = 0;
-
-	SpawnTelegraph(Boss);
-
-	const float TelegraphDurationSeconds = GetMaxTelegraphDurationSeconds();
-	if (TelegraphDurationSeconds > 0.0f)
-	{
-		Boss->GetWorldTimerManager().SetTimer(
-			TelegraphTimerHandle,
-			this,
-			&UPBBossProjectilePattern::StartFireSequence,
-			TelegraphDurationSeconds,
-			false);
-		return;
-	}
-
-	StartFireSequence();
+	return Super::CanExecute_Implementation(Boss) && ProjectileClass && ProjectileCount > 0;
 }
 
-void UPBBossProjectilePattern::CancelPattern_Implementation(APBBossBase* Boss)
+void UPBBossProjectilePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 {
-	ClearTelegraphTimer();
-	ClearFireTimer();
-	Super::CancelPattern_Implementation(Boss);
-	OwnerBoss = nullptr;
 	FiredProjectileCount = 0;
-}
 
-void UPBBossProjectilePattern::StartFireSequence()
-{
-	ClearTelegraphTimer();
-	DestroySpawnedTelegraphs();
-
-	if (!OwnerBoss || !ProjectileClass || ProjectileCount <= 0)
+	if (!GetOwnerBoss() || !ProjectileClass || ProjectileCount <= 0)
 	{
 		FinishPattern();
 		return;
@@ -78,7 +45,7 @@ void UPBBossProjectilePattern::StartFireSequence()
 
 	if (FiredProjectileCount < ProjectileCount)
 	{
-		OwnerBoss->GetWorldTimerManager().SetTimer(
+		Boss->GetWorldTimerManager().SetTimer(
 			FireTimerHandle,
 			this,
 			&UPBBossProjectilePattern::FireProjectile,
@@ -87,16 +54,23 @@ void UPBBossProjectilePattern::StartFireSequence()
 	}
 }
 
+void UPBBossProjectilePattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
+{
+	ClearFireTimer();
+	FiredProjectileCount = 0;
+}
+
 void UPBBossProjectilePattern::FireProjectile()
 {
-	if (!OwnerBoss || !ProjectileClass || FiredProjectileCount >= ProjectileCount)
+	APBBossBase* Boss = GetOwnerBoss();
+	if (!Boss || !ProjectileClass || FiredProjectileCount >= ProjectileCount)
 	{
 		ClearFireTimer();
 		FinishPattern();
 		return;
 	}
 
-	UWorld* World = OwnerBoss->GetWorld();
+	UWorld* World = Boss->GetWorld();
 	if (!World)
 	{
 		ClearFireTimer();
@@ -108,8 +82,8 @@ void UPBBossProjectilePattern::FireProjectile()
 	const FRotator SpawnRotation = GetProjectileSpawnRotation(SpawnLocation);
 
 	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.Owner = OwnerBoss;
-	SpawnParameters.Instigator = OwnerBoss;
+	SpawnParameters.Owner = Boss;
+	SpawnParameters.Instigator = Boss;
 	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	APBBossProjectile* Projectile = World->SpawnActor<APBBossProjectile>(
@@ -126,7 +100,7 @@ void UPBBossProjectilePattern::FireProjectile()
 	++FiredProjectileCount;
 
 	UE_LOG(LogTemp, Warning, TEXT("Boss Projectile Fired: Boss=%s, Projectile=%s, Count=%d/%d"),
-		*GetNameSafe(OwnerBoss),
+		*GetNameSafe(Boss),
 		*GetNameSafe(Projectile),
 		FiredProjectileCount,
 		ProjectileCount);
@@ -140,28 +114,21 @@ void UPBBossProjectilePattern::FireProjectile()
 
 void UPBBossProjectilePattern::ClearFireTimer()
 {
-	if (OwnerBoss)
+	if (APBBossBase* Boss = GetOwnerBoss())
 	{
-		OwnerBoss->GetWorldTimerManager().ClearTimer(FireTimerHandle);
-	}
-}
-
-void UPBBossProjectilePattern::ClearTelegraphTimer()
-{
-	if (OwnerBoss)
-	{
-		OwnerBoss->GetWorldTimerManager().ClearTimer(TelegraphTimerHandle);
+		Boss->GetWorldTimerManager().ClearTimer(FireTimerHandle);
 	}
 }
 
 FVector UPBBossProjectilePattern::GetProjectileSpawnLocation() const
 {
-	if (!OwnerBoss)
+	const APBBossBase* Boss = GetOwnerBoss();
+	if (!Boss)
 	{
 		return FVector::ZeroVector;
 	}
 
-	return OwnerBoss->GetActorLocation() + OwnerBoss->GetActorTransform().TransformVectorNoScale(SpawnOffset);
+	return Boss->GetActorLocation() + Boss->GetActorTransform().TransformVectorNoScale(SpawnOffset);
 }
 
 FRotator UPBBossProjectilePattern::GetProjectileSpawnRotation(const FVector& SpawnLocation) const
@@ -169,13 +136,13 @@ FRotator UPBBossProjectilePattern::GetProjectileSpawnRotation(const FVector& Spa
 	AActor* PinballActor = FindPinballActor();
 	if (!PinballActor)
 	{
-		return OwnerBoss ? OwnerBoss->GetActorRotation() : FRotator::ZeroRotator;
+		return GetOwnerBoss() ? GetOwnerBoss()->GetActorRotation() : FRotator::ZeroRotator;
 	}
 
 	const FVector Direction = PinballActor->GetActorLocation() - SpawnLocation;
 	if (Direction.IsNearlyZero())
 	{
-		return OwnerBoss ? OwnerBoss->GetActorRotation() : FRotator::ZeroRotator;
+		return GetOwnerBoss() ? GetOwnerBoss()->GetActorRotation() : FRotator::ZeroRotator;
 	}
 
 	return Direction.Rotation();
@@ -183,12 +150,13 @@ FRotator UPBBossProjectilePattern::GetProjectileSpawnRotation(const FVector& Spa
 
 AActor* UPBBossProjectilePattern::FindPinballActor() const
 {
-	if (!OwnerBoss)
+	const APBBossBase* Boss = GetOwnerBoss();
+	if (!Boss)
 	{
 		return nullptr;
 	}
 
-	UWorld* World = OwnerBoss->GetWorld();
+	UWorld* World = Boss->GetWorld();
 	if (!World)
 	{
 		return nullptr;

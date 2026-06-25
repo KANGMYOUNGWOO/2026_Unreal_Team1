@@ -79,10 +79,12 @@ private:
 	void InitializePatterns();
 	void ScheduleNextPatternCheck();
 	void ClearPatternCheckTimer();
-	void DeactivatePatternSystem();
+	void DeactivatePatternSystem(bool IsApplyCurrentPatternCooldown);
 	void SetPatternCooldown(UPBBossPatternBase* Pattern);
+	void CancelCurrentPatternInternal(bool IsApplyCooldown);
 	void ClearCurrentPattern();
 	void SetOwnerBossIdleIfPatternState() const;
+	void ShiftPatternTimers(float DeltaSeconds);
 	float GetCurrentTimeSeconds() const;
 	float GetPatternCooldownEndTime(const UPBBossPatternBase* Pattern) const;
 	bool IsPatternCooldownReady(const UPBBossPatternBase* Pattern) const;
@@ -98,6 +100,7 @@ private:
 	TArray<TObjectPtr<UPBBossPatternBase>> PatternInstances;
 
 	float NextPatternAllowedTime = 0.0f;
+	float PatternSystemPausedTime = 0.0f;
 	FTimerHandle PatternCheckTimerHandle;
 	TMap<const UPBBossPatternBase*, float> CooldownEndTimeMap;
 };

@@ -16,8 +16,9 @@ public:
 	UPBBossProjectilePattern();
 
 protected:
-	virtual void StartPattern_Implementation(APBBossBase* Boss) override;
-	virtual void CancelPattern_Implementation(APBBossBase* Boss) override;
+	virtual bool CanExecute_Implementation(APBBossBase* Boss) const override;
+	virtual void ExecutePattern_Implementation(APBBossBase* Boss) override;
+	virtual void CancelPatternInternal_Implementation(APBBossBase* Boss) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile")
 	TSubclassOf<APBBossProjectile> ProjectileClass;
@@ -32,21 +33,15 @@ protected:
 	float FireIntervalSeconds = 0.2f;
 
 private:
-	void StartFireSequence();
 	void FireProjectile();
 	void ClearFireTimer();
-	void ClearTelegraphTimer();
 	FVector GetProjectileSpawnLocation() const;
 	FRotator GetProjectileSpawnRotation(const FVector& SpawnLocation) const;
 	AActor* FindPinballActor() const;
-
-	UPROPERTY(Transient)
-	TObjectPtr<APBBossBase> OwnerBoss;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile", meta = (AllowPrivateAccess = "true"))
 	FVector SpawnOffset = FVector::ZeroVector;
 
 	int32 FiredProjectileCount = 0;
-	FTimerHandle TelegraphTimerHandle;
 	FTimerHandle FireTimerHandle;
 };

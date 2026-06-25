@@ -37,7 +37,8 @@ void UPBBossPatternComponent::StartPatternSystem()
 void UPBBossPatternComponent::StopPatternSystem()
 {
 	IsPatternSystemPaused = false;
-	DeactivatePatternSystem();
+	PatternSystemPausedTime = 0.0f;
+	DeactivatePatternSystem(false);
 }
 
 bool UPBBossPatternComponent::PausePatternSystem()
@@ -48,7 +49,8 @@ bool UPBBossPatternComponent::PausePatternSystem()
 	}
 
 	IsPatternSystemPaused = true;
-	DeactivatePatternSystem();
+	PatternSystemPausedTime = GetCurrentTimeSeconds();
+	DeactivatePatternSystem(true);
 
 	return true;
 }
@@ -59,6 +61,10 @@ bool UPBBossPatternComponent::ResumePatternSystem()
 	{
 		return false;
 	}
+
+	const float PausedDuration = FMath::Max(0.0f, GetCurrentTimeSeconds() - PatternSystemPausedTime);
+	ShiftPatternTimers(PausedDuration);
+	PatternSystemPausedTime = 0.0f;
 
 	StartPatternSystem();
 
@@ -92,6 +98,11 @@ void UPBBossPatternComponent::TryStartNextPattern()
 
 void UPBBossPatternComponent::CancelCurrentPattern()
 {
+	CancelCurrentPatternInternal(false);
+}
+
+void UPBBossPatternComponent::CancelCurrentPatternInternal(bool IsApplyCooldown)
+{
 	if (!CurrentPattern)
 	{
 		IsPatternRunning = false;
@@ -99,6 +110,13 @@ void UPBBossPatternComponent::CancelCurrentPattern()
 	}
 
 	UPBBossPatternBase* CancelledPattern = CurrentPattern;
+
+	if (IsApplyCooldown)
+	{
+		SetPatternCooldown(CancelledPattern);
+		NextPatternAllowedTime = GetCurrentTimeSeconds() + MinPatternIntervalSeconds;
+	}
+
 	ClearCurrentPattern();
 
 	CancelledPattern->CancelPattern(OwnerBoss);
@@ -189,10 +207,10 @@ void UPBBossPatternComponent::ClearPatternCheckTimer()
 	}
 }
 
-void UPBBossPatternComponent::DeactivatePatternSystem()
+void UPBBossPatternComponent::DeactivatePatternSystem(bool IsApplyCurrentPatternCooldown)
 {
 	IsPatternSystemActive = false;
-	CancelCurrentPattern();
+	CancelCurrentPatternInternal(IsApplyCurrentPatternCooldown);
 	ClearPatternCheckTimer();
 }
 
@@ -217,6 +235,29 @@ void UPBBossPatternComponent::SetOwnerBossIdleIfPatternState() const
 	if (OwnerBoss && OwnerBoss->GetBossState() == EPBBossState::Pattern)
 	{
 		OwnerBoss->SetBossState(EPBBossState::Idle);
+	}
+}
+
+void UPBBossPatternComponent::ShiftPatternTimers(float DeltaSeconds)
+{
+	if (DeltaSeconds <= 0.0f)
+	{
+		return;
+	}
+
+	if (NextPatternAllowedTime > PatternSystemPausedTime)
+	{
+		NextPatternAllowedTime += DeltaSeconds;
+	}
+
+	for (TPair<const UPBBossPatternBase*, float>& CooldownEndTimePair : CooldownEndTimeMap)
+	{
+		if (CooldownEndTimePair.Value <= PatternSystemPausedTime)
+		{
+			continue;
+		}
+
+		CooldownEndTimePair.Value += DeltaSeconds;
 	}
 }
 

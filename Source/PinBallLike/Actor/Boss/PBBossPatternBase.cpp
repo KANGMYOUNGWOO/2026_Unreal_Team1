@@ -16,17 +16,52 @@ bool UPBBossPatternBase::CanExecute_Implementation(APBBossBase* Boss) const
 
 void UPBBossPatternBase::StartPattern_Implementation(APBBossBase* Boss)
 {
-	FinishPattern();
+	if (!Boss)
+	{
+		FinishPattern();
+		return;
+	}
+
+	OwnerBoss = Boss;
+	SpawnTelegraph(Boss);
+
+	const float TelegraphDurationSeconds = GetMaxTelegraphDurationSeconds();
+	if (TelegraphDurationSeconds > 0.0f)
+	{
+		Boss->GetWorldTimerManager().SetTimer(
+			TelegraphTimerHandle,
+			this,
+			&UPBBossPatternBase::StartExecutePattern,
+			TelegraphDurationSeconds,
+			false);
+		return;
+	}
+
+	StartExecutePattern();
 }
 
 void UPBBossPatternBase::CancelPattern_Implementation(APBBossBase* Boss)
 {
+	ClearTelegraphTimer();
 	DestroySpawnedTelegraphs();
+	CancelPatternInternal(Boss);
+	OwnerBoss = nullptr;
+}
+
+void UPBBossPatternBase::ExecutePattern_Implementation(APBBossBase* Boss)
+{
+	FinishPattern();
+}
+
+void UPBBossPatternBase::CancelPatternInternal_Implementation(APBBossBase* Boss)
+{
 }
 
 void UPBBossPatternBase::FinishPattern()
 {
+	ClearTelegraphTimer();
 	DestroySpawnedTelegraphs();
+	OwnerBoss = nullptr;
 
 	if (OwnerPatternComponent)
 	{
@@ -37,6 +72,25 @@ void UPBBossPatternBase::FinishPattern()
 UPBBossPatternComponent* UPBBossPatternBase::GetOwnerPatternComponent() const
 {
 	return OwnerPatternComponent;
+}
+
+APBBossBase* UPBBossPatternBase::GetOwnerBoss() const
+{
+	return OwnerBoss;
+}
+
+void UPBBossPatternBase::StartExecutePattern()
+{
+	ClearTelegraphTimer();
+	DestroySpawnedTelegraphs();
+
+	if (!OwnerBoss)
+	{
+		FinishPattern();
+		return;
+	}
+
+	ExecutePattern(OwnerBoss);
 }
 
 TArray<APBBossPatternTelegraph*> UPBBossPatternBase::SpawnTelegraph(APBBossBase* Boss)
@@ -89,6 +143,14 @@ TArray<APBBossPatternTelegraph*> UPBBossPatternBase::SpawnTelegraph(APBBossBase*
 	}
 
 	return SpawnedTelegraphList;
+}
+
+void UPBBossPatternBase::ClearTelegraphTimer()
+{
+	if (OwnerBoss)
+	{
+		OwnerBoss->GetWorldTimerManager().ClearTimer(TelegraphTimerHandle);
+	}
 }
 
 float UPBBossPatternBase::GetMaxTelegraphDurationSeconds() const

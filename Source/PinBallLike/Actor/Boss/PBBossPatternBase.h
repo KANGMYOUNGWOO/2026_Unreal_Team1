@@ -27,6 +27,12 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss|Pattern")
 	void CancelPattern(APBBossBase* Boss);
 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss|Pattern")
+	void ExecutePattern(APBBossBase* Boss);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss|Pattern")
+	void CancelPatternInternal(APBBossBase* Boss);
+
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern")
 	void FinishPattern();
 
@@ -46,20 +52,31 @@ protected:
 	virtual bool CanExecute_Implementation(APBBossBase* Boss) const;
 	virtual void StartPattern_Implementation(APBBossBase* Boss);
 	virtual void CancelPattern_Implementation(APBBossBase* Boss);
+	virtual void ExecutePattern_Implementation(APBBossBase* Boss);
+	virtual void CancelPatternInternal_Implementation(APBBossBase* Boss);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
 	TArray<APBBossPatternTelegraph*> SpawnTelegraph(APBBossBase* Boss);
 
 	void DestroySpawnedTelegraphs();
-	float GetMaxTelegraphDurationSeconds() const;
+	APBBossBase* GetOwnerBoss() const;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Pattern|Telegraph")
 	TArray<FPBBossPatternTelegraphData> TelegraphDataList;
 
 private:
+	void StartExecutePattern();
+	void ClearTelegraphTimer();
+	float GetMaxTelegraphDurationSeconds() const;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBossPatternComponent> OwnerPatternComponent;
 
 	UPROPERTY(Transient)
+	TObjectPtr<APBBossBase> OwnerBoss;
+
+	UPROPERTY(Transient)
 	TArray<TObjectPtr<APBBossPatternTelegraph>> SpawnedTelegraphs;
+
+	FTimerHandle TelegraphTimerHandle;
 };
