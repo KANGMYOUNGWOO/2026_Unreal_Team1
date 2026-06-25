@@ -1,6 +1,5 @@
 #include "PBBossPatternBase.h"
-
-#include "PBBossPatternComponent.h"
+#include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
 
 void UPBBossPatternBase::InitializePattern(UPBBossPatternComponent* NewOwnerPatternComponent)
 {

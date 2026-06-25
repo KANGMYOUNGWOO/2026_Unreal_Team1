@@ -1,6 +1,6 @@
 #include "PBBossPatternComponent.h"
 
-#include "PBBossPatternBase.h"
+#include "PinBallLike/Actor/Boss/PBBossPatternBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 
 UPBBossPatternComponent::UPBBossPatternComponent()
