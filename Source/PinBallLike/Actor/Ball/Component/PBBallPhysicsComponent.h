@@ -5,6 +5,7 @@
 #include "PinBallLike/Interface/Movable.h"
 #include "PBBallPhysicsComponent.generated.h"
 
+class UPBBaseStatComponent;
 class UPrimitiveComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBallMovementHit, const FHitResult&, Hit);
@@ -16,7 +17,7 @@ class PINBALLLIKE_API UPBBallPhysicsComponent : public UActorComponent, public I
 
 public:
 	UPBBallPhysicsComponent();
-	void InitializeDependencies(UPrimitiveComponent* InPrimitiveComponent);
+	void InitializeDependencies(UPrimitiveComponent* InPrimitiveComponent, UPBBaseStatComponent* InStatComponent);
 
 	UPROPERTY(BlueprintAssignable, Category = "PinBall|Movement")
 	FOnBallMovementHit OnBallMovementHit;
@@ -58,10 +59,13 @@ protected:
 		float DeltaTime,
 		ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
-
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
 private:
 	float CalculateImpactDamping(FVector IncomingDirection, FVector ImpactNormal) const;
 	void ClampVelocityToSpeedRange();
+	void HandleStatChanged(FName StatName, int32 NewValue);
+	void ApplyStat(FName StatName, int32 NewValue);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PinBall|Movement", meta = (AllowPrivateAccess = "true"))
 	FVector Velocity = FVector::ZeroVector;
@@ -86,6 +90,8 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPrimitiveComponent> PrimitiveComponent = nullptr;
+	UPROPERTY(Transient)
+	TObjectPtr<UPBBaseStatComponent> StatComponent = nullptr;
 
 	bool bMovementPaused = false;
 };

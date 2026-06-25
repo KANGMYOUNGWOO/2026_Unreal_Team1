@@ -2,6 +2,8 @@
 
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 
 UPBBallPhysicsComponent::UPBBallPhysicsComponent()
 {
@@ -10,9 +12,10 @@ UPBBallPhysicsComponent::UPBBallPhysicsComponent()
 	bAutoActivate = true;
 }
 
-void UPBBallPhysicsComponent::InitializeDependencies(UPrimitiveComponent* InPrimitiveComponent)
+void UPBBallPhysicsComponent::InitializeDependencies(UPrimitiveComponent* InPrimitiveComponent, UPBBaseStatComponent* InStatComponent)
 {
 	PrimitiveComponent = InPrimitiveComponent;
+	StatComponent = InStatComponent;
 }
 
 FVector UPBBallPhysicsComponent::GetVelocity() const
@@ -168,9 +171,18 @@ void UPBBallPhysicsComponent::BeginPlay()
 
 	if (!PrimitiveComponent)
 	{
-		UE_LOG(LogTemp, Error, TEXT("%s requires a UPrimitiveComponent as its owner's root component."),
-			*GetName());
+		UE_LOG(LogTemp, Error, TEXT("%s requires a UPrimitiveComponent as its owner's root component."), *GetName());
 		SetComponentTickEnabled(false);
+	}
+	
+	if (StatComponent)
+	{
+		StatComponent->OnStatChanged.AddUObject(
+			this,
+			&UPBBallPhysicsComponent::HandleStatChanged);
+
+		ApplyStat(PBStatNames::Mass, StatComponent->GetStat(PBStatNames::Mass));
+		ApplyStat(PBStatNames::Bounciness, StatComponent->GetStat(PBStatNames::Bounciness));
 	}
 }
 
@@ -190,6 +202,15 @@ void UPBBallPhysicsComponent::TickComponent(
 	Velocity.Z = 0.0f;
 	Velocity.X -= XGravity * DeltaTime;
 	MoveWithSweep(DeltaTime);
+}
+
+void UPBBallPhysicsComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (StatComponent)
+	{
+		StatComponent->OnStatChanged.RemoveAll(this);
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 float UPBBallPhysicsComponent::CalculateImpactDamping(
@@ -218,4 +239,21 @@ void UPBBallPhysicsComponent::ClampVelocityToSpeedRange()
 	const float SafeMinSpeed = FMath::Max(MinSpeed, 0.0f);
 	const float SafeMaxSpeed = FMath::Max(MaxSpeed, SafeMinSpeed);
 	Velocity = Velocity.GetSafeNormal2D() * FMath::Clamp(CurrentSpeed, SafeMinSpeed, SafeMaxSpeed);
+}
+
+void UPBBallPhysicsComponent::HandleStatChanged(FName StatName, int32 NewValue)
+{
+	ApplyStat(StatName, NewValue);
+}
+
+void UPBBallPhysicsComponent::ApplyStat(FName StatName, int32 NewValue)
+{
+	if (StatName == PBStatNames::Mass)
+	{
+		SetMass(static_cast<float>(NewValue));
+	}
+	else if (StatName == PBStatNames::Bounciness)
+	{
+		SetBounceDamping(static_cast<float>(NewValue) / 100.0f);
+	}
 }
