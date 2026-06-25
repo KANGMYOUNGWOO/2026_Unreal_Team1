@@ -31,7 +31,8 @@ void UPBBaseStatComponent::SetStat(FName StatName, int32 Value)
 	}
 
 	CurrentValue = Value;
-	OnStatChanged.Broadcast(StatName, CurrentValue);
+	//TODO : 오류 때문에 임시 주석처리
+	//OnStatChanged.Broadcast(StatName, CurrentValue);
 }
 
 void UPBBaseStatComponent::ApplyStat(FName StatName, int32 Delta)
