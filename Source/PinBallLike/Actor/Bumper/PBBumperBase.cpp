@@ -5,6 +5,7 @@
 
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Interface/Comboable.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBBumperBase::APBBumperBase()
 {
@@ -13,7 +14,7 @@ APBBumperBase::APBBumperBase()
 
 void APBBumperBase::IncreaseTriggerCount(AActor* OtherActor, int32 Amount)
 {
-	if (IComboable* Comboable = Cast<IComboable>(OtherActor))
+	if (IComboable* Comboable = PBInterfaceUtils::FindInterface<IComboable>(OtherActor))
 	{
 		Comboable->AddCombo(Amount);
 		//UE_LOG(LogTemp, Warning, TEXT("combo = %d"), Comboable->GetCombo());

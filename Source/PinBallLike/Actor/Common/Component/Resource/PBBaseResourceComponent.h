@@ -4,7 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "PinBallLike/Interface/Damageable.h"
+#include "PinBallLike/Interface/ResourceProvider.h"
 #include "PBBaseResourceComponent.generated.h"
+
+DECLARE_MULTICAST_DELEGATE_TwoParams(FPBOnResourceCurrentChanged, FName, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FPBOnResourceChanged, FName);
 
 USTRUCT(BlueprintType)
 struct FPBResourceState
@@ -24,55 +29,58 @@ struct FPBResourceState
 };
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class PINBALLLIKE_API UPBBaseResourceComponent : public UActorComponent
+class PINBALLLIKE_API UPBBaseResourceComponent : public UActorComponent, public IResourceProvider, public IDamageable
 {
 	GENERATED_BODY()
 
 public:
 	UPBBaseResourceComponent();
 
+	FPBOnResourceCurrentChanged OnResourceCurrentChanged;
+	FPBOnResourceChanged OnResourceChanged;
+	
 	UFUNCTION(BlueprintCallable, Category="Resource")
-	bool HasResource(FName ResourceName) const;
-
+	virtual bool HasResource(FName ResourceName) const override;
 	UFUNCTION(BlueprintCallable, Category="Resource")
-	float GetCurrent(FName ResourceName) const;
-
+	virtual float GetResourceCurrent(FName ResourceName) const override;
 	UFUNCTION(BlueprintCallable, Category="Resource")
-	float GetMax(FName ResourceName) const;
-
+	virtual float GetResourceMax(FName ResourceName) const override;
 	UFUNCTION(BlueprintCallable, Category="Resource")
-	float GetRatio(FName ResourceName) const;
+	virtual float GetResourceRatio(FName ResourceName) const override;
+	
+	UFUNCTION(BlueprintCallable, Category="Resource")
+	virtual void TakeDamage(int32 Damage) override;
+	UFUNCTION(BlueprintCallable, Category="Resource")
+	virtual bool IsDead() const override;
 
 	UFUNCTION(BlueprintCallable, Category="Resource")
 	void SetResource(FName ResourceName, float Current, float Max);
+	UFUNCTION(BlueprintCallable, Category="Resource")
+	void SetResourceCurrent(FName ResourceName, float Value);
+	UFUNCTION(BlueprintCallable, Category="Resource")
+	void SetResourceMax(FName ResourceName, float Value, bool bFillCurrent);
+	UFUNCTION(BlueprintCallable, Category="Resource")
+	void SetResourceRegenPerSecond(FName ResourceName, float Value);
 
 	UFUNCTION(BlueprintCallable, Category="Resource")
-	void SetCurrent(FName ResourceName, float Value);
-
+	void ApplyResourceDelta(FName ResourceName, float Delta);
 	UFUNCTION(BlueprintCallable, Category="Resource")
-	void SetMax(FName ResourceName, float Value, bool bFillCurrent);
-
+	bool CanConsumeResource(FName ResourceName, float Cost) const;
 	UFUNCTION(BlueprintCallable, Category="Resource")
-	void SetRegenPerSecond(FName ResourceName, float Value);
-
-	UFUNCTION(BlueprintCallable, Category="Resource")
-	void ApplyDelta(FName ResourceName, float Delta);
-
-	UFUNCTION(BlueprintCallable, Category="Resource")
-	bool CanConsume(FName ResourceName, float Cost) const;
-
-	UFUNCTION(BlueprintCallable, Category="Resource")
-	bool Consume(FName ResourceName, float Cost);
+	bool ConsumeResource(FName ResourceName, float Cost);
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Resource", meta=(AllowPrivateAccess="true"))
-	TMap<FName, FPBResourceState> Resources;
-
+	
+	float GetCurrent(FName ResourceName) const;
+	float GetMax(FName ResourceName) const;
+	float GetRatio(FName ResourceName) const;
+	
 private:
 	FPBResourceState* FindResource(FName ResourceName);
 	const FPBResourceState* FindResource(FName ResourceName) const;
-	void BroadcastResourceChanged(FName ResourceName, const FPBResourceState& Resource);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Resource", meta=(AllowPrivateAccess="true"))
+	TMap<FName, FPBResourceState> Resources;
 };

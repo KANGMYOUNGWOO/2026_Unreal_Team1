@@ -5,35 +5,33 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "UObject/ObjectKey.h"
-#include "PBBallCollisionComponent.generated.h"
+#include "PBBallHitReactionComponent.generated.h"
 
 class UPrimitiveComponent;
 class UPBBallPhysicsComponent;
+class IComboable;
+class IDamageable;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class PINBALLLIKE_API UPBBallCollisionComponent : public UActorComponent
+class PINBALLLIKE_API UPBBallHitReactionComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
-	UPBBallCollisionComponent();
+	UPBBallHitReactionComponent();
+	void InitializeDependencies(
+		UPBBallPhysicsComponent* InPhysicsComponent,
+		IDamageable* InDamageable,
+		IComboable* InComboable);
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
 	UFUNCTION()
 	void HandleMovementHit(const FHitResult& Hit);
-
-	UFUNCTION()
-	void HandleCollisionBeginOverlap(
-		UPrimitiveComponent* OverlappedComponent,
-		AActor* OtherActor,
-		UPrimitiveComponent* OtherComponent,
-		int32 OtherBodyIndex,
-		bool bFromSweep,
-		const FHitResult& SweepResult);
-
+	
 	void ProcessBallContact(AActor* OtherActor);
 	bool WasContactProcessedThisFrame(AActor* OtherActor) const;
 	void MarkContactProcessed(AActor* OtherActor);
@@ -41,8 +39,8 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallPhysicsComponent> PhysicsComponent;
 
-	UPROPERTY(Transient)
-	TObjectPtr<UPrimitiveComponent> CollisionPrimitive;
+	IDamageable* Damageable = nullptr;
+	IComboable* Comboable = nullptr;
 
 	TSet<TObjectKey<AActor>> ProcessedContactActors;
 	double ProcessedContactTime = -1.0;

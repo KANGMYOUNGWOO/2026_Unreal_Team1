@@ -24,10 +24,22 @@ int32 UPBBaseStatComponent::GetStat(FName StatName) const
 
 void UPBBaseStatComponent::SetStat(FName StatName, int32 Value)
 {
-	Stats.FindOrAdd(StatName) = Value;
+	int32& CurrentValue = Stats.FindOrAdd(StatName);
+	if (CurrentValue == Value)
+	{
+		return;
+	}
+
+	CurrentValue = Value;
+	OnStatChanged.Broadcast(StatName, CurrentValue);
 }
 
 void UPBBaseStatComponent::ApplyStat(FName StatName, int32 Delta)
 {
-	Stats.FindOrAdd(StatName) += Delta;
+	if (Delta == 0)
+	{
+		return;
+	}
+
+	SetStat(StatName, GetStat(StatName) + Delta);
 }

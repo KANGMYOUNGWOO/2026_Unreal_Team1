@@ -19,6 +19,7 @@ class PINBALLLIKE_API IMovable
 
 public:
 	virtual FVector GetVelocity() const = 0;
+	virtual void AddVelocity(FVector VelocityToAdd) = 0;
 	virtual void AddImpulse(FVector Impulse) = 0;
 	virtual void StopMovement() = 0;
 	virtual void PauseMovement() = 0;

@@ -3,6 +3,7 @@
 
 #include "PBBaseResourceComponent.h"
 
+#include "PBResourceTypes.h"
 #include "PinBallLike/Utils/PBFixedPoint.h"
 
 UPBBaseResourceComponent::UPBBaseResourceComponent()
@@ -15,34 +16,51 @@ bool UPBBaseResourceComponent::HasResource(FName ResourceName) const
 	return Resources.Contains(ResourceName);
 }
 
-float UPBBaseResourceComponent::GetCurrent(FName ResourceName) const
+float UPBBaseResourceComponent::GetResourceCurrent(FName ResourceName) const
 {
-	const FPBResourceState* Resource = FindResource(ResourceName);
-	return Resource ? FPBFixedPoint::ToFloat(Resource->CurrentRaw) : 0.0f;
+	return GetCurrent(ResourceName);
 }
 
-float UPBBaseResourceComponent::GetMax(FName ResourceName) const
+float UPBBaseResourceComponent::GetResourceMax(FName ResourceName) const
 {
-	const FPBResourceState* Resource = FindResource(ResourceName);
-	return Resource ? FPBFixedPoint::ToFloat(Resource->MaxRaw) : 0.0f;
+	return GetMax(ResourceName);
 }
 
-float UPBBaseResourceComponent::GetRatio(FName ResourceName) const
+float UPBBaseResourceComponent::GetResourceRatio(FName ResourceName) const
 {
-	const FPBResourceState* Resource = FindResource(ResourceName);
-	return Resource && Resource->MaxRaw > 0 ? static_cast<float>(Resource->CurrentRaw) / Resource->MaxRaw : 0.0f;
+	return GetRatio(ResourceName);
+}
+
+void UPBBaseResourceComponent::TakeDamage(int32 Damage)
+{
+	if (Damage <= 0)
+	{
+		return;
+	}
+
+	ApplyResourceDelta(PBResourceNames::Health, -static_cast<float>(Damage));
+}
+
+bool UPBBaseResourceComponent::IsDead() const
+{
+	return GetCurrent(PBResourceNames::Health) <= 0.0f;
 }
 
 void UPBBaseResourceComponent::SetResource(FName ResourceName, float Current, float Max)
 {
 	FPBResourceState& Resource = Resources.FindOrAdd(ResourceName);
+	const int32 PrevCurrentRaw = Resource.CurrentRaw;
 	Resource.MaxRaw = FPBFixedPoint::ToRawNonNegative(Max);
 	Resource.CurrentRaw = FPBFixedPoint::ClampRaw(FPBFixedPoint::ToRaw(Current), 0, Resource.MaxRaw);
 	Resource.RegenRawRemainder = 0.0;
-	BroadcastResourceChanged(ResourceName, Resource);
+	OnResourceChanged.Broadcast(ResourceName);
+	if (PrevCurrentRaw != Resource.CurrentRaw)
+	{
+		OnResourceCurrentChanged.Broadcast(ResourceName, FPBFixedPoint::ToFloat(Resource.CurrentRaw));
+	}
 }
 
-void UPBBaseResourceComponent::SetCurrent(FName ResourceName, float Value)
+void UPBBaseResourceComponent::SetResourceCurrent(FName ResourceName, float Value)
 {
 	FPBResourceState* Resource = FindResource(ResourceName);
 	if (!Resource)
@@ -50,15 +68,22 @@ void UPBBaseResourceComponent::SetCurrent(FName ResourceName, float Value)
 		return;
 	}
 
+	const int32 PrevCurrentRaw = Resource->CurrentRaw;
 	Resource->CurrentRaw = FPBFixedPoint::ClampRaw(FPBFixedPoint::ToRaw(Value), 0, Resource->MaxRaw);
+	if (PrevCurrentRaw == Resource->CurrentRaw)
+	{
+		return;
+	}
+
 	if (Resource->CurrentRaw >= Resource->MaxRaw)
 	{
 		Resource->RegenRawRemainder = 0.0;
 	}
-	BroadcastResourceChanged(ResourceName, *Resource);
+
+	OnResourceCurrentChanged.Broadcast(ResourceName, FPBFixedPoint::ToFloat(Resource->CurrentRaw));
 }
 
-void UPBBaseResourceComponent::SetMax(FName ResourceName, float Value, bool bFillCurrent)
+void UPBBaseResourceComponent::SetResourceMax(FName ResourceName, float Value, bool bFillCurrent)
 {
 	FPBResourceState* Resource = FindResource(ResourceName);
 	if (!Resource)
@@ -66,16 +91,27 @@ void UPBBaseResourceComponent::SetMax(FName ResourceName, float Value, bool bFil
 		return;
 	}
 
+	const int32 PrevMaxRaw = Resource->MaxRaw;
+	const int32 PrevCurrentRaw = Resource->CurrentRaw;
 	Resource->MaxRaw = FPBFixedPoint::ToRawNonNegative(Value);
 	Resource->CurrentRaw = bFillCurrent ? Resource->MaxRaw : FPBFixedPoint::ClampRaw(Resource->CurrentRaw, 0, Resource->MaxRaw);
+	if (PrevMaxRaw == Resource->MaxRaw && PrevCurrentRaw == Resource->CurrentRaw)
+	{
+		return;
+	}
+
 	if (Resource->CurrentRaw >= Resource->MaxRaw)
 	{
 		Resource->RegenRawRemainder = 0.0;
 	}
-	BroadcastResourceChanged(ResourceName, *Resource);
+	OnResourceChanged.Broadcast(ResourceName);
+	if (PrevCurrentRaw != Resource->CurrentRaw)
+	{
+		OnResourceCurrentChanged.Broadcast(ResourceName, FPBFixedPoint::ToFloat(Resource->CurrentRaw));
+	}
 }
 
-void UPBBaseResourceComponent::SetRegenPerSecond(FName ResourceName, float Value)
+void UPBBaseResourceComponent::SetResourceRegenPerSecond(FName ResourceName, float Value)
 {
 	FPBResourceState* Resource = FindResource(ResourceName);
 	if (!Resource)
@@ -83,11 +119,18 @@ void UPBBaseResourceComponent::SetRegenPerSecond(FName ResourceName, float Value
 		return;
 	}
 
+	const int32 PrevRegenPerSecondRaw = Resource->RegenPerSecondRaw;
 	Resource->RegenPerSecondRaw = FPBFixedPoint::ToRawNonNegative(Value);
+	if (PrevRegenPerSecondRaw == Resource->RegenPerSecondRaw)
+	{
+		return;
+	}
+
 	Resource->RegenRawRemainder = 0.0;
+	OnResourceChanged.Broadcast(ResourceName);
 }
 
-void UPBBaseResourceComponent::ApplyDelta(FName ResourceName, float Delta)
+void UPBBaseResourceComponent::ApplyResourceDelta(FName ResourceName, float Delta)
 {
 	FPBResourceState* Resource = FindResource(ResourceName);
 	const int32 RawDelta = FPBFixedPoint::ToRaw(Delta);
@@ -96,29 +139,35 @@ void UPBBaseResourceComponent::ApplyDelta(FName ResourceName, float Delta)
 		return;
 	}
 
+	const int32 PrevCurrentRaw = Resource->CurrentRaw;
 	Resource->CurrentRaw = FPBFixedPoint::ClampRaw(Resource->CurrentRaw + RawDelta, 0, Resource->MaxRaw);
+	if (PrevCurrentRaw == Resource->CurrentRaw)
+	{
+		return;
+	}
+
 	if (Resource->CurrentRaw >= Resource->MaxRaw)
 	{
 		Resource->RegenRawRemainder = 0.0;
 	}
-	BroadcastResourceChanged(ResourceName, *Resource);
+	OnResourceCurrentChanged.Broadcast(ResourceName, FPBFixedPoint::ToFloat(Resource->CurrentRaw));
 }
 
-bool UPBBaseResourceComponent::CanConsume(FName ResourceName, float Cost) const
+bool UPBBaseResourceComponent::CanConsumeResource(FName ResourceName, float Cost) const
 {
 	const FPBResourceState* Resource = FindResource(ResourceName);
 	const int32 RawCost = FPBFixedPoint::ToRaw(Cost);
 	return Resource && Cost >= 0.0f && RawCost >= 0 && Resource->CurrentRaw >= RawCost;
 }
 
-bool UPBBaseResourceComponent::Consume(FName ResourceName, float Cost)
+bool UPBBaseResourceComponent::ConsumeResource(FName ResourceName, float Cost)
 {
-	if (!CanConsume(ResourceName, Cost))
+	if (!CanConsumeResource(ResourceName, Cost))
 	{
 		return false;
 	}
 
-	ApplyDelta(ResourceName, -Cost);
+	ApplyResourceDelta(ResourceName, -Cost);
 	return true;
 }
 
@@ -160,9 +209,27 @@ void UPBBaseResourceComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 		if (PrevCurrent != Resource.CurrentRaw)
 		{
-			BroadcastResourceChanged(ResourcePair.Key, Resource);
+			OnResourceCurrentChanged.Broadcast(ResourcePair.Key, FPBFixedPoint::ToFloat(Resource.CurrentRaw));
 		}
 	}
+}
+
+float UPBBaseResourceComponent::GetCurrent(FName ResourceName) const
+{
+	const FPBResourceState* Resource = FindResource(ResourceName);
+	return Resource ? FPBFixedPoint::ToFloat(Resource->CurrentRaw) : 0.0f;
+}
+
+float UPBBaseResourceComponent::GetMax(FName ResourceName) const
+{
+	const FPBResourceState* Resource = FindResource(ResourceName);
+	return Resource ? FPBFixedPoint::ToFloat(Resource->MaxRaw) : 0.0f;
+}
+
+float UPBBaseResourceComponent::GetRatio(FName ResourceName) const
+{
+	const FPBResourceState* Resource = FindResource(ResourceName);
+	return Resource && Resource->MaxRaw > 0 ? static_cast<float>(Resource->CurrentRaw) / Resource->MaxRaw : 0.0f;
 }
 
 FPBResourceState* UPBBaseResourceComponent::FindResource(FName ResourceName)
@@ -173,10 +240,4 @@ FPBResourceState* UPBBaseResourceComponent::FindResource(FName ResourceName)
 const FPBResourceState* UPBBaseResourceComponent::FindResource(FName ResourceName) const
 {
 	return Resources.Find(ResourceName);
-}
-
-void UPBBaseResourceComponent::BroadcastResourceChanged(FName ResourceName, const FPBResourceState& Resource)
-{
-	(void)ResourceName;
-	(void)Resource;
 }

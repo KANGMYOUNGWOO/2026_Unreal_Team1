@@ -29,7 +29,7 @@ void UPBBallComboComponent::SetCombo(int32 Value)
 
 	CurrentCombo = NewCombo;
 	MaxCombo = FMath::Max(MaxCombo, CurrentCombo);
-	BroadcastComboChanged();
+	OnComboChanged.Broadcast(CurrentCombo, MaxCombo);
 }
 
 void UPBBallComboComponent::AddCombo(int32 Delta)
@@ -56,9 +56,4 @@ bool UPBBallComboComponent::TryConsumeCombo(int32 Cost)
 void UPBBallComboComponent::ResetCombo()
 {
 	SetCombo(0);
-}
-
-void UPBBallComboComponent::BroadcastComboChanged()
-{
-	OnComboChanged.Broadcast(CurrentCombo, MaxCombo);
 }

@@ -10,47 +10,48 @@ UPBBallPhysicsComponent::UPBBallPhysicsComponent()
 	bAutoActivate = true;
 }
 
-void UPBBallPhysicsComponent::BeginPlay()
+void UPBBallPhysicsComponent::InitializeDependencies(UPrimitiveComponent* InPrimitiveComponent)
 {
-	Super::BeginPlay();
-
-	// Owner의 Root Primitive를 실제 이동 및 충돌 컴포넌트로 사용한다.
-	CollisionComponent = ResolveCollisionComponent();
-	if (!CollisionComponent)
-	{
-		UE_LOG(LogTemp, Error, TEXT("%s requires a UPrimitiveComponent as its owner's root component."),
-			*GetName());
-		SetComponentTickEnabled(false);
-	}
-}
-
-void UPBBallPhysicsComponent::TickComponent(
-	const float DeltaTime,
-	const ELevelTick TickType,
-	FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	if (DeltaTime <= 0.0f || bMovementPaused)
-	{
-		return;
-	}
-
-	// XY 평면 속도에 인공 중력을 적용한 뒤 이번 프레임 이동을 처리한다.
-	Velocity.Z = 0.0f;
-	Velocity.X -= XGravity * DeltaTime;
-	MoveWithSweep(DeltaTime);
-}
-
-void UPBBallPhysicsComponent::SetVelocity(FVector NewVelocity)
-{
-	NewVelocity.Z = 0.0f;
-	Velocity = NewVelocity;
+	PrimitiveComponent = InPrimitiveComponent;
 }
 
 FVector UPBBallPhysicsComponent::GetVelocity() const
 {
 	return Velocity;
+}
+
+void UPBBallPhysicsComponent::AddVelocity(FVector VelocityToAdd)
+{
+	VelocityToAdd.Z = 0.0f;
+	Velocity += VelocityToAdd;
+	Velocity.Z = 0.0f;
+}
+
+void UPBBallPhysicsComponent::AddImpulse(FVector Impulse)
+{
+	Impulse.Z = 0.0f;
+	const float SafeMass = FMath::Max(Mass, 0.001f);
+	AddVelocity(Impulse / SafeMass);
+}
+
+void UPBBallPhysicsComponent::StopMovement()
+{
+	Velocity = FVector::ZeroVector;
+}
+
+void UPBBallPhysicsComponent::PauseMovement()
+{
+	bMovementPaused = true;
+}
+
+void UPBBallPhysicsComponent::ResumeMovement()
+{
+	bMovementPaused = false;
+}
+
+bool UPBBallPhysicsComponent::IsMovementPaused() const
+{
+	return bMovementPaused;
 }
 
 void UPBBallPhysicsComponent::SetMass(float NewMass)
@@ -73,18 +74,10 @@ float UPBBallPhysicsComponent::GetBounceDamping() const
 	return BounceDamping;
 }
 
-void UPBBallPhysicsComponent::AddVelocity(FVector VelocityToAdd)
+void UPBBallPhysicsComponent::SetVelocity(FVector NewVelocity)
 {
-	VelocityToAdd.Z = 0.0f;
-	Velocity += VelocityToAdd;
-	Velocity.Z = 0.0f;
-}
-
-void UPBBallPhysicsComponent::AddImpulse(FVector Impulse)
-{
-	Impulse.Z = 0.0f;
-	const float SafeMass = FMath::Max(Mass, 0.001f);
-	AddVelocity(Impulse / SafeMass);
+	NewVelocity.Z = 0.0f;
+	Velocity = NewVelocity;
 }
 
 void UPBBallPhysicsComponent::Launch(FVector Direction, const float Strength)
@@ -94,32 +87,11 @@ void UPBBallPhysicsComponent::Launch(FVector Direction, const float Strength)
 	Velocity = NormalizedDirection * FMath::Max(Strength, 0.0f);
 }
 
-void UPBBallPhysicsComponent::Stop()
-{
-	Velocity = FVector::ZeroVector;
-}
-
-void UPBBallPhysicsComponent::PauseMovement()
-{
-	bMovementPaused = true;
-}
-
-void UPBBallPhysicsComponent::ResumeMovement()
-{
-	bMovementPaused = false;
-}
-
-bool UPBBallPhysicsComponent::IsMovementPaused() const
-{
-	return bMovementPaused;
-}
-
 void UPBBallPhysicsComponent::MoveWithSweep(const float DeltaTime)
 {
 	// Tick에서 한 프레임 동안 이동할 전체 거리를 계산한다.
 	// 이 함수는 위치를 직접 순간이동시키지 않고 Root Primitive를 Sweep 이동시킨다.
-	UPrimitiveComponent* RootPrimitive = ResolveCollisionComponent();
-	if (!RootPrimitive || DeltaTime <= 0.0f)
+	if (!PrimitiveComponent || DeltaTime <= 0.0f)
 	{
 		return;
 	}
@@ -140,9 +112,9 @@ void UPBBallPhysicsComponent::MoveWithSweep(const float DeltaTime)
 	{
 		FHitResult Hit;
 		// MoveComponent는 충돌 지점까지만 실제 이동하고 Hit에 Sweep 결과를 기록한다.
-		RootPrimitive->MoveComponent(
+		PrimitiveComponent->MoveComponent(
 			RemainingMove,
-			RootPrimitive->GetComponentQuat(),
+			PrimitiveComponent->GetComponentQuat(),
 			true,
 			&Hit,
 			MOVECOMP_NoFlags,
@@ -153,7 +125,6 @@ void UPBBallPhysicsComponent::MoveWithSweep(const float DeltaTime)
 		{
 			break;
 		}
-
 		OnBallMovementHit.Broadcast(Hit);
 
 		// 벽의 법선도 XY 평면으로 제한한 뒤 현재 진행 방향을 반사한다.
@@ -162,7 +133,7 @@ void UPBBallPhysicsComponent::MoveWithSweep(const float DeltaTime)
 		ImpactNormal = ImpactNormal.GetSafeNormal();
 		if (ImpactNormal.IsNearlyZero())
 		{
-			Stop();
+			Velocity = FVector::ZeroVector;
 			break;
 		}
 
@@ -191,17 +162,34 @@ void UPBBallPhysicsComponent::MoveWithSweep(const float DeltaTime)
 	ClampVelocityToSpeedRange();
 }
 
-UPrimitiveComponent* UPBBallPhysicsComponent::ResolveCollisionComponent()
+void UPBBallPhysicsComponent::BeginPlay()
 {
-	// 캐시된 컴포넌트가 없으면 Owner의 Root에서 다시 찾는다.
-	if (IsValid(CollisionComponent))
+	Super::BeginPlay();
+
+	if (!PrimitiveComponent)
 	{
-		return CollisionComponent;
+		UE_LOG(LogTemp, Error, TEXT("%s requires a UPrimitiveComponent as its owner's root component."),
+			*GetName());
+		SetComponentTickEnabled(false);
+	}
+}
+
+void UPBBallPhysicsComponent::TickComponent(
+	const float DeltaTime,
+	const ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (DeltaTime <= 0.0f || bMovementPaused)
+	{
+		return;
 	}
 
-	AActor* Owner = GetOwner();
-	CollisionComponent = Owner ? Cast<UPrimitiveComponent>(Owner->GetRootComponent()) : nullptr;
-	return CollisionComponent;
+	// XY 평면 속도에 인공 중력을 적용한 뒤 이번 프레임 이동을 처리한다.
+	Velocity.Z = 0.0f;
+	Velocity.X -= XGravity * DeltaTime;
+	MoveWithSweep(DeltaTime);
 }
 
 float UPBBallPhysicsComponent::CalculateImpactDamping(

@@ -3,13 +3,13 @@
 
 #include "PBBallBase.h"
 
-#include "Component/PBBallCollisionComponent.h"
+#include "Component/PBBallHitReactionComponent.h"
 #include "Component/PBBallComboComponent.h"
 #include "Component/PBBallPhysicsComponent.h"
-#include "PinBallLike/Actor/Common/Componenet/Resource/PBBaseResourceComponent.h"
-#include "PinBallLike/Actor/Common/Componenet/Resource/PBResourceTypes.h"
-#include "PinBallLike/Actor/Common/Componenet/Stat/PBBaseStatComponent.h"
-#include "PinBallLike/Actor/Common/Componenet/Stat/PBStatTypes.h"
+#include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
+#include "PinBallLike/Actor/Common/Component/Resource/PBResourceTypes.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
 
@@ -26,22 +26,26 @@ APBBallBase::APBBallBase()
 	CollisionSphere->SetEnableGravity(false);
 	CollisionSphere->SetGenerateOverlapEvents(true);
 	CollisionSphere->SetNotifyRigidBodyCollision(true);
-
-	// Movement
-	PhysicsComponent = CreateDefaultSubobject<UPBBallPhysicsComponent>(TEXT("PhysicsComponent"));
 	
 	// Stat
 	StatComponent = CreateDefaultSubobject<UPBBaseStatComponent>(TEXT("StatComponent"));
-
+	StatComponent->OnStatChanged.AddUObject(this, &APBBallBase::HandleStatChanged);
+	
 	// Resource
 	ResourceComponent = CreateDefaultSubobject<UPBBaseResourceComponent>(TEXT("ResourceComponent"));
-
+	
 	// Combo
 	ComboComponent = CreateDefaultSubobject<UPBBallComboComponent>(TEXT("ComboComponent"));
+	
+	// Physics
+	PhysicsComponent = CreateDefaultSubobject<UPBBallPhysicsComponent>(TEXT("PhysicsComponent"));
+	PhysicsComponent->InitializeDependencies(CollisionSphere.Get());
+	
+	// Hit Reaction
+	HitReactionComponent = CreateDefaultSubobject<UPBBallHitReactionComponent>(TEXT("HitReactionComponent"));
+	HitReactionComponent->InitializeDependencies(PhysicsComponent.Get(), ResourceComponent.Get(), ComboComponent.Get());
 
-	// Collision Rule
-	CollisionComponent = CreateDefaultSubobject<UPBBallCollisionComponent>(TEXT("CollisionComponent"));
-
+	// @Test
 	DefaultStats.Emplace(PBStatNames::Mass, 1);
 	DefaultStats.Emplace(PBStatNames::Bounciness, 30);
 	DefaultStats.Emplace(PBStatNames::Size, 25);
@@ -51,22 +55,8 @@ APBBallBase::APBBallBase()
 
 	DefaultResources.Emplace(PBResourceNames::Health, 100.0f, 100.0f, 0.0f);
 	DefaultResources.Emplace(PBResourceNames::Mana, 50.0f, 50.0f, 1.0f);
-	
-	InitializeDefaultStats();
-	InitializeDefaultResources();
 
 	DisplayName = "BaseBall";
-}
-
-void APBBallBase::LaunchBall(const FVector Impulse)
-{
-	PhysicsComponent->Launch(Impulse, Impulse.Size2D());
-}
-
-void APBBallBase::AddVelocity(const FVector VelocityToAdd)
-{
-	UE_LOG(LogTemp, Warning, TEXT("AddVelocity %s"), *VelocityToAdd.ToString());
-	PhysicsComponent->AddVelocity(VelocityToAdd);
 }
 
 void APBBallBase::ApplyStatData(const TArray<FPBBallStatData>& StatData)
@@ -77,8 +67,7 @@ void APBBallBase::ApplyStatData(const TArray<FPBBallStatData>& StatData)
 		{
 			continue;
 		}
-
-		SetStat(Stat.StatName, Stat.Value);
+		StatComponent->SetStat(Stat.StatName, Stat.Value);
 	}
 }
 
@@ -90,162 +79,17 @@ void APBBallBase::ApplyResourceData(const TArray<FPBBallResourceData>& ResourceD
 		{
 			continue;
 		}
-
-		SetResource(Resource.ResourceName, Resource.Current, Resource.Max);
-		SetResourceRegenPerSecond(Resource.ResourceName, Resource.RegenPerSecond);
+		ResourceComponent->SetResource(Resource.ResourceName, Resource.Current, Resource.Max);
+		ResourceComponent->SetResourceRegenPerSecond(Resource.ResourceName, Resource.RegenPerSecond);
 	}
 }
 
-bool APBBallBase::HasStat(FName StatName) const
+void APBBallBase::BeginPlay()
 {
-	return StatComponent->HasStat(StatName);
-}
-
-int32 APBBallBase::GetStat(FName StatName) const
-{
-	return StatComponent->GetStat(StatName);
-}
-
-void APBBallBase::SetStat(FName StatName, int32 Value)
-{
-	StatComponent->SetStat(StatName, Value);
-	ApplyStatToComponents(StatName);
-}
-
-void APBBallBase::ApplyStat(FName StatName, int32 Delta)
-{
-	if (Delta == 0)
-	{
-		return;
-	}
-	
-	StatComponent->ApplyStat(StatName, Delta);
-	ApplyStatToComponents(StatName);
-}
-
-bool APBBallBase::HasResource(FName ResourceName) const
-{
-	return ResourceComponent->HasResource(ResourceName);
-}
-
-float APBBallBase::GetResourceCurrent(FName ResourceName) const
-{
-	return ResourceComponent->GetCurrent(ResourceName);
-}
-
-float APBBallBase::GetResourceMax(FName ResourceName) const
-{
-	return ResourceComponent->GetMax(ResourceName);
-}
-
-float APBBallBase::GetResourceRatio(FName ResourceName) const
-{
-	return ResourceComponent->GetRatio(ResourceName);
-}
-
-void APBBallBase::SetResource(FName ResourceName, float Current, float Max)
-{
-	ResourceComponent->SetResource(ResourceName, Current, Max);
-}
-
-void APBBallBase::SetResourceCurrent(FName ResourceName, float Value)
-{
-	ResourceComponent->SetCurrent(ResourceName, Value);
-}
-
-void APBBallBase::SetResourceMax(FName ResourceName, float Value, bool bFillCurrent)
-{
-	ResourceComponent->SetMax(ResourceName, Value, bFillCurrent);
-}
-
-void APBBallBase::SetResourceRegenPerSecond(FName ResourceName, float Value)
-{
-	ResourceComponent->SetRegenPerSecond(ResourceName, Value);
-}
-
-void APBBallBase::ApplyResourceDelta(FName ResourceName, float Delta)
-{
-	ResourceComponent->ApplyDelta(ResourceName, Delta);
-}
-
-bool APBBallBase::CanConsumeResource(FName ResourceName, float Cost) const
-{
-	return ResourceComponent->CanConsume(ResourceName, Cost);
-}
-
-bool APBBallBase::ConsumeResource(FName ResourceName, float Cost)
-{
-	return ResourceComponent->Consume(ResourceName, Cost);
-}
-
-int32 APBBallBase::GetCombo() const
-{
-	return ComboComponent->GetCombo();
-}
-
-void APBBallBase::SetCombo(int32 Value)
-{
-	ComboComponent->SetCombo(Value);
-}
-
-void APBBallBase::AddCombo(int32 Delta)
-{
-	ComboComponent->AddCombo(Delta);
-}
-
-bool APBBallBase::TryConsumeCombo(int32 Cost)
-{
-	return ComboComponent->TryConsumeCombo(Cost);
-}
-
-void APBBallBase::ResetCombo()
-{
-	ComboComponent->ResetCombo();
-}
-
-FVector APBBallBase::GetVelocity() const
-{
-	return PhysicsComponent->GetVelocity();
-}
-
-void APBBallBase::AddImpulse(FVector Impulse)
-{
-	PhysicsComponent->AddImpulse(Impulse);
-}
-
-void APBBallBase::StopMovement()
-{
-	PhysicsComponent->Stop();
-}
-
-void APBBallBase::PauseMovement()
-{
-	PhysicsComponent->PauseMovement();
-}
-
-void APBBallBase::ResumeMovement()
-{
-	PhysicsComponent->ResumeMovement();
-}
-
-bool APBBallBase::IsMovementPaused() const
-{
-	return PhysicsComponent->IsMovementPaused();
-}
-
-void APBBallBase::TakeDamage(int32 Damage)
-{
-	if (Damage <= 0)
-	{
-		return;
-	}
-
-	ApplyResourceDelta(PBResourceNames::Health, -Damage);
-}
-
-bool APBBallBase::IsDead() const
-{
-	return GetResourceCurrent(PBResourceNames::Health) <= 0.0f;
+	Super::BeginPlay();
+		
+	InitializeDefaultStats();
+	InitializeDefaultResources();
 }
 
 void APBBallBase::InitializeDefaultStats()
@@ -258,20 +102,18 @@ void APBBallBase::InitializeDefaultResources()
 	ApplyResourceData(DefaultResources);
 }
 
-void APBBallBase::ApplyStatToComponents(FName StatName)
+void APBBallBase::HandleStatChanged(FName StatName, int32 NewValue)
 {
-	const int32 StatValue = GetStat(StatName);
-
 	if (StatName == PBStatNames::Mass)
 	{
-		PhysicsComponent->SetMass(static_cast<float>(StatValue));
+		PhysicsComponent->SetMass(static_cast<float>(NewValue));
 	}
 	else if (StatName == PBStatNames::Bounciness)
 	{
-		PhysicsComponent->SetBounceDamping(static_cast<float>(StatValue) / 100.0f);
+		PhysicsComponent->SetBounceDamping(static_cast<float>(NewValue) / 100.0f);
 	}
 	else if (StatName == PBStatNames::Size)
 	{
-		CollisionSphere->SetSphereRadius(FMath::Max(static_cast<float>(StatValue), 1.0f), true);
+		CollisionSphere->SetSphereRadius(FMath::Max(static_cast<float>(NewValue), 1.0f), true);
 	}
 }
