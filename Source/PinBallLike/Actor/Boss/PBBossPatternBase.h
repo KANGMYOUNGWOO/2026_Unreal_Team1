@@ -1,10 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PBBossPatternTelegraphData.h"
 #include "UObject/Object.h"
 #include "PBBossPatternBase.generated.h"
 
 class APBBossBase;
+class APBBossPatternTelegraph;
 class UPBBossPatternComponent;
 
 UCLASS(Abstract, Blueprintable)
@@ -45,7 +47,19 @@ protected:
 	virtual void StartPattern_Implementation(APBBossBase* Boss);
 	virtual void CancelPattern_Implementation(APBBossBase* Boss);
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
+	TArray<APBBossPatternTelegraph*> SpawnTelegraph(APBBossBase* Boss);
+
+	void DestroySpawnedTelegraphs();
+	float GetMaxTelegraphDurationSeconds() const;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Pattern|Telegraph")
+	TArray<FPBBossPatternTelegraphData> TelegraphDataList;
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBossPatternComponent> OwnerPatternComponent;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<APBBossPatternTelegraph>> SpawnedTelegraphs;
 };

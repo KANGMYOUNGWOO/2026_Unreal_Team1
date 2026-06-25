@@ -21,6 +21,43 @@ void UPBBossProjectilePattern::StartPattern_Implementation(APBBossBase* Boss)
 	OwnerBoss = Boss;
 	FiredProjectileCount = 0;
 
+	SpawnTelegraph(Boss);
+
+	const float TelegraphDurationSeconds = GetMaxTelegraphDurationSeconds();
+	if (TelegraphDurationSeconds > 0.0f)
+	{
+		Boss->GetWorldTimerManager().SetTimer(
+			TelegraphTimerHandle,
+			this,
+			&UPBBossProjectilePattern::StartFireSequence,
+			TelegraphDurationSeconds,
+			false);
+		return;
+	}
+
+	StartFireSequence();
+}
+
+void UPBBossProjectilePattern::CancelPattern_Implementation(APBBossBase* Boss)
+{
+	ClearTelegraphTimer();
+	ClearFireTimer();
+	Super::CancelPattern_Implementation(Boss);
+	OwnerBoss = nullptr;
+	FiredProjectileCount = 0;
+}
+
+void UPBBossProjectilePattern::StartFireSequence()
+{
+	ClearTelegraphTimer();
+	DestroySpawnedTelegraphs();
+
+	if (!OwnerBoss || !ProjectileClass || ProjectileCount <= 0)
+	{
+		FinishPattern();
+		return;
+	}
+
 	if (FireIntervalSeconds <= 0.0f)
 	{
 		while (FiredProjectileCount < ProjectileCount)
@@ -41,20 +78,13 @@ void UPBBossProjectilePattern::StartPattern_Implementation(APBBossBase* Boss)
 
 	if (FiredProjectileCount < ProjectileCount)
 	{
-		Boss->GetWorldTimerManager().SetTimer(
+		OwnerBoss->GetWorldTimerManager().SetTimer(
 			FireTimerHandle,
 			this,
 			&UPBBossProjectilePattern::FireProjectile,
 			FireIntervalSeconds,
 			true);
 	}
-}
-
-void UPBBossProjectilePattern::CancelPattern_Implementation(APBBossBase* Boss)
-{
-	ClearFireTimer();
-	OwnerBoss = nullptr;
-	FiredProjectileCount = 0;
 }
 
 void UPBBossProjectilePattern::FireProjectile()
@@ -113,6 +143,14 @@ void UPBBossProjectilePattern::ClearFireTimer()
 	if (OwnerBoss)
 	{
 		OwnerBoss->GetWorldTimerManager().ClearTimer(FireTimerHandle);
+	}
+}
+
+void UPBBossProjectilePattern::ClearTelegraphTimer()
+{
+	if (OwnerBoss)
+	{
+		OwnerBoss->GetWorldTimerManager().ClearTimer(TelegraphTimerHandle);
 	}
 }
 

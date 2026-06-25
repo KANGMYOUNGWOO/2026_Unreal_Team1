@@ -32,8 +32,10 @@ protected:
 	float FireIntervalSeconds = 0.2f;
 
 private:
+	void StartFireSequence();
 	void FireProjectile();
 	void ClearFireTimer();
+	void ClearTelegraphTimer();
 	FVector GetProjectileSpawnLocation() const;
 	FRotator GetProjectileSpawnRotation(const FVector& SpawnLocation) const;
 	AActor* FindPinballActor() const;
@@ -45,5 +47,6 @@ private:
 	FVector SpawnOffset = FVector::ZeroVector;
 
 	int32 FiredProjectileCount = 0;
+	FTimerHandle TelegraphTimerHandle;
 	FTimerHandle FireTimerHandle;
 };

@@ -5,6 +5,8 @@
 #include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 #include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 #include "PinBallLike/Interface/BallDamageSource.h"
+#include "PinBallLike/Interface/Comboable.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 #include "Component/PBBossGroggyComponent.h"
 #include "Component/PBBossPatternComponent.h"
 #include "Component/PBBossStatComponent.h"
@@ -79,7 +81,7 @@ void APBBossBase::BeginPlay()
 
 	SetBossState(EPBBossState::Idle);
 	BindBossCollisionEvents();
-	SetWeaknessCollisionEnabled(false);
+	SetWeaknessState(false);
 	CreateBossStatusWidget();
 }
 
@@ -87,11 +89,7 @@ void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	RemoveBossStatusWidget();
 
-	if (BossWeaknessComponent)
-	{
-		BossWeaknessComponent->CloseWeakness();
-	}
-	SetWeaknessCollisionEnabled(false);
+	SetWeaknessState(false);
 
 	ClearGroggyResetTimer();
 	Super::EndPlay(EndPlayReason);
@@ -99,12 +97,7 @@ void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void APBBossBase::TakeBossDamage_Implementation(FName GroggyPointName, int32 DamageAmount)
 {
-	if (DamageAmount <= 0 || IsDead())
-	{
-		return;
-	}
-
-	if (IsWeaknessHitBlocked(GroggyPointName))
+	if (!CanApplyBossDamage(GroggyPointName, DamageAmount))
 	{
 		return;
 	}
@@ -138,14 +131,14 @@ void APBBossBase::OnGroggyTriggered_Implementation()
 
 	if (BossPatternComponent)
 	{
-		BossPatternComponent->CancelCurrentPattern();
+		if (BossPatternComponent->GetCurrentPattern())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Cancel Current Pattern."));
+		}
+		BossPatternComponent->PausePatternSystem();
 	}
 
-	if (BossWeaknessComponent)
-	{
-		BossWeaknessComponent->OpenWeakness();
-	}
-	SetWeaknessCollisionEnabled(true);
+	SetWeaknessState(true);
 
 	StartGroggyResetTimer();
 	BP_OnGroggyStarted();
@@ -168,11 +161,7 @@ void APBBossBase::OnDeadTriggered_Implementation()
 		BossPatternComponent->StopPatternSystem();
 	}
 
-	if (BossWeaknessComponent)
-	{
-		BossWeaknessComponent->CloseWeakness();
-	}
-	SetWeaknessCollisionEnabled(false);
+	SetWeaknessState(false);
 
 	ClearGroggyResetTimer();
 	BP_OnDead();
@@ -202,6 +191,7 @@ void APBBossBase::HandleCollisionHit(
 
 	const FName GroggyPointName = ResolveGroggyPointName(HitComponent);
 	const int32 DamageAmount = GetPinballHitDamage(OtherActor);
+	const bool IsDamageApplied = CanApplyBossDamage(GroggyPointName, DamageAmount);
 
 	UE_LOG(LogTemp, Warning, TEXT("Boss Hit Component: %s, GroggyPoint: %s, Damage: %d"),
 		HitComponent ? *HitComponent->GetName() : TEXT("None"),
@@ -209,6 +199,11 @@ void APBBossBase::HandleCollisionHit(
 		DamageAmount);
 
 	IBossInterface::Execute_TakeBossDamage(this, GroggyPointName, DamageAmount);
+
+	if (IsDamageApplied)
+	{
+		AddPinballCombo(OtherActor);
+	}
 }
 
 void APBBossBase::BindBossCollisionEvents()
@@ -296,14 +291,32 @@ void APBBossBase::HandleGroggyDurationFinished()
 		return;
 	}
 
-	if (BossWeaknessComponent)
-	{
-		BossWeaknessComponent->CloseWeakness();
-	}
-	SetWeaknessCollisionEnabled(false);
+	SetWeaknessState(false);
 
 	BossGroggyComponent->ResetGroggy();
 	SetBossState(EPBBossState::Idle);
+
+	if (BossPatternComponent && BossPatternComponent->ResumePatternSystem())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Finished. Restart Pattern System."));
+	}
+}
+
+void APBBossBase::SetWeaknessState(bool IsOpen)
+{
+	if (BossWeaknessComponent)
+	{
+		if (IsOpen)
+		{
+			BossWeaknessComponent->OpenWeakness();
+		}
+		else
+		{
+			BossWeaknessComponent->CloseWeakness();
+		}
+	}
+
+	SetWeaknessCollisionEnabled(IsOpen);
 }
 
 void APBBossBase::SetWeaknessCollisionEnabled(bool IsEnabled)
@@ -370,6 +383,11 @@ bool APBBossBase::IsWeaknessHitBlocked(FName HitPointName) const
 	return !BossWeaknessComponent->IsWeaknessPointOpen(HitPointName);
 }
 
+bool APBBossBase::CanApplyBossDamage(FName GroggyPointName, int32 DamageAmount) const
+{
+	return DamageAmount > 0 && !IsDead() && !IsWeaknessHitBlocked(GroggyPointName);
+}
+
 bool APBBossBase::IsValidDamageSource(AActor* OtherActor, UPrimitiveComponent* OtherComponent) const
 {
 	if (!OtherActor)
@@ -407,6 +425,17 @@ int32 APBBossBase::GetPinballHitDamage(AActor* OtherActor) const
 
 	const UPBBaseStatComponent* StatComponent = OtherActor->FindComponentByClass<UPBBaseStatComponent>();
 	return StatComponent ? StatComponent->GetStat(PBStatNames::Attack) : 0;
+}
+
+void APBBossBase::AddPinballCombo(AActor* OtherActor) const
+{
+	IComboable* Comboable = PBInterfaceUtils::FindInterface<IComboable>(OtherActor);
+	if (!Comboable)
+	{
+		return;
+	}
+
+	Comboable->AddCombo(1);
 }
 
 FName APBBossBase::ResolveGroggyPointName(UPrimitiveComponent* HitComponent) const

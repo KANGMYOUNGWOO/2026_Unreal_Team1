@@ -29,15 +29,40 @@ void UPBBossPatternComponent::StartPatternSystem()
 		return;
 	}
 
+	IsPatternSystemPaused = false;
 	IsPatternSystemActive = true;
 	ScheduleNextPatternCheck();
 }
 
 void UPBBossPatternComponent::StopPatternSystem()
 {
-	IsPatternSystemActive = false;
-	CancelCurrentPattern();
-	ClearPatternCheckTimer();
+	IsPatternSystemPaused = false;
+	DeactivatePatternSystem();
+}
+
+bool UPBBossPatternComponent::PausePatternSystem()
+{
+	if (!IsPatternSystemActive)
+	{
+		return false;
+	}
+
+	IsPatternSystemPaused = true;
+	DeactivatePatternSystem();
+
+	return true;
+}
+
+bool UPBBossPatternComponent::ResumePatternSystem()
+{
+	if (!IsPatternSystemPaused)
+	{
+		return false;
+	}
+
+	StartPatternSystem();
+
+	return true;
 }
 
 void UPBBossPatternComponent::TryStartNextPattern()
@@ -162,6 +187,13 @@ void UPBBossPatternComponent::ClearPatternCheckTimer()
 	{
 		World->GetTimerManager().ClearTimer(PatternCheckTimerHandle);
 	}
+}
+
+void UPBBossPatternComponent::DeactivatePatternSystem()
+{
+	IsPatternSystemActive = false;
+	CancelCurrentPattern();
+	ClearPatternCheckTimer();
 }
 
 void UPBBossPatternComponent::SetPatternCooldown(UPBBossPatternBase* Pattern)

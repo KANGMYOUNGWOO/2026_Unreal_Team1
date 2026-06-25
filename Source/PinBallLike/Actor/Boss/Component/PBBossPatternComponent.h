@@ -28,6 +28,12 @@ public:
 	void StopPatternSystem();
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern")
+	bool PausePatternSystem();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern")
+	bool ResumePatternSystem();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern")
 	void TryStartNextPattern();
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern")
@@ -57,6 +63,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Pattern")
 	bool IsPatternRunning = false;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Pattern")
+	bool IsPatternSystemPaused = false;
+
 	UPROPERTY(BlueprintAssignable, Category = "Boss|Pattern")
 	FPBBossPatternChangedSignature OnPatternStarted;
 
@@ -70,6 +79,7 @@ private:
 	void InitializePatterns();
 	void ScheduleNextPatternCheck();
 	void ClearPatternCheckTimer();
+	void DeactivatePatternSystem();
 	void SetPatternCooldown(UPBBossPatternBase* Pattern);
 	void ClearCurrentPattern();
 	void SetOwnerBossIdleIfPatternState() const;

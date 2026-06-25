@@ -84,11 +84,14 @@ protected:
 	void StartGroggyResetTimer();
 	void ClearGroggyResetTimer();
 	void HandleGroggyDurationFinished();
+	void SetWeaknessState(bool IsOpen);
 	void SetWeaknessCollisionEnabled(bool IsEnabled);
 	bool IsWeaknessCollisionComponent(const UPrimitiveComponent* PrimitiveComponent) const;
 	bool IsWeaknessHitBlocked(FName HitPointName) const;
+	bool CanApplyBossDamage(FName GroggyPointName, int32 DamageAmount) const;
 	bool IsValidDamageSource(AActor* OtherActor, UPrimitiveComponent* OtherComponent) const;
 	int32 GetPinballHitDamage(AActor* OtherActor) const;
+	void AddPinballCombo(AActor* OtherActor) const;
 	FName ResolveGroggyPointName(UPrimitiveComponent* HitComponent) const;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Collision")
@@ -114,9 +117,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Profile")
 	FText BossName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
-	int32 PinballHitDamage = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy")
 	FName DefaultGroggyPointName = TEXT("Normal");
