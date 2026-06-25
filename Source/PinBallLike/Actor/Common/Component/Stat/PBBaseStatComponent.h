@@ -9,7 +9,7 @@
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FPBOnStatChanged, FName, int32);
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(PinBall), meta=(BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBaseStatComponent : public UActorComponent, public IStatProvider
 {
 	GENERATED_BODY()

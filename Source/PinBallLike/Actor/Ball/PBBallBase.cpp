@@ -29,7 +29,6 @@ APBBallBase::APBBallBase()
 	
 	// Stat
 	StatComponent = CreateDefaultSubobject<UPBBaseStatComponent>(TEXT("StatComponent"));
-	StatComponent->OnStatChanged.AddUObject(this, &APBBallBase::HandleStatChanged);
 	
 	// Resource
 	ResourceComponent = CreateDefaultSubobject<UPBBaseResourceComponent>(TEXT("ResourceComponent"));
@@ -39,7 +38,7 @@ APBBallBase::APBBallBase()
 	
 	// Physics
 	PhysicsComponent = CreateDefaultSubobject<UPBBallPhysicsComponent>(TEXT("PhysicsComponent"));
-	PhysicsComponent->InitializeDependencies(CollisionSphere.Get());
+	PhysicsComponent->InitializeDependencies(CollisionSphere.Get(), StatComponent.Get());
 	
 	// Hit Reaction
 	HitReactionComponent = CreateDefaultSubobject<UPBBallHitReactionComponent>(TEXT("HitReactionComponent"));
@@ -87,7 +86,7 @@ void APBBallBase::ApplyResourceData(const TArray<FPBBallResourceData>& ResourceD
 void APBBallBase::BeginPlay()
 {
 	Super::BeginPlay();
-		
+	
 	InitializeDefaultStats();
 	InitializeDefaultResources();
 }
@@ -100,20 +99,4 @@ void APBBallBase::InitializeDefaultStats()
 void APBBallBase::InitializeDefaultResources()
 {
 	ApplyResourceData(DefaultResources);
-}
-
-void APBBallBase::HandleStatChanged(FName StatName, int32 NewValue)
-{
-	if (StatName == PBStatNames::Mass)
-	{
-		PhysicsComponent->SetMass(static_cast<float>(NewValue));
-	}
-	else if (StatName == PBStatNames::Bounciness)
-	{
-		PhysicsComponent->SetBounceDamping(static_cast<float>(NewValue) / 100.0f);
-	}
-	else if (StatName == PBStatNames::Size)
-	{
-		CollisionSphere->SetSphereRadius(FMath::Max(static_cast<float>(NewValue), 1.0f), true);
-	}
 }

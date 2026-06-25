@@ -9,7 +9,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnBallComboChanged, int32, CurrentCombo, int32, MaxCombo);
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(PinBall), meta=(BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBallComboComponent : public UActorComponent, public IComboable
 {
 	GENERATED_BODY()

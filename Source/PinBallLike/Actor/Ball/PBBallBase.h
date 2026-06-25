@@ -75,7 +75,6 @@ protected:
 private:
 	void InitializeDefaultStats();
 	void InitializeDefaultResources();
-	void HandleStatChanged(FName StatName, int32 NewValue);
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
 	TObjectPtr<USphereComponent> CollisionSphere;
