@@ -1,65 +1,35 @@
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 #include "PBBallPhysicsComponent.h"
-========
-#include "PBBallMovementComponent.h"
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 UPBBallPhysicsComponent::UPBBallPhysicsComponent()
-========
-UPBBallMovementComponent::UPBBallMovementComponent()
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 	bAutoActivate = true;
 }
 
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 void UPBBallPhysicsComponent::InitializeDependencies(UPrimitiveComponent* InPrimitiveComponent, UPBBaseStatComponent* InStatComponent)
-========
-void UPBBallMovementComponent::BeginPlay()
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 {
 	PrimitiveComponent = InPrimitiveComponent;
 	StatComponent = InStatComponent;
 }
 
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 FVector UPBBallPhysicsComponent::GetVelocity() const
-========
-void UPBBallMovementComponent::TickComponent(
-	const float DeltaTime,
-	const ELevelTick TickType,
-	FActorComponentTickFunction* ThisTickFunction)
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 {
 	return Velocity;
 }
 
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 void UPBBallPhysicsComponent::AddVelocity(FVector VelocityToAdd)
-========
-void UPBBallMovementComponent::SetVelocity(FVector NewVelocity)
-{
-	NewVelocity.Z = 0.0f;
-	Velocity = NewVelocity;
-}
-
-void UPBBallMovementComponent::AddVelocity(FVector VelocityToAdd)
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 {
 	VelocityToAdd.Z = 0.0f;
 	Velocity += VelocityToAdd;
 	Velocity.Z = 0.0f;
 }
 
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 void UPBBallPhysicsComponent::AddImpulse(FVector Impulse)
 {
 	Impulse.Z = 0.0f;
@@ -114,25 +84,13 @@ void UPBBallPhysicsComponent::SetVelocity(FVector NewVelocity)
 }
 
 void UPBBallPhysicsComponent::Launch(FVector Direction, const float Strength)
-========
-void UPBBallMovementComponent::Launch(FVector Direction, const float Strength)
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 {
 	Direction.Z = 0.0f;
 	const FVector NormalizedDirection = Direction.GetSafeNormal();
 	Velocity = NormalizedDirection * FMath::Max(Strength, 0.0f);
 }
 
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 void UPBBallPhysicsComponent::MoveWithSweep(const float DeltaTime)
-========
-void UPBBallMovementComponent::Stop()
-{
-	Velocity = FVector::ZeroVector;
-}
-
-void UPBBallMovementComponent::MoveWithSweep(const float DeltaTime)
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 {
 	// Tick에서 한 프레임 동안 이동할 전체 거리를 계산한다.
 	// 이 함수는 위치를 직접 순간이동시키지 않고 Root Primitive를 Sweep 이동시킨다.
@@ -207,11 +165,7 @@ void UPBBallMovementComponent::MoveWithSweep(const float DeltaTime)
 	ClampVelocityToSpeedRange();
 }
 
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 void UPBBallPhysicsComponent::BeginPlay()
-========
-UPrimitiveComponent* UPBBallMovementComponent::ResolveCollisionComponent()
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 {
 	Super::BeginPlay();
 
@@ -232,7 +186,6 @@ UPrimitiveComponent* UPBBallMovementComponent::ResolveCollisionComponent()
 	}
 }
 
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 void UPBBallPhysicsComponent::TickComponent(
 	const float DeltaTime,
 	const ELevelTick TickType,
@@ -261,9 +214,6 @@ void UPBBallPhysicsComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 }
 
 float UPBBallPhysicsComponent::CalculateImpactDamping(
-========
-float UPBBallMovementComponent::CalculateImpactDamping(
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 	const FVector IncomingDirection,
 	const FVector ImpactNormal) const
 {
@@ -274,11 +224,7 @@ float UPBBallMovementComponent::CalculateImpactDamping(
 	return FMath::Lerp(1.0f, BounceDamping, ImpactStrength);
 }
 
-<<<<<<<< HEAD:Source/PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.cpp
 void UPBBallPhysicsComponent::ClampVelocityToSpeedRange()
-========
-void UPBBallMovementComponent::ClampVelocityToSpeedRange()
->>>>>>>> feature/ballstat:Source/PinBallLike/Actor/Ball/Component/PBBallMovementComponent.cpp
 {
 	// 이동 방향은 유지하면서 속력만 MinSpeed와 MaxSpeed 범위로 제한한다.
 	Velocity.Z = 0.0f;

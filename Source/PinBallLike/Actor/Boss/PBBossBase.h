@@ -10,6 +10,7 @@
 class UPBBossGroggyComponent;
 class UPBBossPatternComponent;
 class UPBBossStatComponent;
+class UPBBossStatusWidget;
 class UPBBossWeaknessComponent;
 class UStateTreeComponent;
 class UPrimitiveComponent;
@@ -78,6 +79,8 @@ protected:
 		const FHitResult& Hit);
 
 	void BindBossCollisionEvents();
+	void CreateBossStatusWidget();
+	void RemoveBossStatusWidget();
 	void StartGroggyResetTimer();
 	void ClearGroggyResetTimer();
 	void HandleGroggyDurationFinished();
@@ -123,6 +126,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage")
 	FName DamageSourceTagName = TEXT("pinball");
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|UI")
+	TSubclassOf<UPBBossStatusWidget> BossStatusWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|UI", meta = (ClampMin = "0"))
+	int32 BossStatusWidgetZOrder = 0;
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "Boss|Blueprint Event")
 	void BP_OnDamaged(FName GroggyPointName, int32 DamageAmount);
 
@@ -138,4 +147,7 @@ protected:
 private:
 	FTimerHandle GroggyResetTimerHandle;
 	TMap<UPrimitiveComponent*, ECollisionEnabled::Type> WeaknessCollisionEnabledMap;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBBossStatusWidget> BossStatusWidget;
 };

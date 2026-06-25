@@ -13,7 +13,6 @@
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
-
 AFlipper::AFlipper()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -174,7 +173,6 @@ void AFlipper::ApplyForceToBalls(const float DeltaTime, const float MotionAlpha)
 		APBBallBase* Ball = Cast<APBBallBase>(OverlappingActor);
 		IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
 		if (!IsValid(Ball) || !Movable)
-		if (!IsValid(Ball))
 		{
 			continue;
 		}

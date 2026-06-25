@@ -1,6 +1,7 @@
 #include "PBBossBase.h"
 
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 #include "PinBallLike/Interface/BallDamageSource.h"
 #include "Component/PBBossGroggyComponent.h"
 #include "Component/PBBossPatternComponent.h"
@@ -77,10 +78,13 @@ void APBBossBase::BeginPlay()
 	SetBossState(EPBBossState::Idle);
 	BindBossCollisionEvents();
 	SetWeaknessCollisionEnabled(false);
+	CreateBossStatusWidget();
 }
 
 void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	RemoveBossStatusWidget();
+
 	if (BossWeaknessComponent)
 	{
 		BossWeaknessComponent->CloseWeakness();
@@ -218,6 +222,41 @@ void APBBossBase::BindBossCollisionEvents()
 		PrimitiveComponent->SetNotifyRigidBodyCollision(true);
 		PrimitiveComponent->OnComponentHit.AddUniqueDynamic(this, &APBBossBase::HandleCollisionHit);
 	}
+}
+
+void APBBossBase::CreateBossStatusWidget()
+{
+	if (BossStatusWidget || !BossStatusWidgetClass)
+	{
+		return;
+	}
+
+	APlayerController* PlayerController = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	BossStatusWidget = CreateWidget<UPBBossStatusWidget>(PlayerController, BossStatusWidgetClass);
+	if (!BossStatusWidget)
+	{
+		return;
+	}
+
+	BossStatusWidget->SetBoss(this);
+	BossStatusWidget->AddToViewport(BossStatusWidgetZOrder);
+}
+
+void APBBossBase::RemoveBossStatusWidget()
+{
+	if (!BossStatusWidget)
+	{
+		return;
+	}
+
+	BossStatusWidget->ClearBoss();
+	BossStatusWidget->RemoveFromParent();
+	BossStatusWidget = nullptr;
 }
 
 void APBBossBase::StartGroggyResetTimer()
