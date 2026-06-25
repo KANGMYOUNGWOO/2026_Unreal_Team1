@@ -328,6 +328,9 @@ void APBBossBase::SetWeaknessCollisionEnabled(bool IsEnabled)
 			WeaknessCollisionEnabledMap.Add(PrimitiveComponent, PrimitiveComponent->GetCollisionEnabled());
 		}
 
+		PrimitiveComponent->SetHiddenInGame(!IsEnabled, true);
+		PrimitiveComponent->SetVisibility(IsEnabled, true);
+
 		if (IsEnabled)
 		{
 			const ECollisionEnabled::Type* OriginalCollisionEnabled = WeaknessCollisionEnabledMap.Find(PrimitiveComponent);
