@@ -1,10 +1,10 @@
 #include "PBBumperUIPresenter.h"
 #include "Blueprint/UserWidget.h"
-#include "PinBallLike/Actor/Bumper/PBBumperBase.h"
+#include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PBBumperViewModel.h"
 #include "View/MVVMView.h"
 
-bool UPBBumperUIPresenter::Bind(APBBumperBase* InBumper, UUserWidget* InWidget)
+bool UPBBumperUIPresenter::Bind(APBModularBumperBase* InBumper, UUserWidget* InWidget)
 {
 	Unbind();
 

@@ -5,29 +5,38 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Struct/Bumper/PBBumperState.h"
+#include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTypes.h"
-#include "PBBumperBase.generated.h"
-
+#include "PBModularBumperBase.generated.h"
 
 class APBBallBase;
+class APBBumperPositionAnchor;
+class APBBumperTriggerActorBase;
+class USceneComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-	FPBBumperTriggerCountChangedSignature,
+	FPBModularBumperTriggerCountChangedSignature,
 	int32, CurrentCount,
 	int32, RequiredCount);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-	FPBBumperStateChangedSignature,
+	FPBModularBumperStateChangedSignature,
 	EPBBumperState, PreviousState,
 	EPBBumperState, NewState);
 
 UCLASS(Abstract, Blueprintable)
-class PINBALLLIKE_API APBBumperBase : public AActor
+class PINBALLLIKE_API APBModularBumperBase : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	APBBumperBase();
+	APBModularBumperBase();
+
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger")
+	virtual void HandleTriggerActorActivated(
+		APBBumperTriggerActorBase* TriggerActor,
+		APBBallBase* Ball,
+		const FHitResult& TriggerHit);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
 	void ActivateBumper(APBBallBase* Ball);
@@ -42,13 +51,10 @@ public:
 	void SetBumperState(EPBBumperState NewState);
 
 	UFUNCTION(BlueprintPure, Category = "Bumper")
-	bool CanActivate() const;
-
-	UFUNCTION(BlueprintPure, Category = "Bumper")
 	bool CanAccumulateTrigger() const;
 
 	UFUNCTION(BlueprintPure, Category = "Bumper")
-	FPBBumperRuntimeData GetBumperData() const;
+	bool CanActivate() const;
 
 	UFUNCTION(BlueprintPure, Category = "Bumper")
 	int32 GetCurrentTriggerCount() const;
@@ -59,18 +65,25 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper")
 	EPBBumperState GetBumperState() const;
 
-	//TODO GameMessage 형태로 수정 필요.
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
-	FPBBumperTriggerCountChangedSignature OnBumperTriggerCountChanged;
+	FPBModularBumperTriggerCountChangedSignature OnBumperTriggerCountChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
-	FPBBumperStateChangedSignature OnBumperStateChanged;
+	FPBModularBumperStateChangedSignature OnBumperStateChanged;
 
 protected:
-	void IncreaseComboCount(AActor* OtherActor, int32 Amount = 1);
-	
-	UFUNCTION(BlueprintCallable, Category = "Bumper", meta = (BlueprintProtected = "true"))
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	void AddTriggerCount(APBBallBase* Ball, int32 Amount = 1);
+	APBBumperTriggerActorBase* SpawnTriggerActor(
+		TSubclassOf<APBBumperTriggerActorBase> TriggerClass,
+		EPBBumperPositionId PositionId);
+	void SpawnTriggerActors(
+		TSubclassOf<APBBumperTriggerActorBase> TriggerClass,
+		const TArray<EPBBumperPositionId>& PositionIds);
+	void SpawnTriggerActorsFromInfo(const FPBBumperTriggerSpawnInfo& SpawnInfo);
+	void ClearTriggerActors();
 
 #pragma region Blueprint Events
 	UFUNCTION(BlueprintNativeEvent, Category = "Bumper")
@@ -90,8 +103,17 @@ protected:
 	void OnBumperFinished();
 #pragma endregion
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
+	TObjectPtr<USceneComponent> SceneRoot;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
 	FPBBumperRuntimeData BumperData;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
+	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
+	TArray<TObjectPtr<APBBumperTriggerActorBase>> SpawnedTriggerActors;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
 	int32 CurrentTriggerCount = 0;
@@ -100,5 +122,6 @@ protected:
 	EPBBumperState CurrentState = EPBBumperState::Idle;
 
 private:
+	bool FindBumperPositionTransform(EPBBumperPositionId PositionId, FTransform& OutTransform) const;
 	void NotifyTriggerCountChanged();
 };

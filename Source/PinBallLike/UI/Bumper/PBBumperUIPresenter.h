@@ -1,10 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "UObject/Object.h"
 #include "PBBumperUIPresenter.generated.h"
 
-class APBBumperBase;
 class UPBBumperViewModel;
 class UUserWidget;
 
@@ -15,7 +15,7 @@ class PINBALLLIKE_API UPBBumperUIPresenter : public UObject
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|UI")
-	bool Bind(APBBumperBase* InBumper, UUserWidget* InWidget);
+	bool Bind(APBModularBumperBase* InBumper, UUserWidget* InWidget);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|UI")
 	void Unbind();
@@ -35,5 +35,5 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBumperViewModel> BumperViewModel;
 
-	TWeakObjectPtr<APBBumperBase> Bumper;
+	TWeakObjectPtr<APBModularBumperBase> Bumper;
 };
