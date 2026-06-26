@@ -153,6 +153,8 @@ bool UPBBossPatternComponent::CanStartPattern() const
 		&& !CurrentPattern
 		&& OwnerBoss
 		&& !OwnerBoss->IsDead()
+		&& OwnerBoss->GetBossState() != EPBBossState::Groggy
+		&& OwnerBoss->GetBossState() != EPBBossState::Dead
 		&& GetCurrentTimeSeconds() >= NextPatternAllowedTime;
 }
 

@@ -3,8 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "PinBallLike/Interface/BossInterface.h"
-#include "PinBallLike/Interface/Damageable.h"
 #include "TimerManager.h"
+#include "UObject/ObjectKey.h"
 #include "PBBossBase.generated.h"
 
 class UPBBossGroggyComponent;
@@ -27,7 +27,7 @@ enum class EPBBossState : uint8
 };
 
 UCLASS()
-class PINBALLLIKE_API APBBossBase : public APawn, public IBossInterface, public IDamageable
+class PINBALLLIKE_API APBBossBase : public APawn, public IBossInterface
 {
 	GENERATED_BODY()
 
@@ -58,13 +58,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Profile")
 	FText GetBossName() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
+	void SetPinballCollisionDamageBlocked(bool IsBlocked);
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Damage")
+	bool IsPinballCollisionDamageBlocked() const;
+
 	virtual void TakeBossDamage_Implementation(FName GroggyPointName, int32 DamageAmount) override;
 	virtual void OnGroggyTriggered_Implementation() override;
 	virtual void OnEnragedTriggered_Implementation() override;
 	virtual void OnDeadTriggered_Implementation() override;
 
-	virtual void TakeDamage(int32 Damage) override;
-	virtual bool IsDead() const override;
+	bool IsDead() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -89,8 +94,11 @@ protected:
 	bool IsWeaknessCollisionComponent(const UPrimitiveComponent* PrimitiveComponent) const;
 	bool IsWeaknessHitBlocked(FName HitPointName) const;
 	bool CanApplyBossDamage(FName GroggyPointName, int32 DamageAmount) const;
+	bool CanApplyDamageRateLimit(AActor* OtherActor) const;
 	bool IsValidDamageSource(AActor* OtherActor, UPrimitiveComponent* OtherComponent) const;
 	int32 GetPinballHitDamage(AActor* OtherActor) const;
+	void RecordDamageRateLimit(AActor* OtherActor);
+	void ApplyPinballHitImpulse(AActor* OtherActor, const FHitResult& Hit) const;
 	void AddPinballCombo(AActor* OtherActor) const;
 	FName ResolveGroggyPointName(UPrimitiveComponent* HitComponent) const;
 
@@ -127,6 +135,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage")
 	FName DamageSourceTagName = TEXT("pinball");
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Damage")
+	bool IsPinballCollisionDamageBlockedValue = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
+	int32 MaxDamageCountPerFrame = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
+	float SameSourceHitCooldownSeconds = 0.25f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
+	float PinballHitImpulseStrength = 500.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|UI")
 	TSubclassOf<UPBBossStatusWidget> BossStatusWidgetClass;
 
@@ -148,6 +168,9 @@ protected:
 private:
 	FTimerHandle GroggyResetTimerHandle;
 	TMap<UPrimitiveComponent*, ECollisionEnabled::Type> WeaknessCollisionEnabledMap;
+	TMap<TObjectKey<AActor>, float> LastDamageTimeMap;
+	uint64 LastDamageFrameNumber = 0;
+	int32 CurrentFrameDamageCount = 0;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBossStatusWidget> BossStatusWidget;

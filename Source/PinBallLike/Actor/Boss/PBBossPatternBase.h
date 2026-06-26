@@ -54,12 +54,14 @@ protected:
 	virtual void CancelPattern_Implementation(APBBossBase* Boss);
 	virtual void ExecutePattern_Implementation(APBBossBase* Boss);
 	virtual void CancelPatternInternal_Implementation(APBBossBase* Boss);
+	virtual void ExecuteNativePattern(APBBossBase* Boss);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
 	TArray<APBBossPatternTelegraph*> SpawnTelegraph(APBBossBase* Boss);
 
 	void DestroySpawnedTelegraphs();
 	APBBossBase* GetOwnerBoss() const;
+	void SetOwnerBoss(APBBossBase* Boss);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Pattern|Telegraph")
 	TArray<FPBBossPatternTelegraphData> TelegraphDataList;

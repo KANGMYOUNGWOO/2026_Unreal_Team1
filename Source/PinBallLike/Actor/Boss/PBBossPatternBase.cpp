@@ -57,6 +57,11 @@ void UPBBossPatternBase::CancelPatternInternal_Implementation(APBBossBase* Boss)
 {
 }
 
+void UPBBossPatternBase::ExecuteNativePattern(APBBossBase* Boss)
+{
+	ExecutePattern(Boss);
+}
+
 void UPBBossPatternBase::FinishPattern()
 {
 	ClearTelegraphTimer();
@@ -79,6 +84,11 @@ APBBossBase* UPBBossPatternBase::GetOwnerBoss() const
 	return OwnerBoss;
 }
 
+void UPBBossPatternBase::SetOwnerBoss(APBBossBase* Boss)
+{
+	OwnerBoss = Boss;
+}
+
 void UPBBossPatternBase::StartExecutePattern()
 {
 	ClearTelegraphTimer();
@@ -90,7 +100,7 @@ void UPBBossPatternBase::StartExecutePattern()
 		return;
 	}
 
-	ExecutePattern(OwnerBoss);
+	ExecuteNativePattern(OwnerBoss);
 }
 
 TArray<APBBossPatternTelegraph*> UPBBossPatternBase::SpawnTelegraph(APBBossBase* Boss)
