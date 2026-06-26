@@ -70,13 +70,14 @@ void APBBallBase::ApplyStatData(const TArray<FPBBallStatData>& StatData)
 	}
 }
 
+
 void APBBallBase::ApplyResourceData(const TArray<FPBBallResourceData>& ResourceData)
 {
 	for (const FPBBallResourceData& Resource : ResourceData)
 	{
 		if (Resource.ResourceName.IsNone())
 		{
-			continue;
+			continue;   
 		}
 		ResourceComponent->SetResource(Resource.ResourceName, Resource.Current, Resource.Max);
 		ResourceComponent->SetResourceRegenPerSecond(Resource.ResourceName, Resource.RegenPerSecond);
