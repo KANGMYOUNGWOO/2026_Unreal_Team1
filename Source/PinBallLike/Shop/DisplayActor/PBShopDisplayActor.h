@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "PinBallLike/Subsystem/BallDataStruct.h"
+#include "../../IShopPurchaseHandler.h"
 #include "PBShopDisplayActor.generated.h"
 
 class APBShopItemActor;
@@ -18,7 +18,7 @@ public:
 	// Sets default values for this actor's properties
 	APBShopDisplayActor();
 
-	void DisplayItems(TArray<int32> ItemsID);
+	TArray<FVector> DisplayItems(const TArray<int32>& ItemIds,const TArray<UStaticMesh*>& Meshes, IIShopPurchaseHandler* handler);
 	
 	TArray<FVector> GetSlotWorldLocation() const;
 	

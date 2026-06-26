@@ -7,7 +7,7 @@
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "PBShopSlotWidget.h"
-
+#include "PinBallLike/Subsystem/BallDataStruct.h"
 
 
 void UPBShopWidget::UpdateSlotWidgetPositionsOnce()
@@ -58,7 +58,15 @@ void UPBShopWidget::UpdateSlotWidgetPositionsOnce()
 			continue;
 		}
 		
+		CanvasSlot->SetAlignment(FVector2D(0.5f, 1.0f));
+		CanvasSlot->SetPosition(WidgetPosition + FVector2D(0.f, -40.f));
 		CanvasSlot->SetPosition(WidgetPosition);
+		
+		UE_LOG(LogTemp, Warning, TEXT("Slot %d Projected=%d Pos=%s World=%s"),
+	i,
+	IsProjected,
+	*WidgetPosition.ToString(),
+	*TargetWorldLocation.ToString());
 	}
 	
 }
@@ -78,6 +86,8 @@ void UPBShopWidget::NativeConstruct()
 		Slot6,
 		Slot7
 	};
+	
+	UpdateSlotWidgetPositionsOnce();
 }
 
 void UPBShopWidget::SetShopSlotWorldLocations(const TArray<FVector>& InWorldLocations)
@@ -86,3 +96,20 @@ void UPBShopWidget::SetShopSlotWorldLocations(const TArray<FVector>& InWorldLoca
 	
 	UpdateSlotWidgetPositionsOnce();
 }
+
+void UPBShopWidget::SetShopSlotWidgetData(TArray<const FBallDataStruct*> BallDatas)
+{
+	for(int i=0; i<BallDatas.Num(); i++)
+	{
+		
+	}
+	
+}
+
+void UPBShopWidget::SetShopSlotWidgetData(int32 index, FText Name, int32 Price, FText Synergy)
+{
+	ShopSlotWidgets[index]->SetSlotInfo(Name,Price,Synergy); 
+	
+}
+
+

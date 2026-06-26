@@ -4,7 +4,7 @@
 #include "PBShopSlotWidget.h"
 #include "Components/TextBlock.h"
 
-void UPBShopSlotWidget::SetSlotInfo(const FText& NameText, int32 Price, const FText& SynergyText)
+void UPBShopSlotWidget::SetSlotInfo(FText NameText, int32 Price, FText SynergyText)
 {
 	if (NameTextBlock)
 	{

@@ -17,7 +17,7 @@ class PINBALLLIKE_API UPBShopSlotWidget : public UUserWidget
 	
 public:
 	
-	void SetSlotInfo(const FText& NameText, int32 Price , const FText& SynergyText);
+	void SetSlotInfo(FText NameText, int32 Price , FText SynergyText);
 	
 protected:
 	

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "../../IShopPurchaseHandler.h"
 #include "PBShopActor.generated.h"
 
 class UPBShopViewModel;
@@ -16,7 +17,11 @@ class PINBALLLIKE_API APBShopActor : public AActor
 {
 	GENERATED_BODY()
 	
-	void SetUp(UPBShopManager* InShopManager, UPBShopViewModel* InViewModel , APBShopDisplayActor* InDisplayActor);
+	
+public:
+	APBShopActor();
+	
+	
 	
 	UFUNCTION(BlueprintCallable)
 	void OpenShop();
@@ -24,19 +29,22 @@ class PINBALLLIKE_API APBShopActor : public AActor
 	UFUNCTION(BlueprintCallable)
 	void CloseShop();
 	
-	bool BuyItem(int32 SlotIndex);
+	
 	
 private :
 	
 	void RefreshViewModel();
+
 	
 private:
 	
 	UPROPERTY()
 	TObjectPtr<UPBShopManager> ShopManager;
 	
+	IIShopPurchaseHandler *ShopPurchaseHandler;
+	
 	UPROPERTY()
-	TObjectPtr<UPBShopViewModel> ViewModel;
+	TObjectPtr<UPBShopViewModel> ShopViewModel;
 	
 	UPROPERTY(EditAnywhere, Category = "Shop")
 	TObjectPtr<APBShopDisplayActor> ShopDisplayActor;
@@ -46,5 +54,10 @@ private:
 	
 	UPROPERTY()
 	TObjectPtr<UPBShopWidget> ShopWidget;
+	
+	
 
+protected:
+	virtual void BeginPlay() override;
+	
 };
