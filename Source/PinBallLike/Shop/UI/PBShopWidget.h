@@ -12,7 +12,7 @@
 class UCanvasPanel;
 class UPBShopSlotWidget;
 class UTextBlock; 
-
+struct FBallDataStruct;
 
 UCLASS()
 class PINBALLLIKE_API UPBShopWidget : public UUserWidget
@@ -58,10 +58,18 @@ public:
 
 	void SetShopSlotWorldLocations(const TArray<FVector>& InWorldLocations);
 	
+	void SetShopSlotWidgetData(TArray<const FBallDataStruct*> BallDatas);
+	
+	void SetShopSlotWidgetData(int32 index, FText Name, int32 Price, FText Synergy);
+	
+	
+
 private:
+	
+
+	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> ShopCanvas;
-
 	
 	TArray<TObjectPtr<UPBShopSlotWidget>> ShopSlotWidgets;
 
@@ -69,5 +77,5 @@ private:
 	TArray<FVector> ShopSlotWorldLocations;
 
 	UPROPERTY(EditAnywhere, Category = "Shop UI")
-	FVector SlotWidgetWorldOffset = FVector(0.f, 0.f, 120.f);
+	FVector SlotWidgetWorldOffset = FVector(0.f, -30.f, 40.f);
 };

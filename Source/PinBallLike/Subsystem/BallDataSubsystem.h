@@ -25,8 +25,18 @@ private:
 	TMap<int32, const FBallDataStruct*> BallDataMap;
 	TArray<const FBallDataStruct*> BallDataArray;
 	
+	
+	
+public:
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	
+	
 public :
 	TArray<int32> GetRandomBalls(int32 Count);
 	
+	FText GetBallName(int32 BallId);
+
+    FText GetBallSynergeny(int32 BallId);	
 	
+	const FBallDataStruct* GetBallData(int32 BallId);
 };

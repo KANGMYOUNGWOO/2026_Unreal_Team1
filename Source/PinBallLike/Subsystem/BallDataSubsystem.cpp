@@ -4,13 +4,14 @@
 #include "BallDataSubsystem.h"
 #include "Algo/RandomShuffle.h"
 
+
 void UBallDataSubsystem::InitializeData()
 {
 	BallDataMap.Empty();
 	
 	TArray<FBallDataStruct*> Rows;
 	
-	BallDataTable = LoadObject<UDataTable>(nullptr, TEXT(""));
+	BallDataTable = LoadObject<UDataTable>(nullptr,  TEXT("/Game/Blueprints/Shop/Data/DT_BallData.DT_BallData"));
 	
 	if (!BallDataTable)
 	{
@@ -30,17 +31,71 @@ void UBallDataSubsystem::InitializeData()
 		BallDataMap.Add(Row->BallId,Row); 
 		BallDataArray.Add(Row);
 	}
-	/*
+	
 	if (GEngine)
 	{
-		if (const FBallDataStruct* const* Found = BallDataMap.Find(110001))
+		if (const FBallDataStruct* const* Found = BallDataMap.Find(11001))
 		{
 			const FBallDataStruct* BallData = *Found;
 			
-			
+			UE_LOG(LogTemp, Warning, TEXT("BallData"));
 		}
 	}
-	*/
+	
+	
+
+	
+}
+
+const FBallDataStruct* UBallDataSubsystem::GetBallData(int32 BallId)
+{
+	if (const FBallDataStruct* const* Found = BallDataMap.Find(BallId))
+	{
+		return *Found;
+	}
+	
+	else return nullptr;
+}
+
+void UBallDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	InitializeData();
+}
+
+FText UBallDataSubsystem::GetBallName(int32 BallId)
+{
+	const FBallDataStruct* Data = GetBallData(BallId);
+	
+	if (!Data)
+	{
+		return FText::GetEmpty();
+	}
+	
+	
+	
+	return FText::FromStringTable(
+	  TEXT("STBallText"),
+	   Data->NameKey.ToString());
+}
+
+FText UBallDataSubsystem::GetBallSynergeny(int32 BallId)
+{
+	const FBallDataStruct* Data = GetBallData(BallId);
+	
+	if (!Data)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to GetBallSynergeny"));
+		return FText::GetEmpty();
+	}
+	 
+	
+	
+	return FText::FromStringTable(
+	  TEXT("STBallText"),
+	   Data->SynergyKey.ToString());
+	
+	
 	
 }
 

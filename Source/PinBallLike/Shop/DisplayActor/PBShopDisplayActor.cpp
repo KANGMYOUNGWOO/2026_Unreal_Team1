@@ -35,48 +35,63 @@ APBShopDisplayActor::APBShopDisplayActor()
 
 }
 
-void APBShopDisplayActor::DisplayItems(TArray<int32> ItemsID)
+TArray<FVector> APBShopDisplayActor::DisplayItems(const TArray<int32>& ItemIds,const TArray<UStaticMesh*>& Meshes , IIShopPurchaseHandler* handler)
 {
-	
-	for(APBShopItemActor* ItemActor : SpawnedItems)
+	TArray<FVector> UIWorldLocations;
+
+	for (APBShopItemActor* ItemActor : SpawnedItems)
 	{
-		if(ItemActor)
+		if (ItemActor)
 		{
 			ItemActor->Destroy();
 		}
 	}
-	
+
 	SpawnedItems.Empty();
-	
+
 	if (!ShopItemActorClass)
 	{
-		return;
+		return UIWorldLocations;
 	}
-	
-	const int32 Count = FMath::Min(ItemsID.Num(),ShopSlots.Num());
 
-	for (int32 i =0; i < Count; ++i)
+	const int32 Count = FMath::Min3(
+		ItemIds.Num(),
+		Meshes.Num(),
+		ShopSlots.Num()
+	);
+
+	for (int32 i = 0; i < Count; ++i)
 	{
 		if (!ShopSlots[i])
 		{
 			continue;
 		}
-		
+
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
-		
-		APBShopItemActor* SpawnedItem = GetWorld()->SpawnActor<APBShopItemActor>(
-			ShopItemActorClass,ShopSlots[i]->GetComponentTransform(),
-			SpawnParams);
-		
-		if (SpawnedItem)
+
+		APBShopItemActor* SpawnedItem =
+			GetWorld()->SpawnActor<APBShopItemActor>(
+				ShopItemActorClass,
+				ShopSlots[i]->GetComponentTransform(),
+				SpawnParams
+			);
+
+		if (!SpawnedItem)
 		{
-			//SpawnedItem->SetBallData(Items[i]);
-			SpawnedItems.Add(SpawnedItem);
+			continue;
 		}
-			
+
+		SpawnedItem->SetSlotIndex(i);
+		SpawnedItem->SetMesh(Meshes[i]);
+		SpawnedItem->SetHandler(handler);
+		
+		SpawnedItems.Add(SpawnedItem);
+		
+		UIWorldLocations.Add(SpawnedItem->GetUIWorldLocation());
 	}
 	
+	return UIWorldLocations;
 }
 
 TArray<FVector> APBShopDisplayActor::GetSlotWorldLocation() const

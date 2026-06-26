@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "../../IShopPurchaseHandler.h"
 #include "PBShopItemActor.generated.h"
 
 UCLASS()
@@ -17,6 +18,17 @@ public:
 	
 	void SetMesh(UStaticMesh* InMesh);
 
+	void SetSlotIndex(int32 InSlotIndex);
+	
+	void SetHandler(IIShopPurchaseHandler* handler);
+	
+	FVector GetUIWorldLocation() const;
+	
+	int32 GetSlotIndex() const
+	{
+		return SlotIndex;
+	}
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -30,6 +42,8 @@ protected:
 	UFUNCTION()
 	void HandleClicked(UPrimitiveComponent* TouchedComponent, FKey ButtonPressed);
 
+	
+	
 private:
 	
 	UPROPERTY(VisibleAnywhere)
@@ -39,6 +53,7 @@ private:
 	
 	int32 SlotIndex = INDEX_NONE;
 	
+	IIShopPurchaseHandler* PurchaseHandler;
 	
 public:	
 	// Called every frame

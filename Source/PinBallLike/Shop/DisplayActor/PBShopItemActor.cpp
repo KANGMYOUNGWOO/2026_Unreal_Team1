@@ -37,6 +37,20 @@ void APBShopItemActor::SetMesh(UStaticMesh* InMesh)
 	}
 	
 	Mesh->SetStaticMesh(InMesh);
+	
+	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	Mesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+}
+
+void APBShopItemActor::SetSlotIndex(int32 InSlotIndex)
+{
+	SlotIndex = InSlotIndex;
+}
+
+void APBShopItemActor::SetHandler(IIShopPurchaseHandler* handler)
+{
+	PurchaseHandler = handler;
 }
 
 // Called when the game starts or when spawned
@@ -59,11 +73,19 @@ void APBShopItemActor::HandleEndCursorOver(UPrimitiveComponent* TouchedComponent
 
 void APBShopItemActor::HandleClicked(UPrimitiveComponent* TouchedComponent, FKey ButtonPressed)
 {
-	UE_LOG(
-	   LogTemp,
-	   Warning,
-	   TEXT("Clicked Slot %d"),
-	   SlotIndex);
+	if (PurchaseHandler)
+	{
+		bool IsSuccess = PurchaseHandler->BuyItem(SlotIndex);
+		
+		if (IsSuccess)
+		{
+			Destroy();
+			
+			//SetActorHiddenInGame(!IsSuccess);
+			//SetActorEnableCollision(!IsSuccess);
+			//SetActorTickEnabled(!IsSuccess);
+		}
+	}
 }
 
 void APBShopItemActor::SetHovered(bool IsHovered)
@@ -84,3 +106,12 @@ void APBShopItemActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+FVector APBShopItemActor::GetUIWorldLocation() const
+{
+	FVector Origin;
+	FVector BoxExtent;
+
+	GetActorBounds(false, Origin, BoxExtent);
+
+	return Origin + FVector(0.f, 0.f, BoxExtent.Z + 30.f);
+}
