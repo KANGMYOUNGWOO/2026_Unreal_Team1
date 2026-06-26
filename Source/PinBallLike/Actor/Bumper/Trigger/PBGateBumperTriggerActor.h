@@ -3,44 +3,38 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PinBallLike/Actor/Bumper/PBBumperBase.h"
-#include "PBGateBumper.generated.h"
+#include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
+#include "PBGateBumperTriggerActor.generated.h"
 
 class APBBallBase;
 class UPrimitiveComponent;
 
-UCLASS()
-class PINBALLLIKE_API APBGateBumper : public APBBumperBase
+UCLASS(Blueprintable)
+class PINBALLLIKE_API APBGateBumperTriggerActor : public APBBumperTriggerActorBase
 {
 	GENERATED_BODY()
 
 public:
-	APBGateBumper();
+	APBGateBumperTriggerActor();
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	// 이 태그를 가진 PrimitiveComponent를 통과 판정 영역으로 자동 등록한다.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Gate")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	FName GateAreaTag = TEXT("BumperTrigger");
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Gate")
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<TObjectPtr<UPrimitiveComponent>> GateAreas;
-
-#pragma region Blueprint Events
-	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Gate")
-	void OnGateBumperPassed(APBBallBase* Ball);
-#pragma endregion
 
 private:
 	TMap<TWeakObjectPtr<APBBallBase>, int32> PassingBallOverlapCounts;
 	TMap<TWeakObjectPtr<APBBallBase>, float> PassingBallEntrySides;
 
+	void RegisterGateAreas();
+	void SetupGateArea(UPrimitiveComponent* GateArea);
 	float CalculateGateSide(const UPrimitiveComponent* GateArea, const APBBallBase* Ball) const;
-	
-	void RegisterTaggedAreas();
-	void SetupTriggerArea(UPrimitiveComponent* GateArea);
-	
+
 	UFUNCTION()
 	void HandleGateBeginOverlap(
 		UPrimitiveComponent* OverlappedComponent,
