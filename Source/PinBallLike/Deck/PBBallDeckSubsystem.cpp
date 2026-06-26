@@ -9,16 +9,16 @@ void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	InitializeDeploymentSlots();
 }
 
-EPBDeploymentSlotRole UPBBallDeckSubsystem::GetDeploymentRole(int32 SlotIndex) const
+EPBBallPartyRole UPBBallDeckSubsystem::GetDeploymentRole(int32 SlotIndex) const
 {
 	if (!IsDeploymentSlotValid(SlotIndex))
 	{
-		return EPBDeploymentSlotRole::None;
+		return EPBBallPartyRole::None;
 	}
 
 	return SlotIndex == 0
-		? EPBDeploymentSlotRole::Leader
-		: EPBDeploymentSlotRole::Follower;
+		? EPBBallPartyRole::Leader
+		: EPBBallPartyRole::Follower;
 }
 
 bool UPBBallDeckSubsystem::SetDeploymentSlot(int32 SlotIndex, APBBallBase* Ball)
@@ -27,6 +27,8 @@ bool UPBBallDeckSubsystem::SetDeploymentSlot(int32 SlotIndex, APBBallBase* Ball)
 	{
 		return false;
 	}
+
+	const TArray<APBBallBase*> PreviousBalls = CaptureDeploymentSlotBalls();
 
 	for (FPBBallDeckSlot& DeploymentSlot : DeploymentSlots)
 	{
@@ -37,7 +39,8 @@ bool UPBBallDeckSubsystem::SetDeploymentSlot(int32 SlotIndex, APBBallBase* Ball)
 	}
 
 	DeploymentSlots[SlotIndex].Ball = Ball;
-	CompactDeploymentSlots();
+	CompactDeploymentSlotsInternal();
+	BroadcastDeploymentSlotChange(PreviousBalls);
 	return true;
 }
 
@@ -48,8 +51,11 @@ bool UPBBallDeckSubsystem::ClearDeploymentSlot(int32 SlotIndex)
 		return false;
 	}
 
+	const TArray<APBBallBase*> PreviousBalls = CaptureDeploymentSlotBalls();
+
 	DeploymentSlots[SlotIndex].Ball = nullptr;
-	CompactDeploymentSlots();
+	CompactDeploymentSlotsInternal();
+	BroadcastDeploymentSlotChange(PreviousBalls);
 	return true;
 }
 
@@ -65,8 +71,11 @@ bool UPBBallDeckSubsystem::SwapDeploymentSlots(int32 FirstIndex, int32 SecondInd
 		return true;
 	}
 
+	const TArray<APBBallBase*> PreviousBalls = CaptureDeploymentSlotBalls();
+
 	Swap(DeploymentSlots[FirstIndex].Ball, DeploymentSlots[SecondIndex].Ball);
-	CompactDeploymentSlots();
+	CompactDeploymentSlotsInternal();
+	BroadcastDeploymentSlotChange(PreviousBalls);
 	return true;
 }
 
@@ -141,6 +150,46 @@ bool UPBBallDeckSubsystem::CanBuildDeploymentParty() const
 
 void UPBBallDeckSubsystem::CompactDeploymentSlots()
 {
+	const TArray<APBBallBase*> PreviousBalls = CaptureDeploymentSlotBalls();
+	CompactDeploymentSlotsInternal();
+	BroadcastDeploymentSlotChange(PreviousBalls);
+}
+
+bool UPBBallDeckSubsystem::RotateDeploymentSlots()
+{
+	if (GetDeploymentBallCount() < 2)
+	{
+		return false;
+	}
+
+	CompactDeploymentSlotsInternal();
+
+	APBBallBase* PreviousLeaderBall = DeploymentSlots[0].Ball;
+	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num() - 1; ++SlotIndex)
+	{
+		DeploymentSlots[SlotIndex].Ball = DeploymentSlots[SlotIndex + 1].Ball;
+	}
+	DeploymentSlots.Last().Ball = PreviousLeaderBall;
+
+	CompactDeploymentSlotsInternal();
+	OnDeploymentSlotsRotated.Broadcast();
+	return true;
+}
+
+TArray<APBBallBase*> UPBBallDeckSubsystem::CaptureDeploymentSlotBalls() const
+{
+	TArray<APBBallBase*> Balls;
+	Balls.Reserve(DeploymentSlots.Num());
+	for (const FPBBallDeckSlot& DeploymentSlot : DeploymentSlots)
+	{
+		Balls.Add(DeploymentSlot.Ball);
+	}
+	return Balls;
+}
+
+bool UPBBallDeckSubsystem::CompactDeploymentSlotsInternal()
+{
+	bool bChanged = false;
 	TArray<TObjectPtr<APBBallBase>> OrderedBalls;
 	OrderedBalls.Reserve(MaxDeploymentSlotCount);
 
@@ -154,30 +203,48 @@ void UPBBallDeckSubsystem::CompactDeploymentSlots()
 
 	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num(); ++SlotIndex)
 	{
+		APBBallBase* PreviousBall = DeploymentSlots[SlotIndex].Ball;
 		DeploymentSlots[SlotIndex].Ball = OrderedBalls.IsValidIndex(SlotIndex)
 			? OrderedBalls[SlotIndex]
 			: nullptr;
+
+		if (PreviousBall != DeploymentSlots[SlotIndex].Ball)
+		{
+			bChanged = true;
+		}
 	}
+
+	return bChanged;
 }
 
-bool UPBBallDeckSubsystem::RotateDeploymentSlots()
+void UPBBallDeckSubsystem::BroadcastDeploymentSlotChange(const TArray<APBBallBase*>& PreviousBalls)
 {
-	if (GetDeploymentBallCount() < 2)
+	int32 ChangedSlotIndex = INDEX_NONE;
+	APBBallBase* ChangedSlotBall = nullptr;
+	int32 ChangedSlotCount = 0;
+
+	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num(); ++SlotIndex)
 	{
-		return false;
+		APBBallBase* PreviousBall = PreviousBalls.IsValidIndex(SlotIndex) ? PreviousBalls[SlotIndex] : nullptr;
+		APBBallBase* CurrentBall = DeploymentSlots[SlotIndex].Ball;
+		if (PreviousBall == CurrentBall)
+		{
+			continue;
+		}
+
+		ChangedSlotIndex = SlotIndex;
+		ChangedSlotBall = CurrentBall;
+		++ChangedSlotCount;
 	}
 
-	CompactDeploymentSlots();
-
-	APBBallBase* PreviousLeaderBall = DeploymentSlots[0].Ball;
-	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num() - 1; ++SlotIndex)
+	if (ChangedSlotCount == 1)
 	{
-		DeploymentSlots[SlotIndex].Ball = DeploymentSlots[SlotIndex + 1].Ball;
+		OnDeploymentSlotChanged.Broadcast(ChangedSlotIndex, ChangedSlotBall);
 	}
-	DeploymentSlots.Last().Ball = PreviousLeaderBall;
-
-	CompactDeploymentSlots();
-	return true;
+	else if (ChangedSlotCount > 1)
+	{
+		OnDeploymentSlotsReordered.Broadcast();
+	}
 }
 
 void UPBBallDeckSubsystem::InitializeDeploymentSlots()

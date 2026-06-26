@@ -4,18 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
+#include "PinBallLike/Struct/Party/PBPartyTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBBallDeckSubsystem.generated.h"
 
 class APBBallBase;
 
-UENUM(BlueprintType)
-enum class EPBDeploymentSlotRole : uint8
-{
-	None,
-	Leader,
-	Follower
-};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBOnDeploymentSlotChanged, int32, SlotIndex, APBBallBase*, Ball);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsReordered);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsRotated);
 
 UCLASS()
 class PINBALLLIKE_API UPBBallDeckSubsystem : public UGameInstanceSubsystem
@@ -24,10 +22,17 @@ class PINBALLLIKE_API UPBBallDeckSubsystem : public UGameInstanceSubsystem
 	
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-
-	EPBDeploymentSlotRole GetDeploymentRole(int32 SlotIndex) const;
+	
+	UPROPERTY(BlueprintAssignable, Category = "BallDeck|Deployment")
+	FPBOnDeploymentSlotChanged OnDeploymentSlotChanged;
+	UPROPERTY(BlueprintAssignable, Category = "BallDeck|Deployment")
+	FPBOnDeploymentSlotsReordered OnDeploymentSlotsReordered;
+	UPROPERTY(BlueprintAssignable, Category = "BallDeck|Deployment")
+	FPBOnDeploymentSlotsRotated OnDeploymentSlotsRotated;
+	
 	
 	// Deployment Slot
+	EPBBallPartyRole GetDeploymentRole(int32 SlotIndex) const;
 	bool SetDeploymentSlot(int32 SlotIndex, APBBallBase* Ball);
 	bool ClearDeploymentSlot(int32 SlotIndex);
 	bool SwapDeploymentSlots(int32 FirstIndex, int32 SecondIndex);
@@ -41,15 +46,16 @@ public:
 	bool HasLeaderBall() const;
 	bool CanBuildDeploymentParty() const;
 	void CompactDeploymentSlots();
-	
 	bool RotateDeploymentSlots();
-	
 	
 protected:
 	
 	
 private:
 	void InitializeDeploymentSlots();
+	TArray<APBBallBase*> CaptureDeploymentSlotBalls() const;
+	bool CompactDeploymentSlotsInternal();
+	void BroadcastDeploymentSlotChange(const TArray<APBBallBase*>& PreviousBalls);
 
 	static constexpr int32 MaxDeploymentSlotCount = 3;
 
