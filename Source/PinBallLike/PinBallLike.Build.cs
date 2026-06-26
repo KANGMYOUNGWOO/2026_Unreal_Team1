@@ -8,6 +8,7 @@ public class PinBallLike : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "StateTreeModule", "GameplayStateTreeModule" });
+
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core", 
 			"CoreUObject", 

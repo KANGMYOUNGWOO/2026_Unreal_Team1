@@ -6,10 +6,10 @@
 #include "PBBallPhysicsComponent.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
-#include "PinBallLike/Interface/BallComboSource.h"
-#include "PinBallLike/Interface/BallDamageSource.h"
-#include "PinBallLike/Interface/Comboable.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 #include "PinBallLike/Interface/Damageable.h"
+#include "PinBallLike/Interface/StatProvider.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 
 UPBBallHitReactionComponent::UPBBallHitReactionComponent()
@@ -19,12 +19,10 @@ UPBBallHitReactionComponent::UPBBallHitReactionComponent()
 
 void UPBBallHitReactionComponent::InitializeDependencies(
 	UPBBallPhysicsComponent* InPhysicsComponent,
-	IDamageable* InDamageable,
-	IComboable* InComboable)
+	IStatProvider* InStatProvider)
 {
 	PhysicsComponent = InPhysicsComponent;
-	Damageable = InDamageable;
-	Comboable = InComboable;
+	StatProvider = InStatProvider;
 }
 
 void UPBBallHitReactionComponent::BeginPlay()
@@ -59,25 +57,23 @@ void UPBBallHitReactionComponent::ProcessBallContact(AActor* OtherActor)
 	{
 		return;
 	}
-
+	
 	// 현재 프레임에서 이 액터와의 충돌을 처리했음을 기록합니다.
 	MarkContactProcessed(OtherActor);
 
-	if (IBallDamageSource* DamageSource = Cast<IBallDamageSource>(OtherActor))
+	IDamageable* OtherDamageable = Cast<IDamageable>(OtherActor);
+	if (!OtherDamageable)
 	{
-		if (Damageable)
-		{
-			Damageable->TakeDamage(DamageSource->GetBallDamage());
-		}
+		OtherDamageable = PBInterfaceUtils::FindInterface<IDamageable>(OtherActor);
 	}
 
-	if (IBallComboSource* ComboSource = Cast<IBallComboSource>(OtherActor))
+	if (!OtherDamageable || OtherDamageable->IsDead())
 	{
-		if (Comboable)
-		{
-			Comboable->AddCombo(ComboSource->GetBallComboDelta());
-		}
+		return;
 	}
+
+	const int32 Damage = StatProvider ? StatProvider->GetStat(PBStatNames::Attack) : 0;
+	OtherDamageable->TakeDamage(Damage);
 }
 
 bool UPBBallHitReactionComponent::WasContactProcessedThisFrame(AActor* OtherActor) const

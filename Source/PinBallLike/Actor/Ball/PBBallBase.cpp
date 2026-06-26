@@ -42,7 +42,7 @@ APBBallBase::APBBallBase()
 	
 	// Hit Reaction
 	HitReactionComponent = CreateDefaultSubobject<UPBBallHitReactionComponent>(TEXT("HitReactionComponent"));
-	HitReactionComponent->InitializeDependencies(PhysicsComponent.Get(), ResourceComponent.Get(), ComboComponent.Get());
+	HitReactionComponent->InitializeDependencies(PhysicsComponent.Get(), StatComponent.Get());
 
 	// @Test
 	DefaultStats.Emplace(PBStatNames::Mass, 1);
