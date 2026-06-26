@@ -66,15 +66,10 @@ void APBBallBase::ApplyStatData(const TArray<FPBBallStatData>& StatData)
 		{
 			continue;
 		}
-
-		if (StatComponent->HasStat(Stat.StatName))
-		{
-			continue;
-		}
-
 		StatComponent->SetStat(Stat.StatName, Stat.Value);
 	}
 }
+
 
 void APBBallBase::ApplyResourceData(const TArray<FPBBallResourceData>& ResourceData)
 {
