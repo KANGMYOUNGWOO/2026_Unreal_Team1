@@ -13,7 +13,7 @@ void UPBBossStatComponent::BeginPlay()
 
 	OwnerActor = GetOwner();
 	MaxHP = FMath::Max(MaxHP, 1);
-	HP = FMath::Clamp(HP <= 0 ? MaxHP : HP, 0, MaxHP);
+	HP = MaxHP;
 	OnHPChanged.Broadcast(HP, MaxHP);
 
 	if (!CanNotifyOwner())
