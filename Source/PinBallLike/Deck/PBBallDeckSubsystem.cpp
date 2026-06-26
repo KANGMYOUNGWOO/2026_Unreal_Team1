@@ -3,6 +3,10 @@
 
 #include "PBBallDeckSubsystem.h"
 
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "Engine/EngineTypes.h"
+#include "Engine/World.h"
+
 void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -173,6 +177,70 @@ bool UPBBallDeckSubsystem::RotateDeploymentSlots()
 
 	CompactDeploymentSlotsInternal();
 	OnDeploymentSlotsRotated.Broadcast();
+	return true;
+}
+
+bool UPBBallDeckSubsystem::TestSnakeBall(TSubclassOf<APBBallBase> BallClass)
+{
+	if (!BallClass)
+	{
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	TArray<APBBallBase*> SpawnedBalls;
+	SpawnedBalls.Reserve(MaxDeploymentSlotCount);
+
+	const FVector SpawnOrigin = FVector::ZeroVector;
+	const float SpawnSpacing = 150.0f;
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	for (int32 BallIndex = 0; BallIndex < MaxDeploymentSlotCount; ++BallIndex)
+	{
+		const FVector SpawnLocation = SpawnOrigin + FVector(SpawnSpacing * BallIndex, 0.0f, 0.0f);
+		APBBallBase* SpawnedBall = World->SpawnActor<APBBallBase>(BallClass, SpawnLocation, FRotator::ZeroRotator, SpawnParameters);
+		if (!SpawnedBall)
+		{
+			for (APBBallBase* ExistingBall : SpawnedBalls)
+			{
+				if (ExistingBall)
+				{
+					ExistingBall->Destroy();
+				}
+			}
+			return false;
+		}
+
+		SpawnedBalls.Add(SpawnedBall);
+	}
+
+	for (int32 SlotIndex = 0; SlotIndex < SpawnedBalls.Num(); ++SlotIndex)
+	{
+		if (!SetDeploymentSlot(SlotIndex, SpawnedBalls[SlotIndex]))
+		{
+			for (int32 CleanupSlotIndex = SlotIndex - 1; CleanupSlotIndex >= 0; --CleanupSlotIndex)
+			{
+				ClearDeploymentSlot(CleanupSlotIndex);
+			}
+
+			for (APBBallBase* ExistingBall : SpawnedBalls)
+			{
+				if (ExistingBall)
+				{
+					ExistingBall->Destroy();
+				}
+			}
+			return false;
+		}
+	}
+
 	return true;
 }
 

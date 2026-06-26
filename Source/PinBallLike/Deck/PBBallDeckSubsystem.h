@@ -47,6 +47,9 @@ public:
 	bool CanBuildDeploymentParty() const;
 	void CompactDeploymentSlots();
 	bool RotateDeploymentSlots();
+
+	UFUNCTION(BlueprintCallable, Category = "BallDeck|Test")
+	bool TestSnakeBall(TSubclassOf<APBBallBase> BallClass);
 	
 protected:
 	
