@@ -1,12 +1,7 @@
 #include "PBBossBase.h"
 
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
-#include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
-#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 #include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
-#include "PinBallLike/Interface/Comboable.h"
-#include "PinBallLike/Interface/Movable.h"
-#include "PinBallLike/Utils/PBInterfaceUtils.h"
+#include "Component/PBBossDamageComponent.h"
 #include "Component/PBBossGroggyComponent.h"
 #include "Component/PBBossPatternComponent.h"
 #include "Component/PBBossStatComponent.h"
@@ -30,6 +25,7 @@ APBBossBase::APBBossBase()
 
 	BossStatComponent = CreateDefaultSubobject<UPBBossStatComponent>(TEXT("BossStatComponent"));
 	BossGroggyComponent = CreateDefaultSubobject<UPBBossGroggyComponent>(TEXT("BossGroggyComponent"));
+	BossDamageComponent = CreateDefaultSubobject<UPBBossDamageComponent>(TEXT("BossDamageComponent"));
 	BossPatternComponent = CreateDefaultSubobject<UPBBossPatternComponent>(TEXT("BossPatternComponent"));
 	BossWeaknessComponent = CreateDefaultSubobject<UPBBossWeaknessComponent>(TEXT("BossWeaknessComponent"));
 	BossStateTreeComponent = CreateDefaultSubobject<UStateTreeComponent>(TEXT("BossStateTreeComponent"));
@@ -43,6 +39,11 @@ UPBBossStatComponent* APBBossBase::GetBossStatComponent() const
 UPBBossGroggyComponent* APBBossBase::GetBossGroggyComponent() const
 {
 	return BossGroggyComponent;
+}
+
+UPBBossDamageComponent* APBBossBase::GetBossDamageComponent() const
+{
+	return BossDamageComponent;
 }
 
 UPBBossPatternComponent* APBBossBase::GetBossPatternComponent() const
@@ -77,12 +78,20 @@ FText APBBossBase::GetBossName() const
 
 void APBBossBase::SetPinballCollisionDamageBlocked(bool IsBlocked)
 {
-	IsPinballCollisionDamageBlockedValue = IsBlocked;
+	if (BossDamageComponent)
+	{
+		BossDamageComponent->SetPinballCollisionDamageBlocked(IsBlocked);
+	}
 }
 
 bool APBBossBase::IsPinballCollisionDamageBlocked() const
 {
-	return IsPinballCollisionDamageBlockedValue;
+	return BossDamageComponent && BossDamageComponent->IsPinballCollisionDamageBlocked();
+}
+
+void APBBossBase::NotifyBossDamaged(FName HitPointName, int32 DamageAmount)
+{
+	BP_OnDamaged(HitPointName, DamageAmount);
 }
 
 void APBBossBase::BeginPlay()
@@ -107,31 +116,12 @@ void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void APBBossBase::TakeBossDamage_Implementation(FName GroggyPointName, int32 DamageAmount)
 {
-	if (!CanApplyBossDamage(GroggyPointName, DamageAmount))
+	if (!BossDamageComponent)
 	{
 		return;
 	}
 
-	BP_OnDamaged(GroggyPointName, DamageAmount);
-
-	if (BossStatComponent)
-	{
-		const int32 FinalDamageAmount = BossWeaknessComponent
-			? BossWeaknessComponent->CalculateWeaknessDamage(GroggyPointName, DamageAmount)
-			: DamageAmount;
-
-		BossStatComponent->ApplyBossDamage(GroggyPointName, FinalDamageAmount);
-	}
-
-	if (IsDead())
-	{
-		return;
-	}
-
-	if (BossGroggyComponent)
-	{
-		BossGroggyComponent->ApplyGroggyDamage(GroggyPointName);
-	}
+	BossDamageComponent->ApplyPointDamage(GroggyPointName, DamageAmount);
 }
 
 void APBBossBase::OnGroggyTriggered_Implementation()
@@ -189,30 +179,16 @@ void APBBossBase::HandleCollisionHit(
 	FVector NormalImpulse,
 	const FHitResult& Hit)
 {
-	if (!IsValidDamageSource(OtherActor, OtherComponent))
+	static_cast<void>(NormalImpulse);
+
+	if (BossDamageComponent && BossDamageComponent->IsValidDamageSource(OtherActor, OtherComponent))
 	{
-		return;
+		BossDamageComponent->ApplyHitPartDamage(
+			OtherActor,
+			HitComponent,
+			BossDamageComponent->GetPinballHitDamage(OtherActor),
+			Hit);
 	}
-
-	const FName GroggyPointName = ResolveGroggyPointName(HitComponent);
-	const int32 DamageAmount = GetPinballHitDamage(OtherActor);
-	const bool IsDamageApplied = CanApplyBossDamage(GroggyPointName, DamageAmount)
-		&& CanApplyDamageRateLimit(OtherActor);
-
-	UE_LOG(LogTemp, Warning, TEXT("Boss Hit Component: %s, GroggyPoint: %s, Damage: %d"),
-		HitComponent ? *HitComponent->GetName() : TEXT("None"),
-		*GroggyPointName.ToString(),
-		DamageAmount);
-
-	if (!IsDamageApplied)
-	{
-		return;
-	}
-
-	IBossInterface::Execute_TakeBossDamage(this, GroggyPointName, DamageAmount);
-	RecordDamageRateLimit(OtherActor);
-	ApplyPinballHitImpulse(OtherActor, Hit);
-	AddPinballCombo(OtherActor);
 }
 
 void APBBossBase::BindBossCollisionEvents()
@@ -380,163 +356,4 @@ bool APBBossBase::IsWeaknessCollisionComponent(const UPrimitiveComponent* Primit
 	}
 
 	return false;
-}
-
-bool APBBossBase::IsWeaknessHitBlocked(FName HitPointName) const
-{
-	if (!BossWeaknessComponent || !BossWeaknessComponent->IsWeaknessPoint(HitPointName))
-	{
-		return false;
-	}
-
-	return !BossWeaknessComponent->IsWeaknessPointOpen(HitPointName);
-}
-
-bool APBBossBase::CanApplyBossDamage(FName GroggyPointName, int32 DamageAmount) const
-{
-	return DamageAmount > 0 && !IsDead() && !IsWeaknessHitBlocked(GroggyPointName);
-}
-
-bool APBBossBase::CanApplyDamageRateLimit(AActor* OtherActor) const
-{
-	if (MaxDamageCountPerFrame <= 0)
-	{
-		return false;
-	}
-
-	if (LastDamageFrameNumber == GFrameCounter && CurrentFrameDamageCount >= MaxDamageCountPerFrame)
-	{
-		return false;
-	}
-
-	if (!OtherActor || SameSourceHitCooldownSeconds <= 0.0f)
-	{
-		return true;
-	}
-
-	const UWorld* World = GetWorld();
-	if (!World)
-	{
-		return true;
-	}
-
-	const float* LastDamageTime = LastDamageTimeMap.Find(TObjectKey<AActor>(OtherActor));
-	if (!LastDamageTime)
-	{
-		return true;
-	}
-
-	return World->GetTimeSeconds() - *LastDamageTime >= SameSourceHitCooldownSeconds;
-}
-
-bool APBBossBase::IsValidDamageSource(AActor* OtherActor, UPrimitiveComponent* OtherComponent) const
-{
-	if (!OtherActor)
-	{
-		return false;
-	}
-
-	if (Cast<APBBallBase>(OtherActor))
-	{
-		return true;
-	}
-
-	if (DamageSourceTagName.IsNone())
-	{
-		return false;
-	}
-
-	const bool IsActorTagged = OtherActor->ActorHasTag(DamageSourceTagName);
-	const bool IsComponentTagged = OtherComponent && OtherComponent->ComponentHasTag(DamageSourceTagName);
-
-	return IsActorTagged || IsComponentTagged;
-}
-
-int32 APBBossBase::GetPinballHitDamage(AActor* OtherActor) const
-{
-	if (IsPinballCollisionDamageBlocked())
-	{
-		return 0;
-	}
-
-	if (!OtherActor)
-	{
-		return 0;
-	}
-
-	const UPBBaseStatComponent* StatComponent = OtherActor->FindComponentByClass<UPBBaseStatComponent>();
-	return StatComponent ? StatComponent->GetStat(PBStatNames::Attack) : 0;
-}
-
-void APBBossBase::RecordDamageRateLimit(AActor* OtherActor)
-{
-	if (LastDamageFrameNumber != GFrameCounter)
-	{
-		LastDamageFrameNumber = GFrameCounter;
-		CurrentFrameDamageCount = 0;
-	}
-
-	++CurrentFrameDamageCount;
-
-	if (!OtherActor || SameSourceHitCooldownSeconds <= 0.0f)
-	{
-		return;
-	}
-
-	if (const UWorld* World = GetWorld())
-	{
-		LastDamageTimeMap.FindOrAdd(TObjectKey<AActor>(OtherActor)) = World->GetTimeSeconds();
-	}
-}
-
-void APBBossBase::ApplyPinballHitImpulse(AActor* OtherActor, const FHitResult& Hit) const
-{
-	if (!OtherActor || PinballHitImpulseStrength <= 0.0f)
-	{
-		return;
-	}
-
-	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(OtherActor);
-	if (!Movable)
-	{
-		return;
-	}
-
-	FVector ImpulseDirection = OtherActor->GetActorLocation() - GetActorLocation();
-	ImpulseDirection.Z = 0.0f;
-
-	if (ImpulseDirection.IsNearlyZero())
-	{
-		ImpulseDirection = Hit.ImpactNormal;
-		ImpulseDirection.Z = 0.0f;
-	}
-
-	ImpulseDirection = ImpulseDirection.GetSafeNormal();
-	if (ImpulseDirection.IsNearlyZero())
-	{
-		return;
-	}
-
-	Movable->AddImpulse(ImpulseDirection * PinballHitImpulseStrength);
-}
-
-void APBBossBase::AddPinballCombo(AActor* OtherActor) const
-{
-	IComboable* Comboable = PBInterfaceUtils::FindInterface<IComboable>(OtherActor);
-	if (!Comboable)
-	{
-		return;
-	}
-
-	Comboable->AddCombo(1);
-}
-
-FName APBBossBase::ResolveGroggyPointName(UPrimitiveComponent* HitComponent) const
-{
-	if (!HitComponent || HitComponent->ComponentTags.IsEmpty())
-	{
-		return DefaultGroggyPointName;
-	}
-
-	return HitComponent->ComponentTags[0];
 }

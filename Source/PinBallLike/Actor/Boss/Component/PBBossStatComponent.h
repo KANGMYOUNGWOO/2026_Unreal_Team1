@@ -15,14 +15,18 @@ class PINBALLLIKE_API UPBBossStatComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
+	// 보스 스탯 컴포넌트의 기본 값을 초기화합니다.
 	UPBBossStatComponent();
 
+	// 게임 시작 시 체력과 소유 액터 참조를 초기화합니다.
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
+	// 히트 포인트 배율을 반영해 보스 체력 데미지를 적용합니다.
 	void ApplyBossDamage(FName HitPointName, int32 DamageAmount);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	// 현재 체력이 0 이하인지 확인합니다.
 	bool IsDead() const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Stat", meta = (ClampMin = "1"))
@@ -47,8 +51,11 @@ public:
 	FPBBossHPChangedSignature OnHPChanged;
 
 private:
+	// 히트 포인트 이름에 해당하는 체력 데미지 배율을 반환합니다.
 	int32 GetHPDamageMultiplierPercent(FName HitPointName) const;
+	// 현재 체력이 분노 상태 진입 기준에 도달했는지 확인합니다.
 	bool IsEnrageThresholdReached() const;
+	// 소유 액터에 상태 이벤트를 알릴 수 있는지 확인합니다.
 	bool CanNotifyOwner() const;
 
 	UPROPERTY(Transient)
