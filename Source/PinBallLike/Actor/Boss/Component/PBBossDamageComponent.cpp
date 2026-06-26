@@ -2,14 +2,9 @@
 
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
-#include "PinBallLike/Actor/Boss/Component/PBBossGroggyComponent.h"
-#include "PinBallLike/Actor/Boss/Component/PBBossStatComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossWeaknessComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
-#include "PinBallLike/Interface/Comboable.h"
-#include "PinBallLike/Interface/Movable.h"
-#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 UPBBossDamageComponent::UPBBossDamageComponent()
 {
@@ -54,7 +49,7 @@ void UPBBossDamageComponent::ApplyPointDamage(FName HitPointName, int32 DamageAm
 		FinalDamageAmount = WeaknessComponent->CalculateWeaknessDamage(HitPartInfo.HitPointName, DamageAmount);
 	}
 
-	ApplyDamageToBoss(HitPartInfo.HitPointName, FinalDamageAmount);
+	BroadcastDamageApplied(HitPartInfo.HitPointName, FinalDamageAmount);
 }
 
 void UPBBossDamageComponent::ApplyHitPartDamage(
@@ -227,34 +222,15 @@ void UPBBossDamageComponent::ApplyResolvedDamage(
 		FinalDamageAmount = WeaknessComponent->CalculateWeaknessDamage(HitPartInfo.HitPointName, DamageAmount);
 	}
 
-	ApplyDamageToBoss(HitPartInfo.HitPointName, FinalDamageAmount);
+	BroadcastDamageApplied(HitPartInfo.HitPointName, FinalDamageAmount);
 
 	RecordDamageRateLimit(DamageSource);
-	ApplyPinballHitImpulse(DamageSource, Hit);
-	AddPinballCombo(DamageSource);
+	OnDamageSourceHitApplied.Broadcast(DamageSource, Hit);
 }
 
-void UPBBossDamageComponent::ApplyDamageToBoss(FName HitPointName, int32 DamageAmount)
+void UPBBossDamageComponent::BroadcastDamageApplied(FName HitPointName, int32 DamageAmount)
 {
-	if (!OwnerBoss)
-	{
-		return;
-	}
-
-	OwnerBoss->NotifyBossDamaged(HitPointName, DamageAmount);
-
-	if (UPBBossStatComponent* StatComponent = OwnerBoss->GetBossStatComponent())
-	{
-		StatComponent->ApplyBossDamage(HitPointName, DamageAmount);
-	}
-
-	if (!OwnerBoss->IsDead())
-	{
-		if (UPBBossGroggyComponent* GroggyComponent = OwnerBoss->GetBossGroggyComponent())
-		{
-			GroggyComponent->ApplyGroggyDamage(HitPointName);
-		}
-	}
+	OnBossDamageApplied.Broadcast(HitPointName, DamageAmount);
 }
 
 void UPBBossDamageComponent::RecordDamageRateLimit(AActor* DamageSource)
@@ -276,46 +252,4 @@ void UPBBossDamageComponent::RecordDamageRateLimit(AActor* DamageSource)
 	{
 		LastDamageTimeMap.FindOrAdd(TObjectKey<AActor>(DamageSource)) = World->GetTimeSeconds();
 	}
-}
-
-void UPBBossDamageComponent::ApplyPinballHitImpulse(AActor* DamageSource, const FHitResult& Hit) const
-{
-	if (!DamageSource || PinballHitImpulseStrength <= 0.0f || !OwnerBoss)
-	{
-		return;
-	}
-
-	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(DamageSource);
-	if (!Movable)
-	{
-		return;
-	}
-
-	FVector ImpulseDirection = DamageSource->GetActorLocation() - OwnerBoss->GetActorLocation();
-	ImpulseDirection.Z = 0.0f;
-
-	if (ImpulseDirection.IsNearlyZero())
-	{
-		ImpulseDirection = Hit.ImpactNormal;
-		ImpulseDirection.Z = 0.0f;
-	}
-
-	ImpulseDirection = ImpulseDirection.GetSafeNormal();
-	if (ImpulseDirection.IsNearlyZero())
-	{
-		return;
-	}
-
-	Movable->AddImpulse(ImpulseDirection * PinballHitImpulseStrength);
-}
-
-void UPBBossDamageComponent::AddPinballCombo(AActor* DamageSource) const
-{
-	IComboable* Comboable = PBInterfaceUtils::FindInterface<IComboable>(DamageSource);
-	if (!Comboable)
-	{
-		return;
-	}
-
-	Comboable->AddCombo(1);
 }

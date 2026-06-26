@@ -2,7 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "UObject/ObjectKey.h"
 #include "PBBossWeaknessComponent.generated.h"
+
+class UPrimitiveComponent;
 
 USTRUCT(BlueprintType)
 struct PINBALLLIKE_API FBossWeaknessData
@@ -23,6 +26,8 @@ class PINBALLLIKE_API UPBBossWeaknessComponent : public UActorComponent
 public:
 	// 보스 약점 컴포넌트의 기본 값을 초기화합니다.
 	UPBBossWeaknessComponent();
+
+	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Weakness")
 	// 약점 상태를 열고 변경 이벤트를 알립니다.
@@ -52,4 +57,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Boss|Weakness")
 	FPBBossWeaknessOpenChangedSignature OnWeaknessOpenChanged;
+
+private:
+	void ApplyWeaknessCollisionState(bool IsEnabled);
+	bool IsWeaknessCollisionComponent(const UPrimitiveComponent* PrimitiveComponent) const;
+
+	TMap<TObjectKey<UPrimitiveComponent>, ECollisionEnabled::Type> WeaknessCollisionEnabledMap;
 };

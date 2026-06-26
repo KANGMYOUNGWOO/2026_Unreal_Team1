@@ -1,7 +1,5 @@
 #include "PBBossProjectilePattern.h"
 
-#include "Kismet/GameplayStatics.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/PBBossProjectile.h"
 
@@ -146,21 +144,4 @@ FRotator UPBBossProjectilePattern::GetProjectileSpawnRotation(const FVector& Spa
 	}
 
 	return Direction.Rotation();
-}
-
-AActor* UPBBossProjectilePattern::FindPinballActor() const
-{
-	const APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss)
-	{
-		return nullptr;
-	}
-
-	UWorld* World = Boss->GetWorld();
-	if (!World)
-	{
-		return nullptr;
-	}
-
-	return UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
 }

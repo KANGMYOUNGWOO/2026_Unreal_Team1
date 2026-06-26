@@ -49,8 +49,14 @@ protected:
 private:
 	// 돌진 시작 위치, 방향, 타겟 정보를 미리 계산합니다.
 	void PrepareCharge(APBBossBase* Boss);
+	void RefreshChargeDirection(APBBossBase* Boss);
 	// 돌진 전방 경고용 텔레그래프 액터를 생성합니다.
 	void SpawnChargeTelegraph(APBBossBase* Boss);
+	void StartChargeAim(float AimDurationSeconds);
+	void UpdateChargeAim();
+	void FinishChargeAim();
+	void ClearChargeAimTimers();
+	void UpdateChargeTelegraph() const;
 	// 경고 표시가 끝난 뒤 실제 돌진 실행을 시작합니다.
 	void StartExecuteChargePattern();
 	// 돌진 타이머를 시작하고 핀볼 충돌 처리를 조정합니다.
@@ -87,9 +93,6 @@ private:
 	void SetPinballMoveIgnored(bool IsIgnored) const;
 	// 돌진 단계에서 핀볼 충돌 데미지 차단 여부를 설정합니다.
 	void SetPinballCollisionDamageBlocked(bool IsBlocked) const;
-	// 월드에서 핀볼 액터를 찾아 반환합니다.
-	AActor* FindPinballActor() const;
-
 	FVector ChargeStartLocation = FVector::ZeroVector;
 	FRotator ChargeStartRotation = FRotator::ZeroRotator;
 	FVector ChargeDirection = FVector::ForwardVector;
@@ -101,6 +104,8 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<class APBBossChargeTelegraph> SpawnedChargeTelegraph;
 
+	FTimerHandle ChargeAimTimerHandle;
+	FTimerHandle ChargeAimFinishTimerHandle;
 	FTimerHandle ChargeTelegraphTimerHandle;
 	FTimerHandle ChargeTimerHandle;
 	FTimerHandle ReboundTimerHandle;

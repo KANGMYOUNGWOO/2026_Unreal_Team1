@@ -6,6 +6,15 @@ void APBBossChargeTelegraph::InitChargeTelegraph(
 	const FVector& Direction,
 	float Length)
 {
+	UpdateChargeTelegraphTransform(StartLocation, Direction, Length);
+	InitTelegraph(InDurationSeconds, GetActorScale3D());
+}
+
+void APBBossChargeTelegraph::UpdateChargeTelegraphTransform(
+	const FVector& StartLocation,
+	const FVector& Direction,
+	float Length)
+{
 	FVector SafeDirection = Direction;
 	SafeDirection.Z = 0.0f;
 	SafeDirection = SafeDirection.GetSafeNormal();
@@ -19,5 +28,4 @@ void APBBossChargeTelegraph::InitChargeTelegraph(
 
 	SetActorLocation(StartLocation + SafeDirection * SafeLength * 0.5f);
 	SetActorRotation(SafeDirection.Rotation());
-	InitTelegraph(InDurationSeconds, GetActorScale3D());
 }

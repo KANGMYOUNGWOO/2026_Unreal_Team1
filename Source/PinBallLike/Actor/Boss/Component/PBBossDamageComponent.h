@@ -7,7 +7,11 @@
 #include "PBBossDamageComponent.generated.h"
 
 class APBBossBase;
+class AActor;
 class UPrimitiveComponent;
+
+DECLARE_MULTICAST_DELEGATE_TwoParams(FPBBossDamageAppliedSignature, FName, int32);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FPBBossDamageSourceHitAppliedSignature, AActor*, const FHitResult&);
 
 UCLASS(ClassGroup = (Boss), meta = (BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBossDamageComponent : public UActorComponent
@@ -49,6 +53,9 @@ public:
 	// 핀볼 액터가 충돌 시 줄 데미지 값을 반환합니다.
 	int32 GetPinballHitDamage(AActor* DamageSource) const;
 
+	FPBBossDamageAppliedSignature OnBossDamageApplied;
+	FPBBossDamageSourceHitAppliedSignature OnDamageSourceHitApplied;
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage")
 	FName DefaultHitPointName = TEXT("Normal");
@@ -64,9 +71,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
 	float SameSourceHitCooldownSeconds = 0.25f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
-	float PinballHitImpulseStrength = 500.0f;
 
 private:
 	struct FPBBossHitPartInfo
@@ -87,14 +91,9 @@ private:
 	bool IsWeakPointHitBlocked(const FPBBossHitPartInfo& HitPartInfo) const;
 	// 해석된 피격 부위 정보를 바탕으로 최종 데미지 처리를 수행합니다.
 	void ApplyResolvedDamage(AActor* DamageSource, const FPBBossHitPartInfo& HitPartInfo, int32 DamageAmount, const FHitResult& Hit);
-	// 소유 보스에게 지정 히트 포인트 데미지를 전달합니다.
-	void ApplyDamageToBoss(FName HitPointName, int32 DamageAmount);
+	void BroadcastDamageApplied(FName HitPointName, int32 DamageAmount);
 	// 데미지 소스별 마지막 타격 시간을 기록합니다.
 	void RecordDamageRateLimit(AActor* DamageSource);
-	// 핀볼 타격 시 핀볼에 반발 임펄스를 적용합니다.
-	void ApplyPinballHitImpulse(AActor* DamageSource, const FHitResult& Hit) const;
-	// 핀볼 타격 성공 시 콤보 카운트를 증가시킵니다.
-	void AddPinballCombo(AActor* DamageSource) const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<APBBossBase> OwnerBoss;

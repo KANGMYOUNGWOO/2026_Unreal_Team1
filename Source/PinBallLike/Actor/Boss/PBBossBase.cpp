@@ -1,14 +1,17 @@
 #include "PBBossBase.h"
 
-#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 #include "Component/PBBossDamageComponent.h"
+#include "Component/PBBossDamageReceiverComponent.h"
 #include "Component/PBBossGroggyComponent.h"
 #include "Component/PBBossPatternComponent.h"
+#include "Component/PBBossPinballReactionComponent.h"
 #include "Component/PBBossStatComponent.h"
+#include "Component/PBBossUIComponent.h"
 #include "Component/PBBossWeaknessComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StateTreeComponent.h"
+#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 
 APBBossBase::APBBossBase()
 {
@@ -26,9 +29,12 @@ APBBossBase::APBBossBase()
 	BossStatComponent = CreateDefaultSubobject<UPBBossStatComponent>(TEXT("BossStatComponent"));
 	BossGroggyComponent = CreateDefaultSubobject<UPBBossGroggyComponent>(TEXT("BossGroggyComponent"));
 	BossDamageComponent = CreateDefaultSubobject<UPBBossDamageComponent>(TEXT("BossDamageComponent"));
+	BossDamageReceiverComponent = CreateDefaultSubobject<UPBBossDamageReceiverComponent>(TEXT("BossDamageReceiverComponent"));
 	BossPatternComponent = CreateDefaultSubobject<UPBBossPatternComponent>(TEXT("BossPatternComponent"));
+	BossPinballReactionComponent = CreateDefaultSubobject<UPBBossPinballReactionComponent>(TEXT("BossPinballReactionComponent"));
 	BossWeaknessComponent = CreateDefaultSubobject<UPBBossWeaknessComponent>(TEXT("BossWeaknessComponent"));
 	BossStateTreeComponent = CreateDefaultSubobject<UStateTreeComponent>(TEXT("BossStateTreeComponent"));
+	BossUIComponent = CreateDefaultSubobject<UPBBossUIComponent>(TEXT("BossUIComponent"));
 }
 
 UPBBossStatComponent* APBBossBase::GetBossStatComponent() const
@@ -59,6 +65,11 @@ UPBBossWeaknessComponent* APBBossBase::GetBossWeaknessComponent() const
 UStateTreeComponent* APBBossBase::GetBossStateTreeComponent() const
 {
 	return BossStateTreeComponent;
+}
+
+UPBBossUIComponent* APBBossBase::GetBossUIComponent() const
+{
+	return BossUIComponent;
 }
 
 void APBBossBase::SetBossState(EPBBossState NewBossState)
@@ -101,13 +112,16 @@ void APBBossBase::BeginPlay()
 	SetBossState(EPBBossState::Idle);
 	BindBossCollisionEvents();
 	SetWeaknessState(false);
-	CreateBossStatusWidget();
+
+	if (BossUIComponent && BossStatusWidgetClass)
+	{
+		BossUIComponent->ConfigureBossStatusWidget(BossStatusWidgetClass, BossStatusWidgetZOrder);
+		BossUIComponent->CreateBossStatusWidget();
+	}
 }
 
 void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	RemoveBossStatusWidget();
-
 	SetWeaknessState(false);
 
 	ClearGroggyResetTimer();
@@ -208,41 +222,6 @@ void APBBossBase::BindBossCollisionEvents()
 	}
 }
 
-void APBBossBase::CreateBossStatusWidget()
-{
-	if (BossStatusWidget || !BossStatusWidgetClass)
-	{
-		return;
-	}
-
-	APlayerController* PlayerController = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	BossStatusWidget = CreateWidget<UPBBossStatusWidget>(PlayerController, BossStatusWidgetClass);
-	if (!BossStatusWidget)
-	{
-		return;
-	}
-
-	BossStatusWidget->SetBoss(this);
-	BossStatusWidget->AddToViewport(BossStatusWidgetZOrder);
-}
-
-void APBBossBase::RemoveBossStatusWidget()
-{
-	if (!BossStatusWidget)
-	{
-		return;
-	}
-
-	BossStatusWidget->ClearBoss();
-	BossStatusWidget->RemoveFromParent();
-	BossStatusWidget = nullptr;
-}
-
 void APBBossBase::StartGroggyResetTimer()
 {
 	if (!BossGroggyComponent)
@@ -300,60 +279,4 @@ void APBBossBase::SetWeaknessState(bool IsOpen)
 			BossWeaknessComponent->CloseWeakness();
 		}
 	}
-
-	SetWeaknessCollisionEnabled(IsOpen);
-}
-
-void APBBossBase::SetWeaknessCollisionEnabled(bool IsEnabled)
-{
-	if (!BossWeaknessComponent)
-	{
-		return;
-	}
-
-	TArray<UPrimitiveComponent*> PrimitiveComponents;
-	GetComponents<UPrimitiveComponent>(PrimitiveComponents);
-
-	for (UPrimitiveComponent* PrimitiveComponent : PrimitiveComponents)
-	{
-		if (!PrimitiveComponent || !IsWeaknessCollisionComponent(PrimitiveComponent))
-		{
-			continue;
-		}
-
-		if (!WeaknessCollisionEnabledMap.Contains(PrimitiveComponent))
-		{
-			WeaknessCollisionEnabledMap.Add(PrimitiveComponent, PrimitiveComponent->GetCollisionEnabled());
-		}
-
-		PrimitiveComponent->SetHiddenInGame(!IsEnabled, true);
-		PrimitiveComponent->SetVisibility(IsEnabled, true);
-
-		if (IsEnabled)
-		{
-			const ECollisionEnabled::Type* OriginalCollisionEnabled = WeaknessCollisionEnabledMap.Find(PrimitiveComponent);
-			PrimitiveComponent->SetCollisionEnabled(OriginalCollisionEnabled ? *OriginalCollisionEnabled : ECollisionEnabled::QueryAndPhysics);
-			continue;
-		}
-
-		PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	}
-}
-
-bool APBBossBase::IsWeaknessCollisionComponent(const UPrimitiveComponent* PrimitiveComponent) const
-{
-	if (!PrimitiveComponent || !BossWeaknessComponent)
-	{
-		return false;
-	}
-
-	for (const FName ComponentTag : PrimitiveComponent->ComponentTags)
-	{
-		if (BossWeaknessComponent->IsWeaknessPoint(ComponentTag))
-		{
-			return true;
-		}
-	}
-
-	return false;
 }

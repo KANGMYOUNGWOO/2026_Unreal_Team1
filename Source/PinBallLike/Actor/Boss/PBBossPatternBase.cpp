@@ -1,5 +1,7 @@
 #include "PBBossPatternBase.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
 #include "PinBallLike/Actor/Boss/PBBossPatternTelegraph.h"
@@ -87,6 +89,23 @@ APBBossBase* UPBBossPatternBase::GetOwnerBoss() const
 void UPBBossPatternBase::SetOwnerBoss(APBBossBase* Boss)
 {
 	OwnerBoss = Boss;
+}
+
+AActor* UPBBossPatternBase::FindPinballActor() const
+{
+	const APBBossBase* Boss = GetOwnerBoss();
+	if (!Boss)
+	{
+		return nullptr;
+	}
+
+	UWorld* World = Boss->GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	return UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
 }
 
 void UPBBossPatternBase::StartExecutePattern()

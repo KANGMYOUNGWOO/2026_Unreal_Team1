@@ -8,9 +8,12 @@
 
 class UPBBossGroggyComponent;
 class UPBBossDamageComponent;
+class UPBBossDamageReceiverComponent;
 class UPBBossPatternComponent;
+class UPBBossPinballReactionComponent;
 class UPBBossStatComponent;
 class UPBBossStatusWidget;
+class UPBBossUIComponent;
 class UPBBossWeaknessComponent;
 class UStateTreeComponent;
 class UPrimitiveComponent;
@@ -58,6 +61,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|Component")
 	// 보스의 StateTree 컴포넌트를 반환합니다.
 	UStateTreeComponent* GetBossStateTreeComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Component")
+	UPBBossUIComponent* GetBossUIComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|State")
 	// 보스의 현재 상태를 변경합니다.
@@ -111,10 +117,6 @@ protected:
 
 	// 보스 충돌 이벤트 델리게이트를 바인딩합니다.
 	void BindBossCollisionEvents();
-	// 보스 상태 UI 위젯을 생성하고 화면에 추가합니다.
-	void CreateBossStatusWidget();
-	// 보스 상태 UI 위젯을 화면에서 제거합니다.
-	void RemoveBossStatusWidget();
 	// 그로기 지속 시간이 끝나도록 타이머를 시작합니다.
 	void StartGroggyResetTimer();
 	// 그로기 종료 타이머를 해제합니다.
@@ -123,11 +125,6 @@ protected:
 	void HandleGroggyDurationFinished();
 	// 약점 개방 상태를 컴포넌트와 충돌체에 반영합니다.
 	void SetWeaknessState(bool IsOpen);
-	// 약점 충돌체의 충돌 활성화 여부를 설정합니다.
-	void SetWeaknessCollisionEnabled(bool IsEnabled);
-	// 전달된 충돌 컴포넌트가 약점 충돌체인지 확인합니다.
-	bool IsWeaknessCollisionComponent(const UPrimitiveComponent* PrimitiveComponent) const;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Collision")
 	TObjectPtr<USphereComponent> CollisionSphere;
 
@@ -141,13 +138,22 @@ protected:
 	TObjectPtr<UPBBossDamageComponent> BossDamageComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	TObjectPtr<UPBBossDamageReceiverComponent> BossDamageReceiverComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
 	TObjectPtr<UPBBossPatternComponent> BossPatternComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	TObjectPtr<UPBBossPinballReactionComponent> BossPinballReactionComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
 	TObjectPtr<UPBBossWeaknessComponent> BossWeaknessComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
 	TObjectPtr<UStateTreeComponent> BossStateTreeComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	TObjectPtr<UPBBossUIComponent> BossUIComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|State")
 	EPBBossState BossState = EPBBossState::Idle;
@@ -185,8 +191,4 @@ protected:
 
 private:
 	FTimerHandle GroggyResetTimerHandle;
-	TMap<UPrimitiveComponent*, ECollisionEnabled::Type> WeaknessCollisionEnabledMap;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UPBBossStatusWidget> BossStatusWidget;
 };

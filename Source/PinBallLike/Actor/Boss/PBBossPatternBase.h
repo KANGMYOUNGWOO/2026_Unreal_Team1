@@ -7,6 +7,7 @@
 
 class APBBossBase;
 class APBBossPatternTelegraph;
+class AActor;
 class UPBBossPatternComponent;
 
 UCLASS(Abstract, Blueprintable)
@@ -80,6 +81,7 @@ protected:
 	APBBossBase* GetOwnerBoss() const;
 	// 패턴 실행 중 참조할 소유 보스 액터를 저장합니다.
 	void SetOwnerBoss(APBBossBase* Boss);
+	AActor* FindPinballActor() const;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Pattern|Telegraph")
 	TArray<FPBBossPatternTelegraphData> TelegraphDataList;

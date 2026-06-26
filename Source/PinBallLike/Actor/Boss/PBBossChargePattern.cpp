@@ -1,7 +1,5 @@
 #include "PBBossChargePattern.h"
 
-#include "Kismet/GameplayStatics.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/PBBossChargeTelegraph.h"
 
@@ -31,6 +29,8 @@ void UPBBossChargePattern::StartPattern_Implementation(APBBossBase* Boss)
 		StartExecuteChargePattern();
 		return;
 	}
+
+	StartChargeAim(TelegraphDurationSeconds * 0.5f);
 
 	Boss->GetWorldTimerManager().SetTimer(
 		ChargeTelegraphTimerHandle,
@@ -79,7 +79,17 @@ void UPBBossChargePattern::PrepareCharge(APBBossBase* Boss)
 	ChargedDistance = 0.0f;
 
 	TargetPinballActor = FindPinballActor();
-	if (TargetPinballActor)
+	RefreshChargeDirection(Boss);
+}
+
+void UPBBossChargePattern::RefreshChargeDirection(APBBossBase* Boss)
+{
+	if (!Boss)
+	{
+		return;
+	}
+
+	if (IsValid(TargetPinballActor))
 	{
 		ChargeDirection = TargetPinballActor->GetActorLocation() - ChargeStartLocation;
 		ChargeDirection.Z = 0.0f;
@@ -94,7 +104,14 @@ void UPBBossChargePattern::PrepareCharge(APBBossBase* Boss)
 
 	if (ChargeDirection.IsNearlyZero())
 	{
-		ChargeDirection = Boss->GetActorForwardVector().GetSafeNormal();
+		ChargeDirection = Boss->GetActorForwardVector();
+		ChargeDirection.Z = 0.0f;
+		ChargeDirection = ChargeDirection.GetSafeNormal();
+	}
+
+	if (ChargeDirection.IsNearlyZero())
+	{
+		ChargeDirection = FVector::ForwardVector;
 	}
 }
 
@@ -140,8 +157,74 @@ void UPBBossChargePattern::SpawnChargeTelegraph(APBBossBase* Boss)
 	}
 }
 
+void UPBBossChargePattern::StartChargeAim(float AimDurationSeconds)
+{
+	APBBossBase* Boss = GetOwnerBoss();
+	if (!Boss || AimDurationSeconds <= 0.0f)
+	{
+		return;
+	}
+
+	UpdateChargeAim();
+
+	Boss->GetWorldTimerManager().SetTimer(
+		ChargeAimTimerHandle,
+		this,
+		&UPBBossChargePattern::UpdateChargeAim,
+		UpdateIntervalSeconds,
+		true);
+
+	Boss->GetWorldTimerManager().SetTimer(
+		ChargeAimFinishTimerHandle,
+		this,
+		&UPBBossChargePattern::FinishChargeAim,
+		AimDurationSeconds,
+		false);
+}
+
+void UPBBossChargePattern::UpdateChargeAim()
+{
+	APBBossBase* Boss = GetOwnerBoss();
+	if (!Boss)
+	{
+		return;
+	}
+
+	RefreshChargeDirection(Boss);
+	UpdateChargeTelegraph();
+}
+
+void UPBBossChargePattern::FinishChargeAim()
+{
+	UpdateChargeAim();
+	ClearChargeAimTimers();
+}
+
+void UPBBossChargePattern::ClearChargeAimTimers()
+{
+	if (APBBossBase* Boss = GetOwnerBoss())
+	{
+		Boss->GetWorldTimerManager().ClearTimer(ChargeAimTimerHandle);
+		Boss->GetWorldTimerManager().ClearTimer(ChargeAimFinishTimerHandle);
+	}
+}
+
+void UPBBossChargePattern::UpdateChargeTelegraph() const
+{
+	if (!IsValid(SpawnedChargeTelegraph))
+	{
+		return;
+	}
+
+	SpawnedChargeTelegraph->UpdateChargeTelegraphTransform(
+		ChargeStartLocation,
+		ChargeDirection,
+		ChargeMaxDistance);
+}
+
 void UPBBossChargePattern::StartExecuteChargePattern()
 {
+	ClearChargeAimTimers();
 	ClearChargeTelegraphTimer();
 	DestroyChargeTelegraph();
 
@@ -408,6 +491,7 @@ void UPBBossChargePattern::ClearPatternTimers()
 	}
 
 	ClearChargeTelegraphTimer();
+	ClearChargeAimTimers();
 	Boss->GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
 	Boss->GetWorldTimerManager().ClearTimer(ReboundTimerHandle);
 	Boss->GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
@@ -458,21 +542,4 @@ void UPBBossChargePattern::SetPinballCollisionDamageBlocked(bool IsBlocked) cons
 	{
 		Boss->SetPinballCollisionDamageBlocked(IsBlocked);
 	}
-}
-
-AActor* UPBBossChargePattern::FindPinballActor() const
-{
-	const APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss)
-	{
-		return nullptr;
-	}
-
-	UWorld* World = Boss->GetWorld();
-	if (!World)
-	{
-		return nullptr;
-	}
-
-	return UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
 }
