@@ -12,6 +12,7 @@
 class APBBallBase;
 class APBBumperPositionAnchor;
 class APBBumperTriggerActorBase;
+class UPBBumperEffectBase;
 class USceneComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
@@ -65,6 +66,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper")
 	EPBBumperState GetBumperState() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Effect")
+	void CreateBumperEffect();
+
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
 	FPBModularBumperTriggerCountChangedSignature OnBumperTriggerCountChanged;
 
@@ -111,6 +115,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
+	TSubclassOf<UPBBumperEffectBase> EffectClass;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
+	TObjectPtr<UPBBumperEffectBase> BumperEffect;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<TObjectPtr<APBBumperTriggerActorBase>> SpawnedTriggerActors;

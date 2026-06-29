@@ -38,6 +38,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
 	bool CanIncreaseTrigger() const;
 
+	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
+	bool CanReactToBall() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger")
 	void FinishTrigger();
 
