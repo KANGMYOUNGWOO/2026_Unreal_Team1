@@ -162,8 +162,7 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 	FVector NormalImpulse,
 	const FHitResult& Hit)
 {
-	UE_LOG(LogTemp, Warning, TEXT("bumper hit"));
-	if (!CanIncreaseTrigger())
+	if (!CanReactToBall())
 	{
 		return;
 	}
@@ -191,7 +190,7 @@ void APBCollisionBumperTriggerActor::HandleTriggerBeginOverlap(
 	bool IsFromSweep,
 	const FHitResult& SweepResult)
 {
-	if (!CanIncreaseTrigger())
+	if (!CanReactToBall())
 	{
 		return;
 	}
