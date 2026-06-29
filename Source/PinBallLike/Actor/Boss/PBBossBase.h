@@ -95,6 +95,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|State")
 	bool IsDeadState() const;
 
+	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	bool IsEnragedPhase() const;
+
 	UFUNCTION(BlueprintPure, Category = "Boss|Type")
 	bool IsFixedBoss() const;
 

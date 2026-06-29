@@ -91,6 +91,10 @@ void UPBBossPatternComponent::TryStartNextPattern()
 	CurrentPattern = NextPattern;
 	IsPatternRunning = true;
 	OwnerBoss->SetBossState(EPBBossState::Pattern);
+	if (IsEnragedEntryPattern(CurrentPattern))
+	{
+		IsEnragedEntryPatternPending = false;
+	}
 	OnPatternStarted.Broadcast(CurrentPattern);
 
 	CurrentPattern->StartPattern(OwnerBoss);
@@ -146,6 +150,11 @@ void UPBBossPatternComponent::NotifyPatternFinished(UPBBossPatternBase* Finished
 	}
 }
 
+void UPBBossPatternComponent::NotifyEnragedPhaseStarted()
+{
+	IsEnragedEntryPatternPending = EnragedEntryPatternInstances.Num() > 0;
+}
+
 bool UPBBossPatternComponent::CanStartPattern() const
 {
 	return IsPatternSystemActive
@@ -166,9 +175,20 @@ UPBBossPatternBase* UPBBossPatternComponent::GetCurrentPattern() const
 void UPBBossPatternComponent::InitializePatterns()
 {
 	PatternInstances.Reset();
+	EnragedPatternInstances.Reset();
+	EnragedEntryPatternInstances.Reset();
 	CooldownEndTimeMap.Reset();
 
-	for (TSubclassOf<UPBBossPatternBase> PatternClass : PatternClasses)
+	InitializePatternClasses(PatternClasses, PatternInstances);
+	InitializePatternClasses(EnragedPatternClasses, EnragedPatternInstances);
+	InitializePatternClasses(EnragedEntryPatternClasses, EnragedEntryPatternInstances);
+}
+
+void UPBBossPatternComponent::InitializePatternClasses(
+	const TArray<TSubclassOf<UPBBossPatternBase>>& PatternClassList,
+	TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList)
+{
+	for (TSubclassOf<UPBBossPatternBase> PatternClass : PatternClassList)
 	{
 		if (!PatternClass)
 		{
@@ -182,7 +202,7 @@ void UPBBossPatternComponent::InitializePatterns()
 		}
 
 		Pattern->InitializePattern(this);
-		PatternInstances.Add(Pattern);
+		PatternInstanceList.Add(Pattern);
 	}
 }
 
@@ -292,10 +312,23 @@ bool UPBBossPatternComponent::IsPatternCooldownReady(const UPBBossPatternBase* P
 
 UPBBossPatternBase* UPBBossPatternComponent::SelectExecutablePattern() const
 {
+	if (IsEnragedEntryPatternPending)
+	{
+		if (UPBBossPatternBase* EnragedEntryPattern = SelectExecutablePatternFromList(EnragedEntryPatternInstances))
+		{
+			return EnragedEntryPattern;
+		}
+	}
+
+	return SelectExecutablePatternFromList(GetCurrentPhasePatternInstances());
+}
+
+UPBBossPatternBase* UPBBossPatternComponent::SelectExecutablePatternFromList(const TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList) const
+{
 	UPBBossPatternBase* SelectedPattern = nullptr;
 	float SelectedCooldownEndTime = TNumericLimits<float>::Max();
 
-	for (UPBBossPatternBase* Pattern : PatternInstances)
+	for (UPBBossPatternBase* Pattern : PatternInstanceList)
 	{
 		if (!Pattern || !IsPatternCooldownReady(Pattern) || !Pattern->CanExecute(OwnerBoss))
 		{
@@ -312,4 +345,19 @@ UPBBossPatternBase* UPBBossPatternComponent::SelectExecutablePattern() const
 	}
 
 	return SelectedPattern;
+}
+
+const TArray<TObjectPtr<UPBBossPatternBase>>& UPBBossPatternComponent::GetCurrentPhasePatternInstances() const
+{
+	if (OwnerBoss && OwnerBoss->IsEnragedPhase() && EnragedPatternInstances.Num() > 0)
+	{
+		return EnragedPatternInstances;
+	}
+
+	return PatternInstances;
+}
+
+bool UPBBossPatternComponent::IsEnragedEntryPattern(const UPBBossPatternBase* Pattern) const
+{
+	return Pattern && EnragedEntryPatternInstances.Contains(Pattern);
 }

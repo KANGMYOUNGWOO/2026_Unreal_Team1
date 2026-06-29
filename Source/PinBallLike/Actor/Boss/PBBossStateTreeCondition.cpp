@@ -31,6 +31,9 @@ bool FPBBossStateTreeCondition::TestCondition(FStateTreeExecutionContext& Contex
 	case EPBBossStateTreeConditionType::Enraged:
 		IsPassed = Boss.IsEnragedState();
 		break;
+	case EPBBossStateTreeConditionType::EnragedPhase:
+		IsPassed = Boss.IsEnragedPhase();
+		break;
 	case EPBBossStateTreeConditionType::Dead:
 		IsPassed = Boss.IsDeadState();
 		break;

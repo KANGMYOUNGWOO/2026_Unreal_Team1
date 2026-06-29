@@ -107,6 +107,11 @@ bool APBBossBase::IsDeadState() const
 	return BossState == EPBBossState::Dead;
 }
 
+bool APBBossBase::IsEnragedPhase() const
+{
+	return BossStatComponent && BossStatComponent->IsEnraged;
+}
+
 bool APBBossBase::IsFixedBoss() const
 {
 	return BossMovementType == EPBBossMovementType::Fixed;
@@ -254,7 +259,12 @@ void APBBossBase::OnGroggyTriggered_Implementation()
 void APBBossBase::OnEnragedTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Enraged Started."));
-	SetBossState(EPBBossState::Enraged);
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->NotifyEnragedPhaseStarted();
+	}
+
+	BP_OnEnragedStarted();
 }
 
 void APBBossBase::OnDeadTriggered_Implementation()

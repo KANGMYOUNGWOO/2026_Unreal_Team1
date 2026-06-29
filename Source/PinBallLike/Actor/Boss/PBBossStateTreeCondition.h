@@ -16,6 +16,7 @@ enum class EPBBossStateTreeConditionType : uint8
 	Pattern,
 	Groggy,
 	Enraged,
+	EnragedPhase,
 	Dead,
 	FixedBoss,
 	MovableBoss
