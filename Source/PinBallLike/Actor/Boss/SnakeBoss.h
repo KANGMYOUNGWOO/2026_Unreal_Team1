@@ -29,6 +29,7 @@ public:
 
 	void FaceHeadDirection(const FVector& Direction);
 	void CollapseBodyToHead();
+	void PullBodyToHead(float Alpha);
 
 protected:
 	virtual void BeginPlay() override;
@@ -93,6 +94,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
 	bool IsDrawDebugSnake = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake", meta = (ClampMin = "0.0"))
+	float ChargePullDelayPerSegment = 0.12f;
 
 private:
 	void ConfigureSnakeMeshComponent(UStaticMeshComponent* MeshComponent) const;

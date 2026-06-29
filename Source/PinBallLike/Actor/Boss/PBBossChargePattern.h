@@ -97,6 +97,8 @@ private:
 	FRotator ChargeStartRotation = FRotator::ZeroRotator;
 	FVector ChargeDirection = FVector::ForwardVector;
 	float ChargedDistance = 0.0f;
+	float ChargeAimElapsedSeconds = 0.0f;
+	float ChargeAimDurationSeconds = 0.0f;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> TargetPinballActor;

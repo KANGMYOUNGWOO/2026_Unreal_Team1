@@ -98,6 +98,37 @@ void ASnakeBoss::CollapseBodyToHead()
 	IsSnakeBodyCollapsed = true;
 }
 
+void ASnakeBoss::PullBodyToHead(float Alpha)
+{
+	const float PullAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+	if (PullAlpha <= 0.0f)
+	{
+		return;
+	}
+
+	const FVector HeadLocation = GetActorLocation();
+	SegmentTargetLocations.Reset();
+	SegmentTargetLocations.Reserve(BodySegments.Num());
+
+	for (int32 SegmentIndex = 0; SegmentIndex < BodySegments.Num(); ++SegmentIndex)
+	{
+		UStaticMeshComponent* BodySegment = BodySegments[SegmentIndex];
+		if (!BodySegment)
+		{
+			continue;
+		}
+
+		const int32 TailOrderIndex = BodySegments.Num() - SegmentIndex - 1;
+		const float SegmentStartAlpha = static_cast<float>(TailOrderIndex) * ChargePullDelayPerSegment;
+		const float SegmentAlpha = FMath::Clamp((PullAlpha - SegmentStartAlpha) / FMath::Max(1.0f - SegmentStartAlpha, KINDA_SMALL_NUMBER), 0.0f, 1.0f);
+		const FVector SegmentLocation = FMath::Lerp(BodySegment->GetComponentLocation(), HeadLocation, SegmentAlpha);
+
+		BodySegment->SetWorldLocation(SegmentLocation, false, nullptr, ETeleportType::TeleportPhysics);
+		BodySegment->SetWorldRotation(GetActorRotation());
+		SegmentTargetLocations.Add(SegmentLocation);
+	}
+}
+
 void ASnakeBoss::InitializePatrolCenter()
 {
 	if (IsPatrolCenterInitialized)

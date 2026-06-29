@@ -61,6 +61,8 @@ void UPBBossChargePattern::CancelPatternInternal_Implementation(APBBossBase* Bos
 	SetPinballMoveIgnored(false);
 	SetPinballCollisionDamageBlocked(false);
 	TargetPinballActor = nullptr;
+	ChargeAimElapsedSeconds = 0.0f;
+	ChargeAimDurationSeconds = 0.0f;
 }
 
 void UPBBossChargePattern::ExecuteNativePattern(APBBossBase* Boss)
@@ -78,6 +80,8 @@ void UPBBossChargePattern::PrepareCharge(APBBossBase* Boss)
 	ChargeStartLocation = Boss->GetActorLocation();
 	ChargeStartRotation = Boss->GetActorRotation();
 	ChargedDistance = 0.0f;
+	ChargeAimElapsedSeconds = 0.0f;
+	ChargeAimDurationSeconds = 0.0f;
 
 	TargetPinballActor = FindPinballActor();
 	RefreshChargeDirection(Boss);
@@ -166,6 +170,8 @@ void UPBBossChargePattern::StartChargeAim(float AimDurationSeconds)
 		return;
 	}
 
+	ChargeAimElapsedSeconds = 0.0f;
+	ChargeAimDurationSeconds = AimDurationSeconds;
 	UpdateChargeAim();
 
 	Boss->GetWorldTimerManager().SetTimer(
@@ -195,13 +201,22 @@ void UPBBossChargePattern::UpdateChargeAim()
 	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
 	{
 		SnakeBoss->FaceHeadDirection(ChargeDirection);
+		const float PullAlpha = ChargeAimDurationSeconds > 0.0f
+			? ChargeAimElapsedSeconds / ChargeAimDurationSeconds
+			: 1.0f;
+		SnakeBoss->PullBodyToHead(PullAlpha);
 	}
+
+	ChargeAimElapsedSeconds = FMath::Min(
+		ChargeAimElapsedSeconds + UpdateIntervalSeconds,
+		ChargeAimDurationSeconds);
 
 	UpdateChargeTelegraph();
 }
 
 void UPBBossChargePattern::FinishChargeAim()
 {
+	ChargeAimElapsedSeconds = ChargeAimDurationSeconds;
 	UpdateChargeAim();
 	ClearChargeAimTimers();
 }
