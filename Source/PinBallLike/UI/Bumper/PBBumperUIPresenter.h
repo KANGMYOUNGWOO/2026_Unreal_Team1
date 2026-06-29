@@ -8,6 +8,9 @@
 class UPBBumperViewModel;
 class UUserWidget;
 
+
+//TODO : MVVM 인데 presenter가 왜 필요하지? 다른 방향의 사용법 구상하자.
+
 UCLASS(BlueprintType)
 class PINBALLLIKE_API UPBBumperUIPresenter : public UObject
 {
