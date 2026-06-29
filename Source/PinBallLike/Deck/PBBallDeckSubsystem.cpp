@@ -11,7 +11,74 @@ void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	InitializeDeploymentSlots();
+	InitializeBenchSlots();
 }
+
+bool UPBBallDeckSubsystem::TestSnakeBall(TSubclassOf<APBBallBase> BallClass)
+{
+	if (!BallClass)
+	{
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	TArray<APBBallBase*> SpawnedBalls;
+	SpawnedBalls.Reserve(MaxDeploymentSlotCount);
+
+	const FVector SpawnOrigin = FVector::ZeroVector;
+	const float SpawnSpacing = 150.0f;
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	for (int32 BallIndex = 0; BallIndex < MaxDeploymentSlotCount; ++BallIndex)
+	{
+		const FVector SpawnLocation = SpawnOrigin + FVector(SpawnSpacing * BallIndex, 0.0f, 0.0f);
+		APBBallBase* SpawnedBall = World->SpawnActor<APBBallBase>(BallClass, SpawnLocation, FRotator::ZeroRotator, SpawnParameters);
+		if (!SpawnedBall)
+		{
+			for (APBBallBase* ExistingBall : SpawnedBalls)
+			{
+				if (ExistingBall)
+				{
+					ExistingBall->Destroy();
+				}
+			}
+			return false;
+		}
+
+		SpawnedBalls.Add(SpawnedBall);
+	}
+
+	for (int32 SlotIndex = 0; SlotIndex < SpawnedBalls.Num(); ++SlotIndex)
+	{
+		if (!SetDeploymentSlot(SlotIndex, SpawnedBalls[SlotIndex]))
+		{
+			for (int32 CleanupSlotIndex = SlotIndex - 1; CleanupSlotIndex >= 0; --CleanupSlotIndex)
+			{
+				ClearDeploymentSlot(CleanupSlotIndex);
+			}
+
+			for (APBBallBase* ExistingBall : SpawnedBalls)
+			{
+				if (ExistingBall)
+				{
+					ExistingBall->Destroy();
+				}
+			}
+			return false;
+		}
+	}
+
+	return true;
+}
+
+#pragma region Deployment Slot
 
 EPBBallPartyRole UPBBallDeckSubsystem::GetDeploymentRole(int32 SlotIndex) const
 {
@@ -180,70 +247,6 @@ bool UPBBallDeckSubsystem::RotateDeploymentSlots()
 	return true;
 }
 
-bool UPBBallDeckSubsystem::TestSnakeBall(TSubclassOf<APBBallBase> BallClass)
-{
-	if (!BallClass)
-	{
-		return false;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return false;
-	}
-
-	TArray<APBBallBase*> SpawnedBalls;
-	SpawnedBalls.Reserve(MaxDeploymentSlotCount);
-
-	const FVector SpawnOrigin = FVector::ZeroVector;
-	const float SpawnSpacing = 150.0f;
-
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	for (int32 BallIndex = 0; BallIndex < MaxDeploymentSlotCount; ++BallIndex)
-	{
-		const FVector SpawnLocation = SpawnOrigin + FVector(SpawnSpacing * BallIndex, 0.0f, 0.0f);
-		APBBallBase* SpawnedBall = World->SpawnActor<APBBallBase>(BallClass, SpawnLocation, FRotator::ZeroRotator, SpawnParameters);
-		if (!SpawnedBall)
-		{
-			for (APBBallBase* ExistingBall : SpawnedBalls)
-			{
-				if (ExistingBall)
-				{
-					ExistingBall->Destroy();
-				}
-			}
-			return false;
-		}
-
-		SpawnedBalls.Add(SpawnedBall);
-	}
-
-	for (int32 SlotIndex = 0; SlotIndex < SpawnedBalls.Num(); ++SlotIndex)
-	{
-		if (!SetDeploymentSlot(SlotIndex, SpawnedBalls[SlotIndex]))
-		{
-			for (int32 CleanupSlotIndex = SlotIndex - 1; CleanupSlotIndex >= 0; --CleanupSlotIndex)
-			{
-				ClearDeploymentSlot(CleanupSlotIndex);
-			}
-
-			for (APBBallBase* ExistingBall : SpawnedBalls)
-			{
-				if (ExistingBall)
-				{
-					ExistingBall->Destroy();
-				}
-			}
-			return false;
-		}
-	}
-
-	return true;
-}
-
 TArray<APBBallBase*> UPBBallDeckSubsystem::CaptureDeploymentSlotBalls() const
 {
 	TArray<APBBallBase*> Balls;
@@ -326,3 +329,134 @@ void UPBBallDeckSubsystem::InitializeDeploymentSlots()
 	}
 }
 
+#pragma endregion
+
+#pragma region Bench
+
+void UPBBallDeckSubsystem::InitializeBenchSlots()
+{
+	BenchSlots.SetNum(MaxBenchSlotCount);
+	for (int32 SlotIndex = 0; SlotIndex < BenchSlots.Num(); ++SlotIndex)
+	{
+		BenchSlots[SlotIndex].SlotIndex = SlotIndex;
+		BenchSlots[SlotIndex].SlotType = EPBBallDeckSlotType::Bench;
+		BenchSlots[SlotIndex].Ball = nullptr;
+	}
+}
+
+bool UPBBallDeckSubsystem::SetBenchSlot(int32 SlotIndex, APBBallBase* Ball)
+{
+	if (!IsBenchSlotValid(SlotIndex) || Ball == nullptr)
+	{
+		return false;
+	}
+
+	BenchSlots[SlotIndex].Ball = Ball;
+	OnBenchSlotChanged.Broadcast(SlotIndex, Ball);
+	return true;
+}
+
+bool UPBBallDeckSubsystem::ClearBenchSlot(int32 SlotIndex)
+{
+	if (!IsBenchSlotValid(SlotIndex))
+	{
+		return false;
+	}
+	BenchSlots[SlotIndex].Ball = nullptr;
+	OnBenchSlotChanged.Broadcast(SlotIndex, nullptr);
+	return true;
+}
+
+bool UPBBallDeckSubsystem::SwapBenchSlots(int32 FirstIndex, int32 SecondIndex)
+{
+	if (!IsBenchSlotValid(FirstIndex) || !IsBenchSlotValid(SecondIndex))
+	{
+		return false;
+	}
+
+	if (FirstIndex == SecondIndex)
+	{
+		return true;
+	}
+
+	Swap(BenchSlots[FirstIndex].Ball, BenchSlots[SecondIndex].Ball);
+	OnBenchSlotsSwapped.Broadcast();
+	return true;
+}
+
+bool UPBBallDeckSubsystem::IsBenchSlotValid(int32 SlotIndex) const
+{
+	return BenchSlots.IsValidIndex(SlotIndex);
+}
+
+bool UPBBallDeckSubsystem::IsBenchSlotOccupied(int32 SlotIndex) const
+{
+	return IsBenchSlotValid(SlotIndex) && BenchSlots[SlotIndex].Ball != nullptr;
+}
+
+bool UPBBallDeckSubsystem::HasEmptyBenchSlot() const
+{
+	return FindEmptyBenchSlot() != INDEX_NONE;
+}
+
+int32 UPBBallDeckSubsystem::FindEmptyBenchSlot() const
+{
+	for (int32 SlotIndex = 0; SlotIndex < BenchSlots.Num(); ++SlotIndex)
+	{
+		if (BenchSlots[SlotIndex].Ball == nullptr)
+		{
+			return SlotIndex;
+		}
+	}
+	return INDEX_NONE;
+}
+
+bool UPBBallDeckSubsystem::AddBenchBall(APBBallBase* Ball)
+{
+	if (Ball == nullptr)
+	{
+		return false;
+	}
+
+	const int32 EmptySlotIndex = FindEmptyBenchSlot();
+	if (EmptySlotIndex == INDEX_NONE)
+	{
+		return false;
+	}
+
+	return SetBenchSlot(EmptySlotIndex, Ball);
+}
+
+APBBallBase* UPBBallDeckSubsystem::GetBenchBall(int32 SlotIndex) const
+{
+	return IsBenchSlotValid(SlotIndex) ? BenchSlots[SlotIndex].Ball : nullptr;
+}
+
+TArray<APBBallBase*> UPBBallDeckSubsystem::GetBenchBalls() const
+{
+	TArray<APBBallBase*> Balls;
+	for (const FPBBallDeckSlot& BenchSlot : BenchSlots)
+	{
+		if (BenchSlot.Ball)
+		{
+			Balls.Add(BenchSlot.Ball);
+		}
+	}
+	return Balls;
+}
+
+int32 UPBBallDeckSubsystem::GetBenchBallCount() const
+{
+	int32 BallCount = 0;
+	for (const FPBBallDeckSlot& BenchSlot : BenchSlots)
+	{
+		if (BenchSlot.Ball)
+		{
+			++BallCount;
+		}
+	}
+	return BallCount;
+}
+
+
+#pragma endregion
