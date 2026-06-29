@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Struct/Party/PBPartyTypes.h"
 #include "PBBallBase.generated.h"
 
 class UPBBaseStatComponent;
@@ -68,6 +69,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Resource")
 	void ApplyResourceData(const TArray<FPBBallResourceData>& ResourceData);
+
+	UFUNCTION(BlueprintCallable, Category = "Ball|Combat")
+	void SetCombatRole(EPBBallPartyRole NewCombatRole);
+
+	UFUNCTION(BlueprintPure, Category = "Ball|Combat")
+	EPBBallPartyRole GetCombatRole() const { return CombatRole; }
 	
 protected:
 	virtual void BeginPlay() override;
@@ -99,6 +106,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Ball|Resource")
 	TArray<FPBBallResourceData> DefaultResources;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Combat", meta = (AllowPrivateAccess = "true"))
+	EPBBallPartyRole CombatRole = EPBBallPartyRole::None;
 	
 	FString DisplayName;
 };

@@ -84,6 +84,32 @@ void APBBallBase::ApplyResourceData(const TArray<FPBBallResourceData>& ResourceD
 	}
 }
 
+void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
+{
+	CombatRole = NewCombatRole;
+
+	const bool bLeader = CombatRole == EPBBallPartyRole::Leader;
+	if (PhysicsComponent)
+	{
+		if (bLeader)
+		{
+			PhysicsComponent->ResumeMovement();
+		}
+		else
+		{
+			PhysicsComponent->StopMovement();
+			PhysicsComponent->PauseMovement();
+		}
+	}
+
+	if (CollisionSphere)
+	{
+		CollisionSphere->SetCollisionEnabled(bLeader ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+		CollisionSphere->SetGenerateOverlapEvents(bLeader);
+		CollisionSphere->SetNotifyRigidBodyCollision(bLeader);
+	}
+}
+
 void APBBallBase::BeginPlay()
 {
 	Super::BeginPlay();

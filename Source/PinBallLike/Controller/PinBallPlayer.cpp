@@ -8,6 +8,7 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "GameFramework/PlayerController.h"
+#include "PinBallLike/Actor/Party/PBCombatPartyActor.h"
 #include "PinBallLike/Actor/Flipper/Flipper.h"
 
 APinBallPlayer::APinBallPlayer()
@@ -35,15 +36,29 @@ void APinBallPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	if (!FlipperAction)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("FlipperAction is not assigned on %s."), *GetName());
-		return;
+	}
+	else
+	{
+		EnhancedInputComponent->BindAction(
+			FlipperAction, ETriggerEvent::Started, this, &APinBallPlayer::UpFlippers);
+		EnhancedInputComponent->BindAction(
+			FlipperAction, ETriggerEvent::Completed, this, &APinBallPlayer::DownFlippers);
+		EnhancedInputComponent->BindAction(
+			FlipperAction, ETriggerEvent::Canceled, this, &APinBallPlayer::DownFlippers);
 	}
 
-	EnhancedInputComponent->BindAction(
-		FlipperAction, ETriggerEvent::Started, this, &APinBallPlayer::UpFlippers);
-	EnhancedInputComponent->BindAction(
-		FlipperAction, ETriggerEvent::Completed, this, &APinBallPlayer::DownFlippers);
-	EnhancedInputComponent->BindAction(
-		FlipperAction, ETriggerEvent::Canceled, this, &APinBallPlayer::DownFlippers);
+	if (LaunchAction)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PinBallPlayer bound LaunchAction %s on %s."),
+			*GetNameSafe(LaunchAction.Get()),
+			*GetNameSafe(this));
+		EnhancedInputComponent->BindAction(
+			LaunchAction, ETriggerEvent::Started, this, &APinBallPlayer::LaunchParty);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("LaunchAction is not assigned on %s."), *GetName());
+	}
 }
 
 void APinBallPlayer::UnPossessed()
@@ -99,6 +114,22 @@ void APinBallPlayer::UpFlippers(const FInputActionValue& Value)
 void APinBallPlayer::DownFlippers(const FInputActionValue& Value)
 {
 	SetFlippersRaised(false);
+}
+
+void APinBallPlayer::LaunchParty(const FInputActionValue& Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("PinBallPlayer received LaunchParty input. CombatPartyActor=%s"),
+		*GetNameSafe(CombatPartyActor.Get()));
+
+	if (IsValid(CombatPartyActor))
+	{
+		const bool bLaunched = CombatPartyActor->LaunchPartyFromReadyPosition();
+		UE_LOG(LogTemp, Warning, TEXT("CombatPartyActor launch result: %s"), bLaunched ? TEXT("Success") : TEXT("Failed"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("LaunchParty input ignored because CombatPartyActor is invalid."));
+	}
 }
 
 void APinBallPlayer::SetFlippersRaised(const bool bRaised) const
