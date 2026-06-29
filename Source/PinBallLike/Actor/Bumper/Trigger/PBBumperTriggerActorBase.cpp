@@ -53,6 +53,11 @@ bool APBBumperTriggerActorBase::CanIncreaseTrigger() const
 		&& Bumper->CanAccumulateTrigger();
 }
 
+bool APBBumperTriggerActorBase::CanReactToBall() const
+{
+	return CurrentState != EPBBumperState::Disabled;
+}
+
 void APBBumperTriggerActorBase::FinishTrigger()
 {
 	if (CurrentState != EPBBumperState::Activated)

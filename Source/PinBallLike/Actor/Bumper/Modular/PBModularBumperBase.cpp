@@ -8,6 +8,7 @@
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBBumperPositionAnchor.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/Interface/Comboable.h"
@@ -25,6 +26,7 @@ void APBModularBumperBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	CreateBumperEffect();
 	NotifyTriggerCountChanged();
 
 	for (auto spawnInfo : TriggerSpawnInfos)
@@ -61,9 +63,15 @@ void APBModularBumperBase::ActivateBumper(APBBallBase* Ball)
 	}
 
 	SetBumperState(EPBBumperState::Activated);
-	ResetTriggerCount();
 
 	OnBumperActivated(Ball);
+
+	if (IsValid(BumperEffect))
+	{
+		BumperEffect->ActivateEffect(this, Ball);
+		return;
+	}
+
 	ApplyBumperEffect(Ball);
 }
 
@@ -84,6 +92,7 @@ void APBModularBumperBase::FinishActivation()
 		}
 	}
 
+	ResetTriggerCount();
 	OnBumperFinished();
 }
 
@@ -138,6 +147,20 @@ int32 APBModularBumperBase::GetRequiredTriggerCount() const
 EPBBumperState APBModularBumperBase::GetBumperState() const
 {
 	return CurrentState;
+}
+
+void APBModularBumperBase::CreateBumperEffect()
+{
+	if (!EffectClass)
+	{
+		return;
+	}
+
+	BumperEffect = NewObject<UPBBumperEffectBase>(this, EffectClass);
+	if (IsValid(BumperEffect))
+	{
+		BumperEffect->Initialize(this);
+	}
 }
 
 void APBModularBumperBase::AddTriggerCount(APBBallBase* Ball, const int32 Amount)
