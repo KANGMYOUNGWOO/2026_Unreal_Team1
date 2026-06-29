@@ -15,7 +15,10 @@ public class PinBallLike : ModuleRules
 			"InputCore", 
 			"EnhancedInput",
 			"UMG", 
-			"ModelViewViewModel" });
+			"ModelViewViewModel",
+			"StateTreeModule",
+			"GameplayStateTreeModule"
+		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
