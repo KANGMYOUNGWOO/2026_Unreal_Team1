@@ -2,6 +2,7 @@
 
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/PBBossProjectile.h"
+#include "PinBallLike/Actor/Boss/SnakeBoss.h"
 
 UPBBossProjectilePattern::UPBBossProjectilePattern()
 {
@@ -21,6 +22,17 @@ void UPBBossProjectilePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 	{
 		FinishPattern();
 		return;
+	}
+
+	UpdateProjectileAim();
+	if (Cast<ASnakeBoss>(Boss))
+	{
+		Boss->GetWorldTimerManager().SetTimer(
+			AimTimerHandle,
+			this,
+			&UPBBossProjectilePattern::UpdateProjectileAim,
+			AimUpdateIntervalSeconds,
+			true);
 	}
 
 	if (FireIntervalSeconds <= 0.0f)
@@ -54,7 +66,7 @@ void UPBBossProjectilePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 
 void UPBBossProjectilePattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
 {
-	ClearFireTimer();
+	ClearPatternTimers();
 	FiredProjectileCount = 0;
 }
 
@@ -63,7 +75,7 @@ void UPBBossProjectilePattern::FireProjectile()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss || !ProjectileClass || FiredProjectileCount >= ProjectileCount)
 	{
-		ClearFireTimer();
+		ClearPatternTimers();
 		FinishPattern();
 		return;
 	}
@@ -71,13 +83,19 @@ void UPBBossProjectilePattern::FireProjectile()
 	UWorld* World = Boss->GetWorld();
 	if (!World)
 	{
-		ClearFireTimer();
+		ClearPatternTimers();
 		FinishPattern();
 		return;
 	}
 
-	const FVector SpawnLocation = GetProjectileSpawnLocation();
-	const FRotator SpawnRotation = GetProjectileSpawnRotation(SpawnLocation);
+	FVector SpawnLocation = GetProjectileSpawnLocation();
+	FRotator SpawnRotation = GetProjectileSpawnRotation(SpawnLocation);
+	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
+	{
+		SnakeBoss->FaceHeadDirection(SpawnRotation.Vector());
+		SpawnLocation = GetProjectileSpawnLocation();
+		SpawnRotation = GetProjectileSpawnRotation(SpawnLocation);
+	}
 
 	FActorSpawnParameters SpawnParameters;
 	SpawnParameters.Owner = Boss;
@@ -105,9 +123,22 @@ void UPBBossProjectilePattern::FireProjectile()
 
 	if (FiredProjectileCount >= ProjectileCount)
 	{
-		ClearFireTimer();
+		ClearPatternTimers();
 		FinishPattern();
 	}
+}
+
+void UPBBossProjectilePattern::UpdateProjectileAim()
+{
+	APBBossBase* Boss = GetOwnerBoss();
+	ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss);
+	if (!SnakeBoss)
+	{
+		return;
+	}
+
+	const FVector SpawnLocation = GetProjectileSpawnLocation();
+	SnakeBoss->FaceHeadDirection(GetProjectileSpawnRotation(SpawnLocation).Vector());
 }
 
 void UPBBossProjectilePattern::ClearFireTimer()
@@ -116,6 +147,20 @@ void UPBBossProjectilePattern::ClearFireTimer()
 	{
 		Boss->GetWorldTimerManager().ClearTimer(FireTimerHandle);
 	}
+}
+
+void UPBBossProjectilePattern::ClearAimTimer()
+{
+	if (APBBossBase* Boss = GetOwnerBoss())
+	{
+		Boss->GetWorldTimerManager().ClearTimer(AimTimerHandle);
+	}
+}
+
+void UPBBossProjectilePattern::ClearPatternTimers()
+{
+	ClearFireTimer();
+	ClearAimTimer();
 }
 
 FVector UPBBossProjectilePattern::GetProjectileSpawnLocation() const

@@ -2,6 +2,7 @@
 
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/PBBossChargeTelegraph.h"
+#include "PinBallLike/Actor/Boss/SnakeBoss.h"
 
 bool UPBBossChargePattern::CanExecute_Implementation(APBBossBase* Boss) const
 {
@@ -191,6 +192,11 @@ void UPBBossChargePattern::UpdateChargeAim()
 	}
 
 	RefreshChargeDirection(Boss);
+	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
+	{
+		SnakeBoss->FaceHeadDirection(ChargeDirection);
+	}
+
 	UpdateChargeTelegraph();
 }
 
@@ -248,6 +254,12 @@ void UPBBossChargePattern::StartCharge()
 
 	SetPinballCollisionDamageBlocked(true);
 	SetPinballMoveIgnored(true);
+	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
+	{
+		SnakeBoss->FaceHeadDirection(ChargeDirection);
+		SnakeBoss->CollapseBodyToHead();
+	}
+
 	Boss->GetWorldTimerManager().SetTimer(
 		ChargeTimerHandle,
 		this,

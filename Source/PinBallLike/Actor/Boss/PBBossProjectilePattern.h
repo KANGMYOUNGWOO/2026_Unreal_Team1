@@ -36,11 +36,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile", meta = (ClampMin = "0"))
 	float FireIntervalSeconds = 0.2f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile", meta = (ClampMin = "0.001"))
+	float AimUpdateIntervalSeconds = 0.016f;
+
 private:
 	// 설정된 위치와 방향으로 투사체 하나를 발사합니다.
 	void FireProjectile();
+	void UpdateProjectileAim();
 	// 반복 발사 타이머를 해제합니다.
 	void ClearFireTimer();
+	void ClearAimTimer();
+	void ClearPatternTimers();
 	// 보스 위치와 오프셋을 기준으로 투사체 생성 위치를 계산합니다.
 	FVector GetProjectileSpawnLocation() const;
 	// 핀볼 방향을 바라보도록 투사체 생성 회전을 계산합니다.
@@ -50,4 +56,5 @@ private:
 
 	int32 FiredProjectileCount = 0;
 	FTimerHandle FireTimerHandle;
+	FTimerHandle AimTimerHandle;
 };
