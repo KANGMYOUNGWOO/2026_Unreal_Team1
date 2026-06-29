@@ -62,7 +62,7 @@ public:
 	
 	void SetShopSlotWidgetData(int32 index, FText Name, int32 Price, FText Synergy);
 	
-	
+	void UnActiveSlotWidget(int32 SlotIndex);
 
 private:
 	

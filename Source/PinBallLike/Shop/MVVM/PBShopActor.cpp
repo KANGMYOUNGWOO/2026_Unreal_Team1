@@ -2,16 +2,12 @@
 
 
 #include "PBShopActor.h"
-
-#include <string>
-
 #include  "../PBShopManager.h"
 #include "PBShopViewModel.h"
 #include "../DisplayActor/PBShopDisplayActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "../UI/PBShopWidget.h"
 #include "../../Subsystem/BallDataSubsystem.h"
-#include "Kismet/GameplayStatics.h"
 #include "Engine/GameInstance.h"
 #include "../../Subsystem/AssetStreamingSubsystem.h"
 
@@ -35,6 +31,7 @@ void APBShopActor::OpenShop()
     {
         ShopManager = NewObject<UPBShopManager>(this);
     	ShopPurchaseHandler = ShopManager;
+    	ShopManager->SetShopActorHandler(this);
     }
 
     if (!ShopViewModel)
@@ -154,6 +151,15 @@ void APBShopActor::CloseShop()
 	
 }
 
+void APBShopActor::BuyItem(int32 SlotIndex)
+{
+	if (ShopWidget)
+	{
+		ShopWidget->UnActiveSlotWidget(SlotIndex);
+	}
+	
+	RefreshViewModel();
+}
 
 
 void APBShopActor::RefreshViewModel()

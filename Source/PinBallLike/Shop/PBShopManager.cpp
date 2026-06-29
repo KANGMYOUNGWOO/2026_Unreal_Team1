@@ -68,6 +68,7 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
 		ShopItemIsSell[SlotIndex] = true;
 		CurrentGold -= BallData->BallPrice;
 		UE_LOG(LogTemp, Warning, TEXT("Current Gold : %d"), CurrentGold);
+		if (ShopActorHandler){ShopActorHandler->BuyItem(SlotIndex);}
 		return true;	
 	}
 	else
@@ -79,6 +80,11 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
 int32 UPBShopManager::GetCurrentGold() const
 {
 	return CurrentGold;
+}
+
+void UPBShopManager::SetShopActorHandler(IIShopActorHandler* Handler)
+{
+	ShopActorHandler = Handler;
 }
 
 

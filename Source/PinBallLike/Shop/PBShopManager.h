@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "../IShopPurchaseHandler.h"
+#include "../IShopActorHandler.h"
 #include "PBShopManager.generated.h"
 
 class UUPBShopViewModel;
@@ -26,10 +27,14 @@ public :
 	
     int32 GetCurrentGold() const;
 	
+	void SetShopActorHandler(IIShopActorHandler* Handler);
+	
 private :
 	
 	int32 CurrentGold;
 	TArray<int32> CurrentShopItemBallIds;
 	TArray<bool> ShopItemIsSell;
+	
+	IIShopActorHandler* ShopActorHandler;
 	
 };

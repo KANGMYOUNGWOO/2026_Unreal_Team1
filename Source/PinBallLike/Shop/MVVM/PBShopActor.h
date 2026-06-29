@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "../../IShopPurchaseHandler.h"
+#include "../../IShopActorHandler.h"
 #include "PBShopActor.generated.h"
 
 class UPBShopViewModel;
@@ -13,7 +14,7 @@ class APBShopDisplayActor;
 class UPBShopWidget;
 
 UCLASS()
-class PINBALLLIKE_API APBShopActor : public AActor
+class PINBALLLIKE_API APBShopActor : public AActor , public IIShopActorHandler
 {
 	GENERATED_BODY()
 	
@@ -29,7 +30,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void CloseShop();
 	
-	
+	void BuyItem(int32 SlotIndex) override;
 	
 private :
 	

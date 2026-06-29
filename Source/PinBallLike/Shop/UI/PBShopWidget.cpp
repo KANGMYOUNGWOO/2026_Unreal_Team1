@@ -112,4 +112,9 @@ void UPBShopWidget::SetShopSlotWidgetData(int32 index, FText Name, int32 Price, 
 	
 }
 
+void UPBShopWidget::UnActiveSlotWidget(int32 SlotIndex)
+{
+	ShopSlotWidgets[SlotIndex]->SetVisibility(ESlateVisibility::Collapsed);
+}
+
 
