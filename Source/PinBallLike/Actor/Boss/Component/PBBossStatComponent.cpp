@@ -1,6 +1,7 @@
 #include "PBBossStatComponent.h"
 
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Utils/PBFixedPoint.h"
 
 UPBBossStatComponent::UPBBossStatComponent()
 {
@@ -13,7 +14,9 @@ void UPBBossStatComponent::BeginPlay()
 
 	OwnerActor = GetOwner();
 	MaxHP = FMath::Max(MaxHP, 1);
-	HP = MaxHP;
+	MaxHPRaw = FPBFixedPoint::ToRawNonNegative(static_cast<float>(MaxHP));
+	HPRaw = MaxHPRaw;
+	RefreshDisplayedHP();
 	OnHPChanged.Broadcast(HP, MaxHP);
 
 	if (!CanNotifyOwner())
@@ -30,10 +33,12 @@ void UPBBossStatComponent::ApplyBossDamage(FName HitPointName, int32 DamageAmoun
 	}
 
 	const int32 HPDamageMultiplierPercent = GetHPDamageMultiplierPercent(HitPointName);
-	const int32 FinalHPDamage = DamageAmount * HPDamageMultiplierPercent / 100;
+	const int64 DamageRaw = static_cast<int64>(FPBFixedPoint::ToRaw(static_cast<float>(DamageAmount))) * HPDamageMultiplierPercent / 100;
+	const int32 ClampedDamageRaw = static_cast<int32>(FMath::Min<int64>(DamageRaw, TNumericLimits<int32>::Max()));
 	const int32 PreviousHP = HP;
 
-	HP = FMath::Clamp(HP - FinalHPDamage, 0, MaxHP);
+	HPRaw = FPBFixedPoint::ClampRaw(HPRaw - ClampedDamageRaw, 0, MaxHPRaw);
+	RefreshDisplayedHP();
 	OnHPChanged.Broadcast(HP, MaxHP);
 
 	UE_LOG(LogTemp, Warning, TEXT("Boss HP Damaged: %s, HP %d -> %d / %d"),
@@ -66,7 +71,7 @@ void UPBBossStatComponent::ApplyBossDamage(FName HitPointName, int32 DamageAmoun
 
 bool UPBBossStatComponent::IsDead() const
 {
-	return HP <= 0;
+	return HPRaw <= 0;
 }
 
 int32 UPBBossStatComponent::GetHPDamageMultiplierPercent(FName HitPointName) const
@@ -79,9 +84,20 @@ int32 UPBBossStatComponent::GetHPDamageMultiplierPercent(FName HitPointName) con
 	return DefaultHPDamageMultiplierPercent;
 }
 
+int32 UPBBossStatComponent::GetDisplayedHP() const
+{
+	return FMath::FloorToInt(FPBFixedPoint::ToFloat(HPRaw));
+}
+
+void UPBBossStatComponent::RefreshDisplayedHP()
+{
+	MaxHP = FMath::Max(1, FMath::FloorToInt(FPBFixedPoint::ToFloat(MaxHPRaw)));
+	HP = FMath::Clamp(GetDisplayedHP(), 0, MaxHP);
+}
+
 bool UPBBossStatComponent::IsEnrageThresholdReached() const
 {
-	return HP * 100 <= MaxHP * EnrageHPRatioPercent;
+	return static_cast<int64>(HPRaw) * 100 <= static_cast<int64>(MaxHPRaw) * EnrageHPRatioPercent;
 }
 
 bool UPBBossStatComponent::CanNotifyOwner() const

@@ -246,4 +246,5 @@ protected:
 
 private:
 	FTimerHandle GroggyResetTimerHandle;
+	bool IsGroggyStateActive = false;
 };

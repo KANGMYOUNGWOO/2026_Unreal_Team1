@@ -62,6 +62,8 @@ public:
 private:
 	// 히트 포인트 이름에 해당하는 체력 데미지 배율을 반환합니다.
 	int32 GetHPDamageMultiplierPercent(FName HitPointName) const;
+	int32 GetDisplayedHP() const;
+	void RefreshDisplayedHP();
 	// 현재 체력이 분노 상태 진입 기준에 도달했는지 확인합니다.
 	bool IsEnrageThresholdReached() const;
 	// 소유 액터에 상태 이벤트를 알릴 수 있는지 확인합니다.
@@ -69,4 +71,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> OwnerActor;
+
+	int32 HPRaw = 0;
+	int32 MaxHPRaw = 0;
 };

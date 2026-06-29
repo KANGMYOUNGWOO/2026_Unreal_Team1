@@ -144,6 +144,14 @@ void APBBossBase::StopPatternState()
 
 void APBBossBase::StartGroggyState()
 {
+	if (IsGroggyStateActive || IsDead())
+	{
+		return;
+	}
+
+	IsGroggyStateActive = true;
+	SetBossState(EPBBossState::Groggy);
+
 	if (BossPatternComponent)
 	{
 		if (BossPatternComponent->GetCurrentPattern())
@@ -161,12 +169,14 @@ void APBBossBase::StartGroggyState()
 
 void APBBossBase::FinishGroggyState()
 {
-	if (!BossGroggyComponent || IsDead())
+	if (!IsGroggyStateActive || !BossGroggyComponent || IsDead())
 	{
 		return;
 	}
 
+	IsGroggyStateActive = false;
 	SetWeaknessState(false);
+	ClearGroggyResetTimer();
 
 	BossGroggyComponent->ResetGroggy();
 
@@ -183,6 +193,8 @@ void APBBossBase::StartEnragedState()
 
 void APBBossBase::StartDeadState()
 {
+	IsGroggyStateActive = false;
+
 	if (BossPatternComponent)
 	{
 		BossPatternComponent->StopPatternSystem();
@@ -253,7 +265,7 @@ void APBBossBase::TakeBossDamage_Implementation(FName GroggyPointName, int32 Dam
 void APBBossBase::OnGroggyTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Started."));
-	SetBossState(EPBBossState::Groggy);
+	StartGroggyState();
 }
 
 void APBBossBase::OnEnragedTriggered_Implementation()
@@ -347,6 +359,7 @@ void APBBossBase::HandleGroggyDurationFinished()
 		return;
 	}
 
+	FinishGroggyState();
 	SetBossState(EPBBossState::Idle);
 }
 

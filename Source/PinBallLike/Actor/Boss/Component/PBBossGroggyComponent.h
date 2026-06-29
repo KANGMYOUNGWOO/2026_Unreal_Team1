@@ -50,9 +50,14 @@ public:
 private:
 	// 그로기 포인트 이름에 해당하는 그로기 증가량을 반환합니다.
 	int32 GetGroggyAmount(FName GroggyPointName) const;
+	int32 GetDisplayedGroggyGauge() const;
+	void RefreshDisplayedGroggyGauge();
 	// 소유 액터에 그로기 이벤트를 알릴 수 있는지 확인합니다.
 	bool CanNotifyOwner() const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> OwnerActor;
+
+	int32 GroggyGaugeRaw = 0;
+	int32 MaxGroggyGaugeRaw = 0;
 };
