@@ -9,7 +9,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Component/PBSnakeFormationComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
-#include "PinBallLike/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/PBBallDeckSubsystem.h"
 
 APBCombatPartyActor::APBCombatPartyActor()
 {
