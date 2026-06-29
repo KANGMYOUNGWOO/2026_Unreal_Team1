@@ -29,6 +29,13 @@ enum class EPBBossState : uint8
 	Dead
 };
 
+UENUM(BlueprintType)
+enum class EPBBossMovementType : uint8
+{
+	Fixed,
+	Movable
+};
+
 UCLASS()
 class PINBALLLIKE_API APBBossBase : public APawn, public IBossInterface
 {
@@ -72,6 +79,48 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|State")
 	// 보스의 현재 상태를 반환합니다.
 	EPBBossState GetBossState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	bool IsIdleState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	bool IsPatternState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	bool IsGroggyState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	bool IsEnragedState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	bool IsDeadState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Type")
+	bool IsFixedBoss() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Type")
+	bool IsMovableBoss() const;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss|State")
+	void StartIdleState();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	void StartPatternState();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	void StopPatternState();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	void StartGroggyState();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	void FinishGroggyState();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	void StartEnragedState();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	void StartDeadState();
 
 	UFUNCTION(BlueprintPure, Category = "Boss|Profile")
 	// UI 등에 표시할 보스 이름을 반환합니다.
@@ -157,6 +206,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|State")
 	EPBBossState BossState = EPBBossState::Idle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Type")
+	EPBBossMovementType BossMovementType = EPBBossMovementType::Fixed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Profile")
 	FText BossName;

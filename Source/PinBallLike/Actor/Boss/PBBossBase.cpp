@@ -82,6 +82,113 @@ EPBBossState APBBossBase::GetBossState() const
 	return BossState;
 }
 
+bool APBBossBase::IsIdleState() const
+{
+	return BossState == EPBBossState::Idle;
+}
+
+bool APBBossBase::IsPatternState() const
+{
+	return BossState == EPBBossState::Pattern;
+}
+
+bool APBBossBase::IsGroggyState() const
+{
+	return BossState == EPBBossState::Groggy;
+}
+
+bool APBBossBase::IsEnragedState() const
+{
+	return BossState == EPBBossState::Enraged;
+}
+
+bool APBBossBase::IsDeadState() const
+{
+	return BossState == EPBBossState::Dead;
+}
+
+bool APBBossBase::IsFixedBoss() const
+{
+	return BossMovementType == EPBBossMovementType::Fixed;
+}
+
+bool APBBossBase::IsMovableBoss() const
+{
+	return BossMovementType == EPBBossMovementType::Movable;
+}
+
+void APBBossBase::StartIdleState_Implementation()
+{
+}
+
+void APBBossBase::StartPatternState()
+{
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->StartPatternSystem();
+	}
+}
+
+void APBBossBase::StopPatternState()
+{
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->StopPatternSystem();
+	}
+}
+
+void APBBossBase::StartGroggyState()
+{
+	if (BossPatternComponent)
+	{
+		if (BossPatternComponent->GetCurrentPattern())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Cancel Current Pattern."));
+		}
+		BossPatternComponent->PausePatternSystem();
+	}
+
+	SetWeaknessState(true);
+
+	StartGroggyResetTimer();
+	BP_OnGroggyStarted();
+}
+
+void APBBossBase::FinishGroggyState()
+{
+	if (!BossGroggyComponent || IsDead())
+	{
+		return;
+	}
+
+	SetWeaknessState(false);
+
+	BossGroggyComponent->ResetGroggy();
+
+	if (BossPatternComponent && BossPatternComponent->ResumePatternSystem())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Finished. Restart Pattern System."));
+	}
+}
+
+void APBBossBase::StartEnragedState()
+{
+	BP_OnEnragedStarted();
+}
+
+void APBBossBase::StartDeadState()
+{
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->StopPatternSystem();
+	}
+
+	SetWeaknessState(false);
+
+	ClearGroggyResetTimer();
+	BP_OnDead();
+}
+
 FText APBBossBase::GetBossName() const
 {
 	return BossName;
@@ -142,43 +249,18 @@ void APBBossBase::OnGroggyTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Started."));
 	SetBossState(EPBBossState::Groggy);
-
-	if (BossPatternComponent)
-	{
-		if (BossPatternComponent->GetCurrentPattern())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Cancel Current Pattern."));
-		}
-		BossPatternComponent->PausePatternSystem();
-	}
-
-	SetWeaknessState(true);
-
-	StartGroggyResetTimer();
-	BP_OnGroggyStarted();
 }
 
 void APBBossBase::OnEnragedTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Enraged Started."));
 	SetBossState(EPBBossState::Enraged);
-	BP_OnEnragedStarted();
 }
 
 void APBBossBase::OnDeadTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Dead."));
 	SetBossState(EPBBossState::Dead);
-
-	if (BossPatternComponent)
-	{
-		BossPatternComponent->StopPatternSystem();
-	}
-
-	SetWeaknessState(false);
-
-	ClearGroggyResetTimer();
-	BP_OnDead();
 }
 
 bool APBBossBase::IsDead() const
@@ -255,15 +337,7 @@ void APBBossBase::HandleGroggyDurationFinished()
 		return;
 	}
 
-	SetWeaknessState(false);
-
-	BossGroggyComponent->ResetGroggy();
 	SetBossState(EPBBossState::Idle);
-
-	if (BossPatternComponent && BossPatternComponent->ResumePatternSystem())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Finished. Restart Pattern System."));
-	}
 }
 
 void APBBossBase::SetWeaknessState(bool IsOpen)
