@@ -43,13 +43,7 @@ void UPBBossDamageComponent::ApplyPointDamage(FName HitPointName, int32 DamageAm
 		return;
 	}
 
-	int32 FinalDamageAmount = DamageAmount;
-	if (UPBBossWeaknessComponent* WeaknessComponent = OwnerBoss->GetBossWeaknessComponent())
-	{
-		FinalDamageAmount = WeaknessComponent->CalculateWeaknessDamage(HitPartInfo.HitPointName, DamageAmount);
-	}
-
-	BroadcastDamageApplied(HitPartInfo.HitPointName, FinalDamageAmount);
+	BroadcastDamageApplied(HitPartInfo.HitPointName, DamageAmount);
 }
 
 void UPBBossDamageComponent::ApplyHitPartDamage(
@@ -216,13 +210,7 @@ void UPBBossDamageComponent::ApplyResolvedDamage(
 		return;
 	}
 
-	int32 FinalDamageAmount = DamageAmount;
-	if (UPBBossWeaknessComponent* WeaknessComponent = OwnerBoss->GetBossWeaknessComponent())
-	{
-		FinalDamageAmount = WeaknessComponent->CalculateWeaknessDamage(HitPartInfo.HitPointName, DamageAmount);
-	}
-
-	BroadcastDamageApplied(HitPartInfo.HitPointName, FinalDamageAmount);
+	BroadcastDamageApplied(HitPartInfo.HitPointName, DamageAmount);
 
 	RecordDamageRateLimit(DamageSource);
 	OnDamageSourceHitApplied.Broadcast(DamageSource, Hit);

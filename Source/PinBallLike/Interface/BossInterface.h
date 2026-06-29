@@ -10,9 +10,6 @@ struct PINBALLLIKE_API FBossGroggyPointData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy Point", meta = (ClampMin = "0"))
-	int32 HPDamageMultiplierPercent = 100;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy Point", meta = (ClampMin = "0"))
 	int32 GroggyAmount = 10;
 };
 

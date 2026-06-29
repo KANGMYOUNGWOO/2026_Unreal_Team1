@@ -9,6 +9,15 @@ class AActor;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBBossHPChangedSignature, int32, HP, int32, MaxHP);
 
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FBossHitPointDamageData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
+	int32 HPDamageMultiplierPercent = 100;
+};
+
 UCLASS(ClassGroup = (Boss), meta = (BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBossStatComponent : public UActorComponent
 {
@@ -42,7 +51,7 @@ public:
 	int32 DefaultHPDamageMultiplierPercent = 100;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage")
-	TMap<FName, FBossGroggyPointData> HitPointDataMap;
+	TMap<FName, FBossHitPointDamageData> HitPointDataMap;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|State", meta = (ClampMin = "0", ClampMax = "100"))
 	int32 EnrageHPRatioPercent = 40;

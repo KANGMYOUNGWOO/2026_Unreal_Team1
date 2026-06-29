@@ -71,7 +71,7 @@ bool UPBBossStatComponent::IsDead() const
 
 int32 UPBBossStatComponent::GetHPDamageMultiplierPercent(FName HitPointName) const
 {
-	if (const FBossGroggyPointData* HitPointData = HitPointDataMap.Find(HitPointName))
+	if (const FBossHitPointDamageData* HitPointData = HitPointDataMap.Find(HitPointName))
 	{
 		return HitPointData->HPDamageMultiplierPercent;
 	}

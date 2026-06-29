@@ -52,23 +52,7 @@ bool UPBBossWeaknessComponent::IsWeaknessPointOpen(FName WeaknessPointName) cons
 
 bool UPBBossWeaknessComponent::IsWeaknessPoint(FName WeaknessPointName) const
 {
-	return WeaknessPointDataMap.Contains(WeaknessPointName);
-}
-
-int32 UPBBossWeaknessComponent::CalculateWeaknessDamage(FName WeaknessPointName, int32 DamageAmount) const
-{
-	if (DamageAmount <= 0 || !IsWeaknessPointOpen(WeaknessPointName))
-	{
-		return DamageAmount;
-	}
-
-	const FBossWeaknessData* WeaknessData = WeaknessPointDataMap.Find(WeaknessPointName);
-	if (!WeaknessData)
-	{
-		return DamageAmount;
-	}
-
-	return DamageAmount * WeaknessData->HPDamageMultiplierPercent / 100;
+	return WeaknessPointNames.Contains(WeaknessPointName);
 }
 
 void UPBBossWeaknessComponent::ApplyWeaknessCollisionState(bool IsEnabled)
