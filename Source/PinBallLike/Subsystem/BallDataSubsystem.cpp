@@ -3,6 +3,8 @@
 
 #include "BallDataSubsystem.h"
 #include "Algo/RandomShuffle.h"
+#include "Engine/AssetManager.h"
+#include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
 
 
 void UBallDataSubsystem::InitializeData()
@@ -61,6 +63,7 @@ void UBallDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	InitializeData();
+	InitializeBallData();
 }
 
 FText UBallDataSubsystem::GetBallName(int32 BallId)
@@ -122,3 +125,69 @@ TArray<int32> UBallDataSubsystem::GetRandomBalls(int32 Count)
 	
 	return ResultArray;
 }
+
+#pragma region Ball
+
+void UBallDataSubsystem::InitializeBallData()
+{
+	BallDataAssets.Empty();
+	BallDataAssetMap.Empty();
+
+	UAssetManager& AssetManager = UAssetManager::Get();
+	TArray<FPrimaryAssetId> BallAssetIds;
+	AssetManager.GetPrimaryAssetIdList(UPBBallDataAsset::BallDataAssetType, BallAssetIds);
+
+	for (const FPrimaryAssetId& BallAssetId : BallAssetIds)
+	{
+		const FSoftObjectPath BallAssetPath = AssetManager.GetPrimaryAssetPath(BallAssetId);
+		UPBBallDataAsset* BallDataAsset = Cast<UPBBallDataAsset>(BallAssetPath.TryLoad());
+		if (!BallDataAsset)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Failed to load BallDataAsset. PrimaryAssetId=%s"), *BallAssetId.ToString());
+			continue;
+		}
+
+		if (BallDataAsset->BallId == 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BallDataAsset %s has invalid BallId 0."), *GetNameSafe(BallDataAsset));
+			continue;
+		}
+
+		if (BallDataAssetMap.Contains(BallDataAsset->BallId))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Duplicate BallDataAsset BallId %d. Asset=%s"), BallDataAsset->BallId, *GetNameSafe(BallDataAsset));
+			continue;
+		}
+
+		BallDataAssets.Add(BallDataAsset);
+		BallDataAssetMap.Add(BallDataAsset->BallId, BallDataAsset);
+	}
+}
+
+const UPBBallDataAsset* UBallDataSubsystem::GetBallDataAsset(int32 BallId) const
+{
+	if (UPBBallDataAsset* const* Found = BallDataAssetMap.Find(BallId))
+	{
+		return *Found;
+	}
+
+	return nullptr;
+}
+
+TArray<const UPBBallDataAsset*> UBallDataSubsystem::GetAllBallDataAssets() const
+{
+	TArray<const UPBBallDataAsset*> Result;
+	Result.Reserve(BallDataAssets.Num());
+
+	for (const TObjectPtr<UPBBallDataAsset>& BallDataAsset : BallDataAssets)
+	{
+		if (BallDataAsset)
+		{
+			Result.Add(BallDataAsset.Get());
+		}
+	}
+
+	return Result;
+}
+
+#pragma endregion

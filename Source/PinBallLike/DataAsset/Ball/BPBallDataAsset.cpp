@@ -2,3 +2,10 @@
 
 
 #include "BPBallDataAsset.h"
+
+const FPrimaryAssetType UPBBallDataAsset::BallDataAssetType = TEXT("BallData");
+
+FPrimaryAssetId UPBBallDataAsset::GetPrimaryAssetId() const
+{
+	return FPrimaryAssetId(BallDataAssetType, GetFName());
+}

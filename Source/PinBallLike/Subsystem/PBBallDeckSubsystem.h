@@ -4,17 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
+#include "PinBallLike/Struct/Deck/PBBallInstanceData.h"
 #include "PinBallLike/Struct/Party/PBPartyTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBBallDeckSubsystem.generated.h"
 
-class APBBallBase;
-
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBOnDeploymentSlotChanged, int32, SlotIndex, APBBallBase*, Ball);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBOnDeploymentSlotChanged, int32, SlotIndex, int32, BallInstanceId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsReordered);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsRotated);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBOnBenchSlotChanged, int32, SlotIndex, APBBallBase*, Ball);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBOnBenchSlotChanged, int32, SlotIndex, int32, BallInstanceId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnBenchSlotsSwapped);
 
 UCLASS()
@@ -25,8 +23,9 @@ class PINBALLLIKE_API UPBBallDeckSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-	UFUNCTION(BlueprintCallable, Category = "BallDeck|Test")
-	bool TestSnakeBall(TSubclassOf<APBBallBase> BallClass);
+	int32 AddOwnedBall(int32 BallId, int32 StarLevel = 1);
+	const FPBBallInstanceData* GetOwnedBallData(int32 BallInstanceId) const;
+	bool HasOwnedBall(int32 BallInstanceId) const;
 
 #pragma region Deployment Slot
 
@@ -39,15 +38,15 @@ public:
 	FPBOnDeploymentSlotsRotated OnDeploymentSlotsRotated;
 	
 	EPBBallPartyRole GetDeploymentRole(int32 SlotIndex) const;
-	bool SetDeploymentSlot(int32 SlotIndex, APBBallBase* Ball);
+	bool SetDeploymentSlot(int32 SlotIndex, int32 BallInstanceId);
 	bool ClearDeploymentSlot(int32 SlotIndex);
 	bool SwapDeploymentSlots(int32 FirstIndex, int32 SecondIndex);
 	bool IsDeploymentSlotValid(int32 SlotIndex) const;
 	bool IsDeploymentSlotOccupied(int32 SlotIndex) const;
-	APBBallBase* GetDeploymentSlotBall(int32 SlotIndex) const;
-	APBBallBase* GetLeaderBall() const;
-	TArray<APBBallBase*> GetDeploymentBalls() const;
-	TArray<APBBallBase*> GetFollowerBalls() const;
+	int32 GetDeploymentSlotBallInstanceId(int32 SlotIndex) const;
+	int32 GetLeaderBallInstanceId() const;
+	TArray<int32> GetDeploymentBallInstanceIds() const;
+	TArray<int32> GetFollowerBallInstanceIds() const;
 	int32 GetDeploymentBallCount() const;
 	bool HasLeaderBall() const;
 	bool CanBuildDeploymentParty() const;
@@ -56,9 +55,10 @@ public:
 
 private:
 	void InitializeDeploymentSlots();
-	TArray<APBBallBase*> CaptureDeploymentSlotBalls() const;
+	TArray<int32> CaptureDeploymentSlotBallInstanceIds() const;
 	bool CompactDeploymentSlotsInternal();
-	void BroadcastDeploymentSlotChange(const TArray<APBBallBase*>& PreviousBalls);
+	void BroadcastDeploymentSlotChange(const TArray<int32>& PreviousBallInstanceIds);
+	void ClearBallInstanceFromSlots(int32 BallInstanceId);
 
 	static constexpr int32 MaxDeploymentSlotCount = 3;
 
@@ -75,16 +75,17 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "BallDeck|Bench")
 	FPBOnBenchSlotsSwapped OnBenchSlotsSwapped;
 
-	bool SetBenchSlot(int32 SlotIndex, APBBallBase* Ball);
+	bool SetBenchSlot(int32 SlotIndex, int32 BallInstanceId);
 	bool ClearBenchSlot(int32 SlotIndex);
 	bool SwapBenchSlots(int32 FirstIndex, int32 SecondIndex);
 	bool IsBenchSlotValid(int32 SlotIndex) const;
 	bool IsBenchSlotOccupied(int32 SlotIndex) const;
 	bool HasEmptyBenchSlot() const;
 	int32 FindEmptyBenchSlot() const;
-	bool AddBenchBall(APBBallBase* Ball);
-	APBBallBase* GetBenchBall(int32 SlotIndex) const;
-	TArray<APBBallBase*> GetBenchBalls() const;
+	bool AddBenchBall(int32 BallInstanceId);
+	bool AddNewBallToBench(int32 BallId, int32 StarLevel = 1);
+	int32 GetBenchBallInstanceId(int32 SlotIndex) const;
+	TArray<int32> GetBenchBallInstanceIds() const;
 	int32 GetBenchBallCount() const;
 
 private:
@@ -97,4 +98,9 @@ private:
 
 #pragma endregion
 
+private:
+	UPROPERTY()
+	TMap<int32, FPBBallInstanceData> OwnedBallDataMap;
+
+	int32 NextBallInstanceId = 1;
 };

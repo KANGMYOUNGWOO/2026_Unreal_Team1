@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "UObject/PrimaryAssetId.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Struct/Ball/PBBallStarLevelData.h"
 #include "PinBallLike/Struct/Ball/PBPowerFlipType.h"
@@ -15,6 +16,10 @@ class UPBBallDataAsset : public UPrimaryDataAsset
 	GENERATED_BODY()
 
 public:
+	static const FPrimaryAssetType BallDataAssetType;
+
+	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
+
 	// 1. 기본 정보
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Base Info")
 	int32 BallId;

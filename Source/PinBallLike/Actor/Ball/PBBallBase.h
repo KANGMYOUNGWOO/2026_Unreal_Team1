@@ -31,6 +31,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ball|Resource")
 	void ApplyResourceData(const TArray<FPBResourceData>& ResourceData);
 
+	void InitializeFromBallData(UPBBallDataAsset* InBallData, int32 InStarLevel);
+
 	UFUNCTION(BlueprintCallable, Category = "Ball|Combat")
 	void SetCombatRole(EPBBallPartyRole NewCombatRole);
 

@@ -70,6 +70,18 @@ void APBBallBase::ApplyResourceData(const TArray<FPBResourceData>& ResourceData)
 	}
 }
 
+void APBBallBase::InitializeFromBallData(UPBBallDataAsset* InBallData, int32 InStarLevel)
+{
+	BallData = InBallData;
+	CurrentStarLevel = FMath::Max(InStarLevel, 1);
+
+	if (HasActorBegunPlay())
+	{
+		InitializeStatsFromBallData();
+		InitializeResourcesFromBallData();
+	}
+}
+
 void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
 {
 	CombatRole = NewCombatRole;
