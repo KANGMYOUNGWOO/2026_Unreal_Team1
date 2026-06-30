@@ -3,10 +3,10 @@
 #include "CoreMinimal.h"
 #include "PBBossPatternBase.h"
 #include "TimerManager.h"
-#include "PBBossChargePattern.generated.h"
+#include "PBBossSnakeChargePattern.generated.h"
 
 UENUM(BlueprintType)
-enum class EPBBossChargePatternState : uint8
+enum class EPBBossSnakeChargePatternState : uint8
 {
 	None,
 	Aiming,
@@ -17,7 +17,7 @@ enum class EPBBossChargePatternState : uint8
 };
 
 UCLASS(Blueprintable)
-class PINBALLLIKE_API UPBBossChargePattern : public UPBBossPatternBase
+class PINBALLLIKE_API UPBBossSnakeChargePattern : public UPBBossPatternBase
 {
 	GENERATED_BODY()
 
@@ -60,10 +60,10 @@ protected:
 	float UpdateIntervalSeconds = 0.016f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Charge", meta = (AllowPrivateAccess = "true"))
-	EPBBossChargePatternState ChargePatternState = EPBBossChargePatternState::None;
+	EPBBossSnakeChargePatternState ChargePatternState = EPBBossSnakeChargePatternState::None;
 
 private:
-	void SetChargePatternState(EPBBossChargePatternState NewState);
+	void SetChargePatternState(EPBBossSnakeChargePatternState NewState);
 	void StartAiming(APBBossBase* Boss);
 	void FinishAiming();
 	float GetChargeTelegraphDurationSeconds() const;

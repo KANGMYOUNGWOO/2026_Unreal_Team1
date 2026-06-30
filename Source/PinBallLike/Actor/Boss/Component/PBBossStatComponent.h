@@ -14,7 +14,7 @@ struct PINBALLLIKE_API FBossHitPointDamageData
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Stat Damage", meta = (ClampMin = "0"))
 	int32 HPDamageMultiplierPercent = 100;
 };
 
@@ -30,11 +30,11 @@ public:
 	// 게임 시작 시 체력과 소유 액터 참조를 초기화합니다.
 	virtual void BeginPlay() override;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Stat Damage")
 	// 히트 포인트 배율을 반영해 보스 체력 데미지를 적용합니다.
 	void ApplyBossDamage(FName HitPointName, int32 DamageAmount);
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Stat State")
 	// 현재 체력이 0 이하인지 확인합니다.
 	bool IsDead() const;
 
@@ -44,16 +44,16 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Stat")
 	int32 HP = 100;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Stat State")
 	bool IsEnraged = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Stat Damage", meta = (ClampMin = "0"))
 	int32 DefaultHPDamageMultiplierPercent = 100;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Stat Damage")
 	TMap<FName, FBossHitPointDamageData> HitPointDataMap;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|State", meta = (ClampMin = "0", ClampMax = "100"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Stat State", meta = (ClampMin = "0", ClampMax = "100"))
 	int32 EnrageHPRatioPercent = 40;
 
 	UPROPERTY(BlueprintAssignable, Category = "Boss|Stat")

@@ -14,11 +14,11 @@ class PINBALLLIKE_API UPBBossStatusWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "Boss|UI")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Status UI")
 	// UI가 표시할 보스 참조를 설정하고 이벤트를 바인딩합니다.
 	void SetBoss(APBBossBase* NewBoss);
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|UI")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Status UI")
 	// 현재 보스 참조와 이벤트 바인딩을 해제합니다.
 	void ClearBoss();
 

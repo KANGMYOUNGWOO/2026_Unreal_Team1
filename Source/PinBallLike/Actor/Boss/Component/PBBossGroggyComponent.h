@@ -21,30 +21,30 @@ public:
 	// 게임 시작 시 소유 액터 참조를 캐싱합니다.
 	virtual void BeginPlay() override;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Groggy")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Groggy Component")
 	// 지정 그로기 포인트의 누적 그로기 데미지를 적용합니다.
 	void ApplyGroggyDamage(FName GroggyPointName);
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Groggy")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Groggy Component")
 	// 그로기 게이지와 그로기 상태를 초기화합니다.
 	void ResetGroggy();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy", meta = (ClampMin = "1"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy Component", meta = (ClampMin = "1"))
 	int32 MaxGroggyGauge = 100;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Groggy")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Groggy Component")
 	int32 GroggyGauge = 0;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Groggy State")
 	bool IsGroggy = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy", meta = (ClampMin = "0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy Component", meta = (ClampMin = "0"))
 	int32 DefaultGroggyAmount = 10;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy Component")
 	TMap<FName, FBossGroggyPointData> GroggyPointDataMap;
 
-	UPROPERTY(BlueprintAssignable, Category = "Boss|Groggy")
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Groggy Component")
 	FPBBossGroggyGaugeChangedSignature OnGroggyGaugeChanged;
 
 private:

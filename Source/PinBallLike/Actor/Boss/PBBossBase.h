@@ -45,95 +45,95 @@ public:
 	// 보스 기본 컴포넌트들을 생성하고 초기 상태를 설정합니다.
 	APBBossBase();
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Component")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Component")
 	// 보스의 체력/상태 수치 컴포넌트를 반환합니다.
 	UPBBossStatComponent* GetBossStatComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Component")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Component")
 	// 보스의 그로기 게이지 컴포넌트를 반환합니다.
 	UPBBossGroggyComponent* GetBossGroggyComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Component")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Component")
 	// 보스의 데미지 처리 컴포넌트를 반환합니다.
 	UPBBossDamageComponent* GetBossDamageComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Component")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Component")
 	// 보스의 패턴 실행 컴포넌트를 반환합니다.
 	UPBBossPatternComponent* GetBossPatternComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Component")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Component")
 	// 보스의 약점 상태 컴포넌트를 반환합니다.
 	UPBBossWeaknessComponent* GetBossWeaknessComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Component")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Component")
 	// 보스의 StateTree 컴포넌트를 반환합니다.
 	UStateTreeComponent* GetBossStateTreeComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Component")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Component")
 	UPBBossUIComponent* GetBossUIComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	// 보스의 현재 상태를 변경합니다.
 	void SetBossState(EPBBossState NewBossState);
 
-	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	// 보스의 현재 상태를 반환합니다.
 	EPBBossState GetBossState() const;
 
-	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	bool IsIdleState() const;
 
-	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	bool IsPatternState() const;
 
-	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	bool IsGroggyState() const;
 
-	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	bool IsEnragedState() const;
 
-	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	bool IsDeadState() const;
 
-	UFUNCTION(BlueprintPure, Category = "Boss|State")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	bool IsEnragedPhase() const;
 
-	UFUNCTION(BlueprintPure, Category = "Boss|Type")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base Type")
 	bool IsFixedBoss() const;
 
-	UFUNCTION(BlueprintPure, Category = "Boss|Type")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base Type")
 	bool IsMovableBoss() const;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss|State")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss|Base State")
 	void StartIdleState();
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void StartPatternState();
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void StopPatternState();
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void StartGroggyState();
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void FinishGroggyState();
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void StartEnragedState();
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|State")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void StartDeadState();
 
-	UFUNCTION(BlueprintPure, Category = "Boss|Profile")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base Profile")
 	// UI 등에 표시할 보스 이름을 반환합니다.
 	FText GetBossName() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Damage")
 	// 핀볼 충돌 데미지를 임시로 막을지 설정합니다.
 	void SetPinballCollisionDamageBlocked(bool IsBlocked);
 
-	UFUNCTION(BlueprintPure, Category = "Boss|Damage")
+	UFUNCTION(BlueprintPure, Category = "Boss|Base Damage")
 	// 현재 핀볼 충돌 데미지가 차단되어 있는지 반환합니다.
 	bool IsPinballCollisionDamageBlocked() const;
 
@@ -180,52 +180,52 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Collision")
 	TObjectPtr<USphereComponent> CollisionSphere;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossStatComponent> BossStatComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossGroggyComponent> BossGroggyComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossDamageComponent> BossDamageComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossDamageReceiverComponent> BossDamageReceiverComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossPatternComponent> BossPatternComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossPinballReactionComponent> BossPinballReactionComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossWeaknessComponent> BossWeaknessComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UStateTreeComponent> BossStateTreeComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Component")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossUIComponent> BossUIComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base State")
 	EPBBossState BossState = EPBBossState::Idle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Type")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Base Type")
 	EPBBossMovementType BossMovementType = EPBBossMovementType::Fixed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Profile")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Profile")
 	FText BossName;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Groggy")
 	FName DefaultGroggyPointName = TEXT("Normal");
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Groggy", meta = (ClampMin = "0.1"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Groggy", meta = (ClampMin = "0.1"))
 	float GroggyDurationSeconds = 3.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|UI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base UI")
 	TSubclassOf<UPBBossStatusWidget> BossStatusWidgetClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|UI", meta = (ClampMin = "0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base UI", meta = (ClampMin = "0"))
 	int32 BossStatusWidgetZOrder = 0;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Boss|Blueprint Event")

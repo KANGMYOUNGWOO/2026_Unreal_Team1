@@ -2,7 +2,6 @@
 
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/PBBossProjectile.h"
-#include "PinBallLike/Actor/Boss/SnakeBoss.h"
 
 UPBBossProjectilePattern::UPBBossProjectilePattern()
 {
@@ -22,17 +21,6 @@ void UPBBossProjectilePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 	{
 		FinishPattern();
 		return;
-	}
-
-	UpdateProjectileAim();
-	if (Cast<ASnakeBoss>(Boss))
-	{
-		Boss->GetWorldTimerManager().SetTimer(
-			AimTimerHandle,
-			this,
-			&UPBBossProjectilePattern::UpdateProjectileAim,
-			AimUpdateIntervalSeconds,
-			true);
 	}
 
 	if (FireIntervalSeconds <= 0.0f)
@@ -90,12 +78,6 @@ void UPBBossProjectilePattern::FireProjectile()
 
 	FVector SpawnLocation = GetProjectileSpawnLocation();
 	FRotator SpawnRotation = GetProjectileSpawnRotation(SpawnLocation);
-	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
-	{
-		SnakeBoss->FaceHeadDirection(SpawnRotation.Vector());
-		SpawnLocation = GetProjectileSpawnLocation();
-		SpawnRotation = GetProjectileSpawnRotation(SpawnLocation);
-	}
 
 	FActorSpawnParameters SpawnParameters;
 	SpawnParameters.Owner = Boss;
@@ -128,19 +110,6 @@ void UPBBossProjectilePattern::FireProjectile()
 	}
 }
 
-void UPBBossProjectilePattern::UpdateProjectileAim()
-{
-	APBBossBase* Boss = GetOwnerBoss();
-	ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss);
-	if (!SnakeBoss)
-	{
-		return;
-	}
-
-	const FVector SpawnLocation = GetProjectileSpawnLocation();
-	SnakeBoss->FaceHeadDirection(GetProjectileSpawnRotation(SpawnLocation).Vector());
-}
-
 void UPBBossProjectilePattern::ClearFireTimer()
 {
 	if (APBBossBase* Boss = GetOwnerBoss())
@@ -149,18 +118,9 @@ void UPBBossProjectilePattern::ClearFireTimer()
 	}
 }
 
-void UPBBossProjectilePattern::ClearAimTimer()
-{
-	if (APBBossBase* Boss = GetOwnerBoss())
-	{
-		Boss->GetWorldTimerManager().ClearTimer(AimTimerHandle);
-	}
-}
-
 void UPBBossProjectilePattern::ClearPatternTimers()
 {
 	ClearFireTimer();
-	ClearAimTimer();
 }
 
 FVector UPBBossProjectilePattern::GetProjectileSpawnLocation() const
