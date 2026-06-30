@@ -13,6 +13,9 @@ class PINBALLLIKE_API APinBallController : public APlayerController
 {
 	GENERATED_BODY()
 
+public:
+	APinBallController();
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;

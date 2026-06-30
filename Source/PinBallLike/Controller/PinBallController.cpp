@@ -2,7 +2,13 @@
 
 
 #include "PinBallController.h"
+#include "PinBallLike/Cheat/PBCheatManager.h"
 #include "PinBallPlayer.h"
+
+APinBallController::APinBallController()
+{
+	CheatClass = UPBCheatManager::StaticClass();
+}
 
 void APinBallController::OnPossess(APawn* InPawn)
 {
