@@ -11,7 +11,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StateTreeComponent.h"
-#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
+#include "PinBallLike/UI/Boss/PBBossStatusWidget.h"
 
 APBBossBase::APBBossBase()
 {

@@ -43,6 +43,7 @@ protected:
 	void MoveHead(float DeltaTime);
 	void SelectNextPatrolTarget();
 	FVector ClampLocationToPatrolArea(const FVector& SourceLocation) const;
+	bool IsInsideHeadMeshExcludedArea(const FVector& SourceLocation) const;
 	FVector GetPatrolCurveLocation(float Alpha) const;
 	float CalculatePatrolCurveDistance() const;
 	void FaceMovementDirection(const FVector& Direction);
@@ -85,6 +86,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
 	FVector PatrolAreaExtent = FVector(700.0f, 700.0f, 0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake", meta = (ClampMin = "0.0"))
+	float HeadMeshExcludeRadius = 200.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
 	bool IsUseSpawnLocationAsPatrolCenter = true;

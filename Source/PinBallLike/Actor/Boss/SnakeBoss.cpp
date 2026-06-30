@@ -248,11 +248,29 @@ void ASnakeBoss::SelectNextPatrolTarget()
 {
 	PatrolStartLocation = ClampLocationToPatrolArea(GetActorLocation());
 	const FVector PatrolExtent = PatrolAreaExtent.GetAbs();
-	PatrolTargetLocation = PatrolCenter + FVector(
-		FMath::FRandRange(-PatrolExtent.X, PatrolExtent.X),
-		FMath::FRandRange(-PatrolExtent.Y, PatrolExtent.Y),
-		0.0f);
-	PatrolTargetLocation.Z = GetActorLocation().Z;
+	constexpr int32 MaxTargetSelectCount = 10;
+	bool IsTargetSelected = false;
+	for (int32 TargetSelectIndex = 0; TargetSelectIndex < MaxTargetSelectCount; ++TargetSelectIndex)
+	{
+		const FVector RandomLocation = PatrolCenter + FVector(
+			FMath::FRandRange(-PatrolExtent.X, PatrolExtent.X),
+			FMath::FRandRange(-PatrolExtent.Y, PatrolExtent.Y),
+			0.0f);
+
+		PatrolTargetLocation = RandomLocation;
+		PatrolTargetLocation.Z = GetActorLocation().Z;
+		if (!IsInsideHeadMeshExcludedArea(PatrolTargetLocation))
+		{
+			IsTargetSelected = true;
+			break;
+		}
+	}
+
+	if (!IsTargetSelected)
+	{
+		IsPatrolTargetValid = false;
+		return;
+	}
 
 	const FVector TargetOffset = PatrolTargetLocation - PatrolStartLocation;
 	FVector TargetDirection = TargetOffset;
@@ -288,6 +306,16 @@ FVector ASnakeBoss::ClampLocationToPatrolArea(const FVector& SourceLocation) con
 	ClampedLocation.Y = FMath::Clamp(ClampedLocation.Y, PatrolCenter.Y - PatrolExtent.Y, PatrolCenter.Y + PatrolExtent.Y);
 	ClampedLocation.Z = GetActorLocation().Z;
 	return ClampedLocation;
+}
+
+bool ASnakeBoss::IsInsideHeadMeshExcludedArea(const FVector& SourceLocation) const
+{
+	if (!HeadMesh || HeadMeshExcludeRadius <= 0.0f)
+	{
+		return false;
+	}
+
+	return FVector::DistSquared2D(HeadMesh->GetComponentLocation(), SourceLocation) <= FMath::Square(HeadMeshExcludeRadius);
 }
 
 FVector ASnakeBoss::GetPatrolCurveLocation(float Alpha) const
