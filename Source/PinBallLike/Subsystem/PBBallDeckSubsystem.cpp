@@ -3,6 +3,9 @@
 
 #include "PBBallDeckSubsystem.h"
 
+#include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
+#include "PinBallLike/Subsystem/BallDataSubsystem.h"
+
 void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -14,6 +17,7 @@ int32 UPBBallDeckSubsystem::AddOwnedBall(int32 BallId, int32 StarLevel)
 {
 	if (BallId == 0)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem AddOwnedBall failed. Invalid BallId=%d"), BallId);
 		return INDEX_NONE;
 	}
 
@@ -23,6 +27,11 @@ int32 UPBBallDeckSubsystem::AddOwnedBall(int32 BallId, int32 StarLevel)
 	NewBallData.BallId = BallId;
 	NewBallData.StarLevel = FMath::Max(StarLevel, 1);
 
+	UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem AddOwnedBall succeeded. BallInstanceId=%d BallId=%d StarLevel=%d OwnedCount=%d"),
+		NewBallData.InstanceId,
+		NewBallData.BallId,
+		NewBallData.StarLevel,
+		OwnedBallDataMap.Num());
 	return NewInstanceId;
 }
 
@@ -34,6 +43,113 @@ const FPBBallInstanceData* UPBBallDeckSubsystem::GetOwnedBallData(int32 BallInst
 bool UPBBallDeckSubsystem::HasOwnedBall(int32 BallInstanceId) const
 {
 	return OwnedBallDataMap.Contains(BallInstanceId);
+}
+
+bool UPBBallDeckSubsystem::AddNewBallToDeck(int32 BallId, int32 StarLevel)
+{
+	const int32 EmptyDeploymentSlotIndex = FindEmptyDeploymentSlot();
+	const int32 EmptyBenchSlotIndex = EmptyDeploymentSlotIndex == INDEX_NONE ? FindEmptyBenchSlot() : INDEX_NONE;
+	if (EmptyDeploymentSlotIndex == INDEX_NONE && EmptyBenchSlotIndex == INDEX_NONE)
+	{
+		return false;
+	}
+
+	const int32 NewBallInstanceId = AddOwnedBall(BallId, StarLevel);
+	if (NewBallInstanceId == INDEX_NONE)
+	{
+		return false;
+	}
+
+	if (EmptyDeploymentSlotIndex != INDEX_NONE)
+	{
+		return SetDeploymentSlot(EmptyDeploymentSlotIndex, NewBallInstanceId);
+	}
+
+	return SetBenchSlot(EmptyBenchSlotIndex, NewBallInstanceId);
+}
+
+bool UPBBallDeckSubsystem::BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const
+{
+	OutViewData = FPBBallItemViewData();
+
+	const FPBBallInstanceData* BallInstanceData = GetOwnedBallData(BallInstanceId);
+	if (!BallInstanceData || !BallInstanceData->IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem BuildBallItemViewData failed. Invalid instance. BallInstanceId=%d HasInstance=%s"),
+			BallInstanceId,
+			BallInstanceData ? TEXT("true") : TEXT("false"));
+		return false;
+	}
+
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UBallDataSubsystem* BallDataSubsystem = GameInstance ? GameInstance->GetSubsystem<UBallDataSubsystem>() : nullptr;
+	const UPBBallDataAsset* BallDataAsset = BallDataSubsystem ? BallDataSubsystem->GetBallDataAsset(BallInstanceData->BallId) : nullptr;
+
+	if (!BallDataSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem BuildBallItemViewData failed. BallDataSubsystem is null. BallInstanceId=%d BallId=%d"),
+			BallInstanceData->InstanceId,
+			BallInstanceData->BallId);
+		return false;
+	}
+
+	if (!BallDataAsset)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem BuildBallItemViewData missing DataAsset. BallInstanceId=%d BallId=%d SlotType=%d SlotIndex=%d"),
+			BallInstanceData->InstanceId,
+			BallInstanceData->BallId,
+			static_cast<int32>(SourceSlotType),
+			SourceSlotIndex);
+	}
+	else if (!BallDataAsset->Icon)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem BuildBallItemViewData DataAsset has no Icon. BallInstanceId=%d BallId=%d Asset=%s"),
+			BallInstanceData->InstanceId,
+			BallInstanceData->BallId,
+			*GetNameSafe(BallDataAsset));
+	}
+
+	OutViewData.BallInstanceId = BallInstanceData->InstanceId;
+	OutViewData.BallId = BallInstanceData->BallId;
+	OutViewData.StarLevel = BallInstanceData->StarLevel;
+	OutViewData.SourceSlotType = SourceSlotType;
+	OutViewData.SourceSlotIndex = SourceSlotIndex;
+	OutViewData.Icon = BallDataAsset ? BallDataAsset->Icon : nullptr;
+
+	UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem BuildBallItemViewData finished. BallInstanceId=%d BallId=%d StarLevel=%d SlotType=%d SlotIndex=%d DataAsset=%s Icon=%s"),
+		OutViewData.BallInstanceId,
+		OutViewData.BallId,
+		OutViewData.StarLevel,
+		static_cast<int32>(OutViewData.SourceSlotType),
+		OutViewData.SourceSlotIndex,
+		*GetNameSafe(BallDataAsset),
+		*GetNameSafe(OutViewData.Icon));
+	return true;
+}
+
+bool UPBBallDeckSubsystem::MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, EPBBallDeckSlotType TargetSlotType, int32 TargetSlotIndex)
+{
+	FPBBallDeckSlot* SourceSlot = GetMutableDeckSlot(SourceSlotType, SourceSlotIndex);
+	FPBBallDeckSlot* TargetSlot = GetMutableDeckSlot(TargetSlotType, TargetSlotIndex);
+	if (!SourceSlot || !TargetSlot || SourceSlot->BallInstanceId == INDEX_NONE)
+	{
+		return false;
+	}
+
+	if (SourceSlotType == TargetSlotType && SourceSlotIndex == TargetSlotIndex)
+	{
+		return true;
+	}
+
+	const int32 SourceBallInstanceId = SourceSlot->BallInstanceId;
+	const int32 TargetBallInstanceId = TargetSlot->BallInstanceId;
+
+	SourceSlot->BallInstanceId = TargetBallInstanceId;
+	TargetSlot->BallInstanceId = SourceBallInstanceId;
+
+	BroadcastDeckSlotChanged(SourceSlotType, SourceSlotIndex, TargetBallInstanceId);
+	BroadcastDeckSlotChanged(TargetSlotType, TargetSlotIndex, SourceBallInstanceId);
+	return true;
 }
 
 #pragma region Deployment Slot
@@ -109,6 +225,18 @@ bool UPBBallDeckSubsystem::IsDeploymentSlotValid(int32 SlotIndex) const
 bool UPBBallDeckSubsystem::IsDeploymentSlotOccupied(int32 SlotIndex) const
 {
 	return IsDeploymentSlotValid(SlotIndex) && DeploymentSlots[SlotIndex].BallInstanceId != INDEX_NONE;
+}
+
+int32 UPBBallDeckSubsystem::FindEmptyDeploymentSlot() const
+{
+	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num(); ++SlotIndex)
+	{
+		if (DeploymentSlots[SlotIndex].BallInstanceId == INDEX_NONE)
+		{
+			return SlotIndex;
+		}
+	}
+	return INDEX_NONE;
 }
 
 int32 UPBBallDeckSubsystem::GetDeploymentSlotBallInstanceId(int32 SlotIndex) const
@@ -307,6 +435,32 @@ void UPBBallDeckSubsystem::InitializeDeploymentSlots()
 }
 
 #pragma endregion
+
+FPBBallDeckSlot* UPBBallDeckSubsystem::GetMutableDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex)
+{
+	switch (SlotType)
+	{
+	case EPBBallDeckSlotType::Deployment:
+		return DeploymentSlots.IsValidIndex(SlotIndex) ? &DeploymentSlots[SlotIndex] : nullptr;
+	case EPBBallDeckSlotType::Bench:
+	default:
+		return BenchSlots.IsValidIndex(SlotIndex) ? &BenchSlots[SlotIndex] : nullptr;
+	}
+}
+
+void UPBBallDeckSubsystem::BroadcastDeckSlotChanged(EPBBallDeckSlotType SlotType, int32 SlotIndex, int32 BallInstanceId)
+{
+	switch (SlotType)
+	{
+	case EPBBallDeckSlotType::Deployment:
+		OnDeploymentSlotChanged.Broadcast(SlotIndex, BallInstanceId);
+		break;
+	case EPBBallDeckSlotType::Bench:
+	default:
+		OnBenchSlotChanged.Broadcast(SlotIndex, BallInstanceId);
+		break;
+	}
+}
 
 #pragma region Bench
 

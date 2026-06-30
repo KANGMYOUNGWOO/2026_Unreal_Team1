@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PinBallLike/Struct/Ball/PBBallItemViewData.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
 #include "PinBallLike/Struct/Deck/PBBallInstanceData.h"
 #include "PinBallLike/Struct/Party/PBPartyTypes.h"
@@ -26,6 +27,11 @@ public:
 	int32 AddOwnedBall(int32 BallId, int32 StarLevel = 1);
 	const FPBBallInstanceData* GetOwnedBallData(int32 BallInstanceId) const;
 	bool HasOwnedBall(int32 BallInstanceId) const;
+	bool AddNewBallToDeck(int32 BallId, int32 StarLevel = 1);
+	bool BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const;
+
+	UFUNCTION(BlueprintCallable, Category = "BallDeck|DragDrop")
+	bool MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, EPBBallDeckSlotType TargetSlotType, int32 TargetSlotIndex);
 
 #pragma region Deployment Slot
 
@@ -43,6 +49,7 @@ public:
 	bool SwapDeploymentSlots(int32 FirstIndex, int32 SecondIndex);
 	bool IsDeploymentSlotValid(int32 SlotIndex) const;
 	bool IsDeploymentSlotOccupied(int32 SlotIndex) const;
+	int32 FindEmptyDeploymentSlot() const;
 	int32 GetDeploymentSlotBallInstanceId(int32 SlotIndex) const;
 	int32 GetLeaderBallInstanceId() const;
 	TArray<int32> GetDeploymentBallInstanceIds() const;
@@ -99,6 +106,9 @@ private:
 #pragma endregion
 
 private:
+	FPBBallDeckSlot* GetMutableDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex);
+	void BroadcastDeckSlotChanged(EPBBallDeckSlotType SlotType, int32 SlotIndex, int32 BallInstanceId);
+
 	UPROPERTY()
 	TMap<int32, FPBBallInstanceData> OwnedBallDataMap;
 

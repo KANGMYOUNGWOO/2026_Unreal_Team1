@@ -17,7 +17,9 @@ public class PinBallLike : ModuleRules
 			"UMG", 
 			"ModelViewViewModel",
 			"StateTreeModule",
-			"GameplayStateTreeModule"
+			"GameplayStateTreeModule", 
+			"Slate",
+			"SlateCore"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
