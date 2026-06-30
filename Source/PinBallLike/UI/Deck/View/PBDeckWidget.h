@@ -6,7 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "PBDeckWidget.generated.h"
 
-class UWrapBox;
+class UUniformGridPanel;
 class UButton;
 /**
  * 
@@ -20,6 +20,6 @@ private:
 	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
 	TObjectPtr<UButton> Button_Exit;
 	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
-	TObjectPtr<UWrapBox> WrapBox_BallList;
+	TObjectPtr<UUniformGridPanel> GridPanel_BallList;
 	
 };
