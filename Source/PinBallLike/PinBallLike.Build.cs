@@ -7,10 +7,6 @@ public class PinBallLike : ModuleRules
 	public PinBallLike(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-<<<<<<< HEAD
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "StateTreeModule", "GameplayStateTreeModule" });
-=======
-	
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core", 
 			"CoreUObject", 
@@ -18,17 +14,11 @@ public class PinBallLike : ModuleRules
 			"InputCore", 
 			"EnhancedInput",
 			"UMG", 
-			"ModelViewViewModel" });
->>>>>>> feature/Shop
+			"ModelViewViewModel",
+			"StateTreeModule",
+			"GameplayStateTreeModule"
 
-		PublicDependencyModuleNames.AddRange(new string[] {
-			"Core", 
-			"CoreUObject", 
-			"Engine", 
-			"InputCore", 
-			"EnhancedInput",
-			"UMG", 
-			"ModelViewViewModel" });
+		});
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
 		// Uncomment if you are using Slate UI
