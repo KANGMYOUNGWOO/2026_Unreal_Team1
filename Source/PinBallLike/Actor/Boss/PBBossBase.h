@@ -76,6 +76,9 @@ public:
 	// 보스의 현재 상태를 변경합니다.
 	void SetBossState(EPBBossState NewBossState);
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
+	void RequestBossState(EPBBossState NewBossState);
+
 	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	// 보스의 현재 상태를 반환합니다.
 	EPBBossState GetBossState() const;

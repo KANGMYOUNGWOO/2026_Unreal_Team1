@@ -48,6 +48,9 @@ void FPBBossStateTreeTask::ExecuteAction(APBBossBase& Boss, EPBBossStateTreeTask
 	case EPBBossStateTreeTaskAction::StartPatternState:
 		Boss.StartPatternState();
 		break;
+	case EPBBossStateTreeTaskAction::SetPatternState:
+		Boss.SetBossState(EPBBossState::Pattern);
+		break;
 	case EPBBossStateTreeTaskAction::StopPatternState:
 		Boss.StopPatternState();
 		break;

@@ -55,11 +55,6 @@ protected:
 
 	bool FindTrailLocationAtDistance(float TargetDistance, FVector& OutLocation) const;
 
-	void StartSnakePattern();
-	void StopSnakePattern();
-	void EnterSnakeGroggy();
-	void ExitSnakeGroggy();
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Snake")
 	TObjectPtr<UStaticMeshComponent> HeadMesh;
 
@@ -97,7 +92,7 @@ protected:
 	float PatrolCurveOffsetScale = 0.35f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
-	bool IsDrawDebugSnake = true;
+	bool IsDrawDebugSnake = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake", meta = (ClampMin = "0.0"))
 	float ChargePullDelayPerSegment = 0.12f;

@@ -81,7 +81,7 @@ bool UPBBossPatternComponent::ResumePatternSystem()
 		IsPatternSystemActive = true;
 		if (OwnerBoss)
 		{
-			OwnerBoss->SetBossState(EPBBossState::Pattern);
+			OwnerBoss->RequestBossState(EPBBossState::Pattern);
 		}
 
 		if (CurrentPattern->ResumePatternAfterExternalGroggy(OwnerBoss))
@@ -114,7 +114,7 @@ void UPBBossPatternComponent::TryStartNextPattern()
 
 	CurrentPattern = NextPattern;
 	IsPatternRunning = true;
-	OwnerBoss->SetBossState(EPBBossState::Pattern);
+	OwnerBoss->RequestBossState(EPBBossState::Pattern);
 	if (IsEnragedEntryPattern(CurrentPattern))
 	{
 		IsEnragedEntryPatternPending = false;
@@ -285,7 +285,7 @@ void UPBBossPatternComponent::SetOwnerBossIdleIfPatternState() const
 {
 	if (OwnerBoss && OwnerBoss->GetBossState() == EPBBossState::Pattern)
 	{
-		OwnerBoss->SetBossState(EPBBossState::Idle);
+		OwnerBoss->RequestBossState(EPBBossState::Idle);
 	}
 }
 

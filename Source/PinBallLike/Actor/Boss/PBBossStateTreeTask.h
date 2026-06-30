@@ -16,6 +16,7 @@ enum class EPBBossStateTreeTaskAction : uint8
 	None,
 	StartIdleState,
 	StartPatternState,
+	SetPatternState,
 	StopPatternState,
 	StartGroggyState,
 	FinishGroggyState,

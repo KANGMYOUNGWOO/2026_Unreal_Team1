@@ -16,7 +16,8 @@ public class PinBallLike : ModuleRules
 			"UMG", 
 			"ModelViewViewModel",
 			"StateTreeModule",
-			"GameplayStateTreeModule"
+			"GameplayStateTreeModule",
+			"GameplayTags"
 
 		});
 

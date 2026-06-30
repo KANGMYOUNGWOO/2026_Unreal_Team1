@@ -11,7 +11,30 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StateTreeComponent.h"
+#include "PBBossStateTreeTags.h"
 #include "PinBallLike/UI/Boss/PBBossStatusWidget.h"
+
+namespace
+{
+	FGameplayTag GetBossStateRequestTag(EPBBossState BossState)
+	{
+		switch (BossState)
+		{
+		case EPBBossState::Idle:
+			return PBBossStateTreeTags::RequestIdle;
+		case EPBBossState::Pattern:
+			return PBBossStateTreeTags::RequestPattern;
+		case EPBBossState::Groggy:
+			return PBBossStateTreeTags::RequestGroggy;
+		case EPBBossState::Enraged:
+			return PBBossStateTreeTags::RequestEnraged;
+		case EPBBossState::Dead:
+			return PBBossStateTreeTags::RequestDead;
+		default:
+			return FGameplayTag();
+		}
+	}
+}
 
 APBBossBase::APBBossBase()
 {
@@ -34,6 +57,7 @@ APBBossBase::APBBossBase()
 	BossPinballReactionComponent = CreateDefaultSubobject<UPBBossPinballReactionComponent>(TEXT("BossPinballReactionComponent"));
 	BossWeaknessComponent = CreateDefaultSubobject<UPBBossWeaknessComponent>(TEXT("BossWeaknessComponent"));
 	BossStateTreeComponent = CreateDefaultSubobject<UStateTreeComponent>(TEXT("BossStateTreeComponent"));
+	BossStateTreeComponent->SetStartLogicAutomatically(false);
 	BossUIComponent = CreateDefaultSubobject<UPBBossUIComponent>(TEXT("BossUIComponent"));
 }
 
@@ -75,6 +99,15 @@ UPBBossUIComponent* APBBossBase::GetBossUIComponent() const
 void APBBossBase::SetBossState(EPBBossState NewBossState)
 {
 	BossState = NewBossState;
+}
+
+void APBBossBase::RequestBossState(EPBBossState NewBossState)
+{
+	const FGameplayTag StateRequestTag = GetBossStateRequestTag(NewBossState);
+	if (BossStateTreeComponent && StateRequestTag.IsValid())
+	{
+		BossStateTreeComponent->SendStateTreeEvent(StateRequestTag);
+	}
 }
 
 EPBBossState APBBossBase::GetBossState() const
@@ -124,6 +157,7 @@ bool APBBossBase::IsMovableBoss() const
 
 void APBBossBase::StartIdleState_Implementation()
 {
+	SetBossState(EPBBossState::Idle);
 }
 
 void APBBossBase::StartPatternState()
@@ -188,12 +222,20 @@ void APBBossBase::FinishGroggyState()
 
 void APBBossBase::StartEnragedState()
 {
+	SetBossState(EPBBossState::Enraged);
+
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->NotifyEnragedPhaseStarted();
+	}
+
 	BP_OnEnragedStarted();
 }
 
 void APBBossBase::StartDeadState()
 {
 	IsGroggyStateActive = false;
+	SetBossState(EPBBossState::Dead);
 
 	if (BossPatternComponent)
 	{
@@ -237,6 +279,11 @@ void APBBossBase::BeginPlay()
 	BindBossCollisionEvents();
 	SetWeaknessState(false);
 
+	if (BossStateTreeComponent)
+	{
+		BossStateTreeComponent->StartLogic();
+	}
+
 	if (BossUIComponent && BossStatusWidgetClass)
 	{
 		BossUIComponent->ConfigureBossStatusWidget(BossStatusWidgetClass, BossStatusWidgetZOrder);
@@ -247,6 +294,11 @@ void APBBossBase::BeginPlay()
 void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	SetWeaknessState(false);
+
+	if (BossStateTreeComponent)
+	{
+		BossStateTreeComponent->StopLogic(TEXT("Boss EndPlay"));
+	}
 
 	ClearGroggyResetTimer();
 	Super::EndPlay(EndPlayReason);
@@ -265,24 +317,19 @@ void APBBossBase::TakeBossDamage_Implementation(FName GroggyPointName, int32 Dam
 void APBBossBase::OnGroggyTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Started."));
-	StartGroggyState();
+	RequestBossState(EPBBossState::Groggy);
 }
 
 void APBBossBase::OnEnragedTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Enraged Started."));
-	if (BossPatternComponent)
-	{
-		BossPatternComponent->NotifyEnragedPhaseStarted();
-	}
-
-	BP_OnEnragedStarted();
+	RequestBossState(EPBBossState::Enraged);
 }
 
 void APBBossBase::OnDeadTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Dead."));
-	SetBossState(EPBBossState::Dead);
+	RequestBossState(EPBBossState::Dead);
 }
 
 bool APBBossBase::IsDead() const
@@ -359,8 +406,7 @@ void APBBossBase::HandleGroggyDurationFinished()
 		return;
 	}
 
-	FinishGroggyState();
-	SetBossState(EPBBossState::Idle);
+	RequestBossState(EPBBossState::Idle);
 }
 
 void APBBossBase::SetWeaknessState(bool IsOpen)

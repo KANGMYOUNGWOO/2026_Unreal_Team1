@@ -539,22 +539,6 @@ bool ASnakeBoss::FindTrailLocationAtDistance(float TargetDistance, FVector& OutL
 	return true;
 }
 
-void ASnakeBoss::StartSnakePattern()
-{
-}
-
-void ASnakeBoss::StopSnakePattern()
-{
-}
-
-void ASnakeBoss::EnterSnakeGroggy()
-{
-}
-
-void ASnakeBoss::ExitSnakeGroggy()
-{
-}
-
 void ASnakeBoss::ConfigureSnakeMeshComponent(UStaticMeshComponent* MeshComponent) const
 {
 	if (!MeshComponent)

@@ -18,13 +18,18 @@ void UPBBossDamageComponent::BeginPlay()
 	OwnerBoss = Cast<APBBossBase>(GetOwner());
 }
 
-void UPBBossDamageComponent::DamageToBose(AActor* DamageSource, int32 DamageAmount)
+void UPBBossDamageComponent::DamageToBoss(AActor* DamageSource, int32 DamageAmount)
 {
 	FPBBossHitPartInfo HitPartInfo;
 	HitPartInfo.HitPartType = EPBBossHitPartType::Body;
 	HitPartInfo.HitPointName = DefaultHitPointName;
 
 	ApplyResolvedDamage(DamageSource, HitPartInfo, DamageAmount, FHitResult());
+}
+
+void UPBBossDamageComponent::DamageToBose(AActor* DamageSource, int32 DamageAmount)
+{
+	DamageToBoss(DamageSource, DamageAmount);
 }
 
 void UPBBossDamageComponent::ApplyPointDamage(FName HitPointName, int32 DamageAmount)

@@ -27,6 +27,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
 	// 범퍼 스킬 등 외부 데미지 소스로 보스에게 데미지를 적용합니다. //볼은 제외
+	void DamageToBoss(AActor* DamageSource, int32 DamageAmount);
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Damage", meta = (DeprecatedFunction, DeprecationMessage = "Use DamageToBoss."))
 	void DamageToBose(AActor* DamageSource, int32 DamageAmount);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
