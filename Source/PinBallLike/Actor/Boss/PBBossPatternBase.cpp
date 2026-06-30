@@ -81,6 +81,16 @@ UPBBossPatternComponent* UPBBossPatternBase::GetOwnerPatternComponent() const
 	return OwnerPatternComponent;
 }
 
+bool UPBBossPatternBase::PausePatternForExternalGroggy(APBBossBase* Boss)
+{
+	return false;
+}
+
+bool UPBBossPatternBase::ResumePatternAfterExternalGroggy(APBBossBase* Boss)
+{
+	return false;
+}
+
 APBBossBase* UPBBossPatternBase::GetOwnerBoss() const
 {
 	return OwnerBoss;

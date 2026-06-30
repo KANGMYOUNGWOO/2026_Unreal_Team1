@@ -50,6 +50,14 @@ bool UPBBossPatternComponent::PausePatternSystem()
 
 	IsPatternSystemPaused = true;
 	PatternSystemPausedTime = GetCurrentTimeSeconds();
+
+	if (CurrentPattern && CurrentPattern->PausePatternForExternalGroggy(OwnerBoss))
+	{
+		IsPatternSystemActive = false;
+		ClearPatternCheckTimer();
+		return true;
+	}
+
 	DeactivatePatternSystem(true);
 
 	return true;
@@ -65,6 +73,21 @@ bool UPBBossPatternComponent::ResumePatternSystem()
 	const float PausedDuration = FMath::Max(0.0f, GetCurrentTimeSeconds() - PatternSystemPausedTime);
 	ShiftPatternTimers(PausedDuration);
 	PatternSystemPausedTime = 0.0f;
+
+	if (CurrentPattern && IsPatternRunning)
+	{
+		IsPatternSystemPaused = false;
+		IsPatternSystemActive = true;
+		if (OwnerBoss)
+		{
+			OwnerBoss->SetBossState(EPBBossState::Pattern);
+		}
+
+		if (CurrentPattern->ResumePatternAfterExternalGroggy(OwnerBoss))
+		{
+			return true;
+		}
+	}
 
 	StartPatternSystem();
 

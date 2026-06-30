@@ -5,6 +5,17 @@
 #include "TimerManager.h"
 #include "PBBossChargePattern.generated.h"
 
+UENUM(BlueprintType)
+enum class EPBBossChargePatternState : uint8
+{
+	None,
+	Aiming,
+	Charging,
+	Rebounding,
+	Groggy,
+	Returning
+};
+
 UCLASS(Blueprintable)
 class PINBALLLIKE_API UPBBossChargePattern : public UPBBossPatternBase
 {
@@ -21,6 +32,8 @@ protected:
 	virtual void CancelPatternInternal_Implementation(APBBossBase* Boss) override;
 	// C++에서 돌진 패턴 실행 흐름을 직접 시작합니다.
 	virtual void ExecuteNativePattern(APBBossBase* Boss) override;
+	virtual bool PausePatternForExternalGroggy(APBBossBase* Boss) override;
+	virtual bool ResumePatternAfterExternalGroggy(APBBossBase* Boss) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0"))
 	float ChargeSpeed = 1200.0f;
@@ -46,7 +59,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.001"))
 	float UpdateIntervalSeconds = 0.016f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Charge", meta = (AllowPrivateAccess = "true"))
+	EPBBossChargePatternState ChargePatternState = EPBBossChargePatternState::None;
+
 private:
+	void SetChargePatternState(EPBBossChargePatternState NewState);
+	void StartAiming(APBBossBase* Boss);
+	void FinishAiming();
+	float GetChargeTelegraphDurationSeconds() const;
 	// 돌진 시작 위치, 방향, 타겟 정보를 미리 계산합니다.
 	void PrepareCharge(APBBossBase* Boss);
 	void RefreshChargeDirection(APBBossBase* Boss);
@@ -58,7 +78,6 @@ private:
 	void ClearChargeAimTimers();
 	void UpdateChargeTelegraph() const;
 	// 경고 표시가 끝난 뒤 실제 돌진 실행을 시작합니다.
-	void StartExecuteChargePattern();
 	// 돌진 타이머를 시작하고 핀볼 충돌 처리를 조정합니다.
 	void StartCharge();
 	// 돌진 중 보스를 이동시키고 충돌 또는 최대 거리 도달을 확인합니다.

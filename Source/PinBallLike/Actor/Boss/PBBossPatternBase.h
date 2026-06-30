@@ -48,6 +48,9 @@ public:
 	// 이 패턴을 소유한 패턴 컴포넌트를 반환합니다.
 	UPBBossPatternComponent* GetOwnerPatternComponent() const;
 
+	virtual bool PausePatternForExternalGroggy(APBBossBase* Boss);
+	virtual bool ResumePatternAfterExternalGroggy(APBBossBase* Boss);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
 	FName PatternName = NAME_None;
 

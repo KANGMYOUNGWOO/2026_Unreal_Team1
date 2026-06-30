@@ -12,7 +12,12 @@ class PINBALLLIKE_API APBBossChargeTelegraph : public APBBossPatternTelegraph
 public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
 	// 돌진 방향과 길이에 맞춰 경고 텔레그래프를 초기화합니다.
-	void InitChargeTelegraph(float InDurationSeconds, const FVector& StartLocation, const FVector& Direction, float Length);
+	void InitChargeTelegraph(
+		float InDurationSeconds,
+		const FVector& StartLocation,
+		const FVector& Direction,
+		float Length,
+		const FVector& InScale);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
 	void UpdateChargeTelegraphTransform(const FVector& StartLocation, const FVector& Direction, float Length);

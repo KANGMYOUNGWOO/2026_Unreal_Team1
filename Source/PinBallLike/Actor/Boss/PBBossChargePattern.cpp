@@ -13,38 +13,20 @@ void UPBBossChargePattern::StartPattern_Implementation(APBBossBase* Boss)
 {
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
 
 	SetOwnerBoss(Boss);
-	PrepareCharge(Boss);
-	SpawnChargeTelegraph(Boss);
-
-	const float TelegraphDurationSeconds = TelegraphDataList.IsEmpty()
-		? 0.0f
-		: TelegraphDataList[0].DurationSeconds;
-
-	if (TelegraphDurationSeconds <= 0.0f)
-	{
-		StartExecuteChargePattern();
-		return;
-	}
-
-	StartChargeAim(TelegraphDurationSeconds * 0.5f);
-
-	Boss->GetWorldTimerManager().SetTimer(
-		ChargeTelegraphTimerHandle,
-		this,
-		&UPBBossChargePattern::StartExecuteChargePattern,
-		TelegraphDurationSeconds,
-		false);
+	StartAiming(Boss);
 }
 
 void UPBBossChargePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 {
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
@@ -54,12 +36,11 @@ void UPBBossChargePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 
 void UPBBossChargePattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
 {
-	static_cast<void>(Boss);
-
 	ClearPatternTimers();
 	DestroyChargeTelegraph();
 	SetPinballMoveIgnored(false);
 	SetPinballCollisionDamageBlocked(false);
+	SetChargePatternState(EPBBossChargePatternState::None);
 	TargetPinballActor = nullptr;
 	ReboundedDistance = 0.0f;
 	ChargeAimElapsedSeconds = 0.0f;
@@ -69,6 +50,87 @@ void UPBBossChargePattern::CancelPatternInternal_Implementation(APBBossBase* Bos
 void UPBBossChargePattern::ExecuteNativePattern(APBBossBase* Boss)
 {
 	ExecutePattern_Implementation(Boss);
+}
+
+bool UPBBossChargePattern::PausePatternForExternalGroggy(APBBossBase* Boss)
+{
+	if (!Boss || ChargePatternState != EPBBossChargePatternState::Groggy)
+	{
+		return false;
+	}
+
+	Boss->GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
+	return true;
+}
+
+bool UPBBossChargePattern::ResumePatternAfterExternalGroggy(APBBossBase* Boss)
+{
+	if (!Boss || ChargePatternState != EPBBossChargePatternState::Groggy)
+	{
+		return false;
+	}
+
+	FinishGroggy();
+	return true;
+}
+
+void UPBBossChargePattern::SetChargePatternState(EPBBossChargePatternState NewState)
+{
+	ChargePatternState = NewState;
+}
+
+void UPBBossChargePattern::StartAiming(APBBossBase* Boss)
+{
+	if (!Boss)
+	{
+		SetChargePatternState(EPBBossChargePatternState::None);
+		FinishPattern();
+		return;
+	}
+
+	SetChargePatternState(EPBBossChargePatternState::Aiming);
+	PrepareCharge(Boss);
+	SpawnChargeTelegraph(Boss);
+
+	const float TelegraphDurationSeconds = GetChargeTelegraphDurationSeconds();
+	if (TelegraphDurationSeconds <= 0.0f)
+	{
+		FinishAiming();
+		return;
+	}
+
+	StartChargeAim(TelegraphDurationSeconds * 0.5f);
+
+	Boss->GetWorldTimerManager().SetTimer(
+		ChargeTelegraphTimerHandle,
+		this,
+		&UPBBossChargePattern::FinishAiming,
+		TelegraphDurationSeconds,
+		false);
+}
+
+void UPBBossChargePattern::FinishAiming()
+{
+	ClearChargeAimTimers();
+	ClearChargeTelegraphTimer();
+	DestroyChargeTelegraph();
+	SetChargePatternState(EPBBossChargePatternState::Charging);
+
+	if (APBBossBase* Boss = GetOwnerBoss())
+	{
+		ExecutePattern_Implementation(Boss);
+		return;
+	}
+
+	SetChargePatternState(EPBBossChargePatternState::None);
+	FinishPattern();
+}
+
+float UPBBossChargePattern::GetChargeTelegraphDurationSeconds() const
+{
+	return TelegraphDataList.IsEmpty()
+		? 0.0f
+		: TelegraphDataList[0].DurationSeconds;
 }
 
 void UPBBossChargePattern::PrepareCharge(APBBossBase* Boss)
@@ -160,7 +222,8 @@ void UPBBossChargePattern::SpawnChargeTelegraph(APBBossBase* Boss)
 			TelegraphDataList[0].DurationSeconds,
 			ChargeStartLocation,
 			ChargeDirection,
-			ChargeMaxDistance);
+			ChargeMaxDistance,
+			TelegraphDataList[0].Scale);
 	}
 }
 
@@ -245,30 +308,17 @@ void UPBBossChargePattern::UpdateChargeTelegraph() const
 		ChargeMaxDistance);
 }
 
-void UPBBossChargePattern::StartExecuteChargePattern()
-{
-	ClearChargeAimTimers();
-	ClearChargeTelegraphTimer();
-	DestroyChargeTelegraph();
-
-	if (APBBossBase* Boss = GetOwnerBoss())
-	{
-		ExecutePattern_Implementation(Boss);
-		return;
-	}
-
-	FinishPattern();
-}
-
 void UPBBossChargePattern::StartCharge()
 {
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
 
+	SetChargePatternState(EPBBossChargePatternState::Charging);
 	SetPinballCollisionDamageBlocked(true);
 	SetPinballMoveIgnored(true);
 	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
@@ -290,6 +340,7 @@ void UPBBossChargePattern::UpdateCharge()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
@@ -318,6 +369,7 @@ void UPBBossChargePattern::HandleChargeBlocked(const FHitResult& Hit)
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
@@ -331,10 +383,12 @@ void UPBBossChargePattern::StartRebound()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
 
+	SetChargePatternState(EPBBossChargePatternState::Rebounding);
 	ReboundedDistance = 0.0f;
 	if (ReboundDistance <= 0.0f || ReboundSeconds <= 0.0f)
 	{
@@ -355,6 +409,7 @@ void UPBBossChargePattern::UpdateRebound()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
@@ -382,6 +437,7 @@ void UPBBossChargePattern::FinishRebound()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
@@ -395,10 +451,13 @@ void UPBBossChargePattern::StartGroggy()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
 
+	SetChargePatternState(EPBBossChargePatternState::Groggy);
+	SetPinballCollisionDamageBlocked(false);
 	if (GroggySeconds <= 0.0f)
 	{
 		FinishGroggy();
@@ -418,6 +477,7 @@ void UPBBossChargePattern::FinishGroggy()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
@@ -431,10 +491,12 @@ void UPBBossChargePattern::StartReturn()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
 
+	SetChargePatternState(EPBBossChargePatternState::Returning);
 	SetPinballCollisionDamageBlocked(true);
 
 	if (ReturnSpeed <= 0.0f)
@@ -456,6 +518,7 @@ void UPBBossChargePattern::UpdateReturn()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
@@ -488,6 +551,7 @@ void UPBBossChargePattern::FinishReturn()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
 	{
+		SetChargePatternState(EPBBossChargePatternState::None);
 		FinishPattern();
 		return;
 	}
@@ -497,6 +561,7 @@ void UPBBossChargePattern::FinishReturn()
 	Boss->SetActorLocation(ChargeStartLocation, false);
 	Boss->SetActorRotation(ChargeStartRotation);
 	SetPinballCollisionDamageBlocked(false);
+	SetChargePatternState(EPBBossChargePatternState::None);
 	TargetPinballActor = nullptr;
 	FinishPattern();
 }

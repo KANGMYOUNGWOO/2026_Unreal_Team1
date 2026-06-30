@@ -4,10 +4,12 @@ void APBBossChargeTelegraph::InitChargeTelegraph(
 	float InDurationSeconds,
 	const FVector& StartLocation,
 	const FVector& Direction,
-	float Length)
+	float Length,
+	const FVector& InScale)
 {
+	const FVector AppliedScale = GetActorScale3D() * InScale;
 	UpdateChargeTelegraphTransform(StartLocation, Direction, Length);
-	InitTelegraph(InDurationSeconds, GetActorScale3D());
+	InitTelegraph(InDurationSeconds, AppliedScale);
 }
 
 void APBBossChargeTelegraph::UpdateChargeTelegraphTransform(
