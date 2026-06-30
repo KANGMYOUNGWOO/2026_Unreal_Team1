@@ -102,6 +102,7 @@ public:
 private:
 	// 설정된 패턴 클래스들로 패턴 인스턴스를 생성합니다.
 	void InitializePatterns();
+	void ResetPatternStartTime();
 	void InitializePatternClasses(
 		const TArray<TSubclassOf<UPBBossPatternBase>>& PatternClassList,
 		TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList);

@@ -14,6 +14,7 @@ void UPBBossPatternComponent::BeginPlay()
 
 	OwnerBoss = Cast<APBBossBase>(GetOwner());
 	InitializePatterns();
+	ResetPatternStartTime();
 }
 
 void UPBBossPatternComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -205,6 +206,11 @@ void UPBBossPatternComponent::InitializePatterns()
 	InitializePatternClasses(PatternClasses, PatternInstances);
 	InitializePatternClasses(EnragedPatternClasses, EnragedPatternInstances);
 	InitializePatternClasses(EnragedEntryPatternClasses, EnragedEntryPatternInstances);
+}
+
+void UPBBossPatternComponent::ResetPatternStartTime()
+{
+	NextPatternAllowedTime = GetCurrentTimeSeconds() + MinPatternIntervalSeconds;
 }
 
 void UPBBossPatternComponent::InitializePatternClasses(
