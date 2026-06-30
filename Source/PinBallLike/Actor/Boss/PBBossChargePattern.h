@@ -67,6 +67,7 @@ private:
 	void HandleChargeBlocked(const FHitResult& Hit);
 	// 충돌 후 보스를 반대 방향으로 살짝 밀어냅니다.
 	void StartRebound();
+	void UpdateRebound();
 	// 반동 단계를 끝내고 그로기 단계로 전환합니다.
 	void FinishRebound();
 	// 돌진 후 그로기 대기 타이머를 시작합니다.
@@ -97,6 +98,7 @@ private:
 	FRotator ChargeStartRotation = FRotator::ZeroRotator;
 	FVector ChargeDirection = FVector::ForwardVector;
 	float ChargedDistance = 0.0f;
+	float ReboundedDistance = 0.0f;
 	float ChargeAimElapsedSeconds = 0.0f;
 	float ChargeAimDurationSeconds = 0.0f;
 

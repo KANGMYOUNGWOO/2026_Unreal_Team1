@@ -61,6 +61,7 @@ void UPBBossChargePattern::CancelPatternInternal_Implementation(APBBossBase* Bos
 	SetPinballMoveIgnored(false);
 	SetPinballCollisionDamageBlocked(false);
 	TargetPinballActor = nullptr;
+	ReboundedDistance = 0.0f;
 	ChargeAimElapsedSeconds = 0.0f;
 	ChargeAimDurationSeconds = 0.0f;
 }
@@ -80,6 +81,7 @@ void UPBBossChargePattern::PrepareCharge(APBBossBase* Boss)
 	ChargeStartLocation = Boss->GetActorLocation();
 	ChargeStartRotation = Boss->GetActorRotation();
 	ChargedDistance = 0.0f;
+	ReboundedDistance = 0.0f;
 	ChargeAimElapsedSeconds = 0.0f;
 	ChargeAimDurationSeconds = 0.0f;
 
@@ -333,13 +335,8 @@ void UPBBossChargePattern::StartRebound()
 		return;
 	}
 
-	if (ReboundDistance > 0.0f)
-	{
-		FHitResult Hit;
-		MoveBossWithFloorIgnored(Boss, -ChargeDirection * ReboundDistance, Hit);
-	}
-
-	if (ReboundSeconds <= 0.0f)
+	ReboundedDistance = 0.0f;
+	if (ReboundDistance <= 0.0f || ReboundSeconds <= 0.0f)
 	{
 		FinishRebound();
 		return;
@@ -348,9 +345,36 @@ void UPBBossChargePattern::StartRebound()
 	Boss->GetWorldTimerManager().SetTimer(
 		ReboundTimerHandle,
 		this,
-		&UPBBossChargePattern::FinishRebound,
-		ReboundSeconds,
-		false);
+		&UPBBossChargePattern::UpdateRebound,
+		UpdateIntervalSeconds,
+		true);
+}
+
+void UPBBossChargePattern::UpdateRebound()
+{
+	APBBossBase* Boss = GetOwnerBoss();
+	if (!Boss)
+	{
+		FinishPattern();
+		return;
+	}
+
+	const float ReboundSpeed = ReboundDistance / ReboundSeconds;
+	const float MoveDistance = FMath::Min(ReboundSpeed * UpdateIntervalSeconds, ReboundDistance - ReboundedDistance);
+	if (MoveDistance <= 0.0f)
+	{
+		FinishRebound();
+		return;
+	}
+
+	FHitResult Hit;
+	MoveBossWithFloorIgnored(Boss, -ChargeDirection * MoveDistance, Hit);
+	ReboundedDistance += MoveDistance;
+
+	if (Hit.bBlockingHit || ReboundedDistance >= ReboundDistance)
+	{
+		FinishRebound();
+	}
 }
 
 void UPBBossChargePattern::FinishRebound()
