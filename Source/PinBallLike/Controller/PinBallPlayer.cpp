@@ -107,7 +107,6 @@ void APinBallPlayer::RemoveInputMappingContext()
 
 void APinBallPlayer::UpFlippers(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("raise"));
 	SetFlippersRaised(true);
 }
 
@@ -118,13 +117,13 @@ void APinBallPlayer::DownFlippers(const FInputActionValue& Value)
 
 void APinBallPlayer::LaunchParty(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("PinBallPlayer received LaunchParty input. CombatPartyActor=%s"),
-		*GetNameSafe(CombatPartyActor.Get()));
+	// UE_LOG(LogTemp, Warning, TEXT("PinBallPlayer received LaunchParty input. CombatPartyActor=%s"),
+	// 	*GetNameSafe(CombatPartyActor.Get()));
 
 	if (IsValid(CombatPartyActor))
 	{
 		const bool bLaunched = CombatPartyActor->LaunchPartyFromReadyPosition();
-		UE_LOG(LogTemp, Warning, TEXT("CombatPartyActor launch result: %s"), bLaunched ? TEXT("Success") : TEXT("Failed"));
+		// UE_LOG(LogTemp, Warning, TEXT("CombatPartyActor launch result: %s"), bLaunched ? TEXT("Success") : TEXT("Failed"));
 	}
 	else
 	{

@@ -261,18 +261,17 @@ void APBCombatPartyActor::SpawnPartyBallsAtLauncher()
 
 bool APBCombatPartyActor::LaunchPartyFromReadyPosition()
 {
+	if (bLaunchConsumed)
+	{
+		return false;
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("LaunchPartyFromReadyPosition called. Party=%s bLauncherActive=%s bLaunchConsumed=%s Leader=%s PartyBallCount=%d"),
 		*GetNameSafe(this),
 		bLauncherActive ? TEXT("true") : TEXT("false"),
 		bLaunchConsumed ? TEXT("true") : TEXT("false"),
 		*GetNameSafe(LeaderBall.Get()),
 		PartyBalls.Num());
-
-	if (bLaunchConsumed)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("LaunchPartyFromReadyPosition ignored: launch was already consumed."));
-		return false;
-	}
 
 	if (!IsValid(LeaderBall.Get()))
 	{
