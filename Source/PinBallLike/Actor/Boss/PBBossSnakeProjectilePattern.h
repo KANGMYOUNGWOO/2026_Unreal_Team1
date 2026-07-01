@@ -3,18 +3,18 @@
 #include "CoreMinimal.h"
 #include "PBBossPatternBase.h"
 #include "TimerManager.h"
-#include "PBBossProjectilePattern.generated.h"
+#include "PBBossSnakeProjectilePattern.generated.h"
 
 class APBBossProjectile;
 
 UCLASS(Blueprintable)
-class PINBALLLIKE_API UPBBossProjectilePattern : public UPBBossPatternBase
+class PINBALLLIKE_API UPBBossSnakeProjectilePattern : public UPBBossPatternBase
 {
 	GENERATED_BODY()
 
 public:
 	// 투사체 패턴의 기본 값을 초기화합니다.
-	UPBBossProjectilePattern();
+	UPBBossSnakeProjectilePattern();
 
 protected:
 	// 투사체 클래스와 실행 조건을 확인합니다.

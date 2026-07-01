@@ -18,7 +18,6 @@ public class PinBallLike : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"GameplayTags"
-
 		});
 
 

@@ -1,19 +1,19 @@
-#include "PBBossProjectilePattern.h"
+#include "PBBossSnakeProjectilePattern.h"
 
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/PBBossProjectile.h"
 
-UPBBossProjectilePattern::UPBBossProjectilePattern()
+UPBBossSnakeProjectilePattern::UPBBossSnakeProjectilePattern()
 {
 	ProjectileClass = APBBossProjectile::StaticClass();
 }
 
-bool UPBBossProjectilePattern::CanExecute_Implementation(APBBossBase* Boss) const
+bool UPBBossSnakeProjectilePattern::CanExecute_Implementation(APBBossBase* Boss) const
 {
 	return Super::CanExecute_Implementation(Boss) && ProjectileClass && ProjectileCount > 0;
 }
 
-void UPBBossProjectilePattern::ExecutePattern_Implementation(APBBossBase* Boss)
+void UPBBossSnakeProjectilePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 {
 	FiredProjectileCount = 0;
 
@@ -50,19 +50,19 @@ void UPBBossProjectilePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 		Boss->GetWorldTimerManager().SetTimer(
 			FireTimerHandle,
 			this,
-			&UPBBossProjectilePattern::FireProjectile,
+			&UPBBossSnakeProjectilePattern::FireProjectile,
 			FireIntervalSeconds,
 			true);
 	}
 }
 
-void UPBBossProjectilePattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
+void UPBBossSnakeProjectilePattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
 {
 	ClearPatternTimers();
 	FiredProjectileCount = 0;
 }
 
-void UPBBossProjectilePattern::FireProjectile()
+void UPBBossSnakeProjectilePattern::FireProjectile()
 {
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss || !ProjectileClass || FiredProjectileCount >= ProjectileCount)
@@ -114,7 +114,7 @@ void UPBBossProjectilePattern::FireProjectile()
 	}
 }
 
-void UPBBossProjectilePattern::ClearFireTimer()
+void UPBBossSnakeProjectilePattern::ClearFireTimer()
 {
 	if (APBBossBase* Boss = GetOwnerBoss())
 	{
@@ -122,12 +122,12 @@ void UPBBossProjectilePattern::ClearFireTimer()
 	}
 }
 
-void UPBBossProjectilePattern::ClearPatternTimers()
+void UPBBossSnakeProjectilePattern::ClearPatternTimers()
 {
 	ClearFireTimer();
 }
 
-FVector UPBBossProjectilePattern::GetProjectileSpawnLocation() const
+FVector UPBBossSnakeProjectilePattern::GetProjectileSpawnLocation() const
 {
 	const APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss)
@@ -138,7 +138,7 @@ FVector UPBBossProjectilePattern::GetProjectileSpawnLocation() const
 	return Boss->GetActorLocation() + Boss->GetActorTransform().TransformVectorNoScale(SpawnOffset);
 }
 
-FRotator UPBBossProjectilePattern::GetProjectileSpawnRotation(const FVector& SpawnLocation) const
+FRotator UPBBossSnakeProjectilePattern::GetProjectileSpawnRotation(const FVector& SpawnLocation) const
 {
 	AActor* PinballActor = FindPinballActor();
 	if (!PinballActor)
