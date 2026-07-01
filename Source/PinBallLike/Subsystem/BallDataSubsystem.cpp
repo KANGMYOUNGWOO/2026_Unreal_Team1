@@ -136,6 +136,7 @@ void UBallDataSubsystem::InitializeBallData()
 	BallDataAssets.Empty();
 	BallDataAssetMap.Empty();
 
+	// 1. 프로젝트 세팅에 등록된 설장값 읽어들이기
 	const UAssetManagerSettings* AssetManagerSettings = GetDefault<UAssetManagerSettings>();
 	if (AssetManagerSettings)
 	{
@@ -162,6 +163,7 @@ void UBallDataSubsystem::InitializeBallData()
 		}
 	}
 
+	// 2. 에셋 매니저 1차 스캔 시작
 	UAssetManager& AssetManager = UAssetManager::Get();
 	bool bRequestedBallDataScan = false;
 	if (AssetManagerSettings)
@@ -208,6 +210,7 @@ void UBallDataSubsystem::InitializeBallData()
 		UE_LOG(LogTemp, Warning, TEXT("BallDataSubsystem did not request BallData scan. BallData TypeInfo was not found or had no directories."));
 	}
 
+	// 3. 메모리 로드 및 캐싱
 	TArray<FPrimaryAssetId> BallAssetIds;
 	AssetManager.GetPrimaryAssetIdList(UPBBallDataAsset::BallDataAssetType, BallAssetIds);
 
@@ -227,6 +230,7 @@ void UBallDataSubsystem::InitializeBallData()
 			*BallAssetId.ToString(),
 			*BallAssetPath.ToString());
 
+		// 에셋 로드
 		UPBBallDataAsset* BallDataAsset = Cast<UPBBallDataAsset>(BallAssetPath.TryLoad());
 		if (!BallDataAsset)
 		{
@@ -248,6 +252,7 @@ void UBallDataSubsystem::InitializeBallData()
 			continue;
 		}
 
+		// 등록
 		BallDataAssets.Add(BallDataAsset);
 		BallDataAssetMap.Add(BallDataAsset->BallId, BallDataAsset);
 
