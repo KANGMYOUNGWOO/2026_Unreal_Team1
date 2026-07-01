@@ -24,14 +24,29 @@ class PINBALLLIKE_API UPBBallDeckSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
+#pragma region Common
+
 	int32 AddOwnedBall(int32 BallId, int32 StarLevel = 1);
-	const FPBBallInstanceData* GetOwnedBallData(int32 BallInstanceId) const;
-	bool HasOwnedBall(int32 BallInstanceId) const;
 	bool AddNewBallToDeck(int32 BallId, int32 StarLevel = 1);
-	bool BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const;
+	bool RemoveOwnedBall(int32 BallInstanceId);
 
 	UFUNCTION(BlueprintCallable, Category = "BallDeck|DragDrop")
-	bool MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, EPBBallDeckSlotType TargetSlotType, int32 TargetSlotIndex);
+	bool MoveBallBetweenSlots(EPBBallDeckSlotType SourceType, int32 SourceIndex,
+							  EPBBallDeckSlotType TargetType, int32 TargetIndex);
+
+	bool FindBallLocation(int32 BallInstanceId, FPBBallDeckSlot& OutLocation) const;
+	bool IsSlotValid(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;
+	bool IsSlotOccupied(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;
+	int32 FindEmptySlot(EPBBallDeckSlotType SlotType) const;
+	int32 GetSlotBallInstanceId(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;
+	TArray<int32> GetSlotBallInstanceIds(EPBBallDeckSlotType SlotType) const;
+	TArray<int32> GetAllPlacedBallInstanceIds() const;
+
+	const FPBBallInstanceData* GetOwnedBallData(int32 BallInstanceId) const;
+	bool HasOwnedBall(int32 BallInstanceId) const;
+	bool BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const;
+
+#pragma endregion
 
 #pragma region Deployment Slot
 
@@ -47,10 +62,6 @@ public:
 	bool SetDeploymentSlot(int32 SlotIndex, int32 BallInstanceId);
 	bool ClearDeploymentSlot(int32 SlotIndex);
 	bool SwapDeploymentSlots(int32 FirstIndex, int32 SecondIndex);
-	bool IsDeploymentSlotValid(int32 SlotIndex) const;
-	bool IsDeploymentSlotOccupied(int32 SlotIndex) const;
-	int32 FindEmptyDeploymentSlot() const;
-	int32 GetDeploymentSlotBallInstanceId(int32 SlotIndex) const;
 	int32 GetLeaderBallInstanceId() const;
 	TArray<int32> GetDeploymentBallInstanceIds() const;
 	TArray<int32> GetFollowerBallInstanceIds() const;
@@ -61,16 +72,12 @@ public:
 	bool RotateDeploymentSlots();
 
 private:
-	void InitializeDeploymentSlots();
 	TArray<int32> CaptureDeploymentSlotBallInstanceIds() const;
 	bool CompactDeploymentSlotsInternal();
 	void BroadcastDeploymentSlotChange(const TArray<int32>& PreviousBallInstanceIds);
 	void ClearBallInstanceFromSlots(int32 BallInstanceId);
 
 	static constexpr int32 MaxDeploymentSlotCount = 3;
-
-	UPROPERTY()
-	TArray<FPBBallDeckSlot> DeploymentSlots;
 
 #pragma endregion
 
@@ -85,29 +92,24 @@ public:
 	bool SetBenchSlot(int32 SlotIndex, int32 BallInstanceId);
 	bool ClearBenchSlot(int32 SlotIndex);
 	bool SwapBenchSlots(int32 FirstIndex, int32 SecondIndex);
-	bool IsBenchSlotValid(int32 SlotIndex) const;
-	bool IsBenchSlotOccupied(int32 SlotIndex) const;
-	bool HasEmptyBenchSlot() const;
-	int32 FindEmptyBenchSlot() const;
-	bool AddBenchBall(int32 BallInstanceId);
-	bool AddNewBallToBench(int32 BallId, int32 StarLevel = 1);
-	int32 GetBenchBallInstanceId(int32 SlotIndex) const;
 	TArray<int32> GetBenchBallInstanceIds() const;
 	int32 GetBenchBallCount() const;
 
-private:
-	void InitializeBenchSlots();
-
 	static constexpr int32 MaxBenchSlotCount = 9;
+#pragma endregion
+	
+private:
+	static constexpr int32 DeploymentSlotStartIndex = 0;
+	static constexpr int32 BenchSlotStartIndex = MaxDeploymentSlotCount;
+	static constexpr int32 MaxDeckSlotCount = MaxDeploymentSlotCount + MaxBenchSlotCount;
+
+	void InitializeDeckSlots();
+	int32 ToGlobalSlotIndex(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;
+	const FPBBallDeckSlot* GetDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;
+	FPBBallDeckSlot* GetMutableDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex);
 
 	UPROPERTY()
-	TArray<FPBBallDeckSlot> BenchSlots;
-
-#pragma endregion
-
-private:
-	FPBBallDeckSlot* GetMutableDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex);
-	void BroadcastDeckSlotChanged(EPBBallDeckSlotType SlotType, int32 SlotIndex, int32 BallInstanceId);
+	TArray<FPBBallDeckSlot> DeckSlots;
 
 	UPROPERTY()
 	TMap<int32, FPBBallInstanceData> OwnedBallDataMap;

@@ -9,8 +9,7 @@
 void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	InitializeDeploymentSlots();
-	InitializeBenchSlots();
+	InitializeDeckSlots();
 }
 
 int32 UPBBallDeckSubsystem::AddOwnedBall(int32 BallId, int32 StarLevel)
@@ -45,10 +44,85 @@ bool UPBBallDeckSubsystem::HasOwnedBall(int32 BallInstanceId) const
 	return OwnedBallDataMap.Contains(BallInstanceId);
 }
 
+bool UPBBallDeckSubsystem::FindBallLocation(int32 BallInstanceId, FPBBallDeckSlot& OutLocation) const
+{
+	OutLocation = FPBBallDeckSlot();
+
+	if (BallInstanceId == INDEX_NONE)
+	{
+		return false;
+	}
+
+	for (const FPBBallDeckSlot& DeckSlot : DeckSlots)
+	{
+		if (DeckSlot.BallInstanceId == BallInstanceId)
+		{
+			OutLocation = DeckSlot;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UPBBallDeckSubsystem::IsSlotValid(EPBBallDeckSlotType SlotType, int32 SlotIndex) const
+{
+	return GetDeckSlot(SlotType, SlotIndex) != nullptr;
+}
+
+bool UPBBallDeckSubsystem::IsSlotOccupied(EPBBallDeckSlotType SlotType, int32 SlotIndex) const
+{
+	const FPBBallDeckSlot* DeckSlot = GetDeckSlot(SlotType, SlotIndex);
+	return DeckSlot && DeckSlot->BallInstanceId != INDEX_NONE;
+}
+
+int32 UPBBallDeckSubsystem::FindEmptySlot(EPBBallDeckSlotType SlotType) const
+{
+	const int32 SlotCount = SlotType == EPBBallDeckSlotType::Deployment
+		? MaxDeploymentSlotCount
+		: MaxBenchSlotCount;
+
+	for (int32 SlotIndex = 0; SlotIndex < SlotCount; ++SlotIndex)
+	{
+		if (!IsSlotOccupied(SlotType, SlotIndex))
+		{
+			return SlotIndex;
+		}
+	}
+
+	return INDEX_NONE;
+}
+
+int32 UPBBallDeckSubsystem::GetSlotBallInstanceId(EPBBallDeckSlotType SlotType, int32 SlotIndex) const
+{
+	const FPBBallDeckSlot* DeckSlot = GetDeckSlot(SlotType, SlotIndex);
+	return DeckSlot ? DeckSlot->BallInstanceId : INDEX_NONE;
+}
+
+TArray<int32> UPBBallDeckSubsystem::GetSlotBallInstanceIds(EPBBallDeckSlotType SlotType) const
+{
+	TArray<int32> BallInstanceIds;
+	for (const FPBBallDeckSlot& DeckSlot : DeckSlots)
+	{
+		if (DeckSlot.SlotType == SlotType && DeckSlot.BallInstanceId != INDEX_NONE)
+		{
+			BallInstanceIds.Add(DeckSlot.BallInstanceId);
+		}
+	}
+	return BallInstanceIds;
+}
+
+TArray<int32> UPBBallDeckSubsystem::GetAllPlacedBallInstanceIds() const
+{
+	TArray<int32> BallInstanceIds = GetSlotBallInstanceIds(EPBBallDeckSlotType::Deployment);
+	BallInstanceIds.Append(GetSlotBallInstanceIds(EPBBallDeckSlotType::Bench));
+	return BallInstanceIds;
+}
+
 bool UPBBallDeckSubsystem::AddNewBallToDeck(int32 BallId, int32 StarLevel)
 {
-	const int32 EmptyDeploymentSlotIndex = FindEmptyDeploymentSlot();
-	const int32 EmptyBenchSlotIndex = EmptyDeploymentSlotIndex == INDEX_NONE ? FindEmptyBenchSlot() : INDEX_NONE;
+	const int32 EmptyDeploymentSlotIndex = FindEmptySlot(EPBBallDeckSlotType::Deployment);
+	const int32 EmptyBenchSlotIndex = EmptyDeploymentSlotIndex == INDEX_NONE ? FindEmptySlot(EPBBallDeckSlotType::Bench) : INDEX_NONE;
 	if (EmptyDeploymentSlotIndex == INDEX_NONE && EmptyBenchSlotIndex == INDEX_NONE)
 	{
 		return false;
@@ -66,6 +140,38 @@ bool UPBBallDeckSubsystem::AddNewBallToDeck(int32 BallId, int32 StarLevel)
 	}
 
 	return SetBenchSlot(EmptyBenchSlotIndex, NewBallInstanceId);
+}
+
+bool UPBBallDeckSubsystem::RemoveOwnedBall(int32 BallInstanceId)
+{
+	if (!HasOwnedBall(BallInstanceId))
+	{
+		return false;
+	}
+
+	FPBBallDeckSlot BallLocation;
+	const bool bWasPlaced = FindBallLocation(BallInstanceId, BallLocation);
+	if (bWasPlaced)
+	{
+		if (BallLocation.SlotType == EPBBallDeckSlotType::Deployment)
+		{
+			const TArray<int32> PreviousBallInstanceIds = CaptureDeploymentSlotBallInstanceIds();
+			if (FPBBallDeckSlot* DeckSlot = GetMutableDeckSlot(BallLocation.SlotType, BallLocation.SlotIndex))
+			{
+				DeckSlot->BallInstanceId = INDEX_NONE;
+				CompactDeploymentSlotsInternal();
+				BroadcastDeploymentSlotChange(PreviousBallInstanceIds);
+			}
+		}
+		else if (FPBBallDeckSlot* DeckSlot = GetMutableDeckSlot(BallLocation.SlotType, BallLocation.SlotIndex))
+		{
+			DeckSlot->BallInstanceId = INDEX_NONE;
+			OnBenchSlotChanged.Broadcast(BallLocation.SlotIndex, INDEX_NONE);
+		}
+	}
+
+	OwnedBallDataMap.Remove(BallInstanceId);
+	return true;
 }
 
 bool UPBBallDeckSubsystem::BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const
@@ -143,12 +249,32 @@ bool UPBBallDeckSubsystem::MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotTy
 
 	const int32 SourceBallInstanceId = SourceSlot->BallInstanceId;
 	const int32 TargetBallInstanceId = TargetSlot->BallInstanceId;
+	const bool bSourceIsDeployment = SourceSlotType == EPBBallDeckSlotType::Deployment;
+	const bool bTargetIsDeployment = TargetSlotType == EPBBallDeckSlotType::Deployment;
+	const bool bTouchesDeployment = bSourceIsDeployment || bTargetIsDeployment;
+	const TArray<int32> PreviousDeploymentBallInstanceIds = bTouchesDeployment
+		? CaptureDeploymentSlotBallInstanceIds()
+		: TArray<int32>();
 
 	SourceSlot->BallInstanceId = TargetBallInstanceId;
 	TargetSlot->BallInstanceId = SourceBallInstanceId;
 
-	BroadcastDeckSlotChanged(SourceSlotType, SourceSlotIndex, TargetBallInstanceId);
-	BroadcastDeckSlotChanged(TargetSlotType, TargetSlotIndex, SourceBallInstanceId);
+	if (bTouchesDeployment)
+	{
+		CompactDeploymentSlotsInternal();
+		BroadcastDeploymentSlotChange(PreviousDeploymentBallInstanceIds);
+	}
+
+	if (SourceSlotType == EPBBallDeckSlotType::Bench)
+	{
+		OnBenchSlotChanged.Broadcast(SourceSlotIndex, TargetBallInstanceId);
+	}
+
+	if (TargetSlotType == EPBBallDeckSlotType::Bench)
+	{
+		OnBenchSlotChanged.Broadcast(TargetSlotIndex, SourceBallInstanceId);
+	}
+
 	return true;
 }
 
@@ -156,7 +282,7 @@ bool UPBBallDeckSubsystem::MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotTy
 
 EPBBallPartyRole UPBBallDeckSubsystem::GetDeploymentRole(int32 SlotIndex) const
 {
-	if (!IsDeploymentSlotValid(SlotIndex))
+	if (!IsSlotValid(EPBBallDeckSlotType::Deployment, SlotIndex))
 	{
 		return EPBBallPartyRole::None;
 	}
@@ -168,7 +294,7 @@ EPBBallPartyRole UPBBallDeckSubsystem::GetDeploymentRole(int32 SlotIndex) const
 
 bool UPBBallDeckSubsystem::SetDeploymentSlot(int32 SlotIndex, int32 BallInstanceId)
 {
-	if (!IsDeploymentSlotValid(SlotIndex) || !HasOwnedBall(BallInstanceId))
+	if (!IsSlotValid(EPBBallDeckSlotType::Deployment, SlotIndex) || !HasOwnedBall(BallInstanceId))
 	{
 		return false;
 	}
@@ -176,7 +302,7 @@ bool UPBBallDeckSubsystem::SetDeploymentSlot(int32 SlotIndex, int32 BallInstance
 	const TArray<int32> PreviousBallInstanceIds = CaptureDeploymentSlotBallInstanceIds();
 
 	ClearBallInstanceFromSlots(BallInstanceId);
-	DeploymentSlots[SlotIndex].BallInstanceId = BallInstanceId;
+	GetMutableDeckSlot(EPBBallDeckSlotType::Deployment, SlotIndex)->BallInstanceId = BallInstanceId;
 	CompactDeploymentSlotsInternal();
 	BroadcastDeploymentSlotChange(PreviousBallInstanceIds);
 	return true;
@@ -184,14 +310,14 @@ bool UPBBallDeckSubsystem::SetDeploymentSlot(int32 SlotIndex, int32 BallInstance
 
 bool UPBBallDeckSubsystem::ClearDeploymentSlot(int32 SlotIndex)
 {
-	if (!IsDeploymentSlotValid(SlotIndex))
+	if (!IsSlotValid(EPBBallDeckSlotType::Deployment, SlotIndex))
 	{
 		return false;
 	}
 
 	const TArray<int32> PreviousBallInstanceIds = CaptureDeploymentSlotBallInstanceIds();
 
-	DeploymentSlots[SlotIndex].BallInstanceId = INDEX_NONE;
+	GetMutableDeckSlot(EPBBallDeckSlotType::Deployment, SlotIndex)->BallInstanceId = INDEX_NONE;
 	CompactDeploymentSlotsInternal();
 	BroadcastDeploymentSlotChange(PreviousBallInstanceIds);
 	return true;
@@ -199,7 +325,7 @@ bool UPBBallDeckSubsystem::ClearDeploymentSlot(int32 SlotIndex)
 
 bool UPBBallDeckSubsystem::SwapDeploymentSlots(int32 FirstIndex, int32 SecondIndex)
 {
-	if (!IsDeploymentSlotValid(FirstIndex) || !IsDeploymentSlotValid(SecondIndex))
+	if (!IsSlotValid(EPBBallDeckSlotType::Deployment, FirstIndex) || !IsSlotValid(EPBBallDeckSlotType::Deployment, SecondIndex))
 	{
 		return false;
 	}
@@ -211,65 +337,33 @@ bool UPBBallDeckSubsystem::SwapDeploymentSlots(int32 FirstIndex, int32 SecondInd
 
 	const TArray<int32> PreviousBallInstanceIds = CaptureDeploymentSlotBallInstanceIds();
 
-	Swap(DeploymentSlots[FirstIndex].BallInstanceId, DeploymentSlots[SecondIndex].BallInstanceId);
+	FPBBallDeckSlot* FirstSlot = GetMutableDeckSlot(EPBBallDeckSlotType::Deployment, FirstIndex);
+	FPBBallDeckSlot* SecondSlot = GetMutableDeckSlot(EPBBallDeckSlotType::Deployment, SecondIndex);
+	Swap(FirstSlot->BallInstanceId, SecondSlot->BallInstanceId);
 	CompactDeploymentSlotsInternal();
 	BroadcastDeploymentSlotChange(PreviousBallInstanceIds);
 	return true;
 }
 
-bool UPBBallDeckSubsystem::IsDeploymentSlotValid(int32 SlotIndex) const
-{
-	return DeploymentSlots.IsValidIndex(SlotIndex);
-}
-
-bool UPBBallDeckSubsystem::IsDeploymentSlotOccupied(int32 SlotIndex) const
-{
-	return IsDeploymentSlotValid(SlotIndex) && DeploymentSlots[SlotIndex].BallInstanceId != INDEX_NONE;
-}
-
-int32 UPBBallDeckSubsystem::FindEmptyDeploymentSlot() const
-{
-	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num(); ++SlotIndex)
-	{
-		if (DeploymentSlots[SlotIndex].BallInstanceId == INDEX_NONE)
-		{
-			return SlotIndex;
-		}
-	}
-	return INDEX_NONE;
-}
-
-int32 UPBBallDeckSubsystem::GetDeploymentSlotBallInstanceId(int32 SlotIndex) const
-{
-	return IsDeploymentSlotValid(SlotIndex) ? DeploymentSlots[SlotIndex].BallInstanceId : INDEX_NONE;
-}
-
 int32 UPBBallDeckSubsystem::GetLeaderBallInstanceId() const
 {
-	return GetDeploymentSlotBallInstanceId(0);
+	return GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, 0);
 }
 
 TArray<int32> UPBBallDeckSubsystem::GetDeploymentBallInstanceIds() const
 {
-	TArray<int32> BallInstanceIds;
-	for (const FPBBallDeckSlot& DeploymentSlot : DeploymentSlots)
-	{
-		if (DeploymentSlot.BallInstanceId != INDEX_NONE)
-		{
-			BallInstanceIds.Add(DeploymentSlot.BallInstanceId);	
-		}
-	}
-	return BallInstanceIds;
+	return GetSlotBallInstanceIds(EPBBallDeckSlotType::Deployment);
 }
 
 TArray<int32> UPBBallDeckSubsystem::GetFollowerBallInstanceIds() const
 {
 	TArray<int32> BallInstanceIds;
-	for (int32 SlotIndex = 1; SlotIndex < DeploymentSlots.Num(); ++SlotIndex)
+	for (int32 SlotIndex = 1; SlotIndex < MaxDeploymentSlotCount; ++SlotIndex)
 	{
-		if (DeploymentSlots[SlotIndex].BallInstanceId != INDEX_NONE)
+		const int32 BallInstanceId = GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, SlotIndex);
+		if (BallInstanceId != INDEX_NONE)
 		{
-			BallInstanceIds.Add(DeploymentSlots[SlotIndex].BallInstanceId);
+			BallInstanceIds.Add(BallInstanceId);
 		}
 	}
 	return BallInstanceIds;
@@ -277,15 +371,7 @@ TArray<int32> UPBBallDeckSubsystem::GetFollowerBallInstanceIds() const
 
 int32 UPBBallDeckSubsystem::GetDeploymentBallCount() const
 {
-	int32 BallCount = 0;
-	for (const FPBBallDeckSlot& DeploymentSlot : DeploymentSlots)
-	{
-		if (DeploymentSlot.BallInstanceId != INDEX_NONE)
-		{
-			++BallCount;
-		}
-	}
-	return BallCount;
+	return GetDeploymentBallInstanceIds().Num();
 }
 
 bool UPBBallDeckSubsystem::HasLeaderBall() const
@@ -314,12 +400,14 @@ bool UPBBallDeckSubsystem::RotateDeploymentSlots()
 
 	CompactDeploymentSlotsInternal();
 
-	const int32 PreviousLeaderBallInstanceId = DeploymentSlots[0].BallInstanceId;
-	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num() - 1; ++SlotIndex)
+	const int32 PreviousLeaderBallInstanceId = GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, 0);
+	for (int32 SlotIndex = 0; SlotIndex < MaxDeploymentSlotCount - 1; ++SlotIndex)
 	{
-		DeploymentSlots[SlotIndex].BallInstanceId = DeploymentSlots[SlotIndex + 1].BallInstanceId;
+		FPBBallDeckSlot* CurrentSlot = GetMutableDeckSlot(EPBBallDeckSlotType::Deployment, SlotIndex);
+		const FPBBallDeckSlot* NextSlot = GetDeckSlot(EPBBallDeckSlotType::Deployment, SlotIndex + 1);
+		CurrentSlot->BallInstanceId = NextSlot ? NextSlot->BallInstanceId : INDEX_NONE;
 	}
-	DeploymentSlots.Last().BallInstanceId = PreviousLeaderBallInstanceId;
+	GetMutableDeckSlot(EPBBallDeckSlotType::Deployment, MaxDeploymentSlotCount - 1)->BallInstanceId = PreviousLeaderBallInstanceId;
 
 	CompactDeploymentSlotsInternal();
 	OnDeploymentSlotsRotated.Broadcast();
@@ -329,10 +417,10 @@ bool UPBBallDeckSubsystem::RotateDeploymentSlots()
 TArray<int32> UPBBallDeckSubsystem::CaptureDeploymentSlotBallInstanceIds() const
 {
 	TArray<int32> BallInstanceIds;
-	BallInstanceIds.Reserve(DeploymentSlots.Num());
-	for (const FPBBallDeckSlot& DeploymentSlot : DeploymentSlots)
+	BallInstanceIds.Reserve(MaxDeploymentSlotCount);
+	for (int32 SlotIndex = 0; SlotIndex < MaxDeploymentSlotCount; ++SlotIndex)
 	{
-		BallInstanceIds.Add(DeploymentSlot.BallInstanceId);
+		BallInstanceIds.Add(GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, SlotIndex));
 	}
 	return BallInstanceIds;
 }
@@ -343,22 +431,24 @@ bool UPBBallDeckSubsystem::CompactDeploymentSlotsInternal()
 	TArray<int32> OrderedBallInstanceIds;
 	OrderedBallInstanceIds.Reserve(MaxDeploymentSlotCount);
 
-	for (const FPBBallDeckSlot& DeploymentSlot : DeploymentSlots)
+	for (int32 SlotIndex = 0; SlotIndex < MaxDeploymentSlotCount; ++SlotIndex)
 	{
-		if (DeploymentSlot.BallInstanceId != INDEX_NONE)
+		const int32 BallInstanceId = GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, SlotIndex);
+		if (BallInstanceId != INDEX_NONE)
 		{
-			OrderedBallInstanceIds.Add(DeploymentSlot.BallInstanceId);
+			OrderedBallInstanceIds.Add(BallInstanceId);
 		}
 	}
 
-	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num(); ++SlotIndex)
+	for (int32 SlotIndex = 0; SlotIndex < MaxDeploymentSlotCount; ++SlotIndex)
 	{
-		const int32 PreviousBallInstanceId = DeploymentSlots[SlotIndex].BallInstanceId;
-		DeploymentSlots[SlotIndex].BallInstanceId = OrderedBallInstanceIds.IsValidIndex(SlotIndex)
+		FPBBallDeckSlot* DeploymentSlot = GetMutableDeckSlot(EPBBallDeckSlotType::Deployment, SlotIndex);
+		const int32 PreviousBallInstanceId = DeploymentSlot->BallInstanceId;
+		DeploymentSlot->BallInstanceId = OrderedBallInstanceIds.IsValidIndex(SlotIndex)
 			? OrderedBallInstanceIds[SlotIndex]
 			: INDEX_NONE;
 
-		if (PreviousBallInstanceId != DeploymentSlots[SlotIndex].BallInstanceId)
+		if (PreviousBallInstanceId != DeploymentSlot->BallInstanceId)
 		{
 			bChanged = true;
 		}
@@ -373,12 +463,12 @@ void UPBBallDeckSubsystem::BroadcastDeploymentSlotChange(const TArray<int32>& Pr
 	int32 ChangedBallInstanceId = INDEX_NONE;
 	int32 ChangedSlotCount = 0;
 
-	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num(); ++SlotIndex)
+	for (int32 SlotIndex = 0; SlotIndex < MaxDeploymentSlotCount; ++SlotIndex)
 	{
 		const int32 PreviousBallInstanceId = PreviousBallInstanceIds.IsValidIndex(SlotIndex)
 			? PreviousBallInstanceIds[SlotIndex]
 			: INDEX_NONE;
-		const int32 CurrentBallInstanceId = DeploymentSlots[SlotIndex].BallInstanceId;
+		const int32 CurrentBallInstanceId = GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, SlotIndex);
 		if (PreviousBallInstanceId == CurrentBallInstanceId)
 		{
 			continue;
@@ -406,102 +496,66 @@ void UPBBallDeckSubsystem::ClearBallInstanceFromSlots(int32 BallInstanceId)
 		return;
 	}
 
-	for (FPBBallDeckSlot& DeploymentSlot : DeploymentSlots)
+	for (FPBBallDeckSlot& DeckSlot : DeckSlots)
 	{
-		if (DeploymentSlot.BallInstanceId == BallInstanceId)
+		if (DeckSlot.BallInstanceId == BallInstanceId)
 		{
-			DeploymentSlot.BallInstanceId = INDEX_NONE;
-		}
-	}
-
-	for (FPBBallDeckSlot& BenchSlot : BenchSlots)
-	{
-		if (BenchSlot.BallInstanceId == BallInstanceId)
-		{
-			BenchSlot.BallInstanceId = INDEX_NONE;
+			DeckSlot.BallInstanceId = INDEX_NONE;
 		}
 	}
 }
 
-void UPBBallDeckSubsystem::InitializeDeploymentSlots()
+void UPBBallDeckSubsystem::InitializeDeckSlots()
 {
-	DeploymentSlots.SetNum(MaxDeploymentSlotCount);
-	for (int32 SlotIndex = 0; SlotIndex < DeploymentSlots.Num(); ++SlotIndex)
+	DeckSlots.SetNum(MaxDeckSlotCount);
+	for (int32 SlotIndex = 0; SlotIndex < MaxDeploymentSlotCount; ++SlotIndex)
 	{
-		DeploymentSlots[SlotIndex].SlotIndex = SlotIndex;
-		DeploymentSlots[SlotIndex].SlotType = EPBBallDeckSlotType::Deployment;
-		DeploymentSlots[SlotIndex].BallInstanceId = INDEX_NONE;
+		FPBBallDeckSlot& DeckSlot = DeckSlots[DeploymentSlotStartIndex + SlotIndex];
+		DeckSlot.SlotIndex = SlotIndex;
+		DeckSlot.SlotType = EPBBallDeckSlotType::Deployment;
+		DeckSlot.BallInstanceId = INDEX_NONE;
+	}
+
+	for (int32 SlotIndex = 0; SlotIndex < MaxBenchSlotCount; ++SlotIndex)
+	{
+		FPBBallDeckSlot& DeckSlot = DeckSlots[BenchSlotStartIndex + SlotIndex];
+		DeckSlot.SlotIndex = SlotIndex;
+		DeckSlot.SlotType = EPBBallDeckSlotType::Bench;
+		DeckSlot.BallInstanceId = INDEX_NONE;
 	}
 }
 
 #pragma endregion
 
-FPBBallDeckSlot* UPBBallDeckSubsystem::GetMutableDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex)
-{
-	switch (SlotType)
-	{
-	case EPBBallDeckSlotType::Deployment:
-		return DeploymentSlots.IsValidIndex(SlotIndex) ? &DeploymentSlots[SlotIndex] : nullptr;
-	case EPBBallDeckSlotType::Bench:
-	default:
-		return BenchSlots.IsValidIndex(SlotIndex) ? &BenchSlots[SlotIndex] : nullptr;
-	}
-}
-
-void UPBBallDeckSubsystem::BroadcastDeckSlotChanged(EPBBallDeckSlotType SlotType, int32 SlotIndex, int32 BallInstanceId)
-{
-	switch (SlotType)
-	{
-	case EPBBallDeckSlotType::Deployment:
-		OnDeploymentSlotChanged.Broadcast(SlotIndex, BallInstanceId);
-		break;
-	case EPBBallDeckSlotType::Bench:
-	default:
-		OnBenchSlotChanged.Broadcast(SlotIndex, BallInstanceId);
-		break;
-	}
-}
-
 #pragma region Bench
-
-void UPBBallDeckSubsystem::InitializeBenchSlots()
-{
-	BenchSlots.SetNum(MaxBenchSlotCount);
-	for (int32 SlotIndex = 0; SlotIndex < BenchSlots.Num(); ++SlotIndex)
-	{
-		BenchSlots[SlotIndex].SlotIndex = SlotIndex;
-		BenchSlots[SlotIndex].SlotType = EPBBallDeckSlotType::Bench;
-		BenchSlots[SlotIndex].BallInstanceId = INDEX_NONE;
-	}
-}
 
 bool UPBBallDeckSubsystem::SetBenchSlot(int32 SlotIndex, int32 BallInstanceId)
 {
-	if (!IsBenchSlotValid(SlotIndex) || !HasOwnedBall(BallInstanceId))
+	if (!IsSlotValid(EPBBallDeckSlotType::Bench, SlotIndex) || !HasOwnedBall(BallInstanceId))
 	{
 		return false;
 	}
 
 	ClearBallInstanceFromSlots(BallInstanceId);
-	BenchSlots[SlotIndex].BallInstanceId = BallInstanceId;
+	GetMutableDeckSlot(EPBBallDeckSlotType::Bench, SlotIndex)->BallInstanceId = BallInstanceId;
 	OnBenchSlotChanged.Broadcast(SlotIndex, BallInstanceId);
 	return true;
 }
 
 bool UPBBallDeckSubsystem::ClearBenchSlot(int32 SlotIndex)
 {
-	if (!IsBenchSlotValid(SlotIndex))
+	if (!IsSlotValid(EPBBallDeckSlotType::Bench, SlotIndex))
 	{
 		return false;
 	}
-	BenchSlots[SlotIndex].BallInstanceId = INDEX_NONE;
+	GetMutableDeckSlot(EPBBallDeckSlotType::Bench, SlotIndex)->BallInstanceId = INDEX_NONE;
 	OnBenchSlotChanged.Broadcast(SlotIndex, INDEX_NONE);
 	return true;
 }
 
 bool UPBBallDeckSubsystem::SwapBenchSlots(int32 FirstIndex, int32 SecondIndex)
 {
-	if (!IsBenchSlotValid(FirstIndex) || !IsBenchSlotValid(SecondIndex))
+	if (!IsSlotValid(EPBBallDeckSlotType::Bench, FirstIndex) || !IsSlotValid(EPBBallDeckSlotType::Bench, SecondIndex))
 	{
 		return false;
 	}
@@ -511,95 +565,50 @@ bool UPBBallDeckSubsystem::SwapBenchSlots(int32 FirstIndex, int32 SecondIndex)
 		return true;
 	}
 
-	Swap(BenchSlots[FirstIndex].BallInstanceId, BenchSlots[SecondIndex].BallInstanceId);
+	FPBBallDeckSlot* FirstSlot = GetMutableDeckSlot(EPBBallDeckSlotType::Bench, FirstIndex);
+	FPBBallDeckSlot* SecondSlot = GetMutableDeckSlot(EPBBallDeckSlotType::Bench, SecondIndex);
+	Swap(FirstSlot->BallInstanceId, SecondSlot->BallInstanceId);
 	OnBenchSlotsSwapped.Broadcast();
 	return true;
 }
 
-bool UPBBallDeckSubsystem::IsBenchSlotValid(int32 SlotIndex) const
-{
-	return BenchSlots.IsValidIndex(SlotIndex);
-}
-
-bool UPBBallDeckSubsystem::IsBenchSlotOccupied(int32 SlotIndex) const
-{
-	return IsBenchSlotValid(SlotIndex) && BenchSlots[SlotIndex].BallInstanceId != INDEX_NONE;
-}
-
-bool UPBBallDeckSubsystem::HasEmptyBenchSlot() const
-{
-	return FindEmptyBenchSlot() != INDEX_NONE;
-}
-
-int32 UPBBallDeckSubsystem::FindEmptyBenchSlot() const
-{
-	for (int32 SlotIndex = 0; SlotIndex < BenchSlots.Num(); ++SlotIndex)
-	{
-		if (BenchSlots[SlotIndex].BallInstanceId == INDEX_NONE)
-		{
-			return SlotIndex;
-		}
-	}
-	return INDEX_NONE;
-}
-
-bool UPBBallDeckSubsystem::AddBenchBall(int32 BallInstanceId)
-{
-	if (!HasOwnedBall(BallInstanceId))
-	{
-		return false;
-	}
-
-	const int32 EmptySlotIndex = FindEmptyBenchSlot();
-	if (EmptySlotIndex == INDEX_NONE)
-	{
-		return false;
-	}
-
-	return SetBenchSlot(EmptySlotIndex, BallInstanceId);
-}
-
-bool UPBBallDeckSubsystem::AddNewBallToBench(int32 BallId, int32 StarLevel)
-{
-	if (!HasEmptyBenchSlot())
-	{
-		return false;
-	}
-
-	const int32 NewBallInstanceId = AddOwnedBall(BallId, StarLevel);
-	return NewBallInstanceId != INDEX_NONE && AddBenchBall(NewBallInstanceId);
-}
-
-int32 UPBBallDeckSubsystem::GetBenchBallInstanceId(int32 SlotIndex) const
-{
-	return IsBenchSlotValid(SlotIndex) ? BenchSlots[SlotIndex].BallInstanceId : INDEX_NONE;
-}
-
 TArray<int32> UPBBallDeckSubsystem::GetBenchBallInstanceIds() const
 {
-	TArray<int32> BallInstanceIds;
-	for (const FPBBallDeckSlot& BenchSlot : BenchSlots)
-	{
-		if (BenchSlot.BallInstanceId != INDEX_NONE)
-		{
-			BallInstanceIds.Add(BenchSlot.BallInstanceId);
-		}
-	}
-	return BallInstanceIds;
+	return GetSlotBallInstanceIds(EPBBallDeckSlotType::Bench);
 }
 
 int32 UPBBallDeckSubsystem::GetBenchBallCount() const
 {
-	int32 BallCount = 0;
-	for (const FPBBallDeckSlot& BenchSlot : BenchSlots)
-	{
-		if (BenchSlot.BallInstanceId != INDEX_NONE)
-		{
-			++BallCount;
-		}
-	}
-	return BallCount;
+	return GetBenchBallInstanceIds().Num();
 }
 
 
 #pragma endregion
+
+int32 UPBBallDeckSubsystem::ToGlobalSlotIndex(EPBBallDeckSlotType SlotType, int32 SlotIndex) const
+{
+	switch (SlotType)
+	{
+	case EPBBallDeckSlotType::Deployment:
+		return SlotIndex >= 0 && SlotIndex < MaxDeploymentSlotCount
+			? DeploymentSlotStartIndex + SlotIndex
+			: INDEX_NONE;
+	case EPBBallDeckSlotType::Bench:
+	default:
+		return SlotIndex >= 0 && SlotIndex < MaxBenchSlotCount
+			? BenchSlotStartIndex + SlotIndex
+			: INDEX_NONE;
+	}
+}
+
+const FPBBallDeckSlot* UPBBallDeckSubsystem::GetDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex) const
+{
+	const int32 GlobalSlotIndex = ToGlobalSlotIndex(SlotType, SlotIndex);
+	return DeckSlots.IsValidIndex(GlobalSlotIndex) ? &DeckSlots[GlobalSlotIndex] : nullptr;
+}
+
+FPBBallDeckSlot* UPBBallDeckSubsystem::GetMutableDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex)
+{
+	const int32 GlobalSlotIndex = ToGlobalSlotIndex(SlotType, SlotIndex);
+	return DeckSlots.IsValidIndex(GlobalSlotIndex) ? &DeckSlots[GlobalSlotIndex] : nullptr;
+}

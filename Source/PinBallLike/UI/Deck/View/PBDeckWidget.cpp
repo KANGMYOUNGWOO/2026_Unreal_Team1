@@ -102,7 +102,7 @@ void UPBDeckWidget::RefreshBenchSlots()
 	{
 		if (UPBBallSlotWidget* BallSlotWidget = BenchSlotWidgets[SlotIndex])
 		{
-			BallSlotWidget->SetBallInstanceId(DeckSubsystem->GetBenchBallInstanceId(SlotIndex));
+			BallSlotWidget->SetBallInstanceId(DeckSubsystem->GetSlotBallInstanceId(EPBBallDeckSlotType::Bench, SlotIndex));
 		}
 	}
 }

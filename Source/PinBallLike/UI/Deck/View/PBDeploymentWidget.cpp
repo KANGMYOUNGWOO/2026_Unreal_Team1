@@ -101,7 +101,7 @@ void UPBDeploymentWidget::RefreshDeploymentSlots()
 	{
 		if (UPBBallSlotWidget* BallSlotWidget = DeploymentSlotWidgets[SlotIndex])
 		{
-			BallSlotWidget->SetBallInstanceId(DeckSubsystem->GetDeploymentSlotBallInstanceId(SlotIndex));
+			BallSlotWidget->SetBallInstanceId(DeckSubsystem->GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, SlotIndex));
 		}
 	}
 }
