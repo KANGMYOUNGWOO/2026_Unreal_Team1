@@ -13,6 +13,8 @@ class UCanvasPanel;
 class UPBShopSlotWidget;
 class UTextBlock; 
 struct FBallDataStruct;
+class UPBShopViewModel;
+
 
 UCLASS()
 class PINBALLLIKE_API UPBShopWidget : public UUserWidget
@@ -46,9 +48,11 @@ public :
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UPBShopSlotWidget> Slot7;
 
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> GoldText;
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget), Category="Shop|Widget")
+	TObjectPtr<UTextBlock> GoldTextBlock;
 	
+	UFUNCTION(BlueprintImplementableEvent)
+	void BP_SetShopViewModel(UPBShopViewModel* InViewModel);
 	
 private:
 	void UpdateSlotWidgetPositionsOnce();

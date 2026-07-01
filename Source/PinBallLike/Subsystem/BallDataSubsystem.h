@@ -7,6 +7,8 @@
 #include "BallDataStruct.h"
 #include "BallDataSubsystem.generated.h"
 
+class UPBBallDataAsset;
+
 /**
  * 
  */
@@ -39,4 +41,19 @@ public :
     FText GetBallSynergeny(int32 BallId);	
 	
 	const FBallDataStruct* GetBallData(int32 BallId);
+	
+#pragma region Ball
+	
+public:
+	void InitializeBallData();
+	const UPBBallDataAsset* GetBallDataAsset(int32 BallId) const;
+	TArray<const UPBBallDataAsset*> GetAllBallDataAssets() const;
+
+private:
+	UPROPERTY()
+	TArray<TObjectPtr<UPBBallDataAsset>> BallDataAssets;
+
+	TMap<int32, UPBBallDataAsset*> BallDataAssetMap;
+	
+#pragma endregion
 };

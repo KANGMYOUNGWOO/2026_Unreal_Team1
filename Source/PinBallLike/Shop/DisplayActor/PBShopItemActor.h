@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "../../IShopPurchaseHandler.h"
+#include "../../Interface/IShopPurchaseHandler.h"
 #include "PBShopItemActor.generated.h"
 
 UCLASS()

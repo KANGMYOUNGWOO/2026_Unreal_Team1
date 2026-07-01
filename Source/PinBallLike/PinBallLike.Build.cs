@@ -17,13 +17,12 @@ public class PinBallLike : ModuleRules
 			"UMG", 
 			"ModelViewViewModel",
 			"StateTreeModule",
-			"GameplayStateTreeModule"
-		});
-
-		PrivateDependencyModuleNames.AddRange(new string[] {
+			"GameplayStateTreeModule", 
 			"Slate",
 			"SlateCore"
 		});
+
+		PrivateDependencyModuleNames.AddRange(new string[] {  });
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");

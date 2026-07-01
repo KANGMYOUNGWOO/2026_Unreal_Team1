@@ -18,6 +18,7 @@
 #include "Components/UniformGridSlot.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "GameFramework/PlayerController.h"
 
 namespace
 {
@@ -841,6 +842,12 @@ void UPBCollectionWidget::HandleAchievementTabClicked()
 
 void UPBCollectionWidget::HandleCloseClicked()
 {
+	if (APlayerController* PlayerController = GetOwningPlayer())
+	{
+		PlayerController->bShowMouseCursor = false;
+		PlayerController->SetInputMode(FInputModeGameOnly());
+	}
+
 	RemoveFromParent();
 }
 
