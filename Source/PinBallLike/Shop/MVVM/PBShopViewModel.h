@@ -9,20 +9,19 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType, meta = (MVVMAllowedContextCreationType = "Manual"))
 class PINBALLLIKE_API UPBShopViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 	
-public :
-	
-	UFUNCTION(BlueprintPure, FieldNotify)
-	int32 GetGold() const;
-	
+public:
+	UFUNCTION(BlueprintCallable, Category="Shop|ViewModel")
 	void SetGold(int32 NewGold);
-	
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category="Shop|ViewModel")
+	FText GoldText = FText::AsNumber(0);
+
 private:
 	UPROPERTY()
-	int32 Gold;
-	
+	int32 Gold = 0;
 };
