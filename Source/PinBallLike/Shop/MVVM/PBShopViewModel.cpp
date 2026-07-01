@@ -3,18 +3,15 @@
 
 #include "PBShopViewModel.h"
 
-int32 UPBShopViewModel::GetGold() const
-{
-	return Gold;
-}
-
 void UPBShopViewModel::SetGold(int32 NewGold)
 {
-	if (Gold == NewGold)
-	{
-		return;
-	}
-
 	Gold = NewGold;
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetGold);
+
+	UE_MVVM_SET_PROPERTY_VALUE(
+		GoldText,
+		FText::Format(
+			FText::FromString(TEXT("현재 골드 : {0}")),
+			Gold
+		)
+	);
 }

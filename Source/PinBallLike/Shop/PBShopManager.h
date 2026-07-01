@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
-#include "../IShopPurchaseHandler.h"
-#include "../IShopActorHandler.h"
+#include  "../Interface/IShopActorHandler.h"
+#include  "../Interface/IShopPurchaseHandler.h"
 #include "PBShopManager.generated.h"
 
 class UUPBShopViewModel;

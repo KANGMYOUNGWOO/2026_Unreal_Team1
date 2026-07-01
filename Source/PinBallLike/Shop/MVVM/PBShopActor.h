@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "../../IShopPurchaseHandler.h"
-#include "../../IShopActorHandler.h"
+#include "../../Interface/IShopActorHandler.h"
+#include  "../../Interface/IShopPurchaseHandler.h"
 #include "PBShopActor.generated.h"
 
 class UPBShopViewModel;
@@ -32,6 +32,8 @@ public:
 	
 	void BuyItem(int32 SlotIndex) override;
 	
+	bool ApplyViewModelToWidget(UUserWidget* Widget);
+	
 private :
 	
 	void RefreshViewModel();
@@ -44,7 +46,7 @@ private:
 	
 	IIShopPurchaseHandler *ShopPurchaseHandler;
 	
-	UPROPERTY()
+	UPROPERTY(Transient)
 	TObjectPtr<UPBShopViewModel> ShopViewModel;
 	
 	UPROPERTY(EditAnywhere, Category = "Shop")
