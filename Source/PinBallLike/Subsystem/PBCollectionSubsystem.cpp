@@ -283,6 +283,8 @@ FText UPBCollectionSubsystem::GetCategoryDisplayText(EPBCollectionCategory Categ
 		return NSLOCTEXT("PBCollection", "CategoryBoss", "Boss");
 	case EPBCollectionCategory::Relic:
 		return NSLOCTEXT("PBCollection", "CategoryRelic", "Relic");
+	case EPBCollectionCategory::Achievement:
+		return NSLOCTEXT("PBCollection", "CategoryAchievement", "업적");
 	default:
 		return FText::GetEmpty();
 	}
@@ -398,6 +400,22 @@ FText UPBCollectionSubsystem::GetMetadataDisplayText(FName MetadataId)
 	if (MetadataId == TEXT("Arcane"))
 	{
 		return NSLOCTEXT("PBCollection", "MetadataArcane", "비전");
+	}
+	if (MetadataId == TEXT("Achievement"))
+	{
+		return NSLOCTEXT("PBCollection", "MetadataAchievement", "업적");
+	}
+	if (MetadataId == TEXT("Objective"))
+	{
+		return NSLOCTEXT("PBCollection", "MetadataObjective", "목표");
+	}
+	if (MetadataId == TEXT("Account"))
+	{
+		return NSLOCTEXT("PBCollection", "MetadataAccount", "계정");
+	}
+	if (MetadataId == TEXT("Challenge"))
+	{
+		return NSLOCTEXT("PBCollection", "MetadataChallenge", "도전");
 	}
 
 	return FText::FromName(MetadataId);
@@ -588,6 +606,45 @@ void UPBCollectionSubsystem::BuildDemoEntries()
 		{ TEXT("Relic"), TEXT("Bumper"), TEXT("Support") },
 		330,
 		FLinearColor(0.28f, 0.55f, 0.36f, 1.0f));
+
+	AddDemoEntry(TEXT("ACHIEVEMENT_FIRST_CLEAR"), EPBCollectionCategory::Achievement,
+		NSLOCTEXT("PBCollection", "AchievementFirstClearName", "첫 승리"),
+		NSLOCTEXT("PBCollection", "AchievementFirstClearShort", "첫 보스 전투를 완료하면 기록되는 기본 업적입니다."),
+		NSLOCTEXT("PBCollection", "AchievementFirstClearDetail", "플레이어가 첫 보스 전투를 완료했는지 확인하는 업적입니다. 도감에서는 달성 시점과 사용 캐릭터 기록을 확인합니다."),
+		NSLOCTEXT("PBCollection", "AchievementFirstClearUnlock", "훈련 보스 1회 처치"),
+		TEXT("Achievement"),
+		TEXT("Objective"),
+		TEXT("Account"),
+		1,
+		{ TEXT("Achievement"), TEXT("Clear"), TEXT("Tutorial") },
+		410,
+		FLinearColor(0.88f, 0.78f, 0.30f, 1.0f));
+
+	AddDemoEntry(TEXT("ACHIEVEMENT_COMBO_30"), EPBCollectionCategory::Achievement,
+		NSLOCTEXT("PBCollection", "AchievementCombo30Name", "콤보 입문"),
+		NSLOCTEXT("PBCollection", "AchievementCombo30Short", "전투 중 30콤보를 달성하면 해금되는 업적입니다."),
+		NSLOCTEXT("PBCollection", "AchievementCombo30Detail", "보드 컨트롤과 범퍼 배치를 활용해 30콤보를 달성한 기록입니다. 최고 콤보 기록과 함께 보여줄 수 있습니다."),
+		NSLOCTEXT("PBCollection", "AchievementCombo30Unlock", "최고 콤보 30 이상 달성"),
+		TEXT("Achievement"),
+		TEXT("Challenge"),
+		TEXT("Account"),
+		3,
+		{ TEXT("Achievement"), TEXT("Combo"), TEXT("Challenge") },
+		420,
+		FLinearColor(0.45f, 0.78f, 0.42f, 1.0f));
+
+	AddDemoEntry(TEXT("ACHIEVEMENT_BUMPER_MASTER"), EPBCollectionCategory::Achievement,
+		NSLOCTEXT("PBCollection", "AchievementBumperMasterName", "범퍼 연구자"),
+		NSLOCTEXT("PBCollection", "AchievementBumperMasterShort", "범퍼 도감을 일정 수 이상 해금하면 달성하는 업적입니다."),
+		NSLOCTEXT("PBCollection", "AchievementBumperMasterDetail", "설치형 범퍼를 발견하고 해금하는 진행도를 묶어 보여주는 업적입니다. 업적 도감은 장기 목표를 확인하는 용도로 사용합니다."),
+		NSLOCTEXT("PBCollection", "AchievementBumperMasterUnlock", "범퍼 도감 3종 해금"),
+		TEXT("Achievement"),
+		TEXT("Objective"),
+		TEXT("Account"),
+		4,
+		{ TEXT("Achievement"), TEXT("Bumper"), TEXT("Collection") },
+		430,
+		FLinearColor(0.38f, 0.62f, 0.90f, 1.0f));
 }
 
 void UPBCollectionSubsystem::BuildDemoProgress()
@@ -602,6 +659,8 @@ void UPBCollectionSubsystem::BuildDemoProgress()
 	SetInitialProgress(TEXT("BOSS_PART_BREAK"), EPBCollectionState::Discovered);
 	SetInitialProgress(TEXT("RELIC_IMPACT"), EPBCollectionState::Unlocked);
 	SetInitialProgress(TEXT("RELIC_MANA"), EPBCollectionState::Discovered);
+	SetInitialProgress(TEXT("ACHIEVEMENT_FIRST_CLEAR"), EPBCollectionState::Completed);
+	SetInitialProgress(TEXT("ACHIEVEMENT_COMBO_30"), EPBCollectionState::Discovered);
 }
 
 void UPBCollectionSubsystem::BuildLockedProgress()

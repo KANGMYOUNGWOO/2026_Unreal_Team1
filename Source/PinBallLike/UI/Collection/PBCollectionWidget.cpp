@@ -86,6 +86,8 @@ FLinearColor GetAccentColor(EPBCollectionCategory Category, EPBCollectionState S
 		return FLinearColor(0.72f, 0.24f, 0.86f, 1.0f);
 	case EPBCollectionCategory::Relic:
 		return FLinearColor(0.92f, 0.66f, 0.22f, 1.0f);
+	case EPBCollectionCategory::Achievement:
+		return FLinearColor(0.34f, 0.72f, 0.42f, 1.0f);
 	default:
 		return FLinearColor(0.12f, 0.72f, 0.86f, 1.0f);
 	}
@@ -117,6 +119,10 @@ void UPBCollectionWidget::NativeOnInitialized()
 	if (RelicTabButton)
 	{
 		RelicTabButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleRelicTabClicked);
+	}
+	if (AchievementTabButton)
+	{
+		AchievementTabButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleAchievementTabClicked);
 	}
 	if (DiscoverButton)
 	{
@@ -243,13 +249,15 @@ void UPBCollectionWidget::BuildHeader(UVerticalBox* RootBox)
 	BumperTabButton = CreateTextButton(WidgetTree, TEXT("BumperTabButton"), NSLOCTEXT("PBCollection", "BumperTab", "Bumper"));
 	BossTabButton = CreateTextButton(WidgetTree, TEXT("BossTabButton"), NSLOCTEXT("PBCollection", "BossTab", "Boss"));
 	RelicTabButton = CreateTextButton(WidgetTree, TEXT("RelicTabButton"), NSLOCTEXT("PBCollection", "RelicTab", "Relic"));
+	AchievementTabButton = CreateTextButton(WidgetTree, TEXT("AchievementTabButton"), NSLOCTEXT("PBCollection", "AchievementTab", "업적"));
 
 	const TArray<UButton*> TabButtons = {
 		AllTabButton,
 		BallTabButton,
 		BumperTabButton,
 		BossTabButton,
-		RelicTabButton
+		RelicTabButton,
+		AchievementTabButton
 	};
 
 	for (UButton* TabButton : TabButtons)
@@ -788,6 +796,10 @@ void UPBCollectionWidget::SetCategory(EPBCollectionCategory NewCategory)
 	{
 		RelicTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Relic));
 	}
+	if (AchievementTabButton)
+	{
+		AchievementTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Achievement));
+	}
 	RefreshCollection();
 }
 
@@ -820,6 +832,11 @@ void UPBCollectionWidget::HandleBossTabClicked()
 void UPBCollectionWidget::HandleRelicTabClicked()
 {
 	SetCategory(EPBCollectionCategory::Relic);
+}
+
+void UPBCollectionWidget::HandleAchievementTabClicked()
+{
+	SetCategory(EPBCollectionCategory::Achievement);
 }
 
 void UPBCollectionWidget::HandleCloseClicked()

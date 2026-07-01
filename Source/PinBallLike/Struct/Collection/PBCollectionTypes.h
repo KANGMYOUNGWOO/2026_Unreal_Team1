@@ -10,7 +10,8 @@ enum class EPBCollectionCategory : uint8
 	Ball UMETA(DisplayName = "Ball"),
 	Bumper UMETA(DisplayName = "Bumper"),
 	Boss UMETA(DisplayName = "Boss"),
-	Relic UMETA(DisplayName = "Relic")
+	Relic UMETA(DisplayName = "Relic"),
+	Achievement UMETA(DisplayName = "Achievement")
 };
 
 UENUM(BlueprintType)

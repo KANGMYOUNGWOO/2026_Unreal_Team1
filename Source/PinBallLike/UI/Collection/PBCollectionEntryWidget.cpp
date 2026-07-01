@@ -63,6 +63,8 @@ FLinearColor GetAccentColor(EPBCollectionCategory Category, EPBCollectionState S
 		return FLinearColor(0.72f, 0.24f, 0.86f, 1.0f);
 	case EPBCollectionCategory::Relic:
 		return FLinearColor(0.92f, 0.66f, 0.22f, 1.0f);
+	case EPBCollectionCategory::Achievement:
+		return FLinearColor(0.34f, 0.72f, 0.42f, 1.0f);
 	default:
 		return FLinearColor(0.12f, 0.72f, 0.86f, 1.0f);
 	}

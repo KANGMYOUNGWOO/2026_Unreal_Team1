@@ -71,6 +71,8 @@ private:
 	UFUNCTION()
 	void HandleRelicTabClicked();
 	UFUNCTION()
+	void HandleAchievementTabClicked();
+	UFUNCTION()
 	void HandleCloseClicked();
 	UFUNCTION()
 	void HandleSearchTextChanged(const FText& Text);
@@ -156,6 +158,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UButton> RelicTabButton;
+
+	UPROPERTY()
+	TObjectPtr<UButton> AchievementTabButton;
 
 	UPROPERTY()
 	TObjectPtr<UButton> DiscoverButton;
