@@ -59,6 +59,15 @@ public:
 	FPBBossDamageAppliedSignature OnBossDamageApplied;
 	FPBBossDamageSourceHitAppliedSignature OnDamageSourceHitApplied;
 
+private:
+	UFUNCTION()
+	void HandleCollisionHit(
+		UPrimitiveComponent* HitComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComponent,
+		FVector NormalImpulse,
+		const FHitResult& Hit);
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage")
 	FName DefaultHitPointName = TEXT("Normal");
@@ -83,7 +92,9 @@ private:
 	};
 
 	// 충돌한 컴포넌트가 어떤 보스 피격 부위인지 해석합니다.
+	void BindBossCollisionEvents();
 	FPBBossHitPartInfo ResolveHitPartInfo(const UPrimitiveComponent* HitComponent) const;
+	void InitializeHitPartInfoMap();
 	// 충돌 컴포넌트 또는 부모에서 보스 피격 부위 컴포넌트를 찾습니다.
 	const UPBBossHitPartComponent* FindHitPartComponent(const UPrimitiveComponent* HitComponent) const;
 	// 데미지 이름과 수치가 실제 적용 가능한 값인지 확인합니다.
@@ -101,6 +112,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<APBBossBase> OwnerBoss;
 
+	TMap<TObjectKey<UPrimitiveComponent>, FPBBossHitPartInfo> HitPartInfoMap;
 	TMap<TObjectKey<AActor>, float> LastDamageTimeMap;
 	uint64 LastDamageFrameNumber = 0;
 	int32 CurrentFrameDamageCount = 0;

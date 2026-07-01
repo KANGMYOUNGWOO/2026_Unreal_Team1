@@ -89,6 +89,11 @@ void UPBBossWeaknessComponent::ApplyWeaknessCollisionState(bool IsEnabled)
 			continue;
 		}
 
+		if (PrimitiveComponent->GetCollisionEnabled() != ECollisionEnabled::NoCollision)
+		{
+			WeaknessCollisionEnabledMap.FindOrAdd(PrimitiveComponentKey) = PrimitiveComponent->GetCollisionEnabled();
+		}
+
 		PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 }

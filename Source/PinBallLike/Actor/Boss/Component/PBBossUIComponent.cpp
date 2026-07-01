@@ -70,4 +70,9 @@ void UPBBossUIComponent::ConfigureBossStatusWidget(TSubclassOf<UPBBossStatusWidg
 {
 	BossStatusWidgetClass = NewBossStatusWidgetClass;
 	BossStatusWidgetZOrder = NewBossStatusWidgetZOrder;
+
+	if (HasBegunPlay())
+	{
+		CreateBossStatusWidget();
+	}
 }

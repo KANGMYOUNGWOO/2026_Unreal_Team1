@@ -16,7 +16,6 @@ class UPBBossStatusWidget;
 class UPBBossUIComponent;
 class UPBBossWeaknessComponent;
 class UStateTreeComponent;
-class UPrimitiveComponent;
 class USphereComponent;
 
 UENUM(BlueprintType)
@@ -161,17 +160,6 @@ protected:
 	// 액터 종료 시 타이머와 UI를 정리합니다.
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	UFUNCTION()
-	// 보스 충돌체가 다른 액터와 충돌했을 때 데미지 처리를 시도합니다.
-	void HandleCollisionHit(
-		UPrimitiveComponent* HitComponent,
-		AActor* OtherActor,
-		UPrimitiveComponent* OtherComponent,
-		FVector NormalImpulse,
-		const FHitResult& Hit);
-
-	// 보스 충돌 이벤트 델리게이트를 바인딩합니다.
-	void BindBossCollisionEvents();
 	// 그로기 지속 시간이 끝나도록 타이머를 시작합니다.
 	void StartGroggyResetTimer();
 	// 그로기 종료 타이머를 해제합니다.

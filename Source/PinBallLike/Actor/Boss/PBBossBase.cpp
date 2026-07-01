@@ -276,7 +276,6 @@ void APBBossBase::BeginPlay()
 	Super::BeginPlay();
 
 	SetBossState(EPBBossState::Idle);
-	BindBossCollisionEvents();
 	SetWeaknessState(false);
 
 	if (BossStateTreeComponent)
@@ -287,7 +286,6 @@ void APBBossBase::BeginPlay()
 	if (BossUIComponent && BossStatusWidgetClass)
 	{
 		BossUIComponent->ConfigureBossStatusWidget(BossStatusWidgetClass, BossStatusWidgetZOrder);
-		BossUIComponent->CreateBossStatusWidget();
 	}
 }
 
@@ -335,42 +333,6 @@ void APBBossBase::OnDeadTriggered_Implementation()
 bool APBBossBase::IsDead() const
 {
 	return BossStatComponent ? BossStatComponent->IsDead() : true;
-}
-
-void APBBossBase::HandleCollisionHit(
-	UPrimitiveComponent* HitComponent,
-	AActor* OtherActor,
-	UPrimitiveComponent* OtherComponent,
-	FVector NormalImpulse,
-	const FHitResult& Hit)
-{
-	static_cast<void>(NormalImpulse);
-
-	if (BossDamageComponent && BossDamageComponent->IsValidDamageSource(OtherActor, OtherComponent))
-	{
-		BossDamageComponent->ApplyHitPartDamage(
-			OtherActor,
-			HitComponent,
-			BossDamageComponent->GetPinballHitDamage(OtherActor),
-			Hit);
-	}
-}
-
-void APBBossBase::BindBossCollisionEvents()
-{
-	TArray<UPrimitiveComponent*> PrimitiveComponents;
-	GetComponents<UPrimitiveComponent>(PrimitiveComponents);
-
-	for (UPrimitiveComponent* PrimitiveComponent : PrimitiveComponents)
-	{
-		if (!PrimitiveComponent)
-		{
-			continue;
-		}
-
-		PrimitiveComponent->SetNotifyRigidBodyCollision(true);
-		PrimitiveComponent->OnComponentHit.AddUniqueDynamic(this, &APBBossBase::HandleCollisionHit);
-	}
 }
 
 void APBBossBase::StartGroggyResetTimer()

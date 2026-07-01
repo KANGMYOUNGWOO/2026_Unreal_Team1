@@ -120,6 +120,8 @@ private:
 	float ReboundedDistance = 0.0f;
 	float ChargeAimElapsedSeconds = 0.0f;
 	float ChargeAimDurationSeconds = 0.0f;
+	float GroggyEndTimeSeconds = 0.0f;
+	float PausedGroggyRemainingSeconds = 0.0f;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> TargetPinballActor;

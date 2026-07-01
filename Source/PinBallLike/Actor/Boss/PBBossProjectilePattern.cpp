@@ -36,6 +36,10 @@ void UPBBossProjectilePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 			}
 		}
 
+		if (FiredProjectileCount < ProjectileCount && GetOwnerBoss())
+		{
+			FinishPattern();
+		}
 		return;
 	}
 

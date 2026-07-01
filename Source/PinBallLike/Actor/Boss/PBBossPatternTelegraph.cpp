@@ -12,33 +12,12 @@ APBBossPatternTelegraph::APBBossPatternTelegraph()
 
 void APBBossPatternTelegraph::InitTelegraph(float InDurationSeconds, const FVector& InScale)
 {
+	static_cast<void>(InDurationSeconds);
+
 	SetActorScale3D(InScale);
-
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().ClearTimer(DestroyTimerHandle);
-
-		if (InDurationSeconds <= 0.0f)
-		{
-			DestroyTelegraph();
-			return;
-		}
-
-		World->GetTimerManager().SetTimer(
-			DestroyTimerHandle,
-			this,
-			&APBBossPatternTelegraph::DestroyTelegraph,
-			InDurationSeconds,
-			false);
-	}
 }
 
 void APBBossPatternTelegraph::DestroyTelegraph()
 {
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().ClearTimer(DestroyTimerHandle);
-	}
-
 	Destroy();
 }

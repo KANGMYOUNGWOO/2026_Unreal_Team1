@@ -26,7 +26,4 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Pattern|Telegraph")
 	TObjectPtr<USceneComponent> RootSceneComponent;
-
-private:
-	FTimerHandle DestroyTimerHandle;
 };

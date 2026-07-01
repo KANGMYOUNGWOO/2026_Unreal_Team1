@@ -45,6 +45,8 @@ void UPBBossSnakeChargePattern::CancelPatternInternal_Implementation(APBBossBase
 	ReboundedDistance = 0.0f;
 	ChargeAimElapsedSeconds = 0.0f;
 	ChargeAimDurationSeconds = 0.0f;
+	GroggyEndTimeSeconds = 0.0f;
+	PausedGroggyRemainingSeconds = 0.0f;
 }
 
 void UPBBossSnakeChargePattern::ExecuteNativePattern(APBBossBase* Boss)
@@ -59,6 +61,9 @@ bool UPBBossSnakeChargePattern::PausePatternForExternalGroggy(APBBossBase* Boss)
 		return false;
 	}
 
+	const UWorld* World = Boss->GetWorld();
+	const float CurrentTimeSeconds = World ? World->GetTimeSeconds() : 0.0f;
+	PausedGroggyRemainingSeconds = FMath::Max(0.0f, GroggyEndTimeSeconds - CurrentTimeSeconds);
 	Boss->GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
 	return true;
 }
@@ -70,7 +75,21 @@ bool UPBBossSnakeChargePattern::ResumePatternAfterExternalGroggy(APBBossBase* Bo
 		return false;
 	}
 
-	FinishGroggy();
+	if (PausedGroggyRemainingSeconds <= 0.0f)
+	{
+		FinishGroggy();
+		return true;
+	}
+
+	const UWorld* World = Boss->GetWorld();
+	GroggyEndTimeSeconds = World ? World->GetTimeSeconds() + PausedGroggyRemainingSeconds : 0.0f;
+	Boss->GetWorldTimerManager().SetTimer(
+		GroggyTimerHandle,
+		this,
+		&UPBBossSnakeChargePattern::FinishGroggy,
+		PausedGroggyRemainingSeconds,
+		false);
+	PausedGroggyRemainingSeconds = 0.0f;
 	return true;
 }
 
@@ -464,6 +483,9 @@ void UPBBossSnakeChargePattern::StartGroggy()
 		return;
 	}
 
+	const UWorld* World = Boss->GetWorld();
+	GroggyEndTimeSeconds = World ? World->GetTimeSeconds() + GroggySeconds : 0.0f;
+	PausedGroggyRemainingSeconds = 0.0f;
 	Boss->GetWorldTimerManager().SetTimer(
 		GroggyTimerHandle,
 		this,
@@ -483,6 +505,8 @@ void UPBBossSnakeChargePattern::FinishGroggy()
 	}
 
 	Boss->GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
+	GroggyEndTimeSeconds = 0.0f;
+	PausedGroggyRemainingSeconds = 0.0f;
 	StartReturn();
 }
 

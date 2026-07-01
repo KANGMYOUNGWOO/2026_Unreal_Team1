@@ -1,5 +1,6 @@
 #include "PBBossDamageComponent.h"
 
+#include "Components/PrimitiveComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossWeaknessComponent.h"
@@ -16,6 +17,8 @@ void UPBBossDamageComponent::BeginPlay()
 	Super::BeginPlay();
 
 	OwnerBoss = Cast<APBBossBase>(GetOwner());
+	InitializeHitPartInfoMap();
+	BindBossCollisionEvents();
 }
 
 void UPBBossDamageComponent::DamageToBoss(AActor* DamageSource, int32 DamageAmount)
@@ -43,12 +46,15 @@ void UPBBossDamageComponent::ApplyPointDamage(FName HitPointName, int32 DamageAm
 		HitPartInfo.HitPartType = EPBBossHitPartType::WeakPoint;
 	}
 
-	if (!CanApplyDamage(HitPartInfo.HitPointName, DamageAmount) || IsWeakPointHitBlocked(HitPartInfo))
+	if (!CanApplyDamage(HitPartInfo.HitPointName, DamageAmount)
+		|| !CanApplyDamageRateLimit(nullptr)
+		|| IsWeakPointHitBlocked(HitPartInfo))
 	{
 		return;
 	}
 
 	BroadcastDamageApplied(HitPartInfo.HitPointName, DamageAmount);
+	RecordDamageRateLimit(nullptr);
 }
 
 void UPBBossDamageComponent::ApplyHitPartDamage(
@@ -109,8 +115,58 @@ int32 UPBBossDamageComponent::GetPinballHitDamage(AActor* DamageSource) const
 	return StatComponent ? StatComponent->GetStat(PBStatNames::Attack) : 0;
 }
 
+void UPBBossDamageComponent::HandleCollisionHit(
+	UPrimitiveComponent* HitComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComponent,
+	FVector NormalImpulse,
+	const FHitResult& Hit)
+{
+	static_cast<void>(NormalImpulse);
+
+	if (IsValidDamageSource(OtherActor, OtherComponent))
+	{
+		ApplyHitPartDamage(
+			OtherActor,
+			HitComponent,
+			GetPinballHitDamage(OtherActor),
+			Hit);
+	}
+}
+
+void UPBBossDamageComponent::BindBossCollisionEvents()
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	TArray<UPrimitiveComponent*> PrimitiveComponents;
+	OwnerActor->GetComponents<UPrimitiveComponent>(PrimitiveComponents);
+
+	for (UPrimitiveComponent* PrimitiveComponent : PrimitiveComponents)
+	{
+		if (!PrimitiveComponent)
+		{
+			continue;
+		}
+
+		PrimitiveComponent->SetNotifyRigidBodyCollision(true);
+		PrimitiveComponent->OnComponentHit.AddUniqueDynamic(this, &UPBBossDamageComponent::HandleCollisionHit);
+	}
+}
+
 UPBBossDamageComponent::FPBBossHitPartInfo UPBBossDamageComponent::ResolveHitPartInfo(const UPrimitiveComponent* HitComponent) const
 {
+	if (HitComponent)
+	{
+		if (const FPBBossHitPartInfo* CachedHitPartInfo = HitPartInfoMap.Find(TObjectKey<UPrimitiveComponent>(const_cast<UPrimitiveComponent*>(HitComponent))))
+		{
+			return *CachedHitPartInfo;
+		}
+	}
+
 	if (const UPBBossHitPartComponent* HitPartComponent = FindHitPartComponent(HitComponent))
 	{
 		FPBBossHitPartInfo HitPartInfo;
@@ -131,6 +187,38 @@ UPBBossDamageComponent::FPBBossHitPartInfo UPBBossDamageComponent::ResolveHitPar
 	}
 
 	return HitPartInfo;
+}
+
+void UPBBossDamageComponent::InitializeHitPartInfoMap()
+{
+	HitPartInfoMap.Reset();
+
+	if (!OwnerBoss)
+	{
+		return;
+	}
+
+	TArray<UPBBossHitPartComponent*> HitPartComponents;
+	OwnerBoss->GetComponents<UPBBossHitPartComponent>(HitPartComponents);
+
+	for (const UPBBossHitPartComponent* HitPartComponent : HitPartComponents)
+	{
+		if (!HitPartComponent)
+		{
+			continue;
+		}
+
+		UPrimitiveComponent* HitCollisionComponent = HitPartComponent->GetHitCollisionComponent();
+		if (!HitCollisionComponent)
+		{
+			continue;
+		}
+
+		FPBBossHitPartInfo HitPartInfo;
+		HitPartInfo.HitPartType = HitPartComponent->GetHitPartType();
+		HitPartInfo.HitPointName = HitPartComponent->GetHitPointName();
+		HitPartInfoMap.Add(TObjectKey<UPrimitiveComponent>(HitCollisionComponent), HitPartInfo);
+	}
 }
 
 const UPBBossHitPartComponent* UPBBossDamageComponent::FindHitPartComponent(const UPrimitiveComponent* HitComponent) const
