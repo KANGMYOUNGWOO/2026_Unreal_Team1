@@ -10,6 +10,8 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBBallDeckSubsystem.generated.h"
 
+class UPBBallDeckFusionService;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBOnDeploymentSlotChanged, int32, SlotIndex, int32, BallInstanceId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsReordered);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsRotated);
@@ -29,6 +31,7 @@ public:
 	int32 AddOwnedBall(int32 BallId, int32 StarLevel = 1);
 	bool AddNewBallToDeck(int32 BallId, int32 StarLevel = 1);
 	bool RemoveOwnedBall(int32 BallInstanceId);
+	bool SetOwnedBallStarLevel(int32 BallInstanceId, int32 StarLevel);
 
 	UFUNCTION(BlueprintCallable, Category = "BallDeck|DragDrop")
 	bool MoveBallBetweenSlots(EPBBallDeckSlotType SourceType, int32 SourceIndex,
@@ -45,6 +48,26 @@ public:
 	const FPBBallInstanceData* GetOwnedBallData(int32 BallInstanceId) const;
 	bool HasOwnedBall(int32 BallInstanceId) const;
 	bool BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const;
+
+#pragma endregion
+
+#pragma region Fusion
+
+public:
+	UFUNCTION(BlueprintPure, Category = "BallDeck|Fusion")
+	UPBBallDeckFusionService* GetFusionService() const;
+
+	UFUNCTION(BlueprintCallable, Category = "BallDeck|Fusion")
+	bool TryStartFusion();
+
+	UFUNCTION(BlueprintCallable, Category = "BallDeck|Fusion")
+	bool CompletePendingFusion();
+
+	UFUNCTION(BlueprintCallable, Category = "BallDeck|Fusion")
+	bool CancelPendingFusion();
+
+	UFUNCTION(BlueprintPure, Category = "BallDeck|Fusion")
+	bool HasPendingFusion() const;
 
 #pragma endregion
 
@@ -113,6 +136,9 @@ private:
 
 	UPROPERTY()
 	TMap<int32, FPBBallInstanceData> OwnedBallDataMap;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBBallDeckFusionService> FusionService;
 
 	int32 NextBallInstanceId = 1;
 };

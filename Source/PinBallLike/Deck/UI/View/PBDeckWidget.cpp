@@ -4,7 +4,7 @@
 #include "PBDeckWidget.h"
 
 #include "Components/UniformGridPanel.h"
-#include "PinBallLike/Subsystem/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
 #include "PBBallSlotWidget.h"
 

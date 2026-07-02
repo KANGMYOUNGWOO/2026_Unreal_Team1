@@ -3,7 +3,7 @@
 
 #include "PBBaseResourceComponent.h"
 
-#include "PBResourceTypes.h"
+#include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Utils/PBFixedPoint.h"
 
 UPBBaseResourceComponent::UPBBaseResourceComponent()

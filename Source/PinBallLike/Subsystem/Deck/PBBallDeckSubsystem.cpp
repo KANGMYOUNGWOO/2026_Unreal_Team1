@@ -3,6 +3,7 @@
 
 #include "PBBallDeckSubsystem.h"
 
+#include "PBBallDeckFusionService.h"
 #include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
 #include "PinBallLike/Subsystem/BallDataSubsystem.h"
 
@@ -10,6 +11,12 @@ void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	InitializeDeckSlots();
+
+	FusionService = NewObject<UPBBallDeckFusionService>(this);
+	if (FusionService)
+	{
+		FusionService->Initialize(this);
+	}
 }
 
 int32 UPBBallDeckSubsystem::AddOwnedBall(int32 BallId, int32 StarLevel)
@@ -136,10 +143,20 @@ bool UPBBallDeckSubsystem::AddNewBallToDeck(int32 BallId, int32 StarLevel)
 
 	if (EmptyDeploymentSlotIndex != INDEX_NONE)
 	{
-		return SetDeploymentSlot(EmptyDeploymentSlotIndex, NewBallInstanceId);
+		const bool bAddedToDeck = SetDeploymentSlot(EmptyDeploymentSlotIndex, NewBallInstanceId);
+		if (bAddedToDeck && FusionService)
+		{
+			FusionService->TryStartFusion();
+		}
+		return bAddedToDeck;
 	}
 
-	return SetBenchSlot(EmptyBenchSlotIndex, NewBallInstanceId);
+	const bool bAddedToDeck = SetBenchSlot(EmptyBenchSlotIndex, NewBallInstanceId);
+	if (bAddedToDeck && FusionService)
+	{
+		FusionService->TryStartFusion();
+	}
+	return bAddedToDeck;
 }
 
 bool UPBBallDeckSubsystem::RemoveOwnedBall(int32 BallInstanceId)
@@ -171,6 +188,18 @@ bool UPBBallDeckSubsystem::RemoveOwnedBall(int32 BallInstanceId)
 	}
 
 	OwnedBallDataMap.Remove(BallInstanceId);
+	return true;
+}
+
+bool UPBBallDeckSubsystem::SetOwnedBallStarLevel(int32 BallInstanceId, int32 StarLevel)
+{
+	FPBBallInstanceData* BallInstanceData = OwnedBallDataMap.Find(BallInstanceId);
+	if (!BallInstanceData || !BallInstanceData->IsValid())
+	{
+		return false;
+	}
+
+	BallInstanceData->StarLevel = FMath::Max(StarLevel, 1);
 	return true;
 }
 
@@ -277,6 +306,35 @@ bool UPBBallDeckSubsystem::MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotTy
 
 	return true;
 }
+
+#pragma region Fusion
+
+UPBBallDeckFusionService* UPBBallDeckSubsystem::GetFusionService() const
+{
+	return FusionService;
+}
+
+bool UPBBallDeckSubsystem::TryStartFusion()
+{
+	return FusionService && FusionService->TryStartFusion();
+}
+
+bool UPBBallDeckSubsystem::CompletePendingFusion()
+{
+	return FusionService && FusionService->CompletePendingFusion();
+}
+
+bool UPBBallDeckSubsystem::CancelPendingFusion()
+{
+	return FusionService && FusionService->CancelPendingFusion();
+}
+
+bool UPBBallDeckSubsystem::HasPendingFusion() const
+{
+	return FusionService && FusionService->HasPendingFusion();
+}
+
+#pragma endregion
 
 #pragma region Deployment Slot
 
