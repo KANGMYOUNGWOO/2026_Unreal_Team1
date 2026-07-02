@@ -14,7 +14,7 @@
 #include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
 #include "PinBallLike/Struct/Deck/PBBallInstanceData.h"
 #include "PinBallLike/Subsystem/BallDataSubsystem.h"
-#include "PinBallLike/Subsystem/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 
 APBCombatPartyActor::APBCombatPartyActor()
 {

@@ -5,7 +5,7 @@
 
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
-#include "PinBallLike/Subsystem/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 
 void UPBCheatManager::AddBenchBall(int32 BallId)
 {

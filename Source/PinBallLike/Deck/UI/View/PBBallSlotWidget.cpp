@@ -6,7 +6,7 @@
 #include "PBBallItemWidget.h"
 #include "PBBallDragDropOperation.h"
 #include "Components/Overlay.h"
-#include "PinBallLike/Subsystem/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 
 void UPBBallSlotWidget::SetSlotContext(EPBBallDeckSlotType InSlotType, int32 InSlotIndex)
 {

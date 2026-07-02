@@ -5,7 +5,7 @@
 
 #include "Components/UniformGridPanel.h"
 #include "PBBallSlotWidget.h"
-#include "PinBallLike/Subsystem/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
 
 void UPBDeploymentWidget::NativeConstruct()
