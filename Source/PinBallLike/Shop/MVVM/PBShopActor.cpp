@@ -10,6 +10,7 @@
 #include "../../Subsystem/BallDataSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "../../Subsystem/AssetStreamingSubsystem.h"
+#include "View/MVVMView.h"
 
 // Sets default values
 APBShopActor::APBShopActor()
@@ -33,12 +34,7 @@ void APBShopActor::OpenShop()
     	ShopPurchaseHandler = ShopManager;
     	ShopManager->SetShopActorHandler(this);
     }
-
-    if (!ShopViewModel)
-    {
-        ShopViewModel = NewObject<UPBShopViewModel>(this);
-    }
-
+	
     if (!ShopWidget)
     {
         if (!ShopWidgetClass)
@@ -51,8 +47,10 @@ void APBShopActor::OpenShop()
         {
             return;
         }
-
-        ShopWidget->AddToViewport();
+    	
+    	ApplyViewModelToWidget(ShopWidget);
+    	
+    	ShopWidget->AddToViewport();
     }
 
     UGameInstance* GI = UGameplayStatics::GetGameInstance(GetWorld());
@@ -159,6 +157,43 @@ void APBShopActor::BuyItem(int32 SlotIndex)
 	}
 	
 	RefreshViewModel();
+}
+
+bool APBShopActor::ApplyViewModelToWidget(UUserWidget* Widget)
+{
+	if (!IsValid(Widget))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Widget invalid"));
+		return false;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Widget Class = %s"), *GetNameSafe(Widget->GetClass()));
+
+	if (!IsValid(ShopViewModel))
+	{
+		ShopViewModel = NewObject<UPBShopViewModel>(this);
+
+		if (!IsValid(ShopViewModel))
+		{
+			UE_LOG(LogTemp, Error, TEXT("ShopViewModel create failed"));
+			return false;
+		}
+	}
+
+	UMVVMView* View = Widget->GetExtension<UMVVMView>();
+	if (!View)
+	{
+		UE_LOG(LogTemp, Error, TEXT("MVVMView Extension 없음. Widget BP에 ViewModel 등록했는지 확인"));
+		return false;
+	}
+
+	TScriptInterface<INotifyFieldValueChanged> ViewModelInterface(ShopViewModel);
+
+	const bool bResult = View->SetViewModelByClass(ViewModelInterface);
+	UE_LOG(LogTemp, Warning, TEXT("SetViewModelByClass = %s"),
+		bResult ? TEXT("Success") : TEXT("Failed"));
+
+	return bResult;
 }
 
 
