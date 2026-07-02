@@ -3,14 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PBBallDeckFusionService.h"
 #include "PinBallLike/Struct/Ball/PBBallItemViewData.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
 #include "PinBallLike/Struct/Deck/PBBallInstanceData.h"
 #include "PinBallLike/Struct/Party/PBPartyTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBBallDeckSubsystem.generated.h"
-
-class UPBBallDeckFusionService;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBOnDeploymentSlotChanged, int32, SlotIndex, int32, BallInstanceId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsReordered);
@@ -29,6 +28,7 @@ public:
 #pragma region Common
 
 	int32 AddOwnedBall(int32 BallId, int32 StarLevel = 1);
+	// 외부에서 덱에 볼을 추가할때 사용하는 함수
 	bool AddNewBallToDeck(int32 BallId, int32 StarLevel = 1);
 	bool RemoveOwnedBall(int32 BallInstanceId);
 	bool SetOwnedBallStarLevel(int32 BallInstanceId, int32 StarLevel);
@@ -54,6 +54,15 @@ public:
 #pragma region Fusion
 
 public:
+	UPROPERTY(BlueprintAssignable, Category = "BallDeck|Fusion")
+	FPBOnBallFusionStarted OnBallFusionStarted;
+
+	UPROPERTY(BlueprintAssignable, Category = "BallDeck|Fusion")
+	FPBOnBallFusionCompleted OnBallFusionCompleted;
+
+	UPROPERTY(BlueprintAssignable, Category = "BallDeck|Fusion")
+	FPBOnBallFusionCanceled OnBallFusionCanceled;
+
 	UFUNCTION(BlueprintPure, Category = "BallDeck|Fusion")
 	UPBBallDeckFusionService* GetFusionService() const;
 
@@ -68,6 +77,16 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "BallDeck|Fusion")
 	bool HasPendingFusion() const;
+
+private:
+	UFUNCTION()
+	void HandleBallFusionStarted(const FPBBallDeckFusionBatch& FusionBatch);
+
+	UFUNCTION()
+	void HandleBallFusionCompleted(const FPBBallDeckFusionBatch& FusionBatch);
+
+	UFUNCTION()
+	void HandleBallFusionCanceled(const FPBBallDeckFusionBatch& FusionBatch);
 
 #pragma endregion
 
