@@ -7,22 +7,6 @@
 
 APBBossProjectile::APBBossProjectile()
 {
-	PrimaryActorTick.bCanEverTick = false;
-
-	CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
-	SetRootComponent(CollisionSphere);
-	CollisionSphere->InitSphereRadius(15.0f);
-	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	CollisionSphere->SetCollisionResponseToAllChannels(ECR_Overlap);
-	CollisionSphere->SetGenerateOverlapEvents(true);
-
-	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
-	ProjectileMovementComponent->UpdatedComponent = CollisionSphere;
-	ProjectileMovementComponent->InitialSpeed = ProjectileSpeed;
-	ProjectileMovementComponent->MaxSpeed = ProjectileSpeed;
-	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->bShouldBounce = false;
-	ProjectileMovementComponent->bSweepCollision = false;
 }
 
 void APBBossProjectile::SetProjectileSpeed(float NewProjectileSpeed)
@@ -50,6 +34,7 @@ void APBBossProjectile::BeginPlay()
 
 	CheckInitialOverlappingPinballs();
 	ApplyProjectileSpeed();
+	ActivateProjectile();
 	SetLifeSpan(FMath::Max(0.1f, LifeTimeSeconds));
 }
 
