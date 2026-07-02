@@ -6,12 +6,26 @@
 #include "PBBallItemWidget.h"
 #include "PBBallDragDropOperation.h"
 #include "Components/Overlay.h"
+#include "PinBallLike/Deck/UI/ViewModel/PBBallSlotViewModel.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "View/MVVMView.h"
+
+void UPBBallSlotWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	EnsureSlotViewModel();
+}
 
 void UPBBallSlotWidget::SetSlotContext(EPBBallDeckSlotType InSlotType, int32 InSlotIndex)
 {
 	SlotType = InSlotType;
 	SlotIndex = InSlotIndex;
+	EnsureSlotViewModel();
+	if (SlotViewModel)
+	{
+		SlotViewModel->SetSlotContext(SlotType);
+	}
 
 	if (BallItemWidget)
 	{
@@ -21,6 +35,7 @@ void UPBBallSlotWidget::SetSlotContext(EPBBallDeckSlotType InSlotType, int32 InS
 
 void UPBBallSlotWidget::SetBallInstanceId(int32 InBallInstanceId)
 {
+	EnsureSlotViewModel();
 	BallInstanceId = InBallInstanceId;
 
 	if (BallInstanceId == INDEX_NONE)
@@ -41,6 +56,11 @@ void UPBBallSlotWidget::SetBallInstanceId(int32 InBallInstanceId)
 		FPBBallItemViewData ViewData;
 		if (DeckSubsystem && DeckSubsystem->BuildBallItemViewData(BallInstanceId, SlotType, SlotIndex, ViewData))
 		{
+			if (SlotViewModel)
+			{
+				SlotViewModel->SetHasBall(true);
+			}
+
 			UE_LOG(LogTemp, Warning, TEXT("BallSlotWidget SetBallInstanceId built ViewData. Slot=%s SlotType=%d SlotIndex=%d BallInstanceId=%d BallId=%d Icon=%s"),
 				*GetNameSafe(this),
 				static_cast<int32>(SlotType),
@@ -52,6 +72,12 @@ void UPBBallSlotWidget::SetBallInstanceId(int32 InBallInstanceId)
 		}
 		else
 		{
+			if (SlotViewModel)
+			{
+				SlotViewModel->ClearBall();
+				SlotViewModel->SetSlotContext(SlotType);
+			}
+
 			UE_LOG(LogTemp, Warning, TEXT("BallSlotWidget SetBallInstanceId failed to build ViewData. Slot=%s SlotType=%d SlotIndex=%d BallInstanceId=%d DeckSubsystem=%s"),
 				*GetNameSafe(this),
 				static_cast<int32>(SlotType),
@@ -64,7 +90,13 @@ void UPBBallSlotWidget::SetBallInstanceId(int32 InBallInstanceId)
 
 void UPBBallSlotWidget::ClearBallItem()
 {
+	EnsureSlotViewModel();
 	BallInstanceId = INDEX_NONE;
+	if (SlotViewModel)
+	{
+		SlotViewModel->ClearBall();
+		SlotViewModel->SetSlotContext(SlotType);
+	}
 
 	if (BallItemWidget)
 	{
@@ -121,4 +153,43 @@ UPBBallItemWidget* UPBBallSlotWidget::CreateBallItem()
 		*GetNameSafe(NewBallItemWidget),
 		*GetNameSafe(BallItemWidgetClass.Get()));
 	return NewBallItemWidget;
+}
+
+void UPBBallSlotWidget::EnsureSlotViewModel()
+{
+	if (!SlotViewModel)
+	{
+		SlotViewModel = NewObject<UPBBallSlotViewModel>(this);
+	}
+
+	if (SlotViewModel)
+	{
+		ApplyViewModelToWidget();
+	}
+}
+
+bool UPBBallSlotWidget::ApplyViewModelToWidget()
+{
+	if (!SlotViewModel)
+	{
+		return false;
+	}
+
+	UMVVMView* View = GetExtension<UMVVMView>();
+	if (!View)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallSlotWidget ApplyViewModelToWidget failed. Widget=%s MVVMView extension is null"),
+			*GetNameSafe(this));
+		return false;
+	}
+
+	TScriptInterface<INotifyFieldValueChanged> ViewModelInterface(SlotViewModel);
+	const bool bResult = View->SetViewModelByClass(ViewModelInterface);
+	if (!bResult)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallSlotWidget ApplyViewModelToWidget failed. Widget=%s ViewModel=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(SlotViewModel));
+	}
+	return bResult;
 }

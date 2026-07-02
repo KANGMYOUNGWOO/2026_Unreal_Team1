@@ -10,6 +10,7 @@
 
 class UImage;
 class UDragDropOperation;
+class UPBBallItemViewModel;
 /**
  * 
  */
@@ -25,17 +26,23 @@ public:
 	void SetSourceSlot(EPBBallDeckSlotType InSourceSlotType, int32 InSourceSlotIndex);
 
 protected:
+	virtual void NativeOnInitialized() override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
 
-private:
-	void RefreshBallItem();
-
-	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "BallDeck|Item")
 	TObjectPtr<UImage> Image_ProgressBar;
-	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "BallDeck|Item")
 	TObjectPtr<UImage> Image_Ball;
+
+private:
+	void EnsureItemViewModel();
+	bool ApplyViewModelToWidget();
 
 	UPROPERTY(Transient)
 	FPBBallItemViewData ViewData;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBBallItemViewModel> ItemViewModel;
 };
