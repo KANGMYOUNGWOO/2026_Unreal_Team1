@@ -1,7 +1,7 @@
 #include "PBBossSnakeProjectilePattern.h"
 
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
-#include "PinBallLike/Actor/Boss/PBBossProjectile.h"
+#include "PinBallLike/Actor/Boss/Pattern/PBBossProjectile.h"
 
 UPBBossSnakeProjectilePattern::UPBBossSnakeProjectilePattern()
 {

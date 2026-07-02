@@ -11,8 +11,8 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StateTreeComponent.h"
-#include "PBBossStateTreeTags.h"
-#include "PinBallLike/UI/Boss/PBBossStatusWidget.h"
+#include "PinBallLike/Actor/Boss/StateTree/PBBossStateTreeTags.h"
+#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 
 namespace
 {

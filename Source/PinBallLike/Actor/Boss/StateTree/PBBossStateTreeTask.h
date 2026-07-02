@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "StateTreeExecutionTypes.h"
 #include "StateTreeTaskBase.h"
-#include "PBBossBase.h"
+#include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PBBossStateTreeTask.generated.h"
 
 struct FStateTreeExecutionContext;

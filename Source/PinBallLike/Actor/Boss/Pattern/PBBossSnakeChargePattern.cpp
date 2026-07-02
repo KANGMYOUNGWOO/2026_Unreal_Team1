@@ -1,7 +1,7 @@
 #include "PBBossSnakeChargePattern.h"
 
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
-#include "PinBallLike/Actor/Boss/PBBossChargeTelegraph.h"
+#include "PinBallLike/Actor/Boss/Pattern/PBBossChargeTelegraph.h"
 #include "PinBallLike/Actor/Boss/SnakeBoss.h"
 
 bool UPBBossSnakeChargePattern::CanExecute_Implementation(APBBossBase* Boss) const

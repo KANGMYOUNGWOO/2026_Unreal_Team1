@@ -4,7 +4,7 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
-#include "PinBallLike/Actor/Boss/PBBossPatternTelegraph.h"
+#include "PinBallLike/Actor/Boss/Pattern/PBBossPatternTelegraph.h"
 
 void UPBBossPatternBase::InitializePattern(UPBBossPatternComponent* NewOwnerPatternComponent)
 {

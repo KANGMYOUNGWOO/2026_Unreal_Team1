@@ -1,9 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "StateTreeConditionBase.h"
 #include "StateTreeExecutionTypes.h"
-#include "PBBossBase.h"
 #include "PBBossStateTreeCondition.generated.h"
 
 struct FStateTreeExecutionContext;

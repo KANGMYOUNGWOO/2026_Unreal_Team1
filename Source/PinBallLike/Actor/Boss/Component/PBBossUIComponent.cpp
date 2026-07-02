@@ -3,7 +3,7 @@
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
-#include "PinBallLike/UI/Boss/PBBossStatusWidget.h"
+#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 
 UPBBossUIComponent::UPBBossUIComponent()
 {
