@@ -6,6 +6,8 @@
 #include "Components/ActorComponent.h"
 #include "PBTurretFireComponent.generated.h"
 
+class AProjectileBase;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FPBTurretProjectileSignature,
 	AActor*, Projectile);
@@ -38,7 +40,7 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Fire")
-	TSubclassOf<AActor> ProjectileClass;
+	TSubclassOf<AProjectileBase> ProjectileClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Fire")
 	FName MuzzleTag = TEXT("TurretMuzzle");
@@ -57,17 +59,17 @@ protected:
 
 private:
 	FTransform GetMuzzleTransform() const;
-	AActor* GetProjectileFromPool();
-	AActor* SpawnProjectileActor();
-	void ActivateProjectile(AActor* Projectile, const FTransform& SpawnTransform);
-	void DeactivateProjectile(AActor* Projectile);
+	AProjectileBase* GetProjectileFromPool();
+	AProjectileBase* SpawnProjectileActor();
+	void ActivateProjectile(AProjectileBase* Projectile, const FTransform& SpawnTransform);
+	void DeactivateProjectile(AProjectileBase* Projectile);
 	void ClearPool();
 
 	UPROPERTY()
-	TArray<TObjectPtr<AActor>> PooledProjectiles;
+	TArray<TObjectPtr<AProjectileBase>> PooledProjectiles;
 
 	UPROPERTY()
-	TArray<TObjectPtr<AActor>> ActiveProjectiles;
+	TArray<TObjectPtr<AProjectileBase>> ActiveProjectiles;
 
-	TMap<TWeakObjectPtr<AActor>, FTimerHandle> ProjectileLifeTimerHandles;
+	TMap<TWeakObjectPtr<AProjectileBase>, FTimerHandle> ProjectileLifeTimerHandles;
 };
