@@ -1,10 +1,10 @@
-#include "PBBumperUIPresenter.h"
+#include "PBBumperUIBinder.h"
 #include "Blueprint/UserWidget.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PBBumperViewModel.h"
 #include "View/MVVMView.h"
 
-bool UPBBumperUIPresenter::Bind(APBModularBumperBase* InBumper, UUserWidget* InWidget)
+bool UPBBumperUIBinder::Bind(APBModularBumperBase* InBumper, UUserWidget* InWidget)
 {
 	Unbind();
 
@@ -25,7 +25,7 @@ bool UPBBumperUIPresenter::Bind(APBModularBumperBase* InBumper, UUserWidget* InW
 
 	Bumper = InBumper;
 	Bumper->OnBumperTriggerCountChanged.AddUniqueDynamic(
-		this, &UPBBumperUIPresenter::HandleTriggerCountChanged);
+		this, &UPBBumperUIBinder::HandleTriggerCountChanged);
 
 	// 바인딩 시점의 현재 상태를 UI에 즉시 반영한다.
 	HandleTriggerCountChanged(
@@ -35,7 +35,7 @@ bool UPBBumperUIPresenter::Bind(APBModularBumperBase* InBumper, UUserWidget* InW
 	return true;
 }
 
-bool UPBBumperUIPresenter::ApplyViewModelToWidget(UUserWidget* Widget)
+bool UPBBumperUIBinder::ApplyViewModelToWidget(UUserWidget* Widget)
 {
 	if (!IsValid(Widget))
 	{
@@ -58,24 +58,24 @@ bool UPBBumperUIPresenter::ApplyViewModelToWidget(UUserWidget* Widget)
 	return false;
 }
 
-void UPBBumperUIPresenter::Unbind()
+void UPBBumperUIBinder::Unbind()
 {
 	if (Bumper.IsValid())
 	{
 		Bumper->OnBumperTriggerCountChanged.RemoveDynamic(
-			this, &UPBBumperUIPresenter::HandleTriggerCountChanged);
+			this, &UPBBumperUIBinder::HandleTriggerCountChanged);
 	}
 
 	Bumper.Reset();
 }
 
-void UPBBumperUIPresenter::BeginDestroy()
+void UPBBumperUIBinder::BeginDestroy()
 {
 	Unbind();
 	Super::BeginDestroy();
 }
 
-void UPBBumperUIPresenter::HandleTriggerCountChanged(
+void UPBBumperUIBinder::HandleTriggerCountChanged(
 	const int32 CurrentCount,
 	const int32 RequiredCount)
 {

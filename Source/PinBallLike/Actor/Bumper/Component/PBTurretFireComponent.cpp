@@ -3,9 +3,9 @@
 
 #include "PBTurretFireComponent.h"
 
+#include "PinBallLike/Actor/Projectile/ProjectileBase.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
-#include "PinBallLike/Interface/PBProjectile.h"
 #include "TimerManager.h"
 
 UPBTurretFireComponent::UPBTurretFireComponent()
@@ -25,7 +25,7 @@ void UPBTurretFireComponent::BeginPlay()
 	const int32 PoolSize = FMath::Clamp(InitialPoolSize, 0, MaxPoolSize);
 	for (int32 Index = 0; Index < PoolSize; ++Index)
 	{
-		AActor* Projectile = SpawnProjectileActor();
+		AProjectileBase* Projectile = SpawnProjectileActor();
 		if (IsValid(Projectile))
 		{
 			Projectile->SetActorHiddenInGame(true);
@@ -57,7 +57,7 @@ AActor* UPBTurretFireComponent::FireOnce()
 		return nullptr;
 	}
 
-	AActor* Projectile = IsUseObjectPool ? GetProjectileFromPool() : SpawnProjectileActor();
+	AProjectileBase* Projectile = IsUseObjectPool ? GetProjectileFromPool() : SpawnProjectileActor();
 	if (!IsValid(Projectile))
 	{
 		return nullptr;
@@ -71,7 +71,7 @@ AActor* UPBTurretFireComponent::FireOnce()
 
 void UPBTurretFireComponent::ReleaseProjectile(AActor* Projectile)
 {
-	DeactivateProjectile(Projectile);
+	DeactivateProjectile(Cast<AProjectileBase>(Projectile));
 }
 
 FTransform UPBTurretFireComponent::GetMuzzleTransform() const
@@ -98,11 +98,11 @@ FTransform UPBTurretFireComponent::GetMuzzleTransform() const
 	return Owner->GetActorTransform();
 }
 
-AActor* UPBTurretFireComponent::GetProjectileFromPool()
+AProjectileBase* UPBTurretFireComponent::GetProjectileFromPool()
 {
 	while (!PooledProjectiles.IsEmpty())
 	{
-		AActor* Projectile = PooledProjectiles.Pop();
+		AProjectileBase* Projectile = PooledProjectiles.Pop();
 		if (IsValid(Projectile))
 		{
 			return Projectile;
@@ -118,7 +118,7 @@ AActor* UPBTurretFireComponent::GetProjectileFromPool()
 	return SpawnProjectileActor();
 }
 
-AActor* UPBTurretFireComponent::SpawnProjectileActor()
+AProjectileBase* UPBTurretFireComponent::SpawnProjectileActor()
 {
 	AActor* Owner = GetOwner();
 	UWorld* World = GetWorld();
@@ -130,13 +130,13 @@ AActor* UPBTurretFireComponent::SpawnProjectileActor()
 	FActorSpawnParameters SpawnParameters;
 	SpawnParameters.Owner = Owner;
 
-	return World->SpawnActor<AActor>(
+	return World->SpawnActor<AProjectileBase>(
 		ProjectileClass,
 		GetMuzzleTransform(),
 		SpawnParameters);
 }
 
-void UPBTurretFireComponent::ActivateProjectile(AActor* Projectile, const FTransform& SpawnTransform)
+void UPBTurretFireComponent::ActivateProjectile(AProjectileBase* Projectile, const FTransform& SpawnTransform)
 {
 	if (!IsValid(Projectile))
 	{
@@ -149,10 +149,7 @@ void UPBTurretFireComponent::ActivateProjectile(AActor* Projectile, const FTrans
 	Projectile->SetActorTickEnabled(true);
 
 	ActiveProjectiles.AddUnique(Projectile);
-	if (Projectile->GetClass()->ImplementsInterface(UPBProjectile::StaticClass()))
-	{
-		IPBProjectile::Execute_ActivateTurretProjectile(Projectile);
-	}
+	Projectile->ActivateProjectile();
 	OnTurretProjectileActivated.Broadcast(Projectile);
 
 	if (ProjectileLifeTime <= 0.0f)
@@ -169,7 +166,7 @@ void UPBTurretFireComponent::ActivateProjectile(AActor* Projectile, const FTrans
 		false);
 }
 
-void UPBTurretFireComponent::DeactivateProjectile(AActor* Projectile)
+void UPBTurretFireComponent::DeactivateProjectile(AProjectileBase* Projectile)
 {
 	if (!IsValid(Projectile))
 	{
@@ -186,10 +183,7 @@ void UPBTurretFireComponent::DeactivateProjectile(AActor* Projectile)
 	ProjectileLifeTimerHandles.Remove(Projectile);
 
 	ActiveProjectiles.Remove(Projectile);
-	if (Projectile->GetClass()->ImplementsInterface(UPBProjectile::StaticClass()))
-	{
-		IPBProjectile::Execute_DeactivateTurretProjectile(Projectile);
-	}
+	Projectile->DeactivateProjectile();
 	OnTurretProjectileDeactivated.Broadcast(Projectile);
 
 	if (!IsUseObjectPool)
@@ -215,14 +209,14 @@ void UPBTurretFireComponent::ClearPool()
 {
 	if (UWorld* World = GetWorld())
 	{
-		for (TPair<TWeakObjectPtr<AActor>, FTimerHandle>& TimerPair : ProjectileLifeTimerHandles)
+		for (TPair<TWeakObjectPtr<AProjectileBase>, FTimerHandle>& TimerPair : ProjectileLifeTimerHandles)
 		{
 			World->GetTimerManager().ClearTimer(TimerPair.Value);
 		}
 	}
 	ProjectileLifeTimerHandles.Reset();
 
-	for (AActor* Projectile : ActiveProjectiles)
+	for (AProjectileBase* Projectile : ActiveProjectiles)
 	{
 		if (IsValid(Projectile))
 		{
@@ -230,7 +224,7 @@ void UPBTurretFireComponent::ClearPool()
 		}
 	}
 
-	for (AActor* Projectile : PooledProjectiles)
+	for (AProjectileBase* Projectile : PooledProjectiles)
 	{
 		if (IsValid(Projectile))
 		{
