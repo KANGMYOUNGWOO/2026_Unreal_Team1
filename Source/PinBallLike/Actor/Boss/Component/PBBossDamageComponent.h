@@ -82,7 +82,7 @@ protected:
 	int32 MaxDamageCountPerFrame = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
-	float SameSourceHitCooldownSeconds = 0.25f;
+	float DamageCooldownSeconds = 0.25f;
 
 private:
 	struct FPBBossHitPartInfo
@@ -99,21 +99,27 @@ private:
 	const UPBBossHitPartComponent* FindHitPartComponent(const UPrimitiveComponent* HitComponent) const;
 	// 데미지 이름과 수치가 실제 적용 가능한 값인지 확인합니다.
 	bool CanApplyDamage(FName HitPointName, int32 DamageAmount) const;
-	// 같은 프레임 또는 같은 소스의 과도한 데미지를 제한합니다.
-	bool CanApplyDamageRateLimit(AActor* DamageSource) const;
+	// 같은 프레임 또는 짧은 시간 안의 과도한 데미지를 제한합니다.
+	bool CanApplyDamageRateLimit() const;
 	// 닫힌 약점 부위에 대한 데미지 적용을 막아야 하는지 확인합니다.
 	bool IsWeakPointHitBlocked(const FPBBossHitPartInfo& HitPartInfo) const;
 	// 해석된 피격 부위 정보를 바탕으로 최종 데미지 처리를 수행합니다.
 	void ApplyResolvedDamage(AActor* DamageSource, const FPBBossHitPartInfo& HitPartInfo, int32 DamageAmount, const FHitResult& Hit);
+	void ApplyDamageToBoss(FName HitPointName, int32 DamageAmount);
 	void BroadcastDamageApplied(FName HitPointName, int32 DamageAmount);
-	// 데미지 소스별 마지막 타격 시간을 기록합니다.
-	void RecordDamageRateLimit(AActor* DamageSource);
+	// 마지막 데미지 적용 시간을 기록합니다.
+	void RecordDamageRateLimit();
+	void ApplyPinballHitImpulse(AActor* DamageSource, const FHitResult& Hit) const;
+	void AddPinballCombo(AActor* DamageSource) const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<APBBossBase> OwnerBoss;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0", AllowPrivateAccess = "true"))
+	float PinballHitImpulseStrength = 500.0f;
+
 	TMap<TObjectKey<UPrimitiveComponent>, FPBBossHitPartInfo> HitPartInfoMap;
-	TMap<TObjectKey<AActor>, float> LastDamageTimeMap;
+	float LastDamageTimeSeconds = -1.0f;
 	uint64 LastDamageFrameNumber = 0;
 	int32 CurrentFrameDamageCount = 0;
 };

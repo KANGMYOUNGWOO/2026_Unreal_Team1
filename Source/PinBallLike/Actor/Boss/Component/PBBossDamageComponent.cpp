@@ -23,13 +23,18 @@ void UPBBossDamageComponent::BeginPlay()
 	OwnerBoss = Cast<APBBossBase>(GetOwner());
 }
 
-void UPBBossDamageComponent::DamageToBose(AActor* DamageSource, int32 DamageAmount)
+void UPBBossDamageComponent::DamageToBoss(AActor* DamageSource, int32 DamageAmount)
 {
 	FPBBossHitPartInfo HitPartInfo;
 	HitPartInfo.HitPartType = EPBBossHitPartType::Body;
 	HitPartInfo.HitPointName = DefaultHitPointName;
 
 	ApplyResolvedDamage(DamageSource, HitPartInfo, DamageAmount, FHitResult());
+}
+
+void UPBBossDamageComponent::DamageToBose(AActor* DamageSource, int32 DamageAmount)
+{
+	DamageToBoss(DamageSource, DamageAmount);
 }
 
 void UPBBossDamageComponent::ApplyPointDamage(FName HitPointName, int32 DamageAmount)
@@ -43,18 +48,7 @@ void UPBBossDamageComponent::ApplyPointDamage(FName HitPointName, int32 DamageAm
 		HitPartInfo.HitPartType = EPBBossHitPartType::WeakPoint;
 	}
 
-	if (!CanApplyDamage(HitPartInfo.HitPointName, DamageAmount) || IsWeakPointHitBlocked(HitPartInfo))
-	{
-		return;
-	}
-
-	int32 FinalDamageAmount = DamageAmount;
-	if (UPBBossWeaknessComponent* WeaknessComponent = OwnerBoss->GetBossWeaknessComponent())
-	{
-		FinalDamageAmount = WeaknessComponent->CalculateWeaknessDamage(HitPartInfo.HitPointName, DamageAmount);
-	}
-
-	ApplyDamageToBoss(HitPartInfo.HitPointName, FinalDamageAmount);
+	ApplyResolvedDamage(nullptr, HitPartInfo, DamageAmount, FHitResult());
 }
 
 void UPBBossDamageComponent::ApplyHitPartDamage(
@@ -97,6 +91,23 @@ bool UPBBossDamageComponent::IsValidDamageSource(AActor* DamageSource, UPrimitiv
 	const bool IsComponentTagged = DamageSourceComponent && DamageSourceComponent->ComponentHasTag(DamageSourceTagName);
 
 	return IsActorTagged || IsComponentTagged;
+}
+
+void UPBBossDamageComponent::HandleCollisionHit(
+	UPrimitiveComponent* HitComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComponent,
+	FVector NormalImpulse,
+	const FHitResult& Hit)
+{
+	if (!IsValidDamageSource(OtherActor, OtherComponent))
+	{
+		return;
+	}
+
+	const int32 DamageAmount = GetPinballHitDamage(OtherActor);
+	ApplyHitPartDamage(OtherActor, HitComponent, DamageAmount, Hit);
+	OnDamageSourceHitApplied.Broadcast(OtherActor, Hit);
 }
 
 int32 UPBBossDamageComponent::GetPinballHitDamage(AActor* DamageSource) const
@@ -165,7 +176,7 @@ bool UPBBossDamageComponent::CanApplyDamage(FName HitPointName, int32 DamageAmou
 	return OwnerBoss && DamageAmount > 0 && !OwnerBoss->IsDead() && HitPointName != NAME_None;
 }
 
-bool UPBBossDamageComponent::CanApplyDamageRateLimit(AActor* DamageSource) const
+bool UPBBossDamageComponent::CanApplyDamageRateLimit() const
 {
 	if (MaxDamageCountPerFrame <= 0)
 	{
@@ -177,7 +188,7 @@ bool UPBBossDamageComponent::CanApplyDamageRateLimit(AActor* DamageSource) const
 		return false;
 	}
 
-	if (!DamageSource || SameSourceHitCooldownSeconds <= 0.0f)
+	if (DamageCooldownSeconds <= 0.0f)
 	{
 		return true;
 	}
@@ -188,13 +199,12 @@ bool UPBBossDamageComponent::CanApplyDamageRateLimit(AActor* DamageSource) const
 		return true;
 	}
 
-	const float* LastDamageTime = LastDamageTimeMap.Find(TObjectKey<AActor>(DamageSource));
-	if (!LastDamageTime)
+	if (LastDamageTimeSeconds < 0.0f)
 	{
 		return true;
 	}
 
-	return World->GetTimeSeconds() - *LastDamageTime >= SameSourceHitCooldownSeconds;
+	return World->GetTimeSeconds() - LastDamageTimeSeconds >= DamageCooldownSeconds;
 }
 
 bool UPBBossDamageComponent::IsWeakPointHitBlocked(const FPBBossHitPartInfo& HitPartInfo) const
@@ -215,21 +225,15 @@ void UPBBossDamageComponent::ApplyResolvedDamage(
 	const FHitResult& Hit)
 {
 	if (!CanApplyDamage(HitPartInfo.HitPointName, DamageAmount)
-		|| !CanApplyDamageRateLimit(DamageSource)
+		|| !CanApplyDamageRateLimit()
 		|| IsWeakPointHitBlocked(HitPartInfo))
 	{
 		return;
 	}
 
-	int32 FinalDamageAmount = DamageAmount;
-	if (UPBBossWeaknessComponent* WeaknessComponent = OwnerBoss->GetBossWeaknessComponent())
-	{
-		FinalDamageAmount = WeaknessComponent->CalculateWeaknessDamage(HitPartInfo.HitPointName, DamageAmount);
-	}
+	ApplyDamageToBoss(HitPartInfo.HitPointName, DamageAmount);
 
-	ApplyDamageToBoss(HitPartInfo.HitPointName, FinalDamageAmount);
-
-	RecordDamageRateLimit(DamageSource);
+	RecordDamageRateLimit();
 	ApplyPinballHitImpulse(DamageSource, Hit);
 	AddPinballCombo(DamageSource);
 }
@@ -257,7 +261,7 @@ void UPBBossDamageComponent::ApplyDamageToBoss(FName HitPointName, int32 DamageA
 	}
 }
 
-void UPBBossDamageComponent::RecordDamageRateLimit(AActor* DamageSource)
+void UPBBossDamageComponent::RecordDamageRateLimit()
 {
 	if (LastDamageFrameNumber != GFrameCounter)
 	{
@@ -267,14 +271,14 @@ void UPBBossDamageComponent::RecordDamageRateLimit(AActor* DamageSource)
 
 	++CurrentFrameDamageCount;
 
-	if (!DamageSource || SameSourceHitCooldownSeconds <= 0.0f)
+	if (DamageCooldownSeconds <= 0.0f)
 	{
 		return;
 	}
 
 	if (const UWorld* World = GetWorld())
 	{
-		LastDamageTimeMap.FindOrAdd(TObjectKey<AActor>(DamageSource)) = World->GetTimeSeconds();
+		LastDamageTimeSeconds = World->GetTimeSeconds();
 	}
 }
 
