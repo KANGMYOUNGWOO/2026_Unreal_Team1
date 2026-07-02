@@ -1,6 +1,6 @@
 #include "PBCollectionDemoActor.h"
 
-#include "PinBallLike/UI/Collection/PBCollectionWidget.h"
+#include "PinBallLike/Collection/PBCollectionWidget.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Components/InputComponent.h"

@@ -1,7 +1,7 @@
 #include "PBCollectionWidget.h"
 
 #include "PBCollectionEntryWidget.h"
-#include "PinBallLike/Subsystem/PBCollectionSubsystem.h"
+#include "PinBallLike/Collection/PBCollectionSubsystem.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
