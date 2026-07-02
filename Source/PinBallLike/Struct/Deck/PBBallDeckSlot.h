@@ -3,8 +3,6 @@
 #include "CoreMinimal.h"
 #include "PBBallDeckSlot.generated.h"
 
-class APBBallBase;
-
 UENUM(BlueprintType)
 enum class EPBBallDeckSlotType : uint8
 {
@@ -24,10 +22,10 @@ struct PINBALLLIKE_API FPBBallDeckSlot
 	EPBBallDeckSlotType SlotType = EPBBallDeckSlotType::Bench;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck")
-	TObjectPtr<APBBallBase> Ball = nullptr;
+	int32 BallInstanceId = INDEX_NONE;
 
 	bool IsEmpty() const
 	{
-		return Ball == nullptr;
+		return BallInstanceId == INDEX_NONE;
 	}
 };

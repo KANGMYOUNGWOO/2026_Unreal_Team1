@@ -4,12 +4,17 @@
 #include "PBCombatPartyActor.h"
 
 #include "Components/StaticMeshComponent.h"
+#include "Engine/EngineTypes.h"
 #include "Engine/GameInstance.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/World.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Component/PBSnakeFormationComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
-#include "PinBallLike/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
+#include "PinBallLike/Struct/Deck/PBBallInstanceData.h"
+#include "PinBallLike/Subsystem/BallDataSubsystem.h"
+#include "PinBallLike/Subsystem/PBBallDeckSubsystem.h"
 
 APBCombatPartyActor::APBCombatPartyActor()
 {
@@ -61,36 +66,11 @@ void APBCombatPartyActor::UnbindDeckEvents()
 	DeckSubsystem->OnDeploymentSlotsRotated.RemoveDynamic(this, &APBCombatPartyActor::HandleDeploymentSlotsRotated);
 }
 
-void APBCombatPartyActor::HandleDeploymentSlotChanged(int32 SlotIndex, APBBallBase* Ball)
+void APBCombatPartyActor::HandleDeploymentSlotChanged(int32 SlotIndex, int32 BallInstanceId)
 {
-	if (SlotIndex < 0)
-	{
-		return;
-	}
-
-	if (SlotIndex == 0)
-	{
-		if (LeaderBall)
-		{
-			LeaderBall->SetCombatRole(EPBBallPartyRole::None);
-		}
-		LeaderBall = Ball;
-	}
-	else
-	{
-		const int32 FollowerIndex = SlotIndex - 1;
-		FollowerBalls.SetNum(FMath::Max(FollowerBalls.Num(), FollowerIndex + 1));
-		if (FollowerBalls[FollowerIndex])
-		{
-			FollowerBalls[FollowerIndex]->SetCombatRole(EPBBallPartyRole::None);
-		}
-		FollowerBalls[FollowerIndex] = Ball;
-	}
-
-	PartyBalls.SetNum(FMath::Max(PartyBalls.Num(), SlotIndex + 1));
-	PartyBalls[SlotIndex] = Ball;
-	CompactPartyBalls();
-	HandlePartyOrderChanged();
+	(void)SlotIndex;
+	(void)BallInstanceId;
+	RefreshFromDeck();
 }
 
 void APBCombatPartyActor::HandleDeploymentSlotsReordered()
@@ -135,12 +115,14 @@ void APBCombatPartyActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	ClearPartyRoles();
 	UnbindDeckEvents();
+	DestroyPartyBalls();
 	Super::EndPlay(EndPlayReason);
 }
 
 void APBCombatPartyActor::RefreshFromDeck()
 {
 	ClearPartyRoles();
+	DestroyPartyBalls();
 
 	if (!DeckSubsystem)
 	{
@@ -155,17 +137,20 @@ void APBCombatPartyActor::RefreshFromDeck()
 	}
 
 	PartyBalls.Reset();
-	for (APBBallBase* Ball : DeckSubsystem->GetDeploymentBalls())
+	for (const int32 BallInstanceId : DeckSubsystem->GetDeploymentBallInstanceIds())
 	{
-		PartyBalls.Add(Ball);
+		if (APBBallBase* Ball = SpawnBallFromInstanceId(BallInstanceId))
+		{
+			PartyBalls.Add(Ball);
+		}
 	}
 
-	LeaderBall = DeckSubsystem->GetLeaderBall();
+	LeaderBall = PartyBalls.IsValidIndex(0) ? PartyBalls[0] : nullptr;
 
 	FollowerBalls.Reset();
-	for (APBBallBase* Ball : DeckSubsystem->GetFollowerBalls())
+	for (int32 BallIndex = 1; BallIndex < PartyBalls.Num(); ++BallIndex)
 	{
-		FollowerBalls.Add(Ball);
+		FollowerBalls.Add(PartyBalls[BallIndex]);
 	}
 
 	HandlePartyOrderChanged();
@@ -276,18 +261,17 @@ void APBCombatPartyActor::SpawnPartyBallsAtLauncher()
 
 bool APBCombatPartyActor::LaunchPartyFromReadyPosition()
 {
+	if (bLaunchConsumed)
+	{
+		return false;
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("LaunchPartyFromReadyPosition called. Party=%s bLauncherActive=%s bLaunchConsumed=%s Leader=%s PartyBallCount=%d"),
 		*GetNameSafe(this),
 		bLauncherActive ? TEXT("true") : TEXT("false"),
 		bLaunchConsumed ? TEXT("true") : TEXT("false"),
 		*GetNameSafe(LeaderBall.Get()),
 		PartyBalls.Num());
-
-	if (bLaunchConsumed)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("LaunchPartyFromReadyPosition ignored: launch was already consumed."));
-		return false;
-	}
 
 	if (!IsValid(LeaderBall.Get()))
 	{
@@ -368,4 +352,70 @@ void APBCombatPartyActor::CompactPartyBalls()
 	{
 		return Ball == nullptr;
 	});
+}
+
+void APBCombatPartyActor::DestroyPartyBalls()
+{
+	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
+	{
+		if (IsValid(Ball.Get()))
+		{
+			Ball->Destroy();
+		}
+	}
+
+	PartyBalls.Reset();
+	LeaderBall = nullptr;
+	FollowerBalls.Reset();
+}
+
+APBBallBase* APBCombatPartyActor::SpawnBallFromInstanceId(int32 BallInstanceId)
+{
+	if (!DeckSubsystem)
+	{
+		return nullptr;
+	}
+
+	const FPBBallInstanceData* BallInstanceData = DeckSubsystem->GetOwnedBallData(BallInstanceId);
+	if (!BallInstanceData)
+	{
+		return nullptr;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	const UBallDataSubsystem* BallDataSubsystem = GameInstance ? GameInstance->GetSubsystem<UBallDataSubsystem>() : nullptr;
+	if (!BallDataSubsystem)
+	{
+		return nullptr;
+	}
+
+	const UPBBallDataAsset* BallDataAsset = BallDataSubsystem->GetBallDataAsset(BallInstanceData->BallId);
+	if (!BallDataAsset || !BallDataAsset->Ball)
+	{
+		return nullptr;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	const FTransform SpawnTransform(GetActorRotation(), GetActorLocation());
+	APBBallBase* SpawnedBall = World->SpawnActorDeferred<APBBallBase>(
+		BallDataAsset->Ball,
+		SpawnTransform,
+		this,
+		nullptr,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (!SpawnedBall)
+	{
+		return nullptr;
+	}
+
+	SpawnedBall->InitializeFromBallData(const_cast<UPBBallDataAsset*>(BallDataAsset), BallInstanceData->StarLevel);
+	SpawnedBall->FinishSpawning(SpawnTransform);
+	SpawnedBall->SetActorHiddenInGame(true);
+
+	return SpawnedBall;
 }
