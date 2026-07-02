@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
+#include "PinBallLike/Collection/PBCollectionTypes.h"
 #include "PBCollectionEntryWidget.generated.h"
 
 class UBorder;

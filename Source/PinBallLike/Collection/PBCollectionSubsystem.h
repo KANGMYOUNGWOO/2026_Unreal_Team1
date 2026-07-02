@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
+#include "PinBallLike/Collection/PBCollectionTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBCollectionSubsystem.generated.h"
 
