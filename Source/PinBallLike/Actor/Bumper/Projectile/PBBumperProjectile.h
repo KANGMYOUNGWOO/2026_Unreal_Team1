@@ -3,28 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
-#include "PinBallLike/Interface/PBProjectile.h"
+#include "PinBallLike/Actor/Projectile/ProjectileBase.h"
 #include "PBBumperProjectile.generated.h"
 
-class UProjectileMovementComponent;
-class USphereComponent;
-
 UCLASS(Blueprintable)
-class PINBALLLIKE_API APBBumperProjectile : public AActor, public IPBProjectile
+class PINBALLLIKE_API APBBumperProjectile : public AProjectileBase
 {
 	GENERATED_BODY()
 
 public:
 	APBBumperProjectile();
-
-	virtual void ActivateTurretProjectile_Implementation() override;
-	virtual void DeactivateTurretProjectile_Implementation() override;
-
-protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Projectile")
-	TObjectPtr<USphereComponent> CollisionSphere;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Projectile")
-	TObjectPtr<UProjectileMovementComponent> ProjectileMovementComponent;
 };
