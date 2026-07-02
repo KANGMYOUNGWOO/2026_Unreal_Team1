@@ -3,13 +3,13 @@
 #include "CoreMinimal.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "UObject/Object.h"
-#include "PBBumperUIPresenter.generated.h"
+#include "PBBumperUIBinder.generated.h"
 
 class UPBBumperViewModel;
 class UUserWidget;
 
 UCLASS(BlueprintType)
-class PINBALLLIKE_API UPBBumperUIPresenter : public UObject
+class PINBALLLIKE_API UPBBumperUIBinder : public UObject
 {
 	GENERATED_BODY()
 
