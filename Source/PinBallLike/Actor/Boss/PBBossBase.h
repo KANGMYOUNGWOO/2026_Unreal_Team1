@@ -8,7 +8,6 @@
 
 class UPBBossGroggyComponent;
 class UPBBossDamageComponent;
-class UPBBossDamageReceiverComponent;
 class UPBBossPatternComponent;
 class UPBBossPinballReactionComponent;
 class UPBBossStatComponent;
@@ -143,9 +142,10 @@ public:
 	void NotifyBossDamaged(FName HitPointName, int32 DamageAmount);
 
 	// BossInterface를 통해 보스 데미지를 적용합니다.
-	virtual void TakeBossDamage_Implementation(FName GroggyPointName, int32 DamageAmount) override;
+	virtual void DamageToBoss_Implementation(AActor* DamageSource, int32 DamageAmount, UPrimitiveComponent* HitComponent, const FHitResult& Hit) override;
 	// BossInterface를 통해 그로기 진입 처리를 실행합니다.
 	virtual void OnGroggyTriggered_Implementation() override;
+	virtual void IncreaseGroggy_Implementation(int32 GroggyAmount, UPrimitiveComponent* HitComponent) override;
 	// BossInterface를 통해 분노 상태 진입 처리를 실행합니다.
 	virtual void OnEnragedTriggered_Implementation() override;
 	// BossInterface를 통해 사망 처리를 실행합니다.
@@ -181,9 +181,6 @@ protected:
 	TObjectPtr<UPBBossDamageComponent> BossDamageComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
-	TObjectPtr<UPBBossDamageReceiverComponent> BossDamageReceiverComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossPatternComponent> BossPatternComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
@@ -206,9 +203,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Profile")
 	FText BossName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Groggy")
-	FName DefaultGroggyPointName = TEXT("Normal");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Groggy", meta = (ClampMin = "0.1"))
 	float GroggyDurationSeconds = 3.0f;

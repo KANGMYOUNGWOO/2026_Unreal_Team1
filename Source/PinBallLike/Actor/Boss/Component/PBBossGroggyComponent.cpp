@@ -1,6 +1,7 @@
 #include "PBBossGroggyComponent.h"
 
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Actor/Boss/Component/PBBossHitPartComponent.h"
 #include "PinBallLike/Utils/PBFixedPoint.h"
 
 UPBBossGroggyComponent::UPBBossGroggyComponent()
@@ -25,16 +26,17 @@ void UPBBossGroggyComponent::BeginPlay()
 	}
 }
 
-void UPBBossGroggyComponent::ApplyGroggyDamage(FName GroggyPointName)
+void UPBBossGroggyComponent::ApplyGroggyDamage(int32 GroggyAmount, UPrimitiveComponent* HitComponent)
 {
-	if (IsGroggy)
+	if (IsGroggy || GroggyAmount <= 0)
 	{
 		return;
 	}
 
-	const int32 GroggyAmount = GetGroggyAmount(GroggyPointName);
+	const FName GroggyPointName = ResolveGroggyPointName(HitComponent);
+	const int32 AppliedGroggyAmount = CalculateGroggyAmount(GroggyPointName, GroggyAmount);
 	const int32 PreviousGroggyGauge = GroggyGauge;
-	const int32 GroggyAmountRaw = FPBFixedPoint::ToRaw(static_cast<float>(GroggyAmount));
+	const int32 GroggyAmountRaw = FPBFixedPoint::ToRaw(static_cast<float>(AppliedGroggyAmount));
 	const int32 ClampedGroggyGaugeRaw = static_cast<int32>(FMath::Min<int64>(
 		static_cast<int64>(GroggyGaugeRaw) + GroggyAmountRaw,
 		TNumericLimits<int32>::Max()));
@@ -43,8 +45,10 @@ void UPBBossGroggyComponent::ApplyGroggyDamage(FName GroggyPointName)
 	RefreshDisplayedGroggyGauge();
 	OnGroggyGaugeChanged.Broadcast(GroggyGauge, MaxGroggyGauge);
 
-	UE_LOG(LogTemp, Warning, TEXT("Boss Groggy Damaged: %s, Groggy %d -> %d / %d"),
+	UE_LOG(LogTemp, Warning, TEXT("Boss Groggy Damaged: %s, Amount %d -> %d, Groggy %d -> %d / %d"),
 		*GroggyPointName.ToString(),
+		GroggyAmount,
+		AppliedGroggyAmount,
 		PreviousGroggyGauge,
 		GroggyGauge,
 		MaxGroggyGauge);
@@ -71,14 +75,41 @@ void UPBBossGroggyComponent::ResetGroggy()
 	UE_LOG(LogTemp, Warning, TEXT("Boss Groggy Reset."));
 }
 
-int32 UPBBossGroggyComponent::GetGroggyAmount(FName GroggyPointName) const
+FName UPBBossGroggyComponent::ResolveGroggyPointName(UPrimitiveComponent* HitComponent) const
+{
+	if (OwnerActor && HitComponent)
+	{
+		TArray<UPBBossHitPartComponent*> HitPartComponents;
+		OwnerActor->GetComponents<UPBBossHitPartComponent>(HitPartComponents);
+
+		for (const UPBBossHitPartComponent* HitPartComponent : HitPartComponents)
+		{
+			if (HitPartComponent && HitPartComponent->IsTargetHitComponent(HitComponent))
+			{
+				return HitPartComponent->GetHitPointName();
+			}
+		}
+	}
+
+	return NAME_None;
+}
+
+int32 UPBBossGroggyComponent::CalculateGroggyAmount(FName GroggyPointName, int32 GroggyAmount) const
+{
+	const int32 GroggyMultiplierPercent = GetGroggyMultiplierPercent(GroggyPointName);
+	return static_cast<int32>(FMath::Min<int64>(
+		static_cast<int64>(GroggyAmount) * GroggyMultiplierPercent / 100,
+		TNumericLimits<int32>::Max()));
+}
+
+int32 UPBBossGroggyComponent::GetGroggyMultiplierPercent(FName GroggyPointName) const
 {
 	if (const FBossGroggyPointData* GroggyPointData = GroggyPointDataMap.Find(GroggyPointName))
 	{
-		return GroggyPointData->GroggyAmount;
+		return GroggyPointData->GroggyMultiplierPercent;
 	}
 
-	return DefaultGroggyAmount;
+	return DefaultGroggyMultiplierPercent;
 }
 
 int32 UPBBossGroggyComponent::GetDisplayedGroggyGauge() const

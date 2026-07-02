@@ -2,6 +2,7 @@
 
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Actor/Boss/Component/PBBossHitPartComponent.h"
 
 UPBBossWeaknessComponent::UPBBossWeaknessComponent()
 {
@@ -63,55 +64,60 @@ void UPBBossWeaknessComponent::ApplyWeaknessCollisionState(bool IsEnabled)
 		return;
 	}
 
-	TArray<UPrimitiveComponent*> PrimitiveComponents;
-	OwnerActor->GetComponents<UPrimitiveComponent>(PrimitiveComponents);
+	TArray<UPBBossHitPartComponent*> HitPartComponents;
+	OwnerActor->GetComponents<UPBBossHitPartComponent>(HitPartComponents);
 
-	for (UPrimitiveComponent* PrimitiveComponent : PrimitiveComponents)
+	for (const UPBBossHitPartComponent* HitPartComponent : HitPartComponents)
 	{
-		if (!PrimitiveComponent || !IsWeaknessCollisionComponent(PrimitiveComponent))
+		if (!IsWeaknessHitPart(HitPartComponent))
 		{
 			continue;
 		}
 
-		const TObjectKey<UPrimitiveComponent> PrimitiveComponentKey(PrimitiveComponent);
-		if (!WeaknessCollisionEnabledMap.Contains(PrimitiveComponentKey))
+		TArray<UPrimitiveComponent*> HitCollisionComponents;
+		HitPartComponent->GetHitCollisionComponents(HitCollisionComponents);
+
+		for (UPrimitiveComponent* PrimitiveComponent : HitCollisionComponents)
 		{
-			WeaknessCollisionEnabledMap.Add(PrimitiveComponentKey, PrimitiveComponent->GetCollisionEnabled());
+			ApplyCollisionState(PrimitiveComponent, IsEnabled);
 		}
-
-		PrimitiveComponent->SetHiddenInGame(!IsEnabled, true);
-		PrimitiveComponent->SetVisibility(IsEnabled, true);
-
-		if (IsEnabled)
-		{
-			const ECollisionEnabled::Type* OriginalCollisionEnabled = WeaknessCollisionEnabledMap.Find(PrimitiveComponentKey);
-			PrimitiveComponent->SetCollisionEnabled(OriginalCollisionEnabled ? *OriginalCollisionEnabled : ECollisionEnabled::QueryAndPhysics);
-			continue;
-		}
-
-		if (PrimitiveComponent->GetCollisionEnabled() != ECollisionEnabled::NoCollision)
-		{
-			WeaknessCollisionEnabledMap.FindOrAdd(PrimitiveComponentKey) = PrimitiveComponent->GetCollisionEnabled();
-		}
-
-		PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 }
 
-bool UPBBossWeaknessComponent::IsWeaknessCollisionComponent(const UPrimitiveComponent* PrimitiveComponent) const
+bool UPBBossWeaknessComponent::IsWeaknessHitPart(const UPBBossHitPartComponent* HitPartComponent) const
+{
+	return HitPartComponent
+		&& HitPartComponent->GetHitPartType() == EPBBossHitPartType::WeakPoint
+		&& IsWeaknessPoint(HitPartComponent->GetHitPointName());
+}
+
+void UPBBossWeaknessComponent::ApplyCollisionState(UPrimitiveComponent* PrimitiveComponent, bool IsEnabled)
 {
 	if (!PrimitiveComponent)
 	{
-		return false;
+		return;
 	}
 
-	for (const FName ComponentTag : PrimitiveComponent->ComponentTags)
+	const TObjectKey<UPrimitiveComponent> PrimitiveComponentKey(PrimitiveComponent);
+	if (!WeaknessCollisionEnabledMap.Contains(PrimitiveComponentKey))
 	{
-		if (IsWeaknessPoint(ComponentTag))
-		{
-			return true;
-		}
+		WeaknessCollisionEnabledMap.Add(PrimitiveComponentKey, PrimitiveComponent->GetCollisionEnabled());
 	}
 
-	return false;
+	PrimitiveComponent->SetHiddenInGame(!IsEnabled, true);
+	PrimitiveComponent->SetVisibility(IsEnabled, true);
+
+	if (IsEnabled)
+	{
+		const ECollisionEnabled::Type* OriginalCollisionEnabled = WeaknessCollisionEnabledMap.Find(PrimitiveComponentKey);
+		PrimitiveComponent->SetCollisionEnabled(OriginalCollisionEnabled ? *OriginalCollisionEnabled : ECollisionEnabled::QueryAndPhysics);
+		return;
+	}
+
+	if (PrimitiveComponent->GetCollisionEnabled() != ECollisionEnabled::NoCollision)
+	{
+		WeaknessCollisionEnabledMap.FindOrAdd(PrimitiveComponentKey) = PrimitiveComponent->GetCollisionEnabled();
+	}
+
+	PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }

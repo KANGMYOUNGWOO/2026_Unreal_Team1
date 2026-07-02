@@ -1,7 +1,6 @@
 #include "PBBossBase.h"
 
 #include "Component/PBBossDamageComponent.h"
-#include "Component/PBBossDamageReceiverComponent.h"
 #include "Component/PBBossGroggyComponent.h"
 #include "Component/PBBossPatternComponent.h"
 #include "Component/PBBossPinballReactionComponent.h"
@@ -52,7 +51,6 @@ APBBossBase::APBBossBase()
 	BossStatComponent = CreateDefaultSubobject<UPBBossStatComponent>(TEXT("BossStatComponent"));
 	BossGroggyComponent = CreateDefaultSubobject<UPBBossGroggyComponent>(TEXT("BossGroggyComponent"));
 	BossDamageComponent = CreateDefaultSubobject<UPBBossDamageComponent>(TEXT("BossDamageComponent"));
-	BossDamageReceiverComponent = CreateDefaultSubobject<UPBBossDamageReceiverComponent>(TEXT("BossDamageReceiverComponent"));
 	BossPatternComponent = CreateDefaultSubobject<UPBBossPatternComponent>(TEXT("BossPatternComponent"));
 	BossPinballReactionComponent = CreateDefaultSubobject<UPBBossPinballReactionComponent>(TEXT("BossPinballReactionComponent"));
 	BossWeaknessComponent = CreateDefaultSubobject<UPBBossWeaknessComponent>(TEXT("BossWeaknessComponent"));
@@ -302,20 +300,34 @@ void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void APBBossBase::TakeBossDamage_Implementation(FName GroggyPointName, int32 DamageAmount)
+void APBBossBase::DamageToBoss_Implementation(
+	AActor* DamageSource,
+	int32 DamageAmount,
+	UPrimitiveComponent* HitComponent,
+	const FHitResult& Hit)
 {
 	if (!BossDamageComponent)
 	{
 		return;
 	}
 
-	BossDamageComponent->ApplyPointDamage(GroggyPointName, DamageAmount);
+	BossDamageComponent->ApplyHitPartDamage(DamageSource, HitComponent, DamageAmount, Hit);
 }
 
 void APBBossBase::OnGroggyTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Started."));
 	RequestBossState(EPBBossState::Groggy);
+}
+
+void APBBossBase::IncreaseGroggy_Implementation(int32 GroggyAmount, UPrimitiveComponent* HitComponent)
+{
+	if (!BossGroggyComponent || IsDead())
+	{
+		return;
+	}
+
+	BossGroggyComponent->ApplyGroggyDamage(GroggyAmount, HitComponent);
 }
 
 void APBBossBase::OnEnragedTriggered_Implementation()

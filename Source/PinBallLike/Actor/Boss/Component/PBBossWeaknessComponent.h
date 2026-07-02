@@ -5,6 +5,7 @@
 #include "UObject/ObjectKey.h"
 #include "PBBossWeaknessComponent.generated.h"
 
+class UPBBossHitPartComponent;
 class UPrimitiveComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBBossWeaknessOpenChangedSignature, bool, IsWeaknessOpen);
@@ -42,7 +43,8 @@ public:
 
 private:
 	void ApplyWeaknessCollisionState(bool IsEnabled);
-	bool IsWeaknessCollisionComponent(const UPrimitiveComponent* PrimitiveComponent) const;
+	bool IsWeaknessHitPart(const UPBBossHitPartComponent* HitPartComponent) const;
+	void ApplyCollisionState(UPrimitiveComponent* PrimitiveComponent, bool IsEnabled);
 
 	TMap<TObjectKey<UPrimitiveComponent>, ECollisionEnabled::Type> WeaknessCollisionEnabledMap;
 };
