@@ -18,6 +18,7 @@ public class PinBallLike : ModuleRules
 			"ModelViewViewModel",
 			"StateTreeModule",
 			"GameplayStateTreeModule", 
+			"GamePlayTags",
 			"Slate",
 			"SlateCore"
 		});
