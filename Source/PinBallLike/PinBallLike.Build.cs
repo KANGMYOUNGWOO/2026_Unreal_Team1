@@ -7,6 +7,7 @@ public class PinBallLike : ModuleRules
 	public PinBallLike(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+	
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core", 
 			"CoreUObject", 
@@ -16,14 +17,12 @@ public class PinBallLike : ModuleRules
 			"UMG", 
 			"ModelViewViewModel",
 			"StateTreeModule",
-			"GameplayStateTreeModule",
-			"GameplayTags",
-			"Slate", 
+			"GameplayStateTreeModule", 
+			"Slate",
 			"SlateCore"
 		});
 
-	
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[] {  });
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
