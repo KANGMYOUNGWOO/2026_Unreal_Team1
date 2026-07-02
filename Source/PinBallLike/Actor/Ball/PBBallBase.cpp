@@ -6,10 +6,9 @@
 #include "Component/PBBallHitReactionComponent.h"
 #include "Component/PBBallComboComponent.h"
 #include "Component/PBBallPhysicsComponent.h"
+#include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
-#include "PinBallLike/Actor/Common/Component/Resource/PBResourceTypes.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
-#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
 
@@ -43,24 +42,11 @@ APBBallBase::APBBallBase()
 	// Hit Reaction
 	HitReactionComponent = CreateDefaultSubobject<UPBBallHitReactionComponent>(TEXT("HitReactionComponent"));
 	HitReactionComponent->InitializeDependencies(PhysicsComponent.Get(), StatComponent.Get());
-
-	// @Test
-	DefaultStats.Emplace(PBStatNames::Mass, 1);
-	DefaultStats.Emplace(PBStatNames::Bounciness, 30);
-	DefaultStats.Emplace(PBStatNames::Size, 25);
-	DefaultStats.Emplace(PBStatNames::Attack, 0);
-	DefaultStats.Emplace(PBStatNames::StaggerPower, 0);
-	DefaultStats.Emplace(PBStatNames::ManaRegen, 0);
-
-	DefaultResources.Emplace(PBResourceNames::Health, 100.0f, 100.0f, 0.0f);
-	DefaultResources.Emplace(PBResourceNames::Mana, 50.0f, 50.0f, 1.0f);
-
-	DisplayName = "BaseBall";
 }
 
-void APBBallBase::ApplyStatData(const TArray<FPBBallStatData>& StatData)
+void APBBallBase::ApplyStatData(const TArray<FPBStatData>& StatData)
 {
-	for (const FPBBallStatData& Stat : StatData)
+	for (const FPBStatData& Stat : StatData)
 	{
 		if (Stat.StatName.IsNone())
 		{
@@ -71,9 +57,9 @@ void APBBallBase::ApplyStatData(const TArray<FPBBallStatData>& StatData)
 }
 
 
-void APBBallBase::ApplyResourceData(const TArray<FPBBallResourceData>& ResourceData)
+void APBBallBase::ApplyResourceData(const TArray<FPBResourceData>& ResourceData)
 {
-	for (const FPBBallResourceData& Resource : ResourceData)
+	for (const FPBResourceData& Resource : ResourceData)
 	{
 		if (Resource.ResourceName.IsNone())
 		{
@@ -81,6 +67,18 @@ void APBBallBase::ApplyResourceData(const TArray<FPBBallResourceData>& ResourceD
 		}
 		ResourceComponent->SetResource(Resource.ResourceName, Resource.Current, Resource.Max);
 		ResourceComponent->SetResourceRegenPerSecond(Resource.ResourceName, Resource.RegenPerSecond);
+	}
+}
+
+void APBBallBase::InitializeFromBallData(UPBBallDataAsset* InBallData, int32 InStarLevel)
+{
+	BallData = InBallData;
+	CurrentStarLevel = FMath::Max(InStarLevel, 1);
+
+	if (HasActorBegunPlay())
+	{
+		InitializeStatsFromBallData();
+		InitializeResourcesFromBallData();
 	}
 }
 
@@ -114,16 +112,40 @@ void APBBallBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	InitializeDefaultStats();
-	InitializeDefaultResources();
+	InitializeStatsFromBallData();
+	InitializeResourcesFromBallData();
 }
 
-void APBBallBase::InitializeDefaultStats()
+void APBBallBase::InitializeStatsFromBallData()
 {
-	ApplyStatData(DefaultStats);
+	if (!BallData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s has no BallData asset."), *GetName());
+		return;
+	}
+
+	const FPBBallStarLevelData* StarLevelData = BallData->StarLevelData.Find(CurrentStarLevel);
+	if (!StarLevelData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s has no StarLevelData for star level %d."), *GetName(), CurrentStarLevel);
+		return;
+	}
+
+	ApplyStatData(StarLevelData->BaseStats);
 }
 
-void APBBallBase::InitializeDefaultResources()
+void APBBallBase::InitializeResourcesFromBallData()
 {
-	ApplyResourceData(DefaultResources);
+	if (!BallData)
+	{
+		return;
+	}
+
+	const FPBBallStarLevelData* StarLevelData = BallData->StarLevelData.Find(CurrentStarLevel);
+	if (!StarLevelData)
+	{
+		return;
+	}
+
+	ApplyResourceData(StarLevelData->BaseResources);
 }

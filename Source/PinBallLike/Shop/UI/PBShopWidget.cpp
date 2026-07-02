@@ -62,11 +62,7 @@ void UPBShopWidget::UpdateSlotWidgetPositionsOnce()
 		CanvasSlot->SetPosition(WidgetPosition + FVector2D(0.f, -40.f));
 		CanvasSlot->SetPosition(WidgetPosition);
 		
-		UE_LOG(LogTemp, Warning, TEXT("Slot %d Projected=%d Pos=%s World=%s"),
-	i,
-	IsProjected,
-	*WidgetPosition.ToString(),
-	*TargetWorldLocation.ToString());
+		
 	}
 	
 }
@@ -116,5 +112,6 @@ void UPBShopWidget::UnActiveSlotWidget(int32 SlotIndex)
 {
 	ShopSlotWidgets[SlotIndex]->SetVisibility(ESlateVisibility::Collapsed);
 }
+
 
 

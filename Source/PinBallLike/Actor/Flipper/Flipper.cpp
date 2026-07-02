@@ -153,7 +153,6 @@ FVector AFlipper::CalculateForceDirection(const float DistanceAlpha) const
 void AFlipper::SetIsMove(const bool bIsMove)
 {
 	bIsMoveUp = bIsMove;
-	UE_LOG(LogTemp, Warning, TEXT("UP!"));
 }
 
 void AFlipper::ApplyForceToBalls(const float DeltaTime, const float MotionAlpha)
