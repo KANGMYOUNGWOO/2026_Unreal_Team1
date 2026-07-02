@@ -26,7 +26,7 @@ constexpr float TabLabelWidth = 96.0f;
 constexpr float DemoButtonLabelWidth = 82.0f;
 constexpr float DetailPanelWidth = 440.0f;
 
-FSlateBrush MakeColorBrush(const FLinearColor& Color, const FVector2D& ImageSize)
+FSlateBrush MakeCollectionColorBrush(const FLinearColor& Color, const FVector2D& ImageSize)
 {
 	FSlateBrush Brush;
 	Brush.ImageSize = ImageSize;
@@ -42,9 +42,9 @@ FButtonStyle MakeCollectionButtonStyle(
 	const FVector2D& ImageSize)
 {
 	FButtonStyle Style;
-	Style.SetNormal(MakeColorBrush(NormalColor, ImageSize));
-	Style.SetHovered(MakeColorBrush(HoveredColor, ImageSize));
-	Style.SetPressed(MakeColorBrush(PressedColor, ImageSize));
+	Style.SetNormal(MakeCollectionColorBrush(NormalColor, ImageSize));
+	Style.SetHovered(MakeCollectionColorBrush(HoveredColor, ImageSize));
+	Style.SetPressed(MakeCollectionColorBrush(PressedColor, ImageSize));
 	Style.SetNormalPadding(FMargin(12.0f, 8.0f));
 	Style.SetPressedPadding(FMargin(12.0f, 10.0f, 12.0f, 6.0f));
 	return Style;
@@ -70,7 +70,7 @@ FButtonStyle MakeTabButtonStyle(bool bActive)
 		FVector2D(128.0f, 36.0f));
 }
 
-FLinearColor GetAccentColor(EPBCollectionCategory Category, EPBCollectionState State)
+FLinearColor GetCollectionAccentColor(EPBCollectionCategory Category, EPBCollectionState State)
 {
 	if (State == EPBCollectionState::Locked)
 	{
@@ -217,14 +217,14 @@ void UPBCollectionWidget::BuildDefaultWidgetTree()
 	}
 
 	UBorder* RootBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("RootBorder"));
-	RootBorder->SetBrush(MakeColorBrush(FLinearColor(0.015f, 0.018f, 0.024f, 1.0f), FVector2D(1920.0f, 1080.0f)));
+	RootBorder->SetBrush(MakeCollectionColorBrush(FLinearColor(0.015f, 0.018f, 0.024f, 1.0f), FVector2D(1920.0f, 1080.0f)));
 	RootBorder->SetPadding(FMargin(26.0f, 24.0f));
 	WidgetTree->RootWidget = RootBorder;
 
 	UBorder* WindowFrameBorder = WidgetTree->ConstructWidget<UBorder>(
 		UBorder::StaticClass(),
 		TEXT("WindowFrameBorder"));
-	WindowFrameBorder->SetBrush(MakeColorBrush(FLinearColor(0.025f, 0.045f, 0.055f, 0.96f), FVector2D(1606.0f, 979.0f)));
+	WindowFrameBorder->SetBrush(MakeCollectionColorBrush(FLinearColor(0.025f, 0.045f, 0.055f, 0.96f), FVector2D(1606.0f, 979.0f)));
 	WindowFrameBorder->SetPadding(FMargin(34.0f, 34.0f, 34.0f, 34.0f));
 	RootBorder->SetContent(WindowFrameBorder);
 
@@ -295,7 +295,7 @@ void UPBCollectionWidget::BuildBody(UVerticalBox* RootBox)
 	}
 
 	UBorder* ListBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ListBorder"));
-	ListBorder->SetBrush(MakeColorBrush(FLinearColor(0.045f, 0.065f, 0.078f, 0.94f), FVector2D(520.0f, 720.0f)));
+	ListBorder->SetBrush(MakeCollectionColorBrush(FLinearColor(0.045f, 0.065f, 0.078f, 0.94f), FVector2D(520.0f, 720.0f)));
 	ListBorder->SetPadding(FMargin(18.0f, 18.0f, 18.0f, 18.0f));
 	BodyBox->AddChildToHorizontalBox(ListBorder);
 	if (UHorizontalBoxSlot* ListSlot = Cast<UHorizontalBoxSlot>(ListBorder->Slot))
@@ -387,7 +387,7 @@ void UPBCollectionWidget::BuildDetailPanel(UHorizontalBox* BodyBox)
 	}
 
 	UBorder* DetailBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DetailBorder"));
-	DetailBorder->SetBrush(MakeColorBrush(FLinearColor(0.04f, 0.055f, 0.065f, 0.96f), FVector2D(DetailPanelWidth, 720.0f)));
+	DetailBorder->SetBrush(MakeCollectionColorBrush(FLinearColor(0.04f, 0.055f, 0.065f, 0.96f), FVector2D(DetailPanelWidth, 720.0f)));
 	DetailBorder->SetPadding(FMargin(24.0f, 24.0f, 24.0f, 20.0f));
 	DetailSizeBox->AddChild(DetailBorder);
 
@@ -398,8 +398,8 @@ void UPBCollectionWidget::BuildDetailPanel(UHorizontalBox* BodyBox)
 	DetailScrollBox->AddChild(DetailBox);
 
 	DetailAccentBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DetailAccentBorder"));
-	DetailAccentBorder->SetBrush(MakeColorBrush(
-		GetAccentColor(EPBCollectionCategory::Bumper, EPBCollectionState::Unlocked),
+	DetailAccentBorder->SetBrush(MakeCollectionColorBrush(
+		GetCollectionAccentColor(EPBCollectionCategory::Bumper, EPBCollectionState::Unlocked),
 		FVector2D(DetailPanelWidth - 128.0f, 16.0f)));
 	DetailBox->AddChildToVerticalBox(DetailAccentBorder);
 	if (UVerticalBoxSlot* AccentSlot = Cast<UVerticalBoxSlot>(DetailAccentBorder->Slot))
