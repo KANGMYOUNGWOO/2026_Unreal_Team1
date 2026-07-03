@@ -4,9 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Struct/Bumper/PBBumperRuntimeState.h"
 #include "PinBallLike/Struct/Bumper/PBBumperState.h"
+#include "PinBallLike/Struct/Bumper/PBBumperTableRow.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
-#include "PinBallLike/Struct/Bumper/PBBumperTypes.h"
 #include "PBModularBumperBase.generated.h"
 
 class APBBallBase;
@@ -111,7 +112,7 @@ protected:
 	TObjectPtr<USceneComponent> SceneRoot;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
-	FPBBumperRuntimeData BumperData;
+	FPBBumperTableRow BumperData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
@@ -125,11 +126,8 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<TObjectPtr<APBBumperTriggerActorBase>> SpawnedTriggerActors;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
-	int32 CurrentTriggerCount = 0;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper")
-	EPBBumperState CurrentState = EPBBumperState::Idle;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime")
+	FPBBumperRuntimeState RuntimeState;
 
 private:
 	bool FindBumperPositionTransform(EPBBumperPositionId PositionId, FTransform& OutTransform) const;

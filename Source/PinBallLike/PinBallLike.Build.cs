@@ -21,7 +21,8 @@ public class PinBallLike : ModuleRules
 			"GameplayTags",
 			"Slate",
 			"SlateCore",
-			"AssetRegistry"
+			"AssetRegistry",
+			"DeveloperSettings"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
