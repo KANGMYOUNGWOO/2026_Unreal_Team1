@@ -20,7 +20,8 @@ public class PinBallLike : ModuleRules
 			"GameplayStateTreeModule", 
 			"Slate",
 			"SlateCore",
-			"AssetRegistry"
+			"AssetRegistry",
+			"DeveloperSettings"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
