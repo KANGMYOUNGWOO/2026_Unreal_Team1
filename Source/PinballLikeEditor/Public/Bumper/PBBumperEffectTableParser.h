@@ -3,37 +3,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GoogleSheetParserBase.h"
+#include "Bumper/PBSheetParserPreset.h"
+#include "PBTableParserBase.h"
 #include "PBBumperEffectTableParser.generated.h"
 
-class UDataTable;
 class UPBBumperEffectDataAsset;
 
 UCLASS()
-class PINBALLLIKEEDITOR_API UPBBumperEffectTableParser : public UGoogleSheetParserBase
+class PINBALLLIKEEDITOR_API UPBBumperEffectTableParser : public UPBTableParserBase
 {
 	GENERATED_BODY()
 
 public:
 	UPBBumperEffectTableParser();
 
-	virtual void OnParseComplete() override;
-
 protected:
+	virtual const TCHAR* GetParserName() const override;
+	virtual UScriptStruct* GetRowStruct() const override;
+	virtual bool ParseRow(FName RowName, const TMap<FString, FString>& RowData) override;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
-	TObjectPtr<UDataTable> TargetTable;
+	FPBSheetAssetPathPreset DataAssetPreset;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet|Asset", meta = (ContentDir))
-	FDirectoryPath DataAssetFolderPath;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet|Asset")
-	FString AssetNameFormat = TEXT("DA_Effect_{0}");
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet|Class", meta = (ContentDir))
-	FDirectoryPath EffectClassFolderPath;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet|Class")
-	FString EffectClassNameFormat = TEXT("BP_{0}");
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset EffectClassPreset;
 
 	UPBBumperEffectDataAsset* SetupEffectDataAsset(FName RowName) const;
 };

@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Struct/Bumper/PBBumperRuntimeState.h"
 #include "PinBallLike/Struct/Bumper/PBBumperState.h"
-#include "PinBallLike/Struct/Bumper/PBBumperTableRow.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
 #include "PBModularBumperBase.generated.h"
 

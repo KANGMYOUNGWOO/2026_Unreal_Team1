@@ -3,7 +3,7 @@
 
 #include "PBBumperDataAsset.h"
 
-#include "PinBallLike/DataAsset/Bumper/PBBumperAssetIds.h"
+#include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
 
 FPrimaryAssetId UPBBumperDataAsset::GetPrimaryAssetId() const
 {
