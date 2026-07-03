@@ -77,7 +77,7 @@ void APBModularBumperBase::ActivateBumper(APBBallBase* Ball)
 
 void APBModularBumperBase::FinishActivation()
 {
-	if (CurrentState != EPBBumperState::Activated)
+	if (RuntimeState.CurrentState != EPBBumperState::Activated)
 	{
 		return;
 	}
@@ -98,45 +98,45 @@ void APBModularBumperBase::FinishActivation()
 
 void APBModularBumperBase::ResetTriggerCount()
 {
-	CurrentTriggerCount = 0;
+	RuntimeState.CurrentTriggerCount = 0;
 	NotifyTriggerCountChanged();
 }
 
 void APBModularBumperBase::SetBumperState(const EPBBumperState NewState)
 {
-	if (CurrentState == NewState)
+	if (RuntimeState.CurrentState == NewState)
 	{
 		return;
 	}
 
-	const EPBBumperState PreviousState = CurrentState;
-	CurrentState = NewState;
+	const EPBBumperState PreviousState = RuntimeState.CurrentState;
+	RuntimeState.CurrentState = NewState;
 
 	for (APBBumperTriggerActorBase* TriggerActor : SpawnedTriggerActors)
 	{
 		if (IsValid(TriggerActor))
 		{
-			TriggerActor->SetTriggerState(CurrentState);
+			TriggerActor->SetTriggerState(RuntimeState.CurrentState);
 		}
 	}
 
-	OnBumperStateChanged.Broadcast(PreviousState, CurrentState);
+	OnBumperStateChanged.Broadcast(PreviousState, RuntimeState.CurrentState);
 }
 
 bool APBModularBumperBase::CanAccumulateTrigger() const
 {
-	return CurrentState == EPBBumperState::Idle;
+	return RuntimeState.CurrentState == EPBBumperState::Idle;
 }
 
 bool APBModularBumperBase::CanActivate() const
 {
-	return CurrentState == EPBBumperState::Idle
-		&& CurrentTriggerCount >= GetRequiredTriggerCount();
+	return RuntimeState.CurrentState == EPBBumperState::Idle
+		&& RuntimeState.CurrentTriggerCount >= GetRequiredTriggerCount();
 }
 
 int32 APBModularBumperBase::GetCurrentTriggerCount() const
 {
-	return CurrentTriggerCount;
+	return RuntimeState.CurrentTriggerCount;
 }
 
 int32 APBModularBumperBase::GetRequiredTriggerCount() const
@@ -146,7 +146,7 @@ int32 APBModularBumperBase::GetRequiredTriggerCount() const
 
 EPBBumperState APBModularBumperBase::GetBumperState() const
 {
-	return CurrentState;
+	return RuntimeState.CurrentState;
 }
 
 void APBModularBumperBase::CreateBumperEffect()
@@ -171,8 +171,11 @@ void APBModularBumperBase::AddTriggerCount(APBBallBase* Ball, const int32 Amount
 	}
 
 	const int32 RequiredTriggerCount = GetRequiredTriggerCount();
-	const int32 PreviousTriggerCount = CurrentTriggerCount;
-	CurrentTriggerCount = FMath::Clamp(CurrentTriggerCount + Amount, 0, RequiredTriggerCount);
+	const int32 PreviousTriggerCount = RuntimeState.CurrentTriggerCount;
+	RuntimeState.CurrentTriggerCount = FMath::Clamp(
+		RuntimeState.CurrentTriggerCount + Amount,
+		0,
+		RequiredTriggerCount);
 
 	NotifyTriggerCountChanged();
 
@@ -185,7 +188,7 @@ void APBModularBumperBase::AddTriggerCount(APBBallBase* Ball, const int32 Amount
 
 	// 이번 증가로 처음 조건을 만족했을 때만 Ready 이벤트를 보낸다.
 	// TODO 준비는 따로 필요없을듯 하다. 즉시 시전되면 될듯.
-	if (PreviousTriggerCount < RequiredTriggerCount && CurrentTriggerCount >= RequiredTriggerCount)
+	if (PreviousTriggerCount < RequiredTriggerCount && RuntimeState.CurrentTriggerCount >= RequiredTriggerCount)
 	{
 		OnBumperReady();
 	}
@@ -225,7 +228,7 @@ APBBumperTriggerActorBase* APBModularBumperBase::SpawnTriggerActor(
 	TriggerActor->InitializeTrigger(this);
 	UGameplayStatics::FinishSpawningActor(TriggerActor, SpawnTransform);
 	TriggerActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-	TriggerActor->SetTriggerState(CurrentState);
+	TriggerActor->SetTriggerState(RuntimeState.CurrentState);
 	SpawnedTriggerActors.Add(TriggerActor);
 
 	return TriggerActor;
@@ -292,8 +295,8 @@ bool APBModularBumperBase::FindBumperPositionTransform(
 void APBModularBumperBase::NotifyTriggerCountChanged()
 {
 	const int32 RequiredTriggerCount = GetRequiredTriggerCount();
-	OnBumperTriggerCountChanged.Broadcast(CurrentTriggerCount, RequiredTriggerCount);
-	OnTriggerCountChanged(CurrentTriggerCount, RequiredTriggerCount);
+	OnBumperTriggerCountChanged.Broadcast(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
+	OnTriggerCountChanged(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
 }
 
 void APBModularBumperBase::ApplyBumperEffect_Implementation(APBBallBase* Ball)
