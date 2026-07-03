@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "PinBallLike/Struct/Bumper/PBBumperEffectRow.h"
-#include "PinBallLike/Struct/Bumper/PBBumperTableRow.h"
-#include "PinBallLike/Struct/Bumper/PBBumperTriggerRow.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PBTableDataSubsystem.generated.h"
 
 class UDataTable;
