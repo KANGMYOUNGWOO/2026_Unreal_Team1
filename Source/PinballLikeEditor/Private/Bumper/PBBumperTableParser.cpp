@@ -3,102 +3,64 @@
 
 #include "Bumper/PBBumperTableParser.h"
 
-#include "Bumper/PBSheetParserUtils.h"
-#include "PathDataLoadHelper.h"
-#include "PinBallLike/DataAsset/Bumper/PBBumperDataAsset.h"
-#include "PinBallLike/Struct/Bumper/PBBumperTableRow.h"
+#include "PBSheetParserUtils.h"
+#include "Engine/Texture2D.h"
+#include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 
 using namespace PBSheetParserUtils;
 
 UPBBumperTableParser::UPBBumperTableParser()
 {
-	DataAssetFolderPath.Path = TEXT("/Game/DataAsset/Bumper");
+	DataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Bumper");
+	DataAssetPreset.NameFormat = TEXT("DA_Bumper_{0}");
+	IconPreset.NameFormat = TEXT("T_{0}");
 }
 
-void UPBBumperTableParser::OnParseComplete()
+const TCHAR* UPBBumperTableParser::GetParserName() const
 {
-	UE_LOG(LogTemp, Log, TEXT("[BumperSheet][Bumper] OnParseComplete. RowCount=%d"), GetRowCount());
-	LogHeaders(TEXT("Bumper"), GetHeaders());
+	return TEXT("Bumper");
+}
 
-	if (!ValidateTargetTable(TargetTable, FPBBumperTableRow::StaticStruct()))
+UScriptStruct* UPBBumperTableParser::GetRowStruct() const
+{
+	return FPBBumperTableRow::StaticStruct();
+}
+
+bool UPBBumperTableParser::ParseRow(const FName RowName, const TMap<FString, FString>& RowData)
+{
+	FPBBumperTableRow NewRow;
+	NewRow.DisplayName = FText::FromString(RowData.FindRef(TEXT("DisplayName")));
+	NewRow.Description = FText::FromString(RowData.FindRef(TEXT("Description")));
+	NewRow.BumperType = ParseEnumValue(RowData.FindRef(TEXT("BumperType")), EPBBumperType::Rebound);
+	NewRow.TriggerID = FName(*TrimCell(RowData.FindRef(TEXT("TriggerID"))));
+	NewRow.RequiredTriggerCount = FMath::Max(
+		ParseIntValue(RowData.FindRef(TEXT("RequireTriggerCount")), 1),
+		1);
+	NewRow.EffectID = FName(*TrimCell(RowData.FindRef(TEXT("EffectID"))));
+	if (UPBBumperDataAsset* BumperDataAsset = SetupBumperDataAsset(RowName))
 	{
-		LogTargetTableError(TEXT("Bumper"), TargetTable, FPBBumperTableRow::StaticStruct());
-		return;
+		NewRow.BumperDataAsset = TSoftObjectPtr<UPBBumperDataAsset>(BumperDataAsset);
 	}
 
-	ResetTargetTable(TargetTable);
-	int32 AddedRowCount = 0;
-
-	for (int32 RowIndex = 0; RowIndex < GetRowCount(); ++RowIndex)
-	{
-		TMap<FString, FString> RowData;
-		if (!GetRowAt(RowIndex, RowData))
-		{
-			continue;
-		}
-
-		const FString RowNameString = RowData.FindRef(TEXT("RowName"));
-		if (IsUnsetValue(RowNameString))
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[BumperSheet][Bumper] Skip row %d because RowName is empty."), RowIndex);
-			continue;
-		}
-
-		const FName RowName(*TrimCell(RowNameString));
-		FPBBumperTableRow NewRow;
-		NewRow.DisplayName = FText::FromString(RowData.FindRef(TEXT("DisplayName")));
-		NewRow.Description = FText::FromString(RowData.FindRef(TEXT("Description")));
-		NewRow.BumperType = ParseEnumValue(RowData.FindRef(TEXT("BumperType")), EPBBumperType::Rebound);
-		NewRow.TriggerID = FName(*TrimCell(RowData.FindRef(TEXT("TriggerID"))));
-		NewRow.RequiredTriggerCount = FMath::Max(
-			ParseIntValue(RowData.FindRef(TEXT("RequireTriggerCount")), 1),
-			1);
-		NewRow.EffectID = FName(*TrimCell(RowData.FindRef(TEXT("EffectID"))));
-		if (UPBBumperDataAsset* BumperDataAsset = SetupBumperDataAsset(RowName))
-		{
-			NewRow.BumperDataAsset = TSoftObjectPtr<UPBBumperDataAsset>(BumperDataAsset);
-		}
-
-		TargetTable->AddRow(RowName, NewRow);
-		++AddedRowCount;
-	}
-
-	MarkTargetTableDirty(TargetTable);
-	UE_LOG(LogTemp, Log, TEXT("[BumperSheet][Bumper] Added %d rows to %s."),
-		AddedRowCount,
-		*GetNameSafe(TargetTable));
+	TargetTable->AddRow(RowName, NewRow);
+	return true;
 }
 
 UPBBumperDataAsset* UPBBumperTableParser::SetupBumperDataAsset(const FName RowName) const
 {
-	const FString RowNameString = RowName.ToString();
-	if (IsUnsetValue(RowNameString)
-		|| IsUnsetValue(DataAssetFolderPath.Path)
-		|| IsUnsetValue(AssetNameFormat))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[BumperSheet][Bumper] Skip DataAsset setup because asset settings are empty. RowName=%s"),
-			*RowNameString);
-		return nullptr;
-	}
-
-	const FString AssetName = MakeGeneratedAssetName(AssetNameFormat, RowName);
 	UPBBumperDataAsset* BumperDataAsset =
-		UPathDataLoadHelper::GetOrCreateAsset<UPBBumperDataAsset>(DataAssetFolderPath.Path, AssetName);
+		GetOrCreateDataAsset<UPBBumperDataAsset>(DataAssetPreset, RowName, TEXT("Bumper"));
 	if (!IsValid(BumperDataAsset))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[BumperSheet][Bumper] Failed to get or create DataAsset. RowName=%s AssetName=%s"),
-			*RowNameString,
-			*AssetName);
 		return nullptr;
 	}
 
-	// PrimaryAssetId가 에셋명이 아닌 시트 RowName을 사용하도록 저장함
-	BumperDataAsset->RowName = RowName;
-	(void)BumperDataAsset->MarkPackageDirty();
-	UE_LOG(LogTemp, Log, TEXT("[BumperSheet][Bumper] Linked DataAsset. RowName=%s Asset=%s PrimaryAssetId=%s"),
-		*RowNameString,
-		*GetNameSafe(BumperDataAsset),
-		*BumperDataAsset->GetPrimaryAssetId().ToString());
+	if (IconPreset.IsValid())
+	{
+		BumperDataAsset->Icon = FindObject<UTexture2D>(IconPreset, RowName);
+		(void)BumperDataAsset->MarkPackageDirty();
+	}
 
 	return BumperDataAsset;
 }

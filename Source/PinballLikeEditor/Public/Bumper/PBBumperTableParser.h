@@ -3,31 +3,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GoogleSheetParserBase.h"
+#include "Bumper/PBSheetParserPreset.h"
+#include "PBTableParserBase.h"
 #include "PBBumperTableParser.generated.h"
 
-class UDataTable;
 class UPBBumperDataAsset;
 
 UCLASS()
-class PINBALLLIKEEDITOR_API UPBBumperTableParser : public UGoogleSheetParserBase
+class PINBALLLIKEEDITOR_API UPBBumperTableParser : public UPBTableParserBase
 {
 	GENERATED_BODY()
 
 public:
 	UPBBumperTableParser();
 
-	virtual void OnParseComplete() override;
-
 protected:
+	virtual const TCHAR* GetParserName() const override;
+	virtual UScriptStruct* GetRowStruct() const override;
+	virtual bool ParseRow(FName RowName, const TMap<FString, FString>& RowData) override;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
-	TObjectPtr<UDataTable> TargetTable;
+	FPBSheetAssetPathPreset DataAssetPreset;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet|Asset", meta = (ContentDir))
-	FDirectoryPath DataAssetFolderPath;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet|Asset")
-	FString AssetNameFormat = TEXT("DA_Bumper_{0}");
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset IconPreset;
 
 	UPBBumperDataAsset* SetupBumperDataAsset(FName RowName) const;
 };
