@@ -8,8 +8,6 @@
 #include "PinBallLike/Struct/Bumper/PBBumperTypes.h"
 #include "PBBumperTriggerRow.generated.h"
 
-class UPBBumperTriggerDataAsset;
-
 USTRUCT(BlueprintType)
 struct PINBALLLIKE_API FPBBumperTriggerRow : public FTableRowBase
 {
@@ -24,6 +22,4 @@ struct PINBALLLIKE_API FPBBumperTriggerRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Trigger")
 	FText TriggerDescription;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Trigger")
-	TSoftObjectPtr<UPBBumperTriggerDataAsset> TriggerDataAsset;
 };

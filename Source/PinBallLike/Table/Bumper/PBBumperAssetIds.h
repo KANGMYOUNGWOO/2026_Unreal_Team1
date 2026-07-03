@@ -11,8 +11,6 @@ namespace PBBumperAssetIds
 	namespace Type
 	{
 		inline const FPrimaryAssetType BumperData(TEXT("BumperData"));
-		inline const FPrimaryAssetType TriggerData(TEXT("BumperTriggerData"));
-		inline const FPrimaryAssetType EffectData(TEXT("BumperEffectData"));
 	}
 
 	// RowNames for BumperTable

@@ -7,8 +7,6 @@
 #include "PBTableParserBase.h"
 #include "PBBumperEffectTableParser.generated.h"
 
-class UPBBumperEffectDataAsset;
-
 UCLASS()
 class PINBALLLIKEEDITOR_API UPBBumperEffectTableParser : public UPBTableParserBase
 {
@@ -23,10 +21,10 @@ protected:
 	virtual bool ParseRow(FName RowName, const TMap<FString, FString>& RowData) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
-	FPBSheetAssetPathPreset DataAssetPreset;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
 	FPBSheetAssetPathPreset EffectClassPreset;
 
-	UPBBumperEffectDataAsset* SetupEffectDataAsset(FName RowName) const;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset BumperDataAssetPreset;
+
+	void UpdateLinkedBumperDataAssets(FName EffectId) const;
 };

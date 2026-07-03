@@ -21,6 +21,9 @@ public:
 
 	bool IsTableDataReady() const;
 
+	// 로딩 Subsystem이 준비한 테이블을 주입한다. 이 Subsystem은 조회 책임만 가진다.
+	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
+
 #pragma region Bumper
 	bool FindBumperRow(FName RowName, FPBBumperTableRow& OutRow) const;
 	bool FindBumperTriggerRow(FName RowName, FPBBumperTriggerRow& OutRow) const;
@@ -32,8 +35,6 @@ public:
 private:
 	template <typename RowType>
 	bool FindTableRow(const UDataTable* Table, FName RowName, RowType& OutRow, const TCHAR* Context) const;
-
-	void InitializeBumperTables();
 
 #pragma region Bumper
 	UPROPERTY()

@@ -7,8 +7,6 @@
 #include "PinBallLike/Struct/Bumper/PBBumperTypes.h"
 #include "PBBumperEffectRow.generated.h"
 
-class UPBBumperEffectDataAsset;
-
 USTRUCT(BlueprintType)
 struct PINBALLLIKE_API FPBBumperEffectRow : public FTableRowBase
 {
@@ -23,6 +21,4 @@ struct PINBALLLIKE_API FPBBumperEffectRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
 	FText Description;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
-	TSoftObjectPtr<UPBBumperEffectDataAsset> EffectDataAsset;
 };

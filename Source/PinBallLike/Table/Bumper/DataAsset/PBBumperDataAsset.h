@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
+#include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "UObject/PrimaryAssetId.h"
 #include "PBBumperDataAsset.generated.h"
 
@@ -24,4 +26,10 @@ public:
 	/** UI 표시용 아이콘 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Visual", meta = (AssetBundles = "UI"))
 	TSoftObjectPtr<UTexture2D> Icon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger", meta = (AssetBundles = "Gameplay"))
+	TSoftClassPtr<APBBumperTriggerActorBase> TriggerClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
+	TSoftClassPtr<UPBBumperEffectBase> EffectClass;
 };

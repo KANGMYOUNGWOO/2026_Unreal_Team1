@@ -4,13 +4,10 @@
 #include "PBTableDataSubsystem.h"
 
 #include "Engine/DataTable.h"
-#include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
 
 void UPBTableDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-
-	InitializeBumperTables();
 }
 
 bool UPBTableDataSubsystem::IsTableDataReady() const
@@ -20,19 +17,16 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 		&& IsValid(BumperEffectTable);
 }
 
-void UPBTableDataSubsystem::InitializeBumperTables()
+void UPBTableDataSubsystem::SetBumperTables(
+	UDataTable* InBumperTable,
+	UDataTable* InBumperTriggerTable,
+	UDataTable* InBumperEffectTable)
 {
-	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
-	if (!IsValid(Settings))
-	{
-		return;
-	}
+	BumperTable = InBumperTable;
+	BumperTriggerTable = InBumperTriggerTable;
+	BumperEffectTable = InBumperEffectTable;
 
-	BumperTable = Settings->BumperTable.LoadSynchronous();
-	BumperTriggerTable = Settings->BumperTriggerTable.LoadSynchronous();
-	BumperEffectTable = Settings->BumperEffectTable.LoadSynchronous();
-
-	UE_LOG(LogTemp, Log, TEXT("[TableData] Bumper tables loaded. Bumper=%s Trigger=%s Effect=%s"),
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Bumper tables assigned. Bumper=%s Trigger=%s Effect=%s"),
 		*GetNameSafe(BumperTable),
 		*GetNameSafe(BumperTriggerTable),
 		*GetNameSafe(BumperEffectTable));
