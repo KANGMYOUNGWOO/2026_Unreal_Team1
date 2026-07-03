@@ -210,7 +210,7 @@ void APBShopActor::RefreshViewModel()
 void APBShopActor::BeginPlay()
 {
 	Super::BeginPlay();
-	OpenShop();
+	//OpenShop();
 }
 
 
