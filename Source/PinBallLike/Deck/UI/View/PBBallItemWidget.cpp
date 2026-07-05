@@ -9,6 +9,8 @@
 #include "PinBallLike/Deck/UI/ViewModel/PBBallItemViewModel.h"
 #include "View/MVVMView.h"
 
+FPBOnBallItemDragStarted UPBBallItemWidget::OnBallItemDragStarted;
+
 void UPBBallItemWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
@@ -113,10 +115,12 @@ void UPBBallItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const 
 
 	DragDropOperation->InitializeBallDrag(ViewData.BallInstanceId, ViewData.SourceSlotType, ViewData.SourceSlotIndex);
 	DragDropOperation->Pivot = EDragPivot::MouseDown;
+	OnBallItemDragStarted.Broadcast(ViewData.BallInstanceId);
 
 	if (UPBBallItemWidget* DragVisualWidget = CreateWidget<UPBBallItemWidget>(this, GetClass()))
 	{
 		DragVisualWidget->InitializeBallItem(ViewData);
+		DragVisualWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
 		DragDropOperation->DefaultDragVisual = DragVisualWidget;
 	}
 

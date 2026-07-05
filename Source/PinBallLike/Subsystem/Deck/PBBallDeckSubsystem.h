@@ -16,6 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsReordered);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsRotated);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBOnBenchSlotChanged, int32, SlotIndex, int32, BallInstanceId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnBenchSlotsSwapped);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPBOnBallSold, int32, BallInstanceId, int32, BallId, int32, SellPrice);
 
 UCLASS()
 class PINBALLLIKE_API UPBBallDeckSubsystem : public UGameInstanceSubsystem
@@ -36,6 +37,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "BallDeck|DragDrop")
 	bool MoveBallBetweenSlots(EPBBallDeckSlotType SourceType, int32 SourceIndex,
 							  EPBBallDeckSlotType TargetType, int32 TargetIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "BallDeck|Sell")
+	int32 GetSellPrice(int32 BallInstanceId);
+
+	UFUNCTION(BlueprintCallable, Category = "BallDeck|Sell")
+	bool SellBall(int32 BallInstanceId, int32& OutSellPrice);
+
+	UPROPERTY(BlueprintAssignable, Category = "BallDeck|Sell")
+	FPBOnBallSold OnBallSold;
 
 	bool FindBallLocation(int32 BallInstanceId, FPBBallDeckSlot& OutLocation) const;
 	bool IsSlotValid(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;

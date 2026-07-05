@@ -5,6 +5,7 @@
 
 #include "PBBallDeckFusionService.h"
 #include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
+#include "PinBallLike/Subsystem/BallDataStruct.h"
 #include "PinBallLike/Subsystem/BallDataSubsystem.h"
 
 void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -311,6 +312,46 @@ bool UPBBallDeckSubsystem::MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotTy
 		OnBenchSlotChanged.Broadcast(TargetSlotIndex, SourceBallInstanceId);
 	}
 
+	return true;
+}
+
+int32 UPBBallDeckSubsystem::GetSellPrice(int32 BallInstanceId)
+{
+	const FPBBallInstanceData* BallInstanceData = GetOwnedBallData(BallInstanceId);
+	if (!BallInstanceData || !BallInstanceData->IsValid())
+	{
+		return 0;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UBallDataSubsystem* BallDataSubsystem = GameInstance ? GameInstance->GetSubsystem<UBallDataSubsystem>() : nullptr;
+	const FBallDataStruct* BallData = BallDataSubsystem ? BallDataSubsystem->GetBallData(BallInstanceData->BallId) : nullptr;
+	return BallData ? BallData->BallPrice : 0;
+}
+
+bool UPBBallDeckSubsystem::SellBall(int32 BallInstanceId, int32& OutSellPrice)
+{
+	OutSellPrice = GetSellPrice(BallInstanceId);
+	if (OutSellPrice <= 0)
+	{
+		return false;
+	}
+
+	const FPBBallInstanceData* BallInstanceData = GetOwnedBallData(BallInstanceId);
+	if (!BallInstanceData || !BallInstanceData->IsValid())
+	{
+		OutSellPrice = 0;
+		return false;
+	}
+
+	const int32 BallId = BallInstanceData->BallId;
+	if (!RemoveOwnedBall(BallInstanceId))
+	{
+		OutSellPrice = 0;
+		return false;
+	}
+
+	OnBallSold.Broadcast(BallInstanceId, BallId, OutSellPrice);
 	return true;
 }
 
