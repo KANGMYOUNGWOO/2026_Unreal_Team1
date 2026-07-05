@@ -1,10 +1,10 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "PBDragMessage.generated.h"
+#include "PBDeckDragMessage.generated.h"
 
 USTRUCT(BlueprintType)
-struct FPBDragStartedMessage
+struct FPBDeckDragStartedMessage
 {
 	GENERATED_BODY()
 
@@ -16,19 +16,7 @@ struct FPBDragStartedMessage
 };
 
 USTRUCT(BlueprintType)
-struct FPBDragMovedMessage
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly)
-	int32 ItemId = INDEX_NONE;
-
-	UPROPERTY(BlueprintReadOnly)
-	FVector2D ScreenPosition = FVector2D::ZeroVector;
-};
-
-USTRUCT(BlueprintType)
-struct FPBDragDroppedMessage
+struct FPBDeckDragEndedMessage
 {
 	GENERATED_BODY()
 
@@ -39,5 +27,5 @@ struct FPBDragDroppedMessage
 	UObject* SourceObject = nullptr;
 
 	UPROPERTY(BlueprintReadOnly)
-	UObject* TargetObject = nullptr;
+	bool bCancelled = false;
 };

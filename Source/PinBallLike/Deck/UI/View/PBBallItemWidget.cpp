@@ -4,12 +4,13 @@
 #include "PBBallItemWidget.h"
 
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "InputCoreTypes.h"
 #include "PBBallDragDropOperation.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Deck/UI/ViewModel/PBBallItemViewModel.h"
+#include "PinBallLike/Struct/Deck/PBDeckDragMessage.h"
 #include "View/MVVMView.h"
-
-FPBOnBallItemDragStarted UPBBallItemWidget::OnBallItemDragStarted;
 
 void UPBBallItemWidget::NativeOnInitialized()
 {
@@ -115,7 +116,7 @@ void UPBBallItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const 
 
 	DragDropOperation->InitializeBallDrag(ViewData.BallInstanceId, ViewData.SourceSlotType, ViewData.SourceSlotIndex);
 	DragDropOperation->Pivot = EDragPivot::MouseDown;
-	OnBallItemDragStarted.Broadcast(ViewData.BallInstanceId);
+	DragDropOperation->Payload = this;
 
 	if (UPBBallItemWidget* DragVisualWidget = CreateWidget<UPBBallItemWidget>(this, GetClass()))
 	{
@@ -125,4 +126,11 @@ void UPBBallItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const 
 	}
 
 	OutOperation = DragDropOperation;
+
+	FPBDeckDragStartedMessage Message;
+	Message.ItemId = ViewData.BallInstanceId;
+	Message.SourceObject = this;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_UI_Deck_Drag_Started,
+		Message);
 }

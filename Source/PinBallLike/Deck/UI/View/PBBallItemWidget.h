@@ -11,7 +11,6 @@
 class UDragDropOperation;
 class UPBBallItemViewModel;
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FPBOnBallItemDragStarted, int32);
 /**
  * 
  */
@@ -21,8 +20,6 @@ class PINBALLLIKE_API UPBBallItemWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	static FPBOnBallItemDragStarted OnBallItemDragStarted;
-
 	UFUNCTION(BlueprintCallable, Category = "BallDeck")
 	void InitializeBallItem(const FPBBallItemViewData& InViewData);
 	void SetSourceSlot(EPBBallDeckSlotType InSourceSlotType, int32 InSourceSlotIndex);

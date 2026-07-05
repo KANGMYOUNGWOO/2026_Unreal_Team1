@@ -4,8 +4,9 @@
 #include "PBSellZoneWidget.h"
 
 #include "PBBallDragDropOperation.h"
-#include "PBBallItemWidget.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Deck/UI/ViewModel/PBSellZoneViewModel.h"
+#include "PinBallLike/Struct/Deck/PBDeckDragMessage.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "View/MVVMView.h"
 
@@ -14,12 +15,22 @@ void UPBSellZoneWidget::NativeOnInitialized()
 	Super::NativeOnInitialized();
 
 	EnsureSellZoneViewModel();
-	BindBallItemDragEvents();
+	DragStartedHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBDeckDragStartedMessage>(
+		GameplayTags::Event_UI_Deck_Drag_Started,
+		this,
+		&UPBSellZoneWidget::HandleBallItemDragStarted);
+	DragEndedHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBDeckDragEndedMessage>(
+		GameplayTags::Event_UI_Deck_Drag_Ended,
+		this,
+		&UPBSellZoneWidget::HandleBallItemDragEnded);
+
+	SetSellEnabled(false);
 }
 
 void UPBSellZoneWidget::NativeDestruct()
 {
-	UnbindBallItemDragEvents();
+	DragStartedHandle.Unregister();
+	DragEndedHandle.Unregister();
 
 	Super::NativeDestruct();
 }
@@ -27,6 +38,7 @@ void UPBSellZoneWidget::NativeDestruct()
 void UPBSellZoneWidget::SetSellEnabled(bool bInSellEnabled)
 {
 	bSellEnabled = bInSellEnabled;
+	SetVisibility(bSellEnabled ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	EnsureSellZoneViewModel();
 	if (SellZoneViewModel)
 	{
@@ -85,20 +97,15 @@ bool UPBSellZoneWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDro
 	return bSold;
 }
 
-void UPBSellZoneWidget::BindBallItemDragEvents()
+void UPBSellZoneWidget::HandleBallItemDragStarted(FGameplayTag, const FPBDeckDragStartedMessage& Message)
 {
-	UPBBallItemWidget::OnBallItemDragStarted.RemoveAll(this);
-	UPBBallItemWidget::OnBallItemDragStarted.AddUObject(this, &UPBSellZoneWidget::HandleBallItemDragStarted);
+	SetSellEnabled(true);
+	SetSellBallInstanceId(Message.ItemId);
 }
 
-void UPBSellZoneWidget::UnbindBallItemDragEvents()
+void UPBSellZoneWidget::HandleBallItemDragEnded(FGameplayTag, const FPBDeckDragEndedMessage&)
 {
-	UPBBallItemWidget::OnBallItemDragStarted.RemoveAll(this);
-}
-
-void UPBSellZoneWidget::HandleBallItemDragStarted(int32 BallInstanceId)
-{
-	SetSellBallInstanceId(BallInstanceId);
+	SetSellEnabled(false);
 }
 
 void UPBSellZoneWidget::EnsureSellZoneViewModel()
