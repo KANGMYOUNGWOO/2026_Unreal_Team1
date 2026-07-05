@@ -20,10 +20,19 @@ public class PinBallLike : ModuleRules
 			"GameplayStateTreeModule", 
 			"Slate",
 			"SlateCore",
-			"AssetRegistry"
+			"AssetRegistry",
+			"DeveloperSettings",
+			"GameplayTags",
+			"GameplayMessageRuntime"
+			
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			
+		});
+			
+		
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");

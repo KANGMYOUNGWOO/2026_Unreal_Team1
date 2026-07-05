@@ -14,6 +14,11 @@
 				"Engine",
 				"UMG"
 			]
+		},
+		{
+			"Name": "PinballLikeEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
@@ -38,6 +43,10 @@
 		},
 		{
 			"Name": "ModelViewViewModelPreview",
+			"Enabled": true
+		},
+		{
+			"Name": "GoogleSheetLoader",
 			"Enabled": true
 		}
 	]
