@@ -8,6 +8,7 @@
 
 class APBBallBase;
 class UPBBallDeckSubsystem;
+class UPBBallDataAsset;
 class UPBSnakeFormationComponent;
 class UStaticMeshComponent;
 
@@ -33,7 +34,7 @@ public:
 	bool IsLauncherActive() const { return bLauncherActive; }
 	
 	UFUNCTION()
-	void HandleDeploymentSlotChanged(int32 SlotIndex, APBBallBase* Ball);
+	void HandleDeploymentSlotChanged(int32 SlotIndex, int32 BallInstanceId);
 	UFUNCTION()
 	void HandleDeploymentSlotsReordered();
 	UFUNCTION()
@@ -53,6 +54,8 @@ private:
 	void ApplyPartyRoles();
 	void ClearPartyRoles();
 	void CompactPartyBalls();
+	void DestroyPartyBalls();
+	APBBallBase* SpawnBallFromInstanceId(int32 BallInstanceId);
 	
 	UPROPERTY(VisibleAnywhere, Category = "Party|Launch")
 	TObjectPtr<UStaticMeshComponent> LauncherVisualComponent;

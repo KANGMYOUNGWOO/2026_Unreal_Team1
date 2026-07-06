@@ -6,9 +6,9 @@
 #include "PinBallLike/Actor/Boss/Component/PBBossStatComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossWeaknessComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
-#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 #include "PinBallLike/Interface/Comboable.h"
 #include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Struct/Common/PBStatTypes.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 UPBBossDamageComponent::UPBBossDamageComponent()

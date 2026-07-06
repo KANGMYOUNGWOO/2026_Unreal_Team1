@@ -28,7 +28,7 @@ enum class EPBBumperRoleType : uint8
 	Attack,
 	Spawn,
 	Support,
-	Area
+	Zone
 };
 
 UENUM(BlueprintType)
@@ -38,34 +38,4 @@ enum class EPBBumperEffectType : uint8
 	Buff,
 	Area,
 	Summon
-};
-
-USTRUCT(BlueprintType)
-struct PINBALLLIKE_API FPBBumperRuntimeData
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
-	FName BumperName = NAME_None;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
-	FText Description;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
-	EPBBumperType BumperType = EPBBumperType::Rebound;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
-	EPBBumperTriggerType TriggerType = EPBBumperTriggerType::HitCount;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
-	EPBBumperRoleType RoleType = EPBBumperRoleType::Attack;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
-	EPBBumperEffectType EffectType = EPBBumperEffectType::Instant;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper", meta = (ClampMin = "1"))
-	int32 RequiredTriggerCount = 3;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper", meta = (ClampMin = "1", ClampMax = "3"))
-	int32 StarGrade = 1;
 };

@@ -4,10 +4,14 @@
 #include "AssetStreamingSubsystem.h"
 #include "Engine/AssetManager.h"
 
+
+
 void UAssetStreamingSubsystem::Deinitialize()
 {
 	ReleaseBallMesh();
 	Super::Deinitialize();
+	
+	
 }
 
 void UAssetStreamingSubsystem::ReleaseBallMesh()

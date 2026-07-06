@@ -14,4 +14,7 @@ class PINBALLLIKE_API UPBCheatManager : public UCheatManager
 {
 	GENERATED_BODY()
 	
+public:
+	UFUNCTION(exec)
+	void AddBenchBall(int32 BallId);
 };

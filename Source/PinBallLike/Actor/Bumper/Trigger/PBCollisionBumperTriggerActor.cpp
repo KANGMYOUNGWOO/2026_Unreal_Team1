@@ -6,9 +6,9 @@
 #include "Components/PrimitiveComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
-#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Interface/StatProvider.h"
+#include "PinBallLike/Struct/Common/PBStatTypes.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBCollisionBumperTriggerActor::APBCollisionBumperTriggerActor()

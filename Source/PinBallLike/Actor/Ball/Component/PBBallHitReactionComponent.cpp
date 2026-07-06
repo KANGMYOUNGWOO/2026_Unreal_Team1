@@ -6,9 +6,9 @@
 #include "PBBallPhysicsComponent.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
-#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
 #include "PinBallLike/Interface/Damageable.h"
 #include "PinBallLike/Interface/StatProvider.h"
+#include "PinBallLike/Struct/Common/PBStatTypes.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 

@@ -3,7 +3,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
-#include "PinBallLike/Actor/Common/Component/Stat/PBStatTypes.h"
+#include "PinBallLike/Struct/Common/PBStatTypes.h"
 
 UPBBallPhysicsComponent::UPBBallPhysicsComponent()
 {
