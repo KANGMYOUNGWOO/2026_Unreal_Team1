@@ -29,7 +29,7 @@ void APBChoiceNodeManager::BuildNodesFromSpline(
 
     const int32 PointCount = TargetSpline->GetNumberOfSplinePoints();
 
-    // 0번 포인트는 출발점이므로 노드를 만들지 않는다.
+    
     for (int32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
         const EPBChoiceNodeType NodeType =
