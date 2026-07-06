@@ -38,11 +38,12 @@ void UPBBossSnakeChargePattern::CancelPatternInternal_Implementation(APBBossBase
 {
 	ClearPatternTimers();
 	DestroyChargeTelegraph();
-	SetPinballMoveIgnored(false);
 	SetPinballCollisionDamageBlocked(false);
+	ApplySnakeChargePose(Boss, 0.0f);
 	SetChargePatternState(EPBBossSnakeChargePatternState::None);
-	TargetPinballActor = nullptr;
-	ReboundedDistance = 0.0f;
+
+	ChargeProgressDistance = 0.0f;
+	ReboundProgressAlpha = 0.0f;
 	ChargeAimElapsedSeconds = 0.0f;
 	ChargeAimDurationSeconds = 0.0f;
 	GroggyEndTimeSeconds = 0.0f;
@@ -118,8 +119,7 @@ void UPBBossSnakeChargePattern::StartAiming(APBBossBase* Boss)
 		return;
 	}
 
-	StartChargeAim(TelegraphDurationSeconds * 0.5f);
-
+	StartChargeAim(TelegraphDurationSeconds);
 	Boss->GetWorldTimerManager().SetTimer(
 		ChargeTelegraphTimerHandle,
 		this,
@@ -133,7 +133,6 @@ void UPBBossSnakeChargePattern::FinishAiming()
 	ClearChargeAimTimers();
 	ClearChargeTelegraphTimer();
 	DestroyChargeTelegraph();
-	SetChargePatternState(EPBBossSnakeChargePatternState::Charging);
 
 	if (APBBossBase* Boss = GetOwnerBoss())
 	{
@@ -160,14 +159,13 @@ void UPBBossSnakeChargePattern::PrepareCharge(APBBossBase* Boss)
 	}
 
 	ChargeStartLocation = Boss->GetActorLocation();
-	ChargeStartRotation = Boss->GetActorRotation();
-	ChargedDistance = 0.0f;
-	ReboundedDistance = 0.0f;
+	ChargeProgressDistance = 0.0f;
+	ReboundProgressAlpha = 0.0f;
 	ChargeAimElapsedSeconds = 0.0f;
 	ChargeAimDurationSeconds = 0.0f;
 
-	TargetPinballActor = FindPinballActor();
 	RefreshChargeDirection(Boss);
+	ApplySnakeChargePose(Boss, 0.0f);
 }
 
 void UPBBossSnakeChargePattern::RefreshChargeDirection(APBBossBase* Boss)
@@ -177,7 +175,7 @@ void UPBBossSnakeChargePattern::RefreshChargeDirection(APBBossBase* Boss)
 		return;
 	}
 
-	if (IsValid(TargetPinballActor))
+	if (AActor* TargetPinballActor = FindPinballActor())
 	{
 		ChargeDirection = TargetPinballActor->GetActorLocation() - ChargeStartLocation;
 		ChargeDirection.Z = 0.0f;
@@ -192,14 +190,16 @@ void UPBBossSnakeChargePattern::RefreshChargeDirection(APBBossBase* Boss)
 
 	if (ChargeDirection.IsNearlyZero())
 	{
-		ChargeDirection = Boss->GetActorForwardVector();
-		ChargeDirection.Z = 0.0f;
-		ChargeDirection = ChargeDirection.GetSafeNormal();
-	}
-
-	if (ChargeDirection.IsNearlyZero())
-	{
 		ChargeDirection = FVector::ForwardVector;
+	}
+}
+
+void UPBBossSnakeChargePattern::ApplySnakeChargePose(APBBossBase* Boss, float Alpha) const
+{
+	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
+	{
+		const float ClampedAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+		SnakeBoss->SetSnakeChargePose(ClampedAlpha > 0.0f, ChargeDirection, ClampedAlpha);
 	}
 }
 
@@ -264,13 +264,6 @@ void UPBBossSnakeChargePattern::StartChargeAim(float AimDurationSeconds)
 		&UPBBossSnakeChargePattern::UpdateChargeAim,
 		UpdateIntervalSeconds,
 		true);
-
-	Boss->GetWorldTimerManager().SetTimer(
-		ChargeAimFinishTimerHandle,
-		this,
-		&UPBBossSnakeChargePattern::FinishChargeAim,
-		AimDurationSeconds,
-		false);
 }
 
 void UPBBossSnakeChargePattern::UpdateChargeAim()
@@ -282,26 +275,18 @@ void UPBBossSnakeChargePattern::UpdateChargeAim()
 	}
 
 	RefreshChargeDirection(Boss);
-	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
-	{
-		SnakeBoss->FaceHeadDirection(ChargeDirection);
-		const float PullAlpha = ChargeAimDurationSeconds > 0.0f
-			? ChargeAimElapsedSeconds / ChargeAimDurationSeconds
-			: 1.0f;
-		SnakeBoss->PullBodyToHead(PullAlpha);
-	}
-
-	ChargeAimElapsedSeconds = FMath::Min(
-		ChargeAimElapsedSeconds + UpdateIntervalSeconds,
-		ChargeAimDurationSeconds);
-
+	ApplySnakeChargePose(Boss, 0.0f);
+	ChargeAimElapsedSeconds = FMath::Min(ChargeAimElapsedSeconds + UpdateIntervalSeconds, ChargeAimDurationSeconds);
 	UpdateChargeTelegraph();
 }
 
 void UPBBossSnakeChargePattern::FinishChargeAim()
 {
-	ChargeAimElapsedSeconds = ChargeAimDurationSeconds;
-	UpdateChargeAim();
+	if (APBBossBase* Boss = GetOwnerBoss())
+	{
+		ApplySnakeChargePose(Boss, 0.0f);
+	}
+
 	ClearChargeAimTimers();
 }
 
@@ -339,12 +324,8 @@ void UPBBossSnakeChargePattern::StartCharge()
 
 	SetChargePatternState(EPBBossSnakeChargePatternState::Charging);
 	SetPinballCollisionDamageBlocked(true);
-	SetPinballMoveIgnored(true);
-	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
-	{
-		SnakeBoss->FaceHeadDirection(ChargeDirection);
-		SnakeBoss->CollapseBodyToHead();
-	}
+	ChargeProgressDistance = 0.0f;
+	ApplySnakeChargePose(Boss, 0.0f);
 
 	Boss->GetWorldTimerManager().SetTimer(
 		ChargeTimerHandle,
@@ -364,20 +345,22 @@ void UPBBossSnakeChargePattern::UpdateCharge()
 		return;
 	}
 
-	const float MoveDistance = FMath::Min(ChargeSpeed * UpdateIntervalSeconds, ChargeMaxDistance - ChargedDistance);
-	if (MoveDistance <= 0.0f)
+	const float ChargeDistance = FMath::Min(ChargeSpeed * UpdateIntervalSeconds, ChargeMaxDistance - ChargeProgressDistance);
+	if (ChargeDistance <= 0.0f)
 	{
 		HandleChargeBlocked(FHitResult());
 		return;
 	}
 
-	FHitResult Hit;
-	MoveBossWithFloorIgnored(Boss, ChargeDirection * MoveDistance, Hit);
-	ChargedDistance += MoveDistance;
+	ChargeProgressDistance += ChargeDistance;
+	const float ChargeAlpha = ChargeMaxDistance > 0.0f
+		? ChargeProgressDistance / ChargeMaxDistance
+		: 1.0f;
+	ApplySnakeChargePose(Boss, ChargeAlpha);
 
-	if (Hit.bBlockingHit || ChargedDistance >= ChargeMaxDistance)
+	if (ChargeProgressDistance >= ChargeMaxDistance)
 	{
-		HandleChargeBlocked(Hit);
+		HandleChargeBlocked(FHitResult());
 	}
 }
 
@@ -408,8 +391,8 @@ void UPBBossSnakeChargePattern::StartRebound()
 	}
 
 	SetChargePatternState(EPBBossSnakeChargePatternState::Rebounding);
-	ReboundedDistance = 0.0f;
-	if (ReboundDistance <= 0.0f || ReboundSeconds <= 0.0f)
+	ReboundProgressAlpha = 0.0f;
+	if (ReboundSeconds <= 0.0f)
 	{
 		FinishRebound();
 		return;
@@ -433,19 +416,17 @@ void UPBBossSnakeChargePattern::UpdateRebound()
 		return;
 	}
 
-	const float ReboundSpeed = ReboundDistance / ReboundSeconds;
-	const float MoveDistance = FMath::Min(ReboundSpeed * UpdateIntervalSeconds, ReboundDistance - ReboundedDistance);
-	if (MoveDistance <= 0.0f)
+	const float ReboundAlpha = UpdateIntervalSeconds / ReboundSeconds;
+	if (ReboundAlpha <= 0.0f)
 	{
 		FinishRebound();
 		return;
 	}
 
-	FHitResult Hit;
-	MoveBossWithFloorIgnored(Boss, -ChargeDirection * MoveDistance, Hit);
-	ReboundedDistance += MoveDistance;
+	ReboundProgressAlpha = FMath::Min(ReboundProgressAlpha + ReboundAlpha, 1.0f);
+	ApplySnakeChargePose(Boss, 1.0f - ReboundProgressAlpha);
 
-	if (Hit.bBlockingHit || ReboundedDistance >= ReboundDistance)
+	if (ReboundProgressAlpha >= 1.0f)
 	{
 		FinishRebound();
 	}
@@ -462,6 +443,7 @@ void UPBBossSnakeChargePattern::FinishRebound()
 	}
 
 	Boss->GetWorldTimerManager().ClearTimer(ReboundTimerHandle);
+	ApplySnakeChargePose(Boss, 0.0f);
 	StartGroggy();
 }
 
@@ -507,119 +489,10 @@ void UPBBossSnakeChargePattern::FinishGroggy()
 	Boss->GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
 	GroggyEndTimeSeconds = 0.0f;
 	PausedGroggyRemainingSeconds = 0.0f;
-	StartReturn();
-}
-
-void UPBBossSnakeChargePattern::StartReturn()
-{
-	APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss)
-	{
-		SetChargePatternState(EPBBossSnakeChargePatternState::None);
-		FinishPattern();
-		return;
-	}
-
-	SetChargePatternState(EPBBossSnakeChargePatternState::Returning);
-	SetPinballCollisionDamageBlocked(true);
-
-	if (ReturnSpeed <= 0.0f)
-	{
-		FinishReturn();
-		return;
-	}
-
-	Boss->GetWorldTimerManager().SetTimer(
-		ReturnTimerHandle,
-		this,
-		&UPBBossSnakeChargePattern::UpdateReturn,
-		UpdateIntervalSeconds,
-		true);
-}
-
-void UPBBossSnakeChargePattern::UpdateReturn()
-{
-	APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss)
-	{
-		SetChargePatternState(EPBBossSnakeChargePatternState::None);
-		FinishPattern();
-		return;
-	}
-
-	const FVector CurrentLocation = Boss->GetActorLocation();
-	FVector ReturnDirection = ChargeStartLocation - CurrentLocation;
-	ReturnDirection.Z = 0.0f;
-
-	const float RemainingDistance = ReturnDirection.Size();
-	if (RemainingDistance <= ReturnAcceptanceRadius)
-	{
-		FinishReturn();
-		return;
-	}
-
-	ReturnDirection = ReturnDirection.GetSafeNormal();
-
-	const float MoveDistance = FMath::Min(ReturnSpeed * UpdateIntervalSeconds, RemainingDistance);
-	FHitResult Hit;
-	MoveBossWithFloorIgnored(Boss, ReturnDirection * MoveDistance, Hit);
-
-	if (Hit.bBlockingHit)
-	{
-		FinishReturn();
-	}
-}
-
-void UPBBossSnakeChargePattern::FinishReturn()
-{
-	APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss)
-	{
-		SetChargePatternState(EPBBossSnakeChargePatternState::None);
-		FinishPattern();
-		return;
-	}
-
-	Boss->GetWorldTimerManager().ClearTimer(ReturnTimerHandle);
-	SetPinballMoveIgnored(false);
-	Boss->SetActorLocation(ChargeStartLocation, false);
-	Boss->SetActorRotation(ChargeStartRotation);
+	ApplySnakeChargePose(Boss, 0.0f);
 	SetPinballCollisionDamageBlocked(false);
 	SetChargePatternState(EPBBossSnakeChargePatternState::None);
-	TargetPinballActor = nullptr;
 	FinishPattern();
-}
-
-bool UPBBossSnakeChargePattern::MoveBossWithFloorIgnored(APBBossBase* Boss, const FVector& MoveOffset, FHitResult& OutHit) const
-{
-	if (!Boss)
-	{
-		return false;
-	}
-
-	const FVector PreviousLocation = Boss->GetActorLocation();
-	Boss->AddActorWorldOffset(MoveOffset, true, &OutHit);
-
-	if (!IsFloorHit(OutHit))
-	{
-		return OutHit.bBlockingHit;
-	}
-
-	Boss->SetActorLocation(PreviousLocation + MoveOffset, false);
-	OutHit = FHitResult();
-	return false;
-}
-
-bool UPBBossSnakeChargePattern::IsFloorHit(const FHitResult& Hit) const
-{
-	if (!Hit.bBlockingHit)
-	{
-		return false;
-	}
-
-	const AActor* HitActor = Hit.GetActor();
-	const FString HitActorName = IsValid(HitActor) ? HitActor->GetName() : FString();
-	return Hit.ImpactNormal.Z > 0.5f || HitActorName.Contains(TEXT("Floor"));
 }
 
 void UPBBossSnakeChargePattern::ClearPatternTimers()
@@ -635,7 +508,6 @@ void UPBBossSnakeChargePattern::ClearPatternTimers()
 	Boss->GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
 	Boss->GetWorldTimerManager().ClearTimer(ReboundTimerHandle);
 	Boss->GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
-	Boss->GetWorldTimerManager().ClearTimer(ReturnTimerHandle);
 }
 
 void UPBBossSnakeChargePattern::ClearChargeTelegraphTimer()
@@ -656,24 +528,6 @@ void UPBBossSnakeChargePattern::DestroyChargeTelegraph()
 
 	SpawnedChargeTelegraph->DestroyTelegraph();
 	SpawnedChargeTelegraph = nullptr;
-}
-
-void UPBBossSnakeChargePattern::SetPinballMoveIgnored(bool IsIgnored) const
-{
-	APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss || !TargetPinballActor)
-	{
-		return;
-	}
-
-	if (IsIgnored)
-	{
-		Boss->MoveIgnoreActorAdd(TargetPinballActor);
-	}
-	else
-	{
-		Boss->MoveIgnoreActorRemove(TargetPinballActor);
-	}
 }
 
 void UPBBossSnakeChargePattern::SetPinballCollisionDamageBlocked(bool IsBlocked) const
