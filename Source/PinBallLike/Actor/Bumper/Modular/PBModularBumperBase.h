@@ -70,6 +70,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Effect")
 	void CreateBumperEffect();
 
+	void InitializeBumper(
+		const FPBBumperTableRow& InBumperData,
+		const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
+		TSubclassOf<UPBBumperEffectBase> InEffectClass,
+		const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms);
+
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
 	FPBModularBumperTriggerCountChangedSignature OnBumperTriggerCountChanged;
 
@@ -84,10 +90,12 @@ protected:
 	APBBumperTriggerActorBase* SpawnTriggerActor(
 		TSubclassOf<APBBumperTriggerActorBase> TriggerClass,
 		EPBBumperPositionId PositionId);
+	
 	void SpawnTriggerActors(
 		TSubclassOf<APBBumperTriggerActorBase> TriggerClass,
 		const TArray<EPBBumperPositionId>& PositionIds);
 	void SpawnTriggerActorsFromInfo(const FPBBumperTriggerSpawnInfo& SpawnInfo);
+	
 	void ClearTriggerActors();
 
 #pragma region Blueprint Events
@@ -125,6 +133,9 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<TObjectPtr<APBBumperTriggerActorBase>> SpawnedTriggerActors;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
+	TMap<EPBBumperPositionId, FTransform> AnchorTransforms;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime")
 	FPBBumperRuntimeState RuntimeState;

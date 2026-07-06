@@ -4,13 +4,30 @@
 #include "PBBallItemWidget.h"
 
 #include "Blueprint/WidgetBlueprintLibrary.h"
-#include "Components/Image.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "InputCoreTypes.h"
 #include "PBBallDragDropOperation.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Deck/UI/ViewModel/PBBallItemViewModel.h"
+#include "PinBallLike/Struct/Deck/PBDeckDragMessage.h"
+#include "View/MVVMView.h"
+
+void UPBBallItemWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	EnsureItemViewModel();
+}
 
 void UPBBallItemWidget::InitializeBallItem(const FPBBallItemViewData& InViewData)
 {
 	ViewData = InViewData;
+	EnsureItemViewModel();
+	if (ItemViewModel)
+	{
+		ItemViewModel->SetBallItemViewData(ViewData);
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("BallItemWidget InitializeBallItem. Widget=%s BallInstanceId=%d BallId=%d StarLevel=%d SlotType=%d SlotIndex=%d Icon=%s"),
 		*GetNameSafe(this),
 		ViewData.BallInstanceId,
@@ -19,45 +36,55 @@ void UPBBallItemWidget::InitializeBallItem(const FPBBallItemViewData& InViewData
 		static_cast<int32>(ViewData.SourceSlotType),
 		ViewData.SourceSlotIndex,
 		*GetNameSafe(ViewData.Icon));
-	RefreshBallItem();
 }
 
 void UPBBallItemWidget::SetSourceSlot(EPBBallDeckSlotType InSourceSlotType, int32 InSourceSlotIndex)
 {
 	ViewData.SourceSlotType = InSourceSlotType;
 	ViewData.SourceSlotIndex = InSourceSlotIndex;
+	if (ItemViewModel)
+	{
+		ItemViewModel->SetBallItemViewData(ViewData);
+	}
 }
 
-void UPBBallItemWidget::RefreshBallItem()
+void UPBBallItemWidget::EnsureItemViewModel()
 {
-	if (Image_Ball)
+	if (!ItemViewModel)
 	{
-		if (ViewData.Icon)
-		{
-			Image_Ball->SetBrushFromTexture(ViewData.Icon, true);
-			UE_LOG(LogTemp, Warning, TEXT("BallItemWidget RefreshBallItem set icon. Widget=%s Image=%s Icon=%s"),
-				*GetNameSafe(this),
-				*GetNameSafe(Image_Ball),
-				*GetNameSafe(ViewData.Icon));
-		}
-		else
-		{
-			Image_Ball->SetBrush(FSlateBrush());
-			UE_LOG(LogTemp, Warning, TEXT("BallItemWidget RefreshBallItem cleared icon. Widget=%s Image=%s BallInstanceId=%d BallId=%d"),
-				*GetNameSafe(this),
-				*GetNameSafe(Image_Ball),
-				ViewData.BallInstanceId,
-				ViewData.BallId);
-		}
+		ItemViewModel = NewObject<UPBBallItemViewModel>(this);
 	}
-	else
+
+	if (ItemViewModel)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("BallItemWidget RefreshBallItem failed. Image_Ball is null. Widget=%s BallInstanceId=%d BallId=%d Icon=%s"),
+		ApplyViewModelToWidget();
+	}
+}
+
+bool UPBBallItemWidget::ApplyViewModelToWidget()
+{
+	if (!ItemViewModel)
+	{
+		return false;
+	}
+
+	UMVVMView* View = GetExtension<UMVVMView>();
+	if (!View)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallItemWidget ApplyViewModelToWidget failed. Widget=%s MVVMView extension is null"),
+			*GetNameSafe(this));
+		return false;
+	}
+
+	TScriptInterface<INotifyFieldValueChanged> ViewModelInterface(ItemViewModel);
+	const bool bResult = View->SetViewModelByClass(ViewModelInterface);
+	if (!bResult)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallItemWidget ApplyViewModelToWidget failed. Widget=%s ViewModel=%s"),
 			*GetNameSafe(this),
-			ViewData.BallInstanceId,
-			ViewData.BallId,
-			*GetNameSafe(ViewData.Icon));
+			*GetNameSafe(ItemViewModel));
 	}
+	return bResult;
 }
 
 FReply UPBBallItemWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -89,12 +116,21 @@ void UPBBallItemWidget::NativeOnDragDetected(const FGeometry& InGeometry, const 
 
 	DragDropOperation->InitializeBallDrag(ViewData.BallInstanceId, ViewData.SourceSlotType, ViewData.SourceSlotIndex);
 	DragDropOperation->Pivot = EDragPivot::MouseDown;
+	DragDropOperation->Payload = this;
 
 	if (UPBBallItemWidget* DragVisualWidget = CreateWidget<UPBBallItemWidget>(this, GetClass()))
 	{
 		DragVisualWidget->InitializeBallItem(ViewData);
+		DragVisualWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
 		DragDropOperation->DefaultDragVisual = DragVisualWidget;
 	}
 
 	OutOperation = DragDropOperation;
+
+	FPBDeckDragStartedMessage Message;
+	Message.ItemId = ViewData.BallInstanceId;
+	Message.SourceObject = this;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_UI_Deck_Drag_Started,
+		Message);
 }

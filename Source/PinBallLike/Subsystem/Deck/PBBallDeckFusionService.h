@@ -41,15 +41,32 @@ struct PINBALLLIKE_API FPBBallDeckFusionRequest
 			&& ConsumedBallInstanceIds.Num() == RequiredFusionBallCount
 			&& BallId != 0
 			&& SourceStarLevel > 0
-			&& ResultStarLevel > SourceStarLevel;
+			&& SourceStarLevel < MaxFusionStarLevel
+			&& ResultStarLevel > SourceStarLevel
+			&& ResultStarLevel <= MaxFusionStarLevel;
 	}
 
 	static constexpr int32 RequiredFusionBallCount = 3;
+	static constexpr int32 MaxFusionStarLevel = 3;
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBOnBallFusionStarted, const FPBBallDeckFusionRequest&, FusionRequest);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBOnBallFusionCompleted, const FPBBallDeckFusionRequest&, FusionRequest);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBOnBallFusionCanceled, const FPBBallDeckFusionRequest&, FusionRequest);
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBallDeckFusionBatch
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck|Fusion")
+	TArray<FPBBallDeckFusionRequest> FusionRequests;
+
+	bool IsValid() const
+	{
+		return !FusionRequests.IsEmpty();
+	}
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBOnBallFusionStarted, const FPBBallDeckFusionBatch&, FusionBatch);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBOnBallFusionCompleted, const FPBBallDeckFusionBatch&, FusionBatch);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBOnBallFusionCanceled, const FPBBallDeckFusionBatch&, FusionBatch);
 
 UCLASS()
 class PINBALLLIKE_API UPBBallDeckFusionService : public UObject
@@ -83,13 +100,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "BallDeck|Fusion")
 	FPBBallDeckFusionRequest GetPendingFusion() const;
 
+	UFUNCTION(BlueprintPure, Category = "BallDeck|Fusion")
+	FPBBallDeckFusionBatch GetPendingFusionBatch() const;
+
 private:
-	bool BuildNextFusionRequest(FPBBallDeckFusionRequest& OutFusionRequest) const;
-	bool ApplyFusionRequest(const FPBBallDeckFusionRequest& FusionRequest) const;
+	bool StartNextFusionBatch();
+	bool BuildFusionRequests(TArray<FPBBallDeckFusionRequest>& OutFusionRequests) const;
+	bool ValidateFusionRequests(const TArray<FPBBallDeckFusionRequest>& FusionRequests) const;
+	bool ApplyFusionRequests(const TArray<FPBBallDeckFusionRequest>& FusionRequests) const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallDeckSubsystem> DeckSubsystem;
 
 	UPROPERTY(Transient)
-	FPBBallDeckFusionRequest PendingFusion;
+	TArray<FPBBallDeckFusionRequest> PendingFusionRequests;
 };

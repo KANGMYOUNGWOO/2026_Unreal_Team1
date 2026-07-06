@@ -3,34 +3,26 @@
 
 #include "PBBallItemViewModel.h"
 
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
-
-void UPBBallItemViewModel::SetBall(APBBallBase* InBall)
+void UPBBallItemViewModel::SetBallItemViewData(const FPBBallItemViewData& InViewData)
 {
-	Ball = InBall;
-	RefreshFromBall();
+	UE_MVVM_SET_PROPERTY_VALUE(bHasBall, InViewData.IsValid());
+	UE_MVVM_SET_PROPERTY_VALUE(StarLevel, InViewData.StarLevel);
+	UE_MVVM_SET_PROPERTY_VALUE(IconTexture, InViewData.Icon);
+	UE_MVVM_SET_PROPERTY_VALUE(Progress, CalculateStarProgress(InViewData.StarLevel));
 }
 
 void UPBBallItemViewModel::ClearBall()
 {
-	Ball = nullptr;
-	RefreshFromBall();
+	UE_MVVM_SET_PROPERTY_VALUE(bHasBall, false);
+	UE_MVVM_SET_PROPERTY_VALUE(StarLevel, 1);
+	UE_MVVM_SET_PROPERTY_VALUE(IconTexture, nullptr);
+	UE_MVVM_SET_PROPERTY_VALUE(Progress, 1.0f);
 }
 
-void UPBBallItemViewModel::RefreshFromBall()
+float UPBBallItemViewModel::CalculateStarProgress(int32 InStarLevel) const
 {
-	const bool bNewHasBall = IsValid(Ball);
-	UE_MVVM_SET_PROPERTY_VALUE(bHasBall, bNewHasBall);
-
-	if (!bNewHasBall)
-	{
-		UE_MVVM_SET_PROPERTY_VALUE(BallNameText, FText::GetEmpty());
-		UE_MVVM_SET_PROPERTY_VALUE(BallDescriptionText, FText::GetEmpty());
-		UE_MVVM_SET_PROPERTY_VALUE(EnergyPercent, 0.0f);
-		return;
-	}
-
-	//UE_MVVM_SET_PROPERTY_VALUE(BallNameText, Ball->GetDisplayNameText());
-	UE_MVVM_SET_PROPERTY_VALUE(BallDescriptionText, FText::GetEmpty());
-	//UE_MVVM_SET_PROPERTY_VALUE(EnergyPercent, Ball->GetResourceRatio(PBResourceNames::Mana));
+	constexpr float MaxStarLevel = 3.0f;
+	const float ClampedStarLevel = FMath::Clamp(static_cast<float>(InStarLevel), 0.0f, MaxStarLevel);
+	const float FilledRatio = ClampedStarLevel / MaxStarLevel;
+	return 1.0f - FilledRatio;
 }

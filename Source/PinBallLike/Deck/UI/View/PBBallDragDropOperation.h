@@ -22,6 +22,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "BallDeck|DragDrop")
 	bool IsValidBallDrag() const;
 
+	virtual void Drop_Implementation(const FPointerEvent& PointerEvent) override;
+	virtual void DragCancelled_Implementation(const FPointerEvent& PointerEvent) override;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck|DragDrop", meta = (ExposeOnSpawn = true))
 	int32 BallInstanceId = INDEX_NONE;
 
@@ -30,4 +33,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck|DragDrop", meta = (ExposeOnSpawn = true))
 	int32 SourceSlotIndex = INDEX_NONE;
+
+private:
+	void BroadcastDragEnded(bool bCancelled);
 };

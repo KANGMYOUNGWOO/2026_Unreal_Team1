@@ -8,8 +8,9 @@
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
 #include "PBBallItemWidget.generated.h"
 
-class UImage;
 class UDragDropOperation;
+class UPBBallItemViewModel;
+
 /**
  * 
  */
@@ -21,21 +22,20 @@ class PINBALLLIKE_API UPBBallItemWidget : public UUserWidget
 public:
 	UFUNCTION(BlueprintCallable, Category = "BallDeck")
 	void InitializeBallItem(const FPBBallItemViewData& InViewData);
-
 	void SetSourceSlot(EPBBallDeckSlotType InSourceSlotType, int32 InSourceSlotIndex);
 
 protected:
+	virtual void NativeOnInitialized() override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
 
 private:
-	void RefreshBallItem();
-
-	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
-	TObjectPtr<UImage> Image_ProgressBar;
-	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
-	TObjectPtr<UImage> Image_Ball;
+	void EnsureItemViewModel();
+	bool ApplyViewModelToWidget();
 
 	UPROPERTY(Transient)
 	FPBBallItemViewData ViewData;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBBallItemViewModel> ItemViewModel;
 };

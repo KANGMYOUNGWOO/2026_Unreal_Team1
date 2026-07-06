@@ -27,6 +27,9 @@ struct PINBALLLIKE_API FPBBallItemViewData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck|View")
 	TObjectPtr<UTexture2D> Icon = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck|View")
+	int32 Price = 1;
 
 	bool IsValid() const
 	{
