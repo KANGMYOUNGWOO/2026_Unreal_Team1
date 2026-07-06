@@ -24,14 +24,7 @@ void UPBSnakeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		return;
 	}
 
-	Speed = OwnerSnakeBoss->GetSnakeAnimationSpeed();
-	TurnAmount = OwnerSnakeBoss->GetSnakeAnimationTurnAmount();
-	MovePhase = OwnerSnakeBoss->GetSnakeAnimationMovePhase();
-	IsMoving = OwnerSnakeBoss->IsSnakeAnimationMoving();
-	IsChargePoseActive = OwnerSnakeBoss->IsSnakeChargePoseActive();
-	ChargePoseAlpha = OwnerSnakeBoss->GetSnakeChargePoseAlpha();
-	SnakeSplinePoints = OwnerSnakeBoss->GetSnakeSplinePoints();
-	SnakeChargeHeadSplinePoints = OwnerSnakeBoss->GetSnakeChargeHeadSplinePoints();
+	UpdateAnimationDataFromOwner();
 }
 
 void UPBSnakeAnimInstance::CacheOwnerSnakeBoss()
@@ -41,6 +34,18 @@ void UPBSnakeAnimInstance::CacheOwnerSnakeBoss()
 	{
 		OwnerSnakeBoss = Cast<ASnakeBoss>(GetOwningActor());
 	}
+}
+
+void UPBSnakeAnimInstance::UpdateAnimationDataFromOwner()
+{
+	Speed = OwnerSnakeBoss->GetSnakeAnimationSpeed();
+	TurnAmount = OwnerSnakeBoss->GetSnakeAnimationTurnAmount();
+	MovePhase = OwnerSnakeBoss->GetSnakeAnimationMovePhase();
+	IsMoving = OwnerSnakeBoss->IsSnakeAnimationMoving();
+	IsChargePoseActive = OwnerSnakeBoss->IsSnakeChargePoseActive();
+	ChargePoseAlpha = OwnerSnakeBoss->GetSnakeChargePoseAlpha();
+	SnakeSplinePoints = OwnerSnakeBoss->GetSnakeSplinePoints();
+	SnakeChargeHeadSplinePoints = OwnerSnakeBoss->GetSnakeChargeHeadSplinePoints();
 }
 
 void UPBSnakeAnimInstance::ResetAnimationData()

@@ -280,22 +280,11 @@ void UPBBossSnakeChargePattern::UpdateChargeAim()
 	UpdateChargeTelegraph();
 }
 
-void UPBBossSnakeChargePattern::FinishChargeAim()
-{
-	if (APBBossBase* Boss = GetOwnerBoss())
-	{
-		ApplySnakeChargePose(Boss, 0.0f);
-	}
-
-	ClearChargeAimTimers();
-}
-
 void UPBBossSnakeChargePattern::ClearChargeAimTimers()
 {
 	if (APBBossBase* Boss = GetOwnerBoss())
 	{
 		Boss->GetWorldTimerManager().ClearTimer(ChargeAimTimerHandle);
-		Boss->GetWorldTimerManager().ClearTimer(ChargeAimFinishTimerHandle);
 	}
 }
 
@@ -324,6 +313,7 @@ void UPBBossSnakeChargePattern::StartCharge()
 
 	SetChargePatternState(EPBBossSnakeChargePatternState::Charging);
 	SetPinballCollisionDamageBlocked(true);
+	ChargeStartLocation = Boss->GetActorLocation();
 	ChargeProgressDistance = 0.0f;
 	ApplySnakeChargePose(Boss, 0.0f);
 
@@ -352,7 +342,20 @@ void UPBBossSnakeChargePattern::UpdateCharge()
 		return;
 	}
 
-	ChargeProgressDistance += ChargeDistance;
+	float MovedDistance = 0.0f;
+	FHitResult HitResult;
+	if (!MoveBossByChargeDistance(Boss, ChargeDistance, MovedDistance, HitResult))
+	{
+		ChargeProgressDistance += MovedDistance;
+		const float ChargeAlpha = ChargeMaxDistance > 0.0f
+			? ChargeProgressDistance / ChargeMaxDistance
+			: 1.0f;
+		ApplySnakeChargePose(Boss, ChargeAlpha);
+		HandleChargeBlocked(HitResult);
+		return;
+	}
+
+	ChargeProgressDistance += MovedDistance;
 	const float ChargeAlpha = ChargeMaxDistance > 0.0f
 		? ChargeProgressDistance / ChargeMaxDistance
 		: 1.0f;
@@ -362,6 +365,32 @@ void UPBBossSnakeChargePattern::UpdateCharge()
 	{
 		HandleChargeBlocked(FHitResult());
 	}
+}
+
+bool UPBBossSnakeChargePattern::MoveBossByChargeDistance(
+	APBBossBase* Boss,
+	float ChargeDistance,
+	float& OutMovedDistance,
+	FHitResult& OutHitResult)
+{
+	OutMovedDistance = 0.0f;
+	if (!Boss || ChargeDistance <= 0.0f)
+	{
+		return false;
+	}
+
+	const FVector PreviousLocation = Boss->GetActorLocation();
+	const FVector NextLocation = Boss->GetActorLocation() + ChargeDirection * ChargeDistance;
+	const bool IsMoveCompleted = Boss->SetActorLocation(NextLocation, true, &OutHitResult, ETeleportType::None);
+	OutMovedDistance = FVector::Dist2D(PreviousLocation, Boss->GetActorLocation());
+
+	if (!IsMoveCompleted || OutHitResult.IsValidBlockingHit())
+	{
+		return false;
+	}
+
+	Boss->SetActorRotation(ChargeDirection.Rotation());
+	return true;
 }
 
 void UPBBossSnakeChargePattern::HandleChargeBlocked(const FHitResult& Hit)

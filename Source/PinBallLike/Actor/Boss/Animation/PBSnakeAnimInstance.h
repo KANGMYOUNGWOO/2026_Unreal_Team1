@@ -42,6 +42,7 @@ protected:
 
 private:
 	void CacheOwnerSnakeBoss();
+	void UpdateAnimationDataFromOwner();
 	void ResetAnimationData();
 
 	UPROPERTY(Transient)

@@ -3,6 +3,25 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "DrawDebugHelpers.h"
 
+namespace
+{
+	FVector CalculateCubicBezierLocation(
+		const FVector& StartLocation,
+		const FVector& FirstControlLocation,
+		const FVector& SecondControlLocation,
+		const FVector& EndLocation,
+		float Alpha)
+	{
+		const float ClampedAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+		const float InverseAlpha = 1.0f - ClampedAlpha;
+
+		return StartLocation * InverseAlpha * InverseAlpha * InverseAlpha
+			+ FirstControlLocation * 3.0f * InverseAlpha * InverseAlpha * ClampedAlpha
+			+ SecondControlLocation * 3.0f * InverseAlpha * ClampedAlpha * ClampedAlpha
+			+ EndLocation * ClampedAlpha * ClampedAlpha * ClampedAlpha;
+	}
+}
+
 ASnakeBoss::ASnakeBoss()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -306,11 +325,12 @@ void ASnakeBoss::UpdateSnakeChargeHeadSplinePoints()
 	for (int32 PointIndex = 0; PointIndex < SplinePointCount; ++PointIndex)
 	{
 		const float Alpha = static_cast<float>(PointIndex) / static_cast<float>(SplinePointCount - 1);
-		const float InverseAlpha = 1.0f - Alpha;
-		const FVector PointLocation = StartLocation * InverseAlpha * InverseAlpha * InverseAlpha
-			+ ControlLocation * 3.0f * InverseAlpha * InverseAlpha * Alpha
-			+ EndControlLocation * 3.0f * InverseAlpha * Alpha * Alpha
-			+ EndLocation * Alpha * Alpha * Alpha;
+		const FVector PointLocation = CalculateCubicBezierLocation(
+			StartLocation,
+			ControlLocation,
+			EndControlLocation,
+			EndLocation,
+			Alpha);
 
 		SnakeChargeHeadSplinePoints.Add(MeshTransform.InverseTransformPosition(PointLocation));
 	}
@@ -441,12 +461,12 @@ bool ASnakeBoss::IsInsideHeadExcludedArea(const FVector& SourceLocation) const
 
 FVector ASnakeBoss::GetPatrolCurveLocation(float Alpha) const
 {
-	const float ClampedAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
-	const float InverseAlpha = 1.0f - ClampedAlpha;
-	return PatrolStartLocation * InverseAlpha * InverseAlpha * InverseAlpha
-		+ PatrolCurveControlLocation * 3.0f * InverseAlpha * InverseAlpha * ClampedAlpha
-		+ PatrolCurveEndControlLocation * 3.0f * InverseAlpha * ClampedAlpha * ClampedAlpha
-		+ PatrolTargetLocation * ClampedAlpha * ClampedAlpha * ClampedAlpha;
+	return CalculateCubicBezierLocation(
+		PatrolStartLocation,
+		PatrolCurveControlLocation,
+		PatrolCurveEndControlLocation,
+		PatrolTargetLocation,
+		Alpha);
 }
 
 float ASnakeBoss::CalculatePatrolCurveDistance() const

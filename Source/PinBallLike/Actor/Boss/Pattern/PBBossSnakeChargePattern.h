@@ -58,11 +58,15 @@ private:
 	void SpawnChargeTelegraph(APBBossBase* Boss);
 	void StartChargeAim(float AimDurationSeconds);
 	void UpdateChargeAim();
-	void FinishChargeAim();
 	void ClearChargeAimTimers();
 	void UpdateChargeTelegraph() const;
 	void StartCharge();
 	void UpdateCharge();
+	bool MoveBossByChargeDistance(
+		APBBossBase* Boss,
+		float ChargeDistance,
+		float& OutMovedDistance,
+		FHitResult& OutHitResult);
 	void HandleChargeBlocked(const FHitResult& Hit);
 	void StartRebound();
 	void UpdateRebound();
@@ -87,7 +91,6 @@ private:
 	TObjectPtr<class APBBossChargeTelegraph> SpawnedChargeTelegraph;
 
 	FTimerHandle ChargeAimTimerHandle;
-	FTimerHandle ChargeAimFinishTimerHandle;
 	FTimerHandle ChargeTelegraphTimerHandle;
 	FTimerHandle ChargeTimerHandle;
 	FTimerHandle ReboundTimerHandle;
