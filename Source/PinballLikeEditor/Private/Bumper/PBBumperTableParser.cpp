@@ -59,8 +59,8 @@ UPBBumperDataAsset* UPBBumperTableParser::SetupBumperDataAsset(const FName RowNa
 	if (IconPreset.IsValid())
 	{
 		BumperDataAsset->Icon = FindObject<UTexture2D>(IconPreset, RowName);
-		(void)BumperDataAsset->MarkPackageDirty();
 	}
 
+	(void)BumperDataAsset->MarkPackageDirty();
 	return BumperDataAsset;
 }
