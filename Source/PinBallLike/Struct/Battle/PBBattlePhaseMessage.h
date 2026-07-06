@@ -23,11 +23,5 @@ struct PINBALLLIKE_API FPBBattlePreparationCompletedMessage
 	EPBBattlePreparationType PreparationType = EPBBattlePreparationType::None;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
-	int32 RequestedCount = 0;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
-	int32 CompletedCount = 0;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
 	bool bSuccess = false;
 };

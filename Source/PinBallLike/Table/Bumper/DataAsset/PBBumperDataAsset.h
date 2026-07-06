@@ -24,12 +24,16 @@ public:
 	FName RowName = NAME_None;
 	
 	/** UI 표시용 아이콘 */
+
+	// AssetBundles 값은 PBAssetBundleNames와 맞춰야 한다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Visual", meta = (AssetBundles = "UI"))
 	TSoftObjectPtr<UTexture2D> Icon;
 
+	// AssetBundles 값은 PBAssetBundleNames와 맞춰야 한다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<APBBumperTriggerActorBase> TriggerClass;
 
+	// AssetBundles 값은 PBAssetBundleNames와 맞춰야 한다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<UPBBumperEffectBase> EffectClass;
 };

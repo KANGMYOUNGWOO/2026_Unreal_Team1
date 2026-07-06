@@ -10,10 +10,11 @@
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBBumperPositionAnchor.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
-#include "PinBallLike/Struct/GamePlayMessage/PBBattlePhaseMessage.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Table/PBAssetBundleNames.h"
 #include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
 #include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
 #include "PinBallLike/Utils/PBSubsystemUtils.h"
@@ -25,8 +26,6 @@ APBBumperSpawnController::APBBumperSpawnController()
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
 }
-
-// Lifecycle.
 
 void APBBumperSpawnController::BeginPlay()
 {
@@ -64,27 +63,25 @@ void APBBumperSpawnController::CollectBumperAnchors()
 	}
 }
 
-void APBBumperSpawnController::SpawnEquippedBumpers()
+bool APBBumperSpawnController::RequestEquippedBumperGameplayAssetsAsync()
 {
 	if (!CacheRequiredSubsystems())
 	{
-		CompleteBumperPreparation(0, false);
-		return;
+		return false;
 	}
 
 	PendingBumperRowIds = CachedPlayerDataSubsystem->GetEquippedBumperRowIds();
-	ClearSpawnedBumpers();
-	CollectBumperAnchors();
-
-	if (!BumperClass || PendingBumperRowIds.IsEmpty())
+	if (PendingBumperRowIds.IsEmpty())
 	{
-		CompleteBumperPreparation(0, false);
-		return;
+		return false;
 	}
 
-	SpawnPreparedBumpers();
+	TArray<FName> BundleNames;
+	BundleNames.Add(PBAssetBundleNames::Gameplay);
+	CachedGameDataLoadSubsystem->LoadBumperAssetsAsync(PendingBumperRowIds, BundleNames);
+
+	return true;
 }
-// Cleanup.
 
 void APBBumperSpawnController::ClearSpawnedBumpers()
 {
@@ -101,11 +98,70 @@ void APBBumperSpawnController::ClearSpawnedBumpers()
 
 void APBBumperSpawnController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (IsValid(CachedGameDataLoadSubsystem))
+	{
+		CachedGameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
+			this,
+			&APBBumperSpawnController::HandleEquippedBumperAssetsLoaded);
+	}
+
 	ClearSpawnedBumpers();
 
 	Super::EndPlay(EndPlayReason);
 }
-// Spawn steps.
+
+void APBBumperSpawnController::PrepareEquippedBumpersAsync()
+{
+	if (!CacheRequiredSubsystems())
+	{
+		CompleteBumperPreparation(false);
+		return;
+	}
+
+	CachedGameDataLoadSubsystem->OnPrimaryAssetsLoaded.AddUniqueDynamic(
+		this,
+		&APBBumperSpawnController::HandleEquippedBumperAssetsLoaded);
+
+	if (!RequestEquippedBumperGameplayAssetsAsync())
+	{
+		CachedGameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
+			this,
+			&APBBumperSpawnController::HandleEquippedBumperAssetsLoaded);
+		CompleteBumperPreparation(false);
+	}
+}
+
+void APBBumperSpawnController::HandleEquippedBumperAssetsLoaded()
+{
+	if (IsValid(CachedGameDataLoadSubsystem))
+	{
+		CachedGameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
+			this,
+			&APBBumperSpawnController::HandleEquippedBumperAssetsLoaded);
+	}
+	
+	if (!CacheRequiredSubsystems())
+	{
+		CompleteBumperPreparation(false);
+		return;
+	}
+
+	if (PendingBumperRowIds.IsEmpty())
+	{
+		PendingBumperRowIds = CachedPlayerDataSubsystem->GetEquippedBumperRowIds();
+	}
+
+	ClearSpawnedBumpers();
+	CollectBumperAnchors();
+
+	if (!BumperClass || PendingBumperRowIds.IsEmpty())
+	{
+		CompleteBumperPreparation(false);
+		return;
+	}
+
+	SpawnPreparedBumpers();
+}
 
 void APBBumperSpawnController::SpawnPreparedBumpers()
 {
@@ -118,7 +174,7 @@ void APBBumperSpawnController::SpawnPreparedBumpers()
 	const int32 SpawnedCount = SpawnedBumpers.Num() - PreviousSpawnedCount;
 	const bool bSuccess = SpawnedCount == PendingBumperRowIds.Num();
 
-	CompleteBumperPreparation(SpawnedCount, bSuccess);
+	CompleteBumperPreparation(bSuccess);
 }
 
 APBModularBumperBase* APBBumperSpawnController::SpawnSingleBumper(const FName BumperRowId)
@@ -232,9 +288,7 @@ APBModularBumperBase* APBBumperSpawnController::SpawnInitializedBumper(
 	return Bumper;
 }
 
-void APBBumperSpawnController::CompleteBumperPreparation(
-	const int32 CompletedCount,
-	const bool bSuccess) const
+void APBBumperSpawnController::CompleteBumperPreparation(const bool bSuccess) const
 {
 	if (!UGameplayMessageSubsystem::HasInstance(this))
 	{
@@ -243,8 +297,6 @@ void APBBumperSpawnController::CompleteBumperPreparation(
 
 	FPBBattlePreparationCompletedMessage Message;
 	Message.PreparationType = EPBBattlePreparationType::Bumper;
-	Message.RequestedCount = PendingBumperRowIds.Num();
-	Message.CompletedCount = CompletedCount;
 	Message.bSuccess = bSuccess;
 
 	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
@@ -276,3 +328,4 @@ bool APBBumperSpawnController::CacheRequiredSubsystems()
 		&& IsValid(CachedTableDataSubsystem)
 		&& IsValid(CachedPlayerDataSubsystem);
 }
+

@@ -3,13 +3,11 @@
 
 #include "PBBattleGameState.h"
 
-#include "EngineUtils.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
+#include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Bumper/PBBumperSpawnController.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
-#include "PinBallLike/Struct/GamePlayMessage/PBBattlePhaseMessage.h"
-#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
-#include "PinBallLike/Utils/PBSubsystemUtils.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 
 APBBattleGameState::APBBattleGameState()
 {
@@ -31,13 +29,6 @@ void APBBattleGameState::BeginPlay()
 void APBBattleGameState::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UnregisterBattleMessageListeners();
-
-	if (IsValid(GameDataLoadSubsystem))
-	{
-		GameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
-			this,
-			&APBBattleGameState::ContinueAfterBumperAssetsLoaded);
-	}
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -108,7 +99,7 @@ void APBBattleGameState::HandleCurrentPhase()
 
 void APBBattleGameState::HandleLevelPreparing_Implementation()
 {
-	// 레벨 준비에 필요한 작업을 시작한다.
+	// 레벨 준비 단계에서 필요한 작업을 시작한다.
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter LevelPreparing."));
 	ResetPreparationState();
 
@@ -121,50 +112,20 @@ void APBBattleGameState::PrepareBumpers()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Prepare equipped bumpers."));
 
-	GameDataLoadSubsystem = PBSubsystemUtils::GetGameInstanceSubsystem<UPBGameDataLoadSubsystem>(this);
-	if (!IsValid(GameDataLoadSubsystem))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Missing GameDataLoadSubsystem."));
-		return;
-	}
-
-	GameDataLoadSubsystem->OnPrimaryAssetsLoaded.AddUniqueDynamic(
-		this,
-		&APBBattleGameState::ContinueAfterBumperAssetsLoaded);
-	GameDataLoadSubsystem->LoadEquippedBumpersAsync();
-}
-
-void APBBattleGameState::ContinueAfterBumperAssetsLoaded()
-{
-	if (IsValid(GameDataLoadSubsystem))
-	{
-		GameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
-			this,
-			&APBBattleGameState::ContinueAfterBumperAssetsLoaded);
-	}
-
 	if (!IsValid(BumperSpawnController))
 	{
-		UWorld* World = GetWorld();
-		if (!IsValid(World))
-		{
-			return;
-		}
-
-		for (TActorIterator<APBBumperSpawnController> It(World); It; ++It)
-		{
-			BumperSpawnController = *It;
-			break;
-		}
+		BumperSpawnController = Cast<APBBumperSpawnController>(
+			UGameplayStatics::GetActorOfClass(this, APBBumperSpawnController::StaticClass()));
 	}
 
 	if (!IsValid(BumperSpawnController))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Missing BumperSpawnController in level."));
+		MarkPreparationCompleted(EPBBattlePreparationType::Bumper, false);
 		return;
 	}
 
-	BumperSpawnController->SpawnEquippedBumpers();
+	BumperSpawnController->PrepareEquippedBumpersAsync();
 }
 
 void APBBattleGameState::PrepareBalls()
@@ -216,11 +177,9 @@ void APBBattleGameState::HandlePreparationCompletedMessage(
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Preparation completed message. Channel=%s Type=%s Requested=%d Completed=%d Success=%s"),
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Preparation completed message. Channel=%s Type=%s Success=%s"),
 		*Channel.ToString(),
 		*UEnum::GetValueAsString(Message.PreparationType),
-		Message.RequestedCount,
-		Message.CompletedCount,
 		Message.bSuccess ? TEXT("true") : TEXT("false"));
 
 	MarkPreparationCompleted(Message.PreparationType, Message.bSuccess);
@@ -231,8 +190,6 @@ void APBBattleGameState::ResetPreparationState()
 	bBumperPrepared = false;
 	bBallPrepared = false;
 	bBossPrepared = false;
-
-	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Reset preparation state. Bumper=false Ball=false Boss=false"));
 }
 
 void APBBattleGameState::MarkPreparationCompleted(
@@ -254,30 +211,13 @@ void APBBattleGameState::MarkPreparationCompleted(
 		break;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Mark preparation. Type=%s Success=%s CurrentState=(Bumper=%s Ball=%s Boss=%s)"),
-		*UEnum::GetValueAsString(PreparationType),
-		bSuccess ? TEXT("true") : TEXT("false"),
-		bBumperPrepared ? TEXT("true") : TEXT("false"),
-		bBallPrepared ? TEXT("true") : TEXT("false"),
-		bBossPrepared ? TEXT("true") : TEXT("false"));
-
-	TryAdvanceFromLevelPreparing();
-}
-
-void APBBattleGameState::TryAdvanceFromLevelPreparing()
-{
 	if (CurrentPhase != EPBBattleLevelPhase::LevelPreparing)
 	{
 		UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Skip preparation advance. CurrentPhase=%s"),
 			*UEnum::GetValueAsString(CurrentPhase));
 		return;
 	}
-
-	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Check preparation advance. Bumper=%s Ball=%s Boss=%s"),
-		bBumperPrepared ? TEXT("true") : TEXT("false"),
-		bBallPrepared ? TEXT("true") : TEXT("false"),
-		bBossPrepared ? TEXT("true") : TEXT("false"));
-
+	
 	if (bBumperPrepared && bBallPrepared && bBossPrepared)
 	{
 		CompleteLevelPreparing();

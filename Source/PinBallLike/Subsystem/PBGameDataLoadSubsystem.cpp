@@ -162,7 +162,9 @@ void UPBGameDataLoadSubsystem::LoadSoftReferencesAsync(
 		OnLoaded);
 }
 
-void UPBGameDataLoadSubsystem::LoadEquippedBumpersAsync()
+void UPBGameDataLoadSubsystem::LoadBumperAssetsAsync(
+	const TArray<FName>& BumperRowIds,
+	const TArray<FName>& BundleNames)
 {
 	if (!IsValid(BumperAssetLoader))
 	{
@@ -171,7 +173,7 @@ void UPBGameDataLoadSubsystem::LoadEquippedBumpersAsync()
 		return;
 	}
 
-	BumperAssetLoader->LoadEquippedBumpersAsync();
+	BumperAssetLoader->LoadBumperAssetsAsync(BumperRowIds, BundleNames);
 }
 
 void UPBGameDataLoadSubsystem::UnloadStartupGameData()
@@ -199,7 +201,7 @@ void UPBGameDataLoadSubsystem::UnloadPrimaryAssets()
 	LoadedPrimaryAssets.Empty();
 	bPrimaryAssetsReady = false;
 
-	// ?몃뱾???댁젣?섎㈃ Subsystem???↔퀬 ?덈뜕 ?ㅽ듃由щ컢 李몄“媛 ?뺣━?쒕떎.
+	// 핸들을 해제하면 Subsystem이 유지하던 스트리밍 참조가 정리된다.
 	if (PrimaryAssetLoadHandle.IsValid())
 	{
 		PrimaryAssetLoadHandle->ReleaseHandle();

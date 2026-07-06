@@ -30,7 +30,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Spawn")
 	void CollectBumperAnchors();
 
-	void SpawnEquippedBumpers();
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Spawn")
+	void PrepareEquippedBumpersAsync();
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Spawn")
 	void ClearSpawnedBumpers();
@@ -39,6 +40,11 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
+	UFUNCTION()
+	void HandleEquippedBumperAssetsLoaded();
+
+	bool RequestEquippedBumperGameplayAssetsAsync();
+
 	// Spawn steps.
 	void SpawnPreparedBumpers();
 	APBModularBumperBase* SpawnSingleBumper(FName BumperRowId);
@@ -55,7 +61,7 @@ private:
 		const TArray<FPBBumperTriggerSpawnInfo>& TriggerSpawnInfos);
 
 	// 완료 처리와 의존성 캐싱.
-	void CompleteBumperPreparation(int32 CompletedCount, bool bSuccess) const;
+	void CompleteBumperPreparation(bool bSuccess) const;
 	bool CacheRequiredSubsystems();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Spawn", meta = (AllowPrivateAccess = "true"))

@@ -40,8 +40,8 @@ public:
 	// PrimaryAsset 안의 SoftObject/SoftClass 참조를 추가 로드한다.
 	void LoadSoftReferencesAsync(const TArray<FSoftObjectPath>& SoftReferencePaths, FStreamableDelegate OnLoaded);
 
-	// 범퍼 전용 로더로 위임하는 편의 함수.
-	void LoadEquippedBumpersAsync();
+	// 범퍼 RowId와 BundleNames를 직접 지정해 로드한다.
+	void LoadBumperAssetsAsync(const TArray<FName>& BumperRowIds, const TArray<FName>& BundleNames);
 
 	void UnloadStartupGameData();
 	void UnloadPrimaryAssets();

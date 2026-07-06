@@ -8,7 +8,6 @@
 #include "PBBattleGameState.generated.h"
 
 class APBBumperSpawnController;
-class UPBGameDataLoadSubsystem;
 enum class EPBBattlePreparationType : uint8;
 struct FPBBattlePreparationCompletedMessage;
 
@@ -61,9 +60,6 @@ protected:
 
 	void PrepareBumpers();
 
-	UFUNCTION()
-	void ContinueAfterBumperAssetsLoaded();
-
 	void PrepareBalls();
 
 	void PrepareBoss();
@@ -73,7 +69,6 @@ protected:
 	void HandlePreparationCompletedMessage(FGameplayTag Channel, const FPBBattlePreparationCompletedMessage& Message);
 	void ResetPreparationState();
 	void MarkPreparationCompleted(EPBBattlePreparationType PreparationType, bool bSuccess);
-	void TryAdvanceFromLevelPreparing();
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Battle|Flow")
 	void HandleBossIntro();
@@ -99,9 +94,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<APBBumperSpawnController> BumperSpawnController;
-
-	UPROPERTY()
-	TObjectPtr<UPBGameDataLoadSubsystem> GameDataLoadSubsystem;
 
 	FGameplayMessageListenerHandle PreparationCompletedListenerHandle;
 

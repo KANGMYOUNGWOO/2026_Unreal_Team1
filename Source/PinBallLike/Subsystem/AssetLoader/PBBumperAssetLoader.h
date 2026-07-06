@@ -17,20 +17,21 @@ class PINBALLLIKE_API UPBBumperAssetLoader : public UObject
 public:
 	void Initialize(UPBGameDataLoadSubsystem* InOwnerSubsystem);
 
-	// 장착된 범퍼를 PlayerData에서 읽어 로드한다.
-	void LoadEquippedBumpersAsync();
-
-	// 지정한 RowId 목록으로 범퍼를 로드한다.
-	void LoadBumpersByRowIdsAsync(const TArray<FName>& BumperRowIds);
+	// RowId와 BundleNames를 직접 지정해 범퍼 에셋을 로드한다.
+	void LoadBumperAssetsAsync(const TArray<FName>& BumperRowIds, const TArray<FName>& BundleNames);
 
 private:
 	UFUNCTION()
-	void ResumeEquippedBumperLoadAfterStartupDataReady();
+	void ResumeBumperAssetLoadAfterStartupDataReady();
 
-	void HandlePrimaryAssetLoadCompleted(TArray<FPrimaryAssetId> LoadedAssetIds);
-	void LoadReferencedClassesAsync();
-	void HandleReferencedClassLoadCompleted();
+	void HandleBumperPrimaryAssetLoadCompleted(TArray<FPrimaryAssetId> LoadedAssetIds);
 
 	UPROPERTY()
 	TObjectPtr<UPBGameDataLoadSubsystem> OwnerSubsystem;
+
+	UPROPERTY(Transient)
+	TArray<FName> PendingBumperRowIds;
+
+	UPROPERTY(Transient)
+	TArray<FName> PendingBundleNames;
 };
