@@ -11,23 +11,24 @@ namespace PBBumperAssetIds
 	namespace Type
 	{
 		inline const FPrimaryAssetType BumperData(TEXT("BumperData"));
-		inline const FPrimaryAssetType TriggerData(TEXT("BumperTriggerData"));
-		inline const FPrimaryAssetType EffectData(TEXT("BumperEffectData"));
 	}
 
 	// RowNames for BumperTable
 	namespace Bumper
 	{
 		inline const FName BasicCombo(TEXT("BasicCombo"));
-		inline const FName BasicTest02(TEXT("BasicTest02"));
-		inline const FName BasicTest03(TEXT("BasicTest03"));
+		inline const FName Test01(TEXT("Test01"));
+		inline const FName Test02(TEXT("Test02"));
+		inline const FName Test03(TEXT("Test03"));
 	}
 
 	// RowNames forTriggerTable
 	namespace Trigger
 	{
 		inline const FName Circle_Trigger_1(TEXT("Circle_Trigger_1"));
-		inline const FName Trigger_Hit_2(TEXT("Trigger_Hit_2"));
+		inline const FName Trigger_Test01(TEXT("Trigger_Test01"));
+		inline const FName Trigger_Test02(TEXT("Trigger_Test02"));
+		inline const FName Trigger_Test03(TEXT("Trigger_Test03"));
 	}
 
 	// RowNames for EffectTable

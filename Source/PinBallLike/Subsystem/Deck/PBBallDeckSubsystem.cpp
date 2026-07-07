@@ -5,6 +5,7 @@
 
 #include "PBBallDeckFusionService.h"
 #include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
+#include "PinBallLike/Subsystem/BallDataStruct.h"
 #include "PinBallLike/Subsystem/BallDataSubsystem.h"
 
 void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -16,6 +17,9 @@ void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	if (FusionService)
 	{
 		FusionService->Initialize(this);
+		FusionService->OnBallFusionStarted.AddDynamic(this, &UPBBallDeckSubsystem::HandleBallFusionStarted);
+		FusionService->OnBallFusionCompleted.AddDynamic(this, &UPBBallDeckSubsystem::HandleBallFusionCompleted);
+		FusionService->OnBallFusionCanceled.AddDynamic(this, &UPBBallDeckSubsystem::HandleBallFusionCanceled);
 	}
 }
 
@@ -143,20 +147,10 @@ bool UPBBallDeckSubsystem::AddNewBallToDeck(int32 BallId, int32 StarLevel)
 
 	if (EmptyDeploymentSlotIndex != INDEX_NONE)
 	{
-		const bool bAddedToDeck = SetDeploymentSlot(EmptyDeploymentSlotIndex, NewBallInstanceId);
-		if (bAddedToDeck && FusionService)
-		{
-			FusionService->TryStartFusion();
-		}
-		return bAddedToDeck;
+		return SetDeploymentSlot(EmptyDeploymentSlotIndex, NewBallInstanceId);
 	}
 
-	const bool bAddedToDeck = SetBenchSlot(EmptyBenchSlotIndex, NewBallInstanceId);
-	if (bAddedToDeck && FusionService)
-	{
-		FusionService->TryStartFusion();
-	}
-	return bAddedToDeck;
+	return SetBenchSlot(EmptyBenchSlotIndex, NewBallInstanceId);
 }
 
 bool UPBBallDeckSubsystem::RemoveOwnedBall(int32 BallInstanceId)
@@ -200,6 +194,20 @@ bool UPBBallDeckSubsystem::SetOwnedBallStarLevel(int32 BallInstanceId, int32 Sta
 	}
 
 	BallInstanceData->StarLevel = FMath::Max(StarLevel, 1);
+
+	FPBBallDeckSlot BallLocation;
+	if (FindBallLocation(BallInstanceId, BallLocation))
+	{
+		if (BallLocation.SlotType == EPBBallDeckSlotType::Deployment)
+		{
+			OnDeploymentSlotChanged.Broadcast(BallLocation.SlotIndex, BallInstanceId);
+		}
+		else
+		{
+			OnBenchSlotChanged.Broadcast(BallLocation.SlotIndex, BallInstanceId);
+		}
+	}
+
 	return true;
 }
 
@@ -307,6 +315,46 @@ bool UPBBallDeckSubsystem::MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotTy
 	return true;
 }
 
+int32 UPBBallDeckSubsystem::GetSellPrice(int32 BallInstanceId)
+{
+	const FPBBallInstanceData* BallInstanceData = GetOwnedBallData(BallInstanceId);
+	if (!BallInstanceData || !BallInstanceData->IsValid())
+	{
+		return 0;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UBallDataSubsystem* BallDataSubsystem = GameInstance ? GameInstance->GetSubsystem<UBallDataSubsystem>() : nullptr;
+	const FBallDataStruct* BallData = BallDataSubsystem ? BallDataSubsystem->GetBallData(BallInstanceData->BallId) : nullptr;
+	return BallData ? BallData->BallPrice : 0;
+}
+
+bool UPBBallDeckSubsystem::SellBall(int32 BallInstanceId, int32& OutSellPrice)
+{
+	OutSellPrice = GetSellPrice(BallInstanceId);
+	if (OutSellPrice <= 0)
+	{
+		return false;
+	}
+
+	const FPBBallInstanceData* BallInstanceData = GetOwnedBallData(BallInstanceId);
+	if (!BallInstanceData || !BallInstanceData->IsValid())
+	{
+		OutSellPrice = 0;
+		return false;
+	}
+
+	const int32 BallId = BallInstanceData->BallId;
+	if (!RemoveOwnedBall(BallInstanceId))
+	{
+		OutSellPrice = 0;
+		return false;
+	}
+
+	OnBallSold.Broadcast(BallInstanceId, BallId, OutSellPrice);
+	return true;
+}
+
 #pragma region Fusion
 
 UPBBallDeckFusionService* UPBBallDeckSubsystem::GetFusionService() const
@@ -316,22 +364,43 @@ UPBBallDeckFusionService* UPBBallDeckSubsystem::GetFusionService() const
 
 bool UPBBallDeckSubsystem::TryStartFusion()
 {
+	UE_LOG(LogTemp, Warning, TEXT("TryStartFusion"));
 	return FusionService && FusionService->TryStartFusion();
 }
 
 bool UPBBallDeckSubsystem::CompletePendingFusion()
 {
+	UE_LOG(LogTemp, Warning, TEXT("CompletePendingFusion"));
 	return FusionService && FusionService->CompletePendingFusion();
 }
 
 bool UPBBallDeckSubsystem::CancelPendingFusion()
 {
+	UE_LOG(LogTemp, Warning, TEXT("CancelPendingFusion"));
 	return FusionService && FusionService->CancelPendingFusion();
 }
 
 bool UPBBallDeckSubsystem::HasPendingFusion() const
 {
+	UE_LOG(LogTemp, Warning, TEXT("HasPendingFusion"));
 	return FusionService && FusionService->HasPendingFusion();
+}
+
+void UPBBallDeckSubsystem::HandleBallFusionStarted(const FPBBallDeckFusionBatch& FusionBatch)
+{
+	UE_LOG(LogTemp, Warning, TEXT("HandleBallFusionStarted"));
+	OnBallFusionStarted.Broadcast(FusionBatch);
+	CompletePendingFusion();
+}
+
+void UPBBallDeckSubsystem::HandleBallFusionCompleted(const FPBBallDeckFusionBatch& FusionBatch)
+{
+	OnBallFusionCompleted.Broadcast(FusionBatch);
+}
+
+void UPBBallDeckSubsystem::HandleBallFusionCanceled(const FPBBallDeckFusionBatch& FusionBatch)
+{
+	OnBallFusionCanceled.Broadcast(FusionBatch);
 }
 
 #pragma endregion
@@ -363,6 +432,7 @@ bool UPBBallDeckSubsystem::SetDeploymentSlot(int32 SlotIndex, int32 BallInstance
 	GetMutableDeckSlot(EPBBallDeckSlotType::Deployment, SlotIndex)->BallInstanceId = BallInstanceId;
 	CompactDeploymentSlotsInternal();
 	BroadcastDeploymentSlotChange(PreviousBallInstanceIds);
+	TryStartFusion();
 	return true;
 }
 
@@ -597,6 +667,7 @@ bool UPBBallDeckSubsystem::SetBenchSlot(int32 SlotIndex, int32 BallInstanceId)
 	ClearBallInstanceFromSlots(BallInstanceId);
 	GetMutableDeckSlot(EPBBallDeckSlotType::Bench, SlotIndex)->BallInstanceId = BallInstanceId;
 	OnBenchSlotChanged.Broadcast(SlotIndex, BallInstanceId);
+	TryStartFusion();
 	return true;
 }
 

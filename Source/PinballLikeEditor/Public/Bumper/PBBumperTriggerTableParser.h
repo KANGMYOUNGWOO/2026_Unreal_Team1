@@ -7,8 +7,6 @@
 #include "PBTableParserBase.h"
 #include "PBBumperTriggerTableParser.generated.h"
 
-class UPBBumperTriggerDataAsset;
-
 UCLASS()
 class PINBALLLIKEEDITOR_API UPBBumperTriggerTableParser : public UPBTableParserBase
 {
@@ -23,10 +21,10 @@ protected:
 	virtual bool ParseRow(FName RowName, const TMap<FString, FString>& RowData) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
-	FPBSheetAssetPathPreset DataAssetPreset;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
 	FPBSheetAssetPathPreset TriggerClassPreset;
 
-	UPBBumperTriggerDataAsset* SetupTriggerDataAsset(FName RowName) const;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset BumperDataAssetPreset;
+
+	void UpdateLinkedBumperDataAssets(FName TriggerId) const;
 };

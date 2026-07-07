@@ -163,6 +163,18 @@ void APBModularBumperBase::CreateBumperEffect()
 	}
 }
 
+void APBModularBumperBase::InitializeBumper(
+	const FPBBumperTableRow& InBumperData,
+	const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
+	TSubclassOf<UPBBumperEffectBase> InEffectClass,
+	const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms)
+{
+	BumperData = InBumperData;
+	TriggerSpawnInfos = InTriggerSpawnInfos;
+	EffectClass = InEffectClass;
+	AnchorTransforms = InAnchorTransforms;
+}
+
 void APBModularBumperBase::AddTriggerCount(APBBallBase* Ball, const int32 Amount)
 {
 	if (!IsValid(Ball) || !CanAccumulateTrigger() || Amount <= 0)
@@ -269,6 +281,12 @@ bool APBModularBumperBase::FindBumperPositionTransform(
 	if (PositionId == EPBBumperPositionId::None)
 	{
 		return false;
+	}
+
+	if (const FTransform* AnchorTransform = AnchorTransforms.Find(PositionId))
+	{
+		OutTransform = *AnchorTransform;
+		return true;
 	}
 
 	UWorld* World = GetWorld();

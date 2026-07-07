@@ -4,9 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
+#include "PinBallLike/Struct/Ball/PBBallItemViewData.h"
 #include "PBBallItemViewModel.generated.h"
-
-class APBBallBase;
 
 /**
  * 
@@ -18,30 +17,23 @@ class PINBALLLIKE_API UPBBallItemViewModel : public UMVVMViewModelBase
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "BallDeck|ItemViewModel")
-	void SetBall(APBBallBase* InBall);
+	void SetBallItemViewData(const FPBBallItemViewData& InViewData);
 
 	UFUNCTION(BlueprintCallable, Category = "BallDeck|ItemViewModel")
 	void ClearBall();
-
-	UFUNCTION(BlueprintCallable, Category = "BallDeck|ItemViewModel")
-	void RefreshFromBall();
-
-	UFUNCTION(BlueprintPure, Category = "BallDeck|ItemViewModel")
-	APBBallBase* GetBall() const { return Ball; }
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "BallDeck|ItemViewModel")
 	bool bHasBall = false;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "BallDeck|ItemViewModel")
-	FText BallNameText;
+	int32 StarLevel = 1;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "BallDeck|ItemViewModel")
-	FText BallDescriptionText;
+	TObjectPtr<UTexture2D> IconTexture = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "BallDeck|ItemViewModel")
-	float EnergyPercent = 0.0f;
+	float Progress = 1.0f;
 
 private:
-	UPROPERTY(Transient)
-	TObjectPtr<APBBallBase> Ball = nullptr;
+	float CalculateStarProgress(int32 InStarLevel) const;
 };
