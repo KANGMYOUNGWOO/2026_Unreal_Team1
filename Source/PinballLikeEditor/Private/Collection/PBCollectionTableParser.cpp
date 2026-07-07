@@ -1,7 +1,7 @@
 #include "Collection/PBCollectionTableParser.h"
 
 #include "PBSheetParserUtils.h"
-#include "PinBallLike/Collection/PBCollectionTypes.h"
+#include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 
 using namespace PBSheetParserUtils;

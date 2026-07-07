@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "PinBallLike/Collection/PBCollectionTypes.h"
+#include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "PBCollectionTableRow.generated.h"
 
 /**
