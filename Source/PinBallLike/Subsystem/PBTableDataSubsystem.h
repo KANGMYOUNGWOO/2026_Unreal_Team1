@@ -31,6 +31,7 @@ public:
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
 
 #pragma region Bumper
+	bool GetAllBumperRows(TArray<FName>& OutRowNames, TArray<FPBBumperTableRow>& OutRows) const;
 	bool FindBumperRow(FName RowName, FPBBumperTableRow& OutRow) const;
 	bool FindBumperTriggerRow(FName RowName, FPBBumperTriggerRow& OutRow) const;
 	bool FindBumperEffectRow(FName RowName, FPBBumperEffectRow& OutRow) const;
@@ -46,6 +47,13 @@ private:
 
 	template <typename RowType>
 	bool FindTableRow(const UDataTable* Table, FName RowName, RowType& OutRow, const TCHAR* Context) const;
+
+	template <typename RowType>
+	bool GetAllTableRows(
+		const UDataTable* Table,
+		TArray<FName>& OutRowNames,
+		TArray<RowType>& OutRows,
+		const TCHAR* Context) const;
 
 #pragma region Bumper
 	UPROPERTY()
@@ -79,4 +87,30 @@ bool UPBTableDataSubsystem::FindTableRow(
 
 	OutRow = *Row;
 	return true;
+}
+
+template <typename RowType>
+bool UPBTableDataSubsystem::GetAllTableRows(
+	const UDataTable* Table,
+	TArray<FName>& OutRowNames,
+	TArray<RowType>& OutRows,
+	const TCHAR* Context) const
+{
+	OutRowNames.Reset();
+	OutRows.Reset();
+
+	if (!IsValid(Table))
+	{
+		return false;
+	}
+
+	Table->ForeachRow<RowType>(
+		Context,
+		[&OutRowNames, &OutRows](const FName& RowName, const RowType& Row)
+		{
+			OutRowNames.Add(RowName);
+			OutRows.Add(Row);
+		});
+
+	return OutRows.Num() > 0;
 }
