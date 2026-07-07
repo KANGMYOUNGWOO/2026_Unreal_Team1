@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PinBallLike/Table/Ball/Struct/PBBallStarLevelRow.h"
+#include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
@@ -23,20 +25,22 @@ public:
 
 	// 로딩 Subsystem이 준비한 테이블을 주입한다. 이 Subsystem은 조회 책임만 가진다.
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
+	void SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable);
 
+private:
+	template <typename RowType>
+	bool FindTableRow(const UDataTable* Table, FName RowName, RowType& OutRow, const TCHAR* Context) const;
+	
 #pragma region Bumper
+	
+public:
 	bool FindBumperRow(FName RowName, FPBBumperTableRow& OutRow) const;
 	bool FindBumperTriggerRow(FName RowName, FPBBumperTriggerRow& OutRow) const;
 	bool FindBumperEffectRow(FName RowName, FPBBumperEffectRow& OutRow) const;
 	bool FindLinkedBumperTriggerRow(FName BumperRowName, FPBBumperTriggerRow& OutRow) const;
 	bool FindLinkedBumperEffectRow(FName BumperRowName, FPBBumperEffectRow& OutRow) const;
-#pragma endregion
 
 private:
-	template <typename RowType>
-	bool FindTableRow(const UDataTable* Table, FName RowName, RowType& OutRow, const TCHAR* Context) const;
-
-#pragma region Bumper
 	UPROPERTY()
 	TObjectPtr<UDataTable> BumperTable;
 
@@ -45,6 +49,24 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> BumperEffectTable;
+	
+#pragma endregion
+	
+#pragma region Ball
+	
+public:
+	bool FindBallRow(FName RowName, FPBBallTableRow& OutRow) const;
+	bool FindBallStarLevelRow(FName RowName, FPBBallStarLevelRow& OutRow) const;
+	bool FindBallRowByBallId(int32 BallId, FName& OutRowName, FPBBallTableRow& OutRow) const;
+	bool FindBallStarLevelRow(int32 BallId, int32 StarLevel, FName& OutRowName, FPBBallStarLevelRow& OutRow) const;
+	
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> BallTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> BallStarLevelTable;
+	
 #pragma endregion
 };
 

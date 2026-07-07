@@ -46,12 +46,14 @@ void UPBGameDataLoadSubsystem::LoadStartupGameDataAsync()
 	}
 
 	TArray<FSoftObjectPath> TablePaths;
-	TablePaths.Reserve(3);
+	TablePaths.Reserve(5);
 
 	// 테이블 경로는 DeveloperSettings에서만 관리한다.
 	const FSoftObjectPath BumperTablePath = Settings->BumperTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperTriggerTablePath = Settings->BumperTriggerTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperEffectTablePath = Settings->BumperEffectTable.ToSoftObjectPath();
+	const FSoftObjectPath BallTablePath = Settings->BallTable.ToSoftObjectPath();
+	const FSoftObjectPath BallStarLevelTablePath = Settings->BallStarLevelTable.ToSoftObjectPath();
 
 	if (BumperTablePath.IsValid())
 	{
@@ -66,6 +68,16 @@ void UPBGameDataLoadSubsystem::LoadStartupGameDataAsync()
 	if (BumperEffectTablePath.IsValid())
 	{
 		TablePaths.Add(BumperEffectTablePath);
+	}
+
+	if (BallTablePath.IsValid())
+	{
+		TablePaths.Add(BallTablePath);
+	}
+
+	if (BallStarLevelTablePath.IsValid())
+	{
+		TablePaths.Add(BallStarLevelTablePath);
 	}
 
 	if (TablePaths.IsEmpty())
@@ -186,6 +198,7 @@ void UPBGameDataLoadSubsystem::UnloadStartupGameData()
 		if (UPBTableDataSubsystem* TableDataSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>())
 		{
 			TableDataSubsystem->SetBumperTables(nullptr, nullptr, nullptr);
+			TableDataSubsystem->SetBallTables(nullptr, nullptr);
 		}
 	}
 
@@ -228,6 +241,8 @@ void UPBGameDataLoadSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjec
 	UDataTable* BumperTable = nullptr;
 	UDataTable* BumperTriggerTable = nullptr;
 	UDataTable* BumperEffectTable = nullptr;
+	UDataTable* BallTable = nullptr;
+	UDataTable* BallStarLevelTable = nullptr;
 
 	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
 	if (IsValid(Settings))
@@ -236,6 +251,8 @@ void UPBGameDataLoadSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjec
 		BumperTable = Cast<UDataTable>(Settings->BumperTable.Get());
 		BumperTriggerTable = Cast<UDataTable>(Settings->BumperTriggerTable.Get());
 		BumperEffectTable = Cast<UDataTable>(Settings->BumperEffectTable.Get());
+		BallTable = Cast<UDataTable>(Settings->BallTable.Get());
+		BallStarLevelTable = Cast<UDataTable>(Settings->BallStarLevelTable.Get());
 	}
 
 	for (const FSoftObjectPath& LoadedPath : LoadedPaths)
@@ -249,11 +266,14 @@ void UPBGameDataLoadSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjec
 	if (UPBTableDataSubsystem* TableDataSubsystem = GetGameInstance()->GetSubsystem<UPBTableDataSubsystem>())
 	{
 		TableDataSubsystem->SetBumperTables(BumperTable, BumperTriggerTable, BumperEffectTable);
+		TableDataSubsystem->SetBallTables(BallTable, BallStarLevelTable);
 	}
 
 	bStartupGameDataReady = IsValid(BumperTable)
 		&& IsValid(BumperTriggerTable)
-		&& IsValid(BumperEffectTable);
+		&& IsValid(BumperEffectTable)
+		&& IsValid(BallTable)
+		&& IsValid(BallStarLevelTable);
 
 	UE_LOG(LogTemp, Log, TEXT("[GameDataLoad] Startup game data loaded. Ready=%s TableCount=%d"),
 		bStartupGameDataReady ? TEXT("true") : TEXT("false"),

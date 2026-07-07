@@ -25,4 +25,15 @@ public:
 	TSoftObjectPtr<UDataTable> BumperEffectTable;
 	
 #pragma endregion
+	
+#pragma region Ball
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Ball|Table")
+	TSoftObjectPtr<UDataTable> BallTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Ball|Table")
+	TSoftObjectPtr<UDataTable> BallStarLevelTable;
+	
+	
+#pragma endregion 
 };

@@ -26,9 +26,7 @@ private:
 	
 	TMap<int32, const FBallDataStruct*> BallDataMap;
 	TArray<const FBallDataStruct*> BallDataArray;
-	
-	
-	
+
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	
@@ -42,18 +40,4 @@ public :
 	
 	const FBallDataStruct* GetBallData(int32 BallId);
 	
-#pragma region Ball
-	
-public:
-	void InitializeBallData();
-	const UPBBallDataAsset* GetBallDataAsset(int32 BallId) const;
-	TArray<const UPBBallDataAsset*> GetAllBallDataAssets() const;
-
-private:
-	UPROPERTY()
-	TArray<TObjectPtr<UPBBallDataAsset>> BallDataAssets;
-
-	TMap<int32, UPBBallDataAsset*> BallDataAssetMap;
-	
-#pragma endregion
 };

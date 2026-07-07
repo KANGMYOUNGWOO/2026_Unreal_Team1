@@ -1,10 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PBBallInstanceData.generated.h"
+#include "PBDeckOwnedBallData.generated.h"
 
 USTRUCT(BlueprintType)
-struct PINBALLLIKE_API FPBBallInstanceData
+struct PINBALLLIKE_API FPBDeckOwnedBallData
 {
 	GENERATED_BODY()
 

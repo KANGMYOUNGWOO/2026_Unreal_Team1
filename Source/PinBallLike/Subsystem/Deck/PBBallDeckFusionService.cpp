@@ -4,7 +4,7 @@
 #include "PBBallDeckFusionService.h"
 
 #include "PBBallDeckSubsystem.h"
-#include "PinBallLike/Struct/Deck/PBBallInstanceData.h"
+#include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
 
 void UPBBallDeckFusionService::Initialize(UPBBallDeckSubsystem* InDeckSubsystem)
 {
@@ -108,7 +108,7 @@ bool UPBBallDeckFusionService::BuildFusionRequests(TArray<FPBBallDeckFusionReque
 	const TArray<int32> PlacedBallInstanceIds = DeckSubsystem->GetAllPlacedBallInstanceIds();
 	for (const int32 BallInstanceId : PlacedBallInstanceIds)
 	{
-		const FPBBallInstanceData* BallInstanceData = DeckSubsystem->GetOwnedBallData(BallInstanceId);
+		const FPBDeckOwnedBallData* BallInstanceData = DeckSubsystem->GetOwnedBallData(BallInstanceId);
 		if (!BallInstanceData || !BallInstanceData->IsValid())
 		{
 			continue;
@@ -144,7 +144,7 @@ bool UPBBallDeckFusionService::BuildFusionRequests(TArray<FPBBallDeckFusionReque
 		{
 			const int32 FirstConsumedIndex = RequestIndex * FPBBallDeckFusionRequest::RequiredFusionBallCount;
 			const int32 SurvivorBallInstanceId = CandidateBallInstanceIds[FirstConsumedIndex];
-			const FPBBallInstanceData* SurvivorBallInstanceData = DeckSubsystem->GetOwnedBallData(SurvivorBallInstanceId);
+			const FPBDeckOwnedBallData* SurvivorBallInstanceData = DeckSubsystem->GetOwnedBallData(SurvivorBallInstanceId);
 			if (!SurvivorBallInstanceData || !SurvivorBallInstanceData->IsValid())
 			{
 				continue;
@@ -202,7 +202,7 @@ bool UPBBallDeckFusionService::ValidateFusionRequests(const TArray<FPBBallDeckFu
 				return false;
 			}
 
-			const FPBBallInstanceData* BallInstanceData = DeckSubsystem->GetOwnedBallData(BallInstanceId);
+			const FPBDeckOwnedBallData* BallInstanceData = DeckSubsystem->GetOwnedBallData(BallInstanceId);
 			if (!BallInstanceData
 				|| !BallInstanceData->IsValid()
 				|| BallInstanceData->BallId != FusionRequest.BallId

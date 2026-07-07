@@ -14,7 +14,9 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 {
 	return IsValid(BumperTable)
 		&& IsValid(BumperTriggerTable)
-		&& IsValid(BumperEffectTable);
+		&& IsValid(BumperEffectTable)
+		&& IsValid(BallTable)
+		&& IsValid(BallStarLevelTable);
 }
 
 void UPBTableDataSubsystem::SetBumperTables(
@@ -30,6 +32,16 @@ void UPBTableDataSubsystem::SetBumperTables(
 		*GetNameSafe(BumperTable),
 		*GetNameSafe(BumperTriggerTable),
 		*GetNameSafe(BumperEffectTable));
+}
+
+void UPBTableDataSubsystem::SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable)
+{
+	BallTable = InBallTable;
+	BallStarLevelTable = InBallStarLevelTable;
+	
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Ball tables assigned. Ball=%s StarLevel=%s"),
+	*GetNameSafe(BallTable),
+	*GetNameSafe(BallStarLevelTable));
 }
 
 #pragma region Bumper
@@ -75,4 +87,72 @@ bool UPBTableDataSubsystem::FindLinkedBumperEffectRow(
 	return FindBumperEffectRow(BumperRow.EffectID, OutRow);
 }
 
+
 #pragma endregion
+
+#pragma region Ball
+
+bool UPBTableDataSubsystem::FindBallRow(FName RowName, FPBBallTableRow& OutRow) const
+{
+	return FindTableRow(BallTable, RowName, OutRow, TEXT("FindBallRow"));
+}
+
+bool UPBTableDataSubsystem::FindBallStarLevelRow(FName RowName, FPBBallStarLevelRow& OutRow) const
+{
+	return FindTableRow(BallStarLevelTable, RowName, OutRow, TEXT("FindBallStarLevelRow"));
+}
+
+bool UPBTableDataSubsystem::FindBallRowByBallId(
+	const int32 BallId,
+	FName& OutRowName,
+	FPBBallTableRow& OutRow) const
+{
+	OutRowName = NAME_None;
+	OutRow = FPBBallTableRow();
+	if (!IsValid(BallTable) || BallId == 0)
+	{
+		return false;
+	}
+
+	for (const TPair<FName, uint8*>& RowPair : BallTable->GetRowMap())
+	{
+		const FPBBallTableRow* Row = reinterpret_cast<FPBBallTableRow*>(RowPair.Value);
+		if (Row && Row->BallId == BallId)
+		{
+			OutRowName = RowPair.Key;
+			OutRow = *Row;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UPBTableDataSubsystem::FindBallStarLevelRow(
+	const int32 BallId,
+	const int32 StarLevel,
+	FName& OutRowName,
+	FPBBallStarLevelRow& OutRow) const
+{
+	OutRowName = NAME_None;
+	OutRow = FPBBallStarLevelRow();
+	if (!IsValid(BallStarLevelTable) || BallId == 0 || StarLevel <= 0)
+	{
+		return false;
+	}
+
+	for (const TPair<FName, uint8*>& RowPair : BallStarLevelTable->GetRowMap())
+	{
+		const FPBBallStarLevelRow* Row = reinterpret_cast<FPBBallStarLevelRow*>(RowPair.Value);
+		if (Row && Row->BallId == BallId && Row->StarLevel == StarLevel)
+		{
+			OutRowName = RowPair.Key;
+			OutRow = *Row;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+#pragma endregion 

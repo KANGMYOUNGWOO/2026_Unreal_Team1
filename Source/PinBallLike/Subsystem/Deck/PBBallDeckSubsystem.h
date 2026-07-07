@@ -6,7 +6,7 @@
 #include "PBBallDeckFusionService.h"
 #include "PinBallLike/Struct/Ball/PBBallItemViewData.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
-#include "PinBallLike/Struct/Deck/PBBallInstanceData.h"
+#include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
 #include "PinBallLike/Struct/Party/PBPartyTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBBallDeckSubsystem.generated.h"
@@ -55,7 +55,7 @@ public:
 	TArray<int32> GetSlotBallInstanceIds(EPBBallDeckSlotType SlotType) const;
 	TArray<int32> GetAllPlacedBallInstanceIds() const;
 
-	const FPBBallInstanceData* GetOwnedBallData(int32 BallInstanceId) const;
+	const FPBDeckOwnedBallData* GetOwnedBallData(int32 BallInstanceId) const;
 	bool HasOwnedBall(int32 BallInstanceId) const;
 	bool BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const;
 
@@ -164,7 +164,7 @@ private:
 	TArray<FPBBallDeckSlot> DeckSlots;
 
 	UPROPERTY()
-	TMap<int32, FPBBallInstanceData> OwnedBallDataMap;
+	TMap<int32, FPBDeckOwnedBallData> OwnedBallDataMap;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallDeckFusionService> FusionService;

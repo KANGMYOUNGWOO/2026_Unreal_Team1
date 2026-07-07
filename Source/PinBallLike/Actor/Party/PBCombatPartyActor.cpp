@@ -11,10 +11,39 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Component/PBSnakeFormationComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
-#include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
-#include "PinBallLike/Struct/Deck/PBBallInstanceData.h"
-#include "PinBallLike/Subsystem/BallDataSubsystem.h"
+#include "PinBallLike/Struct/Ball/PBBallInstanceData.h"
+#include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
+#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
+
+static void AppendResourceData(TArray<FPBResourceData>& OutResources, const TMap<FName, int32>& ResourceValues)
+{
+	for (const TPair<FName, int32>& ResourceValue : ResourceValues)
+	{
+		if (!ResourceValue.Key.IsNone())
+		{
+			OutResources.Add(FPBResourceData(
+				ResourceValue.Key,
+				static_cast<float>(ResourceValue.Value),
+				static_cast<float>(ResourceValue.Value),
+				0.0f));
+		}
+	}
+}
+
+static void AppendStatData(TArray<FPBStatData>& OutStats, const TMap<FName, int32>& StatValues)
+{
+	for (const TPair<FName, int32>& StatValue : StatValues)
+	{
+		if (!StatValue.Key.IsNone())
+		{
+			OutStats.Add(FPBStatData(StatValue.Key, StatValue.Value));
+		}
+	}
+}
 
 APBCombatPartyActor::APBCombatPartyActor()
 {
@@ -376,21 +405,45 @@ APBBallBase* APBCombatPartyActor::SpawnBallFromInstanceId(int32 BallInstanceId)
 		return nullptr;
 	}
 
-	const FPBBallInstanceData* BallInstanceData = DeckSubsystem->GetOwnedBallData(BallInstanceId);
+	const FPBDeckOwnedBallData* BallInstanceData = DeckSubsystem->GetOwnedBallData(BallInstanceId);
 	if (!BallInstanceData)
 	{
 		return nullptr;
 	}
 
 	UGameInstance* GameInstance = GetGameInstance();
-	const UBallDataSubsystem* BallDataSubsystem = GameInstance ? GameInstance->GetSubsystem<UBallDataSubsystem>() : nullptr;
-	if (!BallDataSubsystem)
+	const UPBTableDataSubsystem* TableDataSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBTableDataSubsystem>() : nullptr;
+	const UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr;
+	if (!TableDataSubsystem || !GameDataLoadSubsystem)
 	{
 		return nullptr;
 	}
 
-	const UPBBallDataAsset* BallDataAsset = BallDataSubsystem->GetBallDataAsset(BallInstanceData->BallId);
-	if (!BallDataAsset || !BallDataAsset->Ball)
+	FName BallRowName;
+	FPBBallTableRow BallRow;
+	if (!TableDataSubsystem->FindBallRowByBallId(BallInstanceData->BallId, BallRowName, BallRow))
+	{
+		return nullptr;
+	}
+
+	FName StarLevelRowName;
+	FPBBallStarLevelRow StarLevelRow;
+	if (!TableDataSubsystem->FindBallStarLevelRow(
+		BallInstanceData->BallId,
+		BallInstanceData->StarLevel,
+		StarLevelRowName,
+		StarLevelRow))
+	{
+		return nullptr;
+	}
+
+	const FPrimaryAssetId BallAssetId(PBBallAssetIds::Type::BallData, BallRowName);
+	const UPBBallDataAsset* BallDataAsset =
+		Cast<UPBBallDataAsset>(GameDataLoadSubsystem->GetLoadedPrimaryAsset(BallAssetId));
+	UClass* BallActorClass = BallDataAsset ? BallDataAsset->ActorClass.Get() : nullptr;
+	if (!IsValid(BallActorClass))
 	{
 		return nullptr;
 	}
@@ -403,7 +456,7 @@ APBBallBase* APBCombatPartyActor::SpawnBallFromInstanceId(int32 BallInstanceId)
 
 	const FTransform SpawnTransform(GetActorRotation(), GetActorLocation());
 	APBBallBase* SpawnedBall = World->SpawnActorDeferred<APBBallBase>(
-		BallDataAsset->Ball,
+		BallActorClass,
 		SpawnTransform,
 		this,
 		nullptr,
@@ -413,7 +466,14 @@ APBBallBase* APBCombatPartyActor::SpawnBallFromInstanceId(int32 BallInstanceId)
 		return nullptr;
 	}
 
-	SpawnedBall->InitializeFromBallData(const_cast<UPBBallDataAsset*>(BallDataAsset), BallInstanceData->StarLevel);
+	FPBBallInstanceData NewBallInstanceData;
+	NewBallInstanceData.InstanceId = BallInstanceData->InstanceId;
+	NewBallInstanceData.BallId = BallInstanceData->BallId;
+	NewBallInstanceData.StarLevel = BallInstanceData->StarLevel;
+	AppendResourceData(NewBallInstanceData.BaseResources, StarLevelRow.BaseResources);
+	AppendStatData(NewBallInstanceData.BaseStats, StarLevelRow.BaseStats);
+
+	SpawnedBall->InitializeFromBallInstanceData(NewBallInstanceData);
 	SpawnedBall->FinishSpawning(SpawnTransform);
 	SpawnedBall->SetActorHiddenInGame(true);
 

@@ -23,6 +23,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "UI"))
 	TSoftObjectPtr<UTexture2D> Icon;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Actor", meta = (AssetBundles = "Actor"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Actor", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<APBBallBase> ActorClass;
 };

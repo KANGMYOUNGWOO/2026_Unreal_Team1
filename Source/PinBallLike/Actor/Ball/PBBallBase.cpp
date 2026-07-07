@@ -6,7 +6,6 @@
 #include "Component/PBBallHitReactionComponent.h"
 #include "Component/PBBallComboComponent.h"
 #include "Component/PBBallPhysicsComponent.h"
-#include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "Components/SphereComponent.h"
@@ -70,16 +69,11 @@ void APBBallBase::ApplyResourceData(const TArray<FPBResourceData>& ResourceData)
 	}
 }
 
-void APBBallBase::InitializeFromBallData(UPBBallDataAsset* InBallData, int32 InStarLevel)
+void APBBallBase::InitializeFromBallInstanceData(const FPBBallInstanceData& InBallInstanceData)
 {
-	BallData = InBallData;
-	CurrentStarLevel = FMath::Max(InStarLevel, 1);
-
-	if (HasActorBegunPlay())
-	{
-		InitializeStatsFromBallData();
-		InitializeResourcesFromBallData();
-	}
+	BallInstanceData = InBallInstanceData;
+	ApplyStatData(BallInstanceData.BaseStats);
+	ApplyResourceData(BallInstanceData.BaseResources);
 }
 
 void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
@@ -111,41 +105,4 @@ void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
 void APBBallBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	InitializeStatsFromBallData();
-	InitializeResourcesFromBallData();
-}
-
-void APBBallBase::InitializeStatsFromBallData()
-{
-	if (!BallData)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%s has no BallData asset."), *GetName());
-		return;
-	}
-
-	const FPBBallStarLevelData* StarLevelData = BallData->StarLevelData.Find(CurrentStarLevel);
-	if (!StarLevelData)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%s has no StarLevelData for star level %d."), *GetName(), CurrentStarLevel);
-		return;
-	}
-
-	ApplyStatData(StarLevelData->BaseStats);
-}
-
-void APBBallBase::InitializeResourcesFromBallData()
-{
-	if (!BallData)
-	{
-		return;
-	}
-
-	const FPBBallStarLevelData* StarLevelData = BallData->StarLevelData.Find(CurrentStarLevel);
-	if (!StarLevelData)
-	{
-		return;
-	}
-
-	ApplyResourceData(StarLevelData->BaseResources);
 }

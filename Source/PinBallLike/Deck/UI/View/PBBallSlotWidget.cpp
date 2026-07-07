@@ -162,10 +162,10 @@ void UPBBallSlotWidget::EnsureSlotViewModel()
 		SlotViewModel = NewObject<UPBBallSlotViewModel>(this);
 	}
 
-	if (SlotViewModel)
-	{
-		ApplyViewModelToWidget();
-	}
+	// if (SlotViewModel)
+	// {
+	// 	ApplyViewModelToWidget();
+	// }
 }
 
 bool UPBBallSlotWidget::ApplyViewModelToWidget()
