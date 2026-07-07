@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Engine/StreamableManager.h"
+#include "PinBallLike/Table/PBAssetBundleNames.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "UObject/PrimaryAssetId.h"
 #include "PBGameDataLoadSubsystem.generated.h"
 
 class UDataTable;
-class UPBBumperAssetLoader;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBGameDataLoadEvent);
 
@@ -37,17 +37,23 @@ public:
 		const TArray<FName>& BundleNames,
 		FStreamableDelegate OnLoaded);
 
+	void LoadPrimaryAssetsByNamesAsync(
+		FPrimaryAssetType AssetType,
+		const TArray<FName>& AssetNames,
+		const TArray<FName>& BundleNames);
+
 	// PrimaryAsset 안의 SoftObject/SoftClass 참조를 추가 로드한다.
 	void LoadSoftReferencesAsync(const TArray<FSoftObjectPath>& SoftReferencePaths, FStreamableDelegate OnLoaded);
 
-	// 범퍼 RowId와 BundleNames를 직접 지정해 로드한다.
-	void LoadBumperAssetsAsync(const TArray<FName>& BumperRowIds, const TArray<FName>& BundleNames);
-
 	void UnloadStartupGameData();
 	void UnloadPrimaryAssets();
+	void UnloadPrimaryAssetBundle(FName BundleName);
 
-	bool IsStartupGameDataReady() const { return bStartupGameDataReady; }
-	bool ArePrimaryAssetsReady() const { return bPrimaryAssetsReady; }
+	UFUNCTION(BlueprintCallable, Category = "GameData|Asset")
+	void UnloadPrimaryAssetBundleByType(EPBAssetBundleType BundleType);
+
+	bool IsStartupGameDataReady() const { return bIsStartupGameDataReady; }
+	bool IsPrimaryAssetsReady() const { return bIsPrimaryAssetsReady; }
 
 	// 로드 후 캐싱된 PrimaryAsset 객체를 조회한다.
 	UObject* GetLoadedPrimaryAsset(FPrimaryAssetId PrimaryAssetId) const;
@@ -64,19 +70,23 @@ public:
 	FPBGameDataLoadEvent OnPrimaryAssetsLoaded;
 
 private:
+	UFUNCTION()
+	void ResumePrimaryAssetLoadByNamesAfterStartupDataReady();
+
 	void OnStartupGameDataLoadedInternal(TArray<FSoftObjectPath> LoadedPaths);
 	void OnPrimaryAssetsLoadedInternal(TArray<FPrimaryAssetId> LoadedAssetIds);
 
 	// 타입 하나에 맞는 PrimaryAssetId들을 결과 배열에 추가한다.
 	void AppendPrimaryAssetIds(FPrimaryAssetType AssetType, TArray<FPrimaryAssetId>& OutAssetIds) const;
+	FName MakePrimaryAssetBundleKey(const TArray<FName>& BundleNames) const;
+	void RemoveLoadedPrimaryAssetsForBundle(FName BundleName);
+	bool IsPrimaryAssetLoadedByOtherBundle(FName BundleName, FPrimaryAssetId PrimaryAssetId) const;
 
 	// 핸들을 유지해야 비동기 로드 결과가 GC/해제되지 않는다.
 	TSharedPtr<FStreamableHandle> StartupGameDataLoadHandle;
-	TSharedPtr<FStreamableHandle> PrimaryAssetLoadHandle;
 	TSharedPtr<FStreamableHandle> SoftReferenceLoadHandle;
-
-	UPROPERTY()
-	TObjectPtr<UPBBumperAssetLoader> BumperAssetLoader;
+	TMap<FName, TSharedPtr<FStreamableHandle>> PrimaryAssetLoadHandlesByBundle;
+	TMap<FName, TArray<FPrimaryAssetId>> LoadedPrimaryAssetIdsByBundle;
 
 	UPROPERTY()
 	TArray<TObjectPtr<UDataTable>> LoadedStartupTables;
@@ -84,6 +94,15 @@ private:
 	UPROPERTY()
 	TMap<FPrimaryAssetId, TObjectPtr<UObject>> LoadedPrimaryAssets;
 
-	bool bStartupGameDataReady = false;
-	bool bPrimaryAssetsReady = false;
+	UPROPERTY(Transient)
+	FPrimaryAssetType PendingPrimaryAssetType;
+
+	UPROPERTY(Transient)
+	TArray<FName> PendingPrimaryAssetNames;
+
+	UPROPERTY(Transient)
+	TArray<FName> PendingPrimaryAssetBundleNames;
+
+	bool bIsStartupGameDataReady = false;
+	bool bIsPrimaryAssetsReady = false;
 };
