@@ -1,3 +1,4 @@
+
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
@@ -22,6 +23,7 @@ class PINBALLLIKE_API UPBPlayerDataSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
+#pragma region Bumper
 	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
 	bool EquipBumper(EPBBumperSlotType SlotType, FName BumperRowId);
 
@@ -33,6 +35,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Bumper")
 	TArray<FName> GetEquippedBumperRowIds() const;
+#pragma endregion 
 
 private:
 	// TODO: SaveGame 연동 전까지 사용하는 임시 기본 장착값.

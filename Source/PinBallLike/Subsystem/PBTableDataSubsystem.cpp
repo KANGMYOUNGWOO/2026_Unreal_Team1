@@ -34,6 +34,13 @@ void UPBTableDataSubsystem::SetBumperTables(
 
 #pragma region Bumper
 
+bool UPBTableDataSubsystem::GetAllBumperRows(
+	TArray<FName>& OutRowNames,
+	TArray<FPBBumperTableRow>& OutRows) const
+{
+	return GetAllTableRows(BumperTable, OutRowNames, OutRows, TEXT("GetAllBumperRows"));
+}
+
 bool UPBTableDataSubsystem::FindBumperRow(const FName RowName, FPBBumperTableRow& OutRow) const
 {
 	return FindTableRow(BumperTable, RowName, OutRow, TEXT("FindBumperRow"));

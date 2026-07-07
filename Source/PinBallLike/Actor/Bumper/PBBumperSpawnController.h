@@ -16,6 +16,11 @@ class USceneComponent;
 struct FPBBumperTableRow;
 struct FPBBumperTriggerRow;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FPBSpawnedBumpersReadySignature,
+	bool, bSuccess,
+	const TArray<APBModularBumperBase*>&, SpawnedBumperActors);
+
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBumperSpawnController : public AActor
 {
@@ -35,6 +40,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Spawn")
 	void ClearSpawnedBumpers();
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Spawn")
+	void GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpers) const;
+
+	UPROPERTY(BlueprintAssignable, Category = "Bumper|Spawn")
+	FPBSpawnedBumpersReadySignature OnSpawnedBumpersReady;
 
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -61,7 +72,7 @@ private:
 		const TArray<FPBBumperTriggerSpawnInfo>& TriggerSpawnInfos);
 
 	// 완료 처리와 의존성 캐싱.
-	void CompleteBumperPreparation(bool bSuccess) const;
+	void CompleteBumperPreparation(bool bSuccess);
 	bool CacheRequiredSubsystems();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Spawn", meta = (AllowPrivateAccess = "true"))
