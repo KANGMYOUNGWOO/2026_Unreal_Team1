@@ -14,5 +14,18 @@ public:
 	void OnPushed();
 
 	UFUNCTION(BlueprintNativeEvent, Category = "UI")
+	void OnPopRequested();
+
+	UFUNCTION(BlueprintNativeEvent, Category = "UI")
 	void OnPopped();
+
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	bool CompletePop();
+
+	bool IsPopRequested() const { return bIsPopRequested; }
+	void SetPopRequested(bool bInPopRequested) { bIsPopRequested = bInPopRequested; }
+
+private:
+	UPROPERTY(Transient)
+	bool bIsPopRequested = false;
 };
