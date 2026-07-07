@@ -6,7 +6,7 @@
 #include "PBCollectionTableRow.generated.h"
 
 /**
- * Collection_Master DataTable의 한 행입니다.
+ * Collection DataTable의 한 행입니다.
  * 도감 고정 데이터만 담당하며, 발견/해금/완료 같은 플레이어 진행도는 별도 저장소에서 관리합니다.
  */
 USTRUCT(BlueprintType)
