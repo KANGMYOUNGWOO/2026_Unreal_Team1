@@ -9,6 +9,7 @@
 
 class APBBumperSpawnController;
 enum class EPBBattlePreparationType : uint8;
+struct FPBBattleBossDeadMessage;
 struct FPBBattlePreparationCompletedMessage;
 
 UENUM(BlueprintType)
@@ -67,6 +68,7 @@ protected:
 	void RegisterBattleMessageListeners();
 	void UnregisterBattleMessageListeners();
 	void HandlePreparationCompletedMessage(FGameplayTag Channel, const FPBBattlePreparationCompletedMessage& Message);
+	void HandleBossDeadMessage(FGameplayTag Channel, const FPBBattleBossDeadMessage& Message);
 	void ResetPreparationState();
 	void MarkPreparationCompleted(EPBBattlePreparationType PreparationType, bool bSuccess);
 
@@ -96,6 +98,7 @@ private:
 	TObjectPtr<APBBumperSpawnController> BumperSpawnController;
 
 	FGameplayMessageListenerHandle PreparationCompletedListenerHandle;
+	FGameplayMessageListenerHandle BossDeadListenerHandle;
 
 	bool bBumperPrepared = false;
 	bool bBallPrepared = false;

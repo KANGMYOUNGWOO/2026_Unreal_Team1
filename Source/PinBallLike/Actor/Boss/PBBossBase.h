@@ -127,6 +127,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void StartDeadState();
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
+	void HandleDeadTriggered();
+
 	UFUNCTION(BlueprintPure, Category = "Boss|Base Profile")
 	// UI 등에 표시할 보스 이름을 반환합니다.
 	FText GetBossName() const;
@@ -236,4 +239,5 @@ protected:
 private:
 	FTimerHandle GroggyResetTimerHandle;
 	bool IsGroggyStateActive = false;
+	bool IsDeadStateActive = false;
 };

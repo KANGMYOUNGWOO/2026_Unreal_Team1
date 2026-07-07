@@ -1,6 +1,7 @@
 #include "PBBossStatComponent.h"
 
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Utils/PBFixedPoint.h"
 
 UPBBossStatComponent::UPBBossStatComponent()
@@ -62,7 +63,11 @@ void UPBBossStatComponent::ApplyBossDamage(FName HitPointName, int32 DamageAmoun
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Boss Dead."));
 
-		if (CanNotifyOwner())
+		if (APBBossBase* OwnerBoss = Cast<APBBossBase>(OwnerActor))
+		{
+			OwnerBoss->HandleDeadTriggered();
+		}
+		else if (CanNotifyOwner())
 		{
 			IBossInterface::Execute_OnDeadTriggered(OwnerActor);
 		}

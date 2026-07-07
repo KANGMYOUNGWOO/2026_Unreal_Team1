@@ -155,6 +155,11 @@ void APBBattleGameState::RegisterBattleMessageListeners()
 		this,
 		&APBBattleGameState::HandlePreparationCompletedMessage);
 
+	BossDeadListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattleBossDeadMessage>(
+		GameplayTags::Event_Battle_Boss_Dead,
+		this,
+		&APBBattleGameState::HandleBossDeadMessage);
+
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Registered preparation listener. Channel=%s"),
 		*FGameplayTag(GameplayTags::Event_Battle_Phase_Prepare_Completed).ToString());
 }
@@ -165,6 +170,12 @@ void APBBattleGameState::UnregisterBattleMessageListeners()
 	{
 		PreparationCompletedListenerHandle.Unregister();
 		UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Unregistered preparation listener."));
+	}
+
+	if (BossDeadListenerHandle.IsValid())
+	{
+		BossDeadListenerHandle.Unregister();
+		UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Unregistered boss dead listener."));
 	}
 }
 
@@ -183,6 +194,22 @@ void APBBattleGameState::HandlePreparationCompletedMessage(
 		Message.bSuccess ? TEXT("true") : TEXT("false"));
 
 	MarkPreparationCompleted(Message.PreparationType, Message.bSuccess);
+}
+
+void APBBattleGameState::HandleBossDeadMessage(
+	FGameplayTag Channel,
+	const FPBBattleBossDeadMessage& Message)
+{
+	if (CurrentPhase != EPBBattleLevelPhase::Combat)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Boss dead message. Channel=%s Boss=%s"),
+		*Channel.ToString(),
+		*GetNameSafe(Message.BossActor));
+
+	SetBattleLevelPhase(EPBBattleLevelPhase::BossDead);
 }
 
 void APBBattleGameState::ResetPreparationState()
@@ -227,6 +254,7 @@ void APBBattleGameState::MarkPreparationCompleted(
 void APBBattleGameState::HandleBossIntro_Implementation()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BossIntro."));
+	SetBattleLevelPhase(EPBBattleLevelPhase::Combat);
 }
 
 void APBBattleGameState::HandleBattle_Implementation()
@@ -237,6 +265,7 @@ void APBBattleGameState::HandleBattle_Implementation()
 void APBBattleGameState::HandleBossDead_Implementation()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BossDead."));
+	SetBattleLevelPhase(EPBBattleLevelPhase::Reward);
 }
 
 void APBBattleGameState::HandleReward_Implementation()

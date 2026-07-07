@@ -10,9 +10,12 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StateTreeComponent.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Boss/StateTree/PBBossStateTreeTags.h"
 #include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 
 namespace
 {
@@ -253,6 +256,12 @@ void APBBossBase::StartEnragedState()
 
 void APBBossBase::StartDeadState()
 {
+	if (IsDeadStateActive)
+	{
+		return;
+	}
+
+	IsDeadStateActive = true;
 	IsGroggyStateActive = false;
 	SetBossState(EPBBossState::Dead);
 
@@ -265,6 +274,16 @@ void APBBossBase::StartDeadState()
 
 	ClearGroggyResetTimer();
 	BP_OnDead();
+
+	if (UGameplayMessageSubsystem::HasInstance(this))
+	{
+		FPBBattleBossDeadMessage Message;
+		Message.BossActor = this;
+
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_Battle_Boss_Dead,
+			Message);
+	}
 }
 
 FText APBBossBase::GetBossName() const
@@ -359,8 +378,18 @@ void APBBossBase::OnEnragedTriggered_Implementation()
 
 void APBBossBase::OnDeadTriggered_Implementation()
 {
+	HandleDeadTriggered();
+}
+
+void APBBossBase::HandleDeadTriggered()
+{
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Dead."));
-	RequestBossState(EPBBossState::Dead);
+	StartDeadState();
+
+	if (BossStateTreeComponent && BossStateTreeComponent->IsRunning())
+	{
+		RequestBossState(EPBBossState::Dead);
+	}
 }
 
 bool APBBossBase::IsDead() const
