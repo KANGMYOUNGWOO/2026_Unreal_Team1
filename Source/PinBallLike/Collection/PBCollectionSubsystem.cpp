@@ -1,5 +1,6 @@
 #include "PBCollectionSubsystem.h"
 
+#include "PBCollectionNotificationRouter.h"
 #include "Internationalization/Text.h"
 #include "Misc/DateTime.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
@@ -205,11 +206,13 @@ TArray<int32> UPBCollectionSubsystem::GetAvailableStarGrades() const
 bool UPBCollectionSubsystem::DiscoverEntry(FName CollectionId)
 {
 	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	if (!ProgressData)
+	const FPBCollectionEntryData* EntryData = FindEntryData(CollectionId);
+	if (!ProgressData || !EntryData)
 	{
 		return false;
 	}
 
+	const EPBCollectionState PreviousState = ProgressData->State;
 	if (ProgressData->State == EPBCollectionState::Locked)
 	{
 		ProgressData->State = EPBCollectionState::Discovered;
@@ -219,6 +222,7 @@ bool UPBCollectionSubsystem::DiscoverEntry(FName CollectionId)
 		}
 		ProgressData->bIsNew = true;
 		OnCollectionEntryChanged.Broadcast(CollectionId);
+		BroadcastProgressNotification(*EntryData, PreviousState, ProgressData->State);
 	}
 
 	return true;
@@ -227,11 +231,13 @@ bool UPBCollectionSubsystem::DiscoverEntry(FName CollectionId)
 bool UPBCollectionSubsystem::UnlockEntry(FName CollectionId)
 {
 	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	if (!ProgressData)
+	const FPBCollectionEntryData* EntryData = FindEntryData(CollectionId);
+	if (!ProgressData || !EntryData)
 	{
 		return false;
 	}
 
+	const EPBCollectionState PreviousState = ProgressData->State;
 	if (ProgressData->State == EPBCollectionState::Locked)
 	{
 		ProgressData->FirstDiscoveredAtText = MakeNowText();
@@ -247,6 +253,7 @@ bool UPBCollectionSubsystem::UnlockEntry(FName CollectionId)
 		++ProgressData->AcquireCount;
 		ProgressData->bIsNew = true;
 		OnCollectionEntryChanged.Broadcast(CollectionId);
+		BroadcastProgressNotification(*EntryData, PreviousState, ProgressData->State);
 	}
 
 	return true;
@@ -255,12 +262,15 @@ bool UPBCollectionSubsystem::UnlockEntry(FName CollectionId)
 bool UPBCollectionSubsystem::CompleteEntry(FName CollectionId, const FString& CompletedByCharacterName)
 {
 	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	if (!ProgressData)
+	const FPBCollectionEntryData* EntryData = FindEntryData(CollectionId);
+	if (!ProgressData || !EntryData)
 	{
 		return false;
 	}
 
-	if (ProgressData->State != EPBCollectionState::Completed)
+	const EPBCollectionState PreviousState = ProgressData->State;
+	const bool bWasCompleted = ProgressData->State == EPBCollectionState::Completed;
+	if (!bWasCompleted)
 	{
 		if (ProgressData->FirstDiscoveredAtText.IsEmpty())
 		{
@@ -281,9 +291,13 @@ bool UPBCollectionSubsystem::CompleteEntry(FName CollectionId, const FString& Co
 		? TEXT("검사 볼")
 		: CompletedByCharacterName;
 	ProgressData->DefeatCount = FMath::Max(1, ProgressData->DefeatCount + 1);
-	ProgressData->bIsNew = true;
+	ProgressData->bIsNew = !bWasCompleted;
 
 	OnCollectionEntryChanged.Broadcast(CollectionId);
+	if (!bWasCompleted)
+	{
+		BroadcastProgressNotification(*EntryData, PreviousState, ProgressData->State);
+	}
 	return true;
 }
 
@@ -837,6 +851,28 @@ FPBCollectionDisplayData UPBCollectionSubsystem::MakeDisplayData(
 	DisplayData.ShortDescription = EntryData.ShortDescription;
 	DisplayData.DetailDescription = EntryData.DetailDescription;
 	return DisplayData;
+}
+
+void UPBCollectionSubsystem::BroadcastProgressNotification(
+	const FPBCollectionEntryData& EntryData,
+	EPBCollectionState PreviousState,
+	EPBCollectionState NewState)
+{
+	if (PreviousState == NewState)
+	{
+		return;
+	}
+
+	FPBCollectionNotificationMessage Message;
+	Message.CollectionId = EntryData.CollectionId;
+	Message.Category = EntryData.Category;
+	Message.PreviousState = PreviousState;
+	Message.NewState = NewState;
+	Message.DisplayName = EntryData.DisplayName;
+	Message.MessageText = FPBCollectionNotificationRouter::BuildNotificationText(Message);
+
+	OnCollectionNotificationRequested.Broadcast(Message);
+	FPBCollectionNotificationRouter::Broadcast(this, Message);
 }
 
 bool UPBCollectionSubsystem::DoesEntryMatchQuery(

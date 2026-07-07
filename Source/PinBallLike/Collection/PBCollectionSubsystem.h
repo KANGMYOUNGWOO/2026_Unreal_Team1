@@ -1,11 +1,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PinBallLike/Struct/Collection/PBCollectionMessage.h"
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBCollectionSubsystem.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBCollectionEntryChangedSignature, FName, CollectionId);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+	FPBCollectionNotificationRequestedSignature,
+	const FPBCollectionNotificationMessage&,
+	Message);
 
 /**
  * 도감 프로토타입의 데이터 조회와 상태 변경을 담당합니다.
@@ -22,6 +27,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
 	FPBCollectionEntryChangedSignature OnCollectionEntryChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
+	FPBCollectionNotificationRequestedSignature OnCollectionNotificationRequested;
 
 	UFUNCTION(BlueprintCallable, Category = "Collection|Demo")
 	void ResetDemoData();
@@ -96,6 +104,10 @@ private:
 	FPBCollectionDisplayData MakeDisplayData(
 		const FPBCollectionEntryData& EntryData,
 		const FPBCollectionProgressData& ProgressData) const;
+	void BroadcastProgressNotification(
+		const FPBCollectionEntryData& EntryData,
+		EPBCollectionState PreviousState,
+		EPBCollectionState NewState);
 	bool DoesEntryMatchQuery(
 		const FPBCollectionEntryData& EntryData,
 		const FPBCollectionProgressData& ProgressData,
