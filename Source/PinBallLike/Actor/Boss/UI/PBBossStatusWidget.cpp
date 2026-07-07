@@ -21,9 +21,44 @@ void UPBBossStatusWidget::SetBoss(APBBossBase* NewBoss)
 
 void UPBBossStatusWidget::ClearBoss()
 {
+	ClearEnrageWarningTimer();
+
 	if (StatusViewModel)
 	{
+		StatusViewModel->HideEnrageWarning();
 		StatusViewModel->ClearBoss();
+	}
+}
+
+void UPBBossStatusWidget::ShowEnrageWarning()
+{
+	EnsureStatusViewModel();
+	if (StatusViewModel)
+	{
+		StatusViewModel->ShowEnrageWarning();
+	}
+
+	ClearEnrageWarningTimer();
+
+	UWorld* World = GetWorld();
+	if (World && EnrageWarningVisibleSeconds > 0.0f)
+	{
+		World->GetTimerManager().SetTimer(
+			EnrageWarningTimerHandle,
+			this,
+			&UPBBossStatusWidget::HideEnrageWarning,
+			EnrageWarningVisibleSeconds,
+			false);
+	}
+}
+
+void UPBBossStatusWidget::HideEnrageWarning()
+{
+	ClearEnrageWarningTimer();
+
+	if (StatusViewModel)
+	{
+		StatusViewModel->HideEnrageWarning();
 	}
 }
 
@@ -71,4 +106,13 @@ bool UPBBossStatusWidget::ApplyViewModelToWidget()
 	}
 
 	return IsResult;
+}
+
+void UPBBossStatusWidget::ClearEnrageWarningTimer()
+{
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(EnrageWarningTimerHandle);
+	}
 }

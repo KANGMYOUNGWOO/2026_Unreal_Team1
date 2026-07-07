@@ -66,6 +66,22 @@ void UPBBossUIComponent::RemoveBossStatusWidget()
 	BossStatusWidget = nullptr;
 }
 
+void UPBBossUIComponent::ShowEnrageWarning()
+{
+	if (BossStatusWidget)
+	{
+		BossStatusWidget->ShowEnrageWarning();
+	}
+}
+
+void UPBBossUIComponent::HideEnrageWarning()
+{
+	if (BossStatusWidget)
+	{
+		BossStatusWidget->HideEnrageWarning();
+	}
+}
+
 void UPBBossUIComponent::ConfigureBossStatusWidget(TSubclassOf<UPBBossStatusWidget> NewBossStatusWidgetClass, int32 NewBossStatusWidgetZOrder)
 {
 	BossStatusWidgetClass = NewBossStatusWidgetClass;

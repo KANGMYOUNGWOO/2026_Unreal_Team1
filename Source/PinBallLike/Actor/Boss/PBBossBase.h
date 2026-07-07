@@ -14,6 +14,7 @@ class UPBBossStatComponent;
 class UPBBossStatusWidget;
 class UPBBossUIComponent;
 class UPBBossWeaknessComponent;
+class UCameraShakeBase;
 class UStateTreeComponent;
 class USphereComponent;
 
@@ -212,6 +213,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base UI", meta = (ClampMin = "0"))
 	int32 BossStatusWidgetZOrder = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Enrage")
+	TSubclassOf<UCameraShakeBase> EnrageCameraShakeClass;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Boss|Blueprint Event")
 	// 블루프린트에서 보스 피격 연출을 구현하는 이벤트입니다.

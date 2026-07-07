@@ -24,6 +24,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|UI Component")
 	void RemoveBossStatusWidget();
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|UI Component")
+	void ShowEnrageWarning();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|UI Component")
+	void HideEnrageWarning();
+
 	void ConfigureBossStatusWidget(TSubclassOf<UPBBossStatusWidget> NewBossStatusWidgetClass, int32 NewBossStatusWidgetZOrder);
 
 protected:

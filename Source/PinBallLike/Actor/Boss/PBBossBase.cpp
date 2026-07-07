@@ -10,6 +10,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StateTreeComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Boss/StateTree/PBBossStateTreeTags.h"
 #include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 
@@ -227,7 +228,27 @@ void APBBossBase::StartEnragedState()
 		BossPatternComponent->NotifyEnragedPhaseStarted();
 	}
 
+	if (BossUIComponent)
+	{
+		BossUIComponent->ShowEnrageWarning();
+	}
+
+	if (EnrageCameraShakeClass)
+	{
+		UWorld* World = GetWorld();
+		APlayerController* PlayerController = World ? World->GetFirstPlayerController() : nullptr;
+		if (PlayerController)
+		{
+			PlayerController->ClientStartCameraShake(EnrageCameraShakeClass);
+		}
+	}
+
 	BP_OnEnragedStarted();
+
+	if (!IsDead())
+	{
+		RequestBossState(EPBBossState::Idle);
+	}
 }
 
 void APBBossBase::StartDeadState()

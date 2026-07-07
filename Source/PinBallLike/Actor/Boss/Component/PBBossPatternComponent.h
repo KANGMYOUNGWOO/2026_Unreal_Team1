@@ -112,6 +112,8 @@ private:
 	void ClearPatternCheckTimer();
 	// 패턴 시스템을 비활성화하고 필요하면 현재 패턴 쿨다운을 적용합니다.
 	void DeactivatePatternSystem(bool IsApplyCurrentPatternCooldown);
+	// 패턴 쿨다운을 광폭화 전환 기준으로 초기화합니다.
+	void ResetPatternCooldowns();
 	// 지정 패턴의 쿨다운 종료 시간을 기록합니다.
 	void SetPatternCooldown(UPBBossPatternBase* Pattern);
 	// 현재 패턴을 내부적으로 취소하고 필요하면 쿨다운을 적용합니다.

@@ -23,6 +23,8 @@ void UPBBossStatusViewModel::ClearBoss()
 	UnbindBossEvents();
 	Boss = nullptr;
 
+	UE_MVVM_SET_PROPERTY_VALUE(EnrageWarningVisibility, ESlateVisibility::Collapsed);
+	UE_MVVM_SET_PROPERTY_VALUE(VignetteOpacity, 0.0f);
 	RefreshBossName();
 	HandleHPChanged(0, 1);
 	HandleGroggyGaugeChanged(0, 1);
@@ -45,6 +47,18 @@ void UPBBossStatusViewModel::HandleHPChanged(int32 HP, int32 MaxHP)
 void UPBBossStatusViewModel::HandleGroggyGaugeChanged(int32 GroggyGauge, int32 MaxGroggyGauge)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(GroggyPercent, CalculateGaugePercent(GroggyGauge, MaxGroggyGauge));
+}
+
+void UPBBossStatusViewModel::ShowEnrageWarning()
+{
+	UE_MVVM_SET_PROPERTY_VALUE(EnrageWarningText, FText::FromString(TEXT("Warning!!")));
+	UE_MVVM_SET_PROPERTY_VALUE(EnrageWarningVisibility, ESlateVisibility::HitTestInvisible);
+	UE_MVVM_SET_PROPERTY_VALUE(VignetteOpacity, 1.0f);
+}
+
+void UPBBossStatusViewModel::HideEnrageWarning()
+{
+	UE_MVVM_SET_PROPERTY_VALUE(EnrageWarningVisibility, ESlateVisibility::Collapsed);
 }
 
 void UPBBossStatusViewModel::BindBossEvents()
