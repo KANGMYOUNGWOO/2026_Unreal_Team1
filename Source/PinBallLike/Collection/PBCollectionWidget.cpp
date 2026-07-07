@@ -250,6 +250,7 @@ void UPBCollectionWidget::BuildHeader(UVerticalBox* RootBox)
 	BumperTabButton = CreateTextButton(WidgetTree, TEXT("BumperTabButton"), NSLOCTEXT("PBCollection", "BumperTab", "Bumper"));
 	BossTabButton = CreateTextButton(WidgetTree, TEXT("BossTabButton"), NSLOCTEXT("PBCollection", "BossTab", "Boss"));
 	RelicTabButton = CreateTextButton(WidgetTree, TEXT("RelicTabButton"), NSLOCTEXT("PBCollection", "RelicTab", "Relic"));
+	RelicTabButton->SetVisibility(ESlateVisibility::Collapsed);
 	AchievementTabButton = CreateTextButton(WidgetTree, TEXT("AchievementTabButton"), NSLOCTEXT("PBCollection", "AchievementTab", "업적"));
 
 	const TArray<UButton*> TabButtons = {

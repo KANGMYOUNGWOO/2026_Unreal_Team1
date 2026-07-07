@@ -18,6 +18,7 @@ class PINBALLLIKE_API UPBCollectionSubsystem : public UGameInstanceSubsystem
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 
 	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
 	FPBCollectionEntryChangedSignature OnCollectionEntryChanged;
@@ -65,6 +66,10 @@ public:
 	static FText GetMetadataDisplayText(FName MetadataId);
 
 private:
+	UFUNCTION()
+	void HandleStartupGameDataLoaded();
+
+	bool BuildEntriesFromCollectionTable();
 	void BuildDemoEntries();
 	void BuildDemoProgress();
 	void BuildLockedProgress();

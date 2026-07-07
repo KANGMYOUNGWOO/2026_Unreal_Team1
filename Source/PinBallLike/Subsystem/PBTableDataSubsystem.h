@@ -7,6 +7,7 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
+#include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PBTableDataSubsystem.generated.h"
 
 class UDataTable;
@@ -22,6 +23,11 @@ public:
 	bool IsTableDataReady() const;
 
 	// 로딩 Subsystem이 준비한 테이블을 주입한다. 이 Subsystem은 조회 책임만 가진다.
+	void SetCollectionTable(UDataTable* InCollectionTable);
+	bool IsCollectionTableReady() const;
+	bool FindCollectionRow(FName RowName, FPBCollectionTableRow& OutRow) const;
+	void GetAllCollectionRows(TArray<FPBCollectionTableRow>& OutRows) const;
+
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
 
 #pragma region Bumper
@@ -33,6 +39,11 @@ public:
 #pragma endregion
 
 private:
+#pragma region Collection
+	UPROPERTY()
+	TObjectPtr<UDataTable> CollectionTable;
+#pragma endregion
+
 	template <typename RowType>
 	bool FindTableRow(const UDataTable* Table, FName RowName, RowType& OutRow, const TCHAR* Context) const;
 
