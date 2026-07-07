@@ -3,11 +3,32 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PBAssetBundleNames.generated.h"
+
+UENUM(BlueprintType)
+enum class EPBAssetBundleType : uint8
+{
+	UI UMETA(DisplayName = "UI"),
+	Gameplay UMETA(DisplayName = "Gameplay")
+};
 
 namespace PBAssetBundleNames
 {
 	inline const FName Gameplay = TEXT("Gameplay");
 	inline const FName UI = TEXT("UI");
+
+	inline FName ToName(const EPBAssetBundleType BundleType)
+	{
+		switch (BundleType)
+		{
+		case EPBAssetBundleType::UI:
+			return UI;
+		case EPBAssetBundleType::Gameplay:
+			return Gameplay;
+		default:
+			return NAME_None;
+		}
+	}
 }
 
 
