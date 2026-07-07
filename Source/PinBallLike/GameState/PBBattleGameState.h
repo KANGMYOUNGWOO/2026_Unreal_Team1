@@ -7,6 +7,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "PBBattleGameState.generated.h"
 
+class APBBossSpawnController;
 class APBBumperSpawnController;
 enum class EPBBattlePreparationType : uint8;
 struct FPBBattleBossDeadMessage;
@@ -96,6 +97,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<APBBumperSpawnController> BumperSpawnController;
+
+	UPROPERTY()
+	TObjectPtr<APBBossSpawnController> BossSpawnController;
 
 	FGameplayMessageListenerHandle PreparationCompletedListenerHandle;
 	FGameplayMessageListenerHandle BossDeadListenerHandle;

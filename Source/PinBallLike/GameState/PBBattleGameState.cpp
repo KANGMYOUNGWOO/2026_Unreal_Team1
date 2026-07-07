@@ -5,6 +5,7 @@
 
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "PinBallLike/Actor/Boss/PBBossSpawnController.h"
 #include "PinBallLike/Actor/Bumper/PBBumperSpawnController.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
@@ -137,7 +138,22 @@ void APBBattleGameState::PrepareBalls()
 void APBBattleGameState::PrepareBoss()
 {
 	// TODO: 보스 소환 구현 전까지는 준비 완료로 간주한다.
-	MarkPreparationCompleted(EPBBattlePreparationType::Boss, true);
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Prepare boss."));
+
+	if (!IsValid(BossSpawnController))
+	{
+		BossSpawnController = Cast<APBBossSpawnController>(
+			UGameplayStatics::GetActorOfClass(this, APBBossSpawnController::StaticClass()));
+	}
+
+	if (!IsValid(BossSpawnController))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Missing BossSpawnController in level."));
+		MarkPreparationCompleted(EPBBattlePreparationType::Boss, false);
+		return;
+	}
+
+	BossSpawnController->SpawnBossAsync();
 }
 
 void APBBattleGameState::RegisterBattleMessageListeners()
