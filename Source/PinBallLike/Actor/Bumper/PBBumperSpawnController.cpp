@@ -78,7 +78,10 @@ bool APBBumperSpawnController::RequestEquippedBumperGameplayAssetsAsync()
 
 	TArray<FName> BundleNames;
 	BundleNames.Add(PBAssetBundleNames::Gameplay);
-	CachedGameDataLoadSubsystem->LoadBumperAssetsAsync(PendingBumperRowIds, BundleNames);
+	CachedGameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
+		PBBumperAssetIds::Type::BumperData,
+		PendingBumperRowIds,
+		BundleNames);
 
 	return true;
 }
