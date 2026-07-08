@@ -59,8 +59,7 @@ void UPBBallHitReactionComponent::ProcessBallContact(AActor* OtherActor)
 		return;
 	}
 	
-	IBossInterface* Boss = Cast<IBossInterface>(OtherActor);
-	if (!Boss)
+	if (!OtherActor->GetClass()->ImplementsInterface(UBossInterface::StaticClass()))
 	{
 		return;
 	}

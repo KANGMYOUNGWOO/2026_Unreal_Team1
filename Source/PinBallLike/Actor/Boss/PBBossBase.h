@@ -14,6 +14,7 @@ class UPBBossStatComponent;
 class UPBBossStatusWidget;
 class UPBBossUIComponent;
 class UPBBossWeaknessComponent;
+class UPBBossDataAsset;
 class UCameraShakeBase;
 class UStateTreeComponent;
 class USphereComponent;
@@ -133,6 +134,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Base Profile")
 	// UI 등에 표시할 보스 이름을 반환합니다.
 	FText GetBossName() const;
+
+	void InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAsset);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Base Damage")
 	// 핀볼 충돌 데미지를 임시로 막을지 설정합니다.

@@ -379,16 +379,7 @@ bool UPBBossSnakeChargePattern::MoveBossByChargeDistance(
 		return false;
 	}
 
-	const FVector PreviousLocation = Boss->GetActorLocation();
-	const FVector NextLocation = Boss->GetActorLocation() + ChargeDirection * ChargeDistance;
-	const bool IsMoveCompleted = Boss->SetActorLocation(NextLocation, true, &OutHitResult, ETeleportType::None);
-	OutMovedDistance = FVector::Dist2D(PreviousLocation, Boss->GetActorLocation());
-
-	if (!IsMoveCompleted || OutHitResult.IsValidBlockingHit())
-	{
-		return false;
-	}
-
+	OutMovedDistance = ChargeDistance;
 	Boss->SetActorRotation(ChargeDirection.Rotation());
 	return true;
 }

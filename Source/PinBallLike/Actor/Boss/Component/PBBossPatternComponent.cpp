@@ -225,12 +225,34 @@ UPBBossPatternBase* UPBBossPatternComponent::GetCurrentPattern() const
 	return CurrentPattern;
 }
 
+void UPBBossPatternComponent::ConfigurePatternData(
+	const TArray<FPBBossPatternData>& NewPatternDatas,
+	const TArray<FPBBossPatternData>& NewEnragedPatternDatas,
+	const TArray<FPBBossPatternData>& NewEnragedEntryPatternDatas,
+	float NewMinPatternIntervalSeconds,
+	float NewPatternCheckIntervalSeconds)
+{
+	PatternDatas = NewPatternDatas;
+	EnragedPatternDatas = NewEnragedPatternDatas;
+	EnragedEntryPatternDatas = NewEnragedEntryPatternDatas;
+	MinPatternIntervalSeconds = FMath::Max(0.0f, NewMinPatternIntervalSeconds);
+	PatternCheckIntervalSeconds = FMath::Max(0.1f, NewPatternCheckIntervalSeconds);
+}
+
 void UPBBossPatternComponent::InitializePatterns()
 {
 	PatternInstances.Reset();
 	EnragedPatternInstances.Reset();
 	EnragedEntryPatternInstances.Reset();
 	CooldownEndTimeMap.Reset();
+
+	if (PatternDatas.Num() > 0 || EnragedPatternDatas.Num() > 0 || EnragedEntryPatternDatas.Num() > 0)
+	{
+		InitializePatternDatas(PatternDatas, PatternInstances);
+		InitializePatternDatas(EnragedPatternDatas, EnragedPatternInstances);
+		InitializePatternDatas(EnragedEntryPatternDatas, EnragedEntryPatternInstances);
+		return;
+	}
 
 	InitializePatternClasses(PatternClasses, PatternInstances);
 	InitializePatternClasses(EnragedPatternClasses, EnragedPatternInstances);
@@ -259,6 +281,37 @@ void UPBBossPatternComponent::InitializePatternClasses(
 			continue;
 		}
 
+		Pattern->InitializePattern(this);
+		PatternInstanceList.Add(Pattern);
+	}
+}
+
+void UPBBossPatternComponent::InitializePatternDatas(
+	const TArray<FPBBossPatternData>& PatternDataList,
+	TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList)
+{
+	for (const FPBBossPatternData& PatternData : PatternDataList)
+	{
+		if (!PatternData.IsEnabled || PatternData.PatternClass.IsNull())
+		{
+			continue;
+		}
+
+		TSubclassOf<UPBBossPatternBase> PatternClass = PatternData.PatternClass.Get();
+		if (!PatternClass)
+		{
+			continue;
+		}
+
+		UPBBossPatternBase* Pattern = NewObject<UPBBossPatternBase>(this, PatternClass);
+		if (!Pattern)
+		{
+			continue;
+		}
+
+		Pattern->PatternName = PatternData.PatternName;
+		Pattern->CooldownSeconds = FMath::Max(0.0f, PatternData.CooldownSeconds);
+		Pattern->IsEnabled = PatternData.IsEnabled;
 		Pattern->InitializePattern(this);
 		PatternInstanceList.Add(Pattern);
 	}
