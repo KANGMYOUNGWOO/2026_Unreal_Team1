@@ -9,7 +9,7 @@
 #include "PBShopSlotWidget.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
-#include "PinBallLike/Subsystem/BallDataStruct.h"
+
 #include "PinBallLike/Struct/Choice/PBChoiceType.h"
 
 void UPBShopWidget::UpdateSlotWidgetPositionsOnce()
