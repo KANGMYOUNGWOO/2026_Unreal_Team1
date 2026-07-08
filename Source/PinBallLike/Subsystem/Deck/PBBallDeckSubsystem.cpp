@@ -5,8 +5,7 @@
 
 #include "PBBallDeckAssetLoadService.h"
 #include "PBBallDeckFusionService.h"
-#include "PinBallLike/Subsystem/BallDataStruct.h"
-#include "PinBallLike/Subsystem/BallDataSubsystem.h"
+
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
 
@@ -380,9 +379,8 @@ int32 UPBBallDeckSubsystem::GetSellPrice(int32 BallInstanceId)
 	}
 
 	UGameInstance* GameInstance = GetGameInstance();
-	UBallDataSubsystem* BallDataSubsystem = GameInstance ? GameInstance->GetSubsystem<UBallDataSubsystem>() : nullptr;
-	const FBallDataStruct* BallData = BallDataSubsystem ? BallDataSubsystem->GetBallData(BallInstanceData->BallId) : nullptr;
-	return BallData ? BallData->BallPrice : 0;
+	
+	return 0;
 }
 
 bool UPBBallDeckSubsystem::SellBall(int32 BallInstanceId, int32& OutSellPrice)

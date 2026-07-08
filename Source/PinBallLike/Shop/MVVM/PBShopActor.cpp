@@ -7,10 +7,14 @@
 #include "../DisplayActor/PBShopDisplayActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "../UI/PBShopWidget.h"
-#include "../../Subsystem/BallDataSubsystem.h"
+
 #include "Engine/GameInstance.h"
-#include "../../Subsystem/AssetStreamingSubsystem.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
+#include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
+#include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
 #include "View/MVVMView.h"
+#include  "PinBallLike/GamePlayTag/GamePlayTags.h"
 
 // Sets default values
 APBShopActor::APBShopActor()
@@ -59,65 +63,82 @@ void APBShopActor::OpenShop()
         return;
     }
 
-    UBallDataSubsystem* DataSub = GI->GetSubsystem<UBallDataSubsystem>();
-    UAssetStreamingSubsystem* StreamingSub = GI->GetSubsystem<UAssetStreamingSubsystem>();
+	UPBTableDataSubsystem* TableSub = GI->GetSubsystem<UPBTableDataSubsystem>();
 
-    if (!DataSub || !StreamingSub)
-    {
-        return;
-    }
+	if (!TableSub)
+	{
+		return;
+	}
 
-    const TArray<FName> ShopItemIds = ShopManager->OpenShop();
+	const TArray<FName> ShopItemIds = ShopManager->OpenShop();
 
-   
+	UStaticMesh* CubeMesh = LoadObject<UStaticMesh>(
+		nullptr,
+		TEXT("/Engine/BasicShapes/Cube.Cube")
+	);
 
-    TArray<TSoftObjectPtr<UStaticMesh>> Meshes;
-    Meshes.Reserve(ShopItemIds.Num());
+	if (!CubeMesh)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Default Cube Mesh load failed"));
+		return;
+	}
 
-    for (int32 i = 0; i < ShopItemIds.Num(); ++i)
-    {
-        const FBallDataStruct* Data = DataSub->GetBallData(ShopItemIds[i]);
-        if (!Data)
-        {
-            Meshes.Add(nullptr);
-            continue;
-        }
+	TArray<UStaticMesh*> LoadedMeshes;
+	LoadedMeshes.Reserve(ShopItemIds.Num());
 
-        const FText Name = FText::FromName(Data->NameKey);
-        const FText Synergy = FText::FromName(Data->SynergyKey);
+	for (int32 i = 0; i < ShopItemIds.Num(); ++i)
+	{
+		FPBBallTableRow BallRow;
 
-        ShopWidget->SetShopSlotWidgetData(
-            i,
-            Name,
-            Data->BallPrice,
-            Synergy
-        );
+		if (!TableSub->FindBallRow(ShopItemIds[i], BallRow))
+		{
+			LoadedMeshes.Add(CubeMesh);
 
-        Meshes.Add(Data->BallMesh);
-    }
+			ShopWidget->SetShopSlotWidgetData(
+				i,
+				FText::FromName(ShopItemIds[i]),
+				100,
+				FText::GetEmpty()
+			);
 
-    StreamingSub->PreLoadBallMesh(
-        Meshes,
-        FOnBallMeshLoaded::CreateLambda(
-            [this, ShopItemIds](const TArray<UStaticMesh*>& LoadedMeshes)
-            {
-                if (!ShopDisplayActor)
-                {
-                    return;
-                }
+			continue;
+		}
 
-               const TArray<FVector> UIWorldLocations =  ShopDisplayActor->DisplayItems(ShopItemIds, LoadedMeshes,ShopPurchaseHandler);
-            	
-            	if (ShopDisplayActor && ShopWidget)
-            	{
-					ShopWidget->SetShopSlotWorldLocations(
-						ShopDisplayActor->GetSlotWorldLocation()
-					);
-				}
-            
-            }
-        )
-    );
+		const FText Name = BallRow.DisplayName;
+
+		const FText Synergy =
+			BallRow.SynergyIds.Num() > 0
+				? FText::FromName(BallRow.SynergyIds[0])
+				: FText::GetEmpty();
+
+		// TODO: 가격은 나중에 ShopId 기반 ShopTable에서 가져오도록 교체
+		const int32 TempPrice = 100;
+
+		ShopWidget->SetShopSlotWidgetData(
+			i,
+			Name,
+			TempPrice,
+			Synergy
+		);
+
+		LoadedMeshes.Add(CubeMesh);
+	}
+
+	if (ShopDisplayActor)
+	{
+		ShopDisplayActor->DisplayItems(
+			ShopItemIds,
+			LoadedMeshes,
+			ShopPurchaseHandler
+		);
+
+		if (ShopWidget)
+		{
+			ShopWidget->SetShopSlotWorldLocations(
+				ShopDisplayActor->GetSlotWorldLocation()
+			);
+		}
+	}
 
     RefreshViewModel();
 
@@ -157,6 +178,11 @@ void APBShopActor::BuyItem(int32 SlotIndex)
 	}
 	
 	RefreshViewModel();
+}
+
+void APBShopActor::OpenAbility()
+{
+	OpenShop();
 }
 
 bool APBShopActor::ApplyViewModelToWidget(UUserWidget* Widget)
@@ -207,11 +233,25 @@ void APBShopActor::RefreshViewModel()
 	ShopViewModel->SetGold(ShopManager->GetCurrentGold());
 }
 
+void APBShopActor::HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message)
+{
+	if (Message.Exit == 0) CloseShop();
+}
+
 void APBShopActor::BeginPlay()
 {
 	Super::BeginPlay();
-	OpenShop();
+	
+	UGameplayMessageSubsystem& MessageSubsystem =
+	UGameplayMessageSubsystem::Get(this);
+	
+	ExitStartHandle =
+		MessageSubsystem.RegisterListener<FPBChoiceType>(
+			GameplayTags::Event_UI_Choice_Exit,
+			this,
+			&APBShopActor::HandleExitStart);
 }
+
 
 
 // Called every frame

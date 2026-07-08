@@ -4,11 +4,13 @@
 #include "PBShopWidget.h"
 
 #include "Blueprint/WidgetLayoutLibrary.h"
-#include "Components/CanvasPanel.h"
+#include "Components//Button.h"
 #include "Components/CanvasPanelSlot.h"
 #include "PBShopSlotWidget.h"
-#include "PinBallLike/Subsystem/BallDataStruct.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 
+#include "PinBallLike/Struct/Choice/PBChoiceType.h"
 
 void UPBShopWidget::UpdateSlotWidgetPositionsOnce()
 {
@@ -83,6 +85,12 @@ void UPBShopWidget::NativeConstruct()
 		Slot7
 	};
 	
+	if (ExitButton)
+	{
+		ExitButton->OnClicked.AddDynamic(this,
+			&UPBShopWidget::OnExitButtonClicked);
+	}
+	
 	UpdateSlotWidgetPositionsOnce();
 }
 
@@ -91,6 +99,8 @@ void UPBShopWidget::SetShopSlotWorldLocations(const TArray<FVector>& InWorldLoca
 	ShopSlotWorldLocations = InWorldLocations;
 	
 	UpdateSlotWidgetPositionsOnce();
+	
+	
 }
 
 void UPBShopWidget::SetShopSlotWidgetData(TArray<const FBallDataStruct*> BallDatas)
@@ -111,6 +121,17 @@ void UPBShopWidget::SetShopSlotWidgetData(int32 index, FText Name, int32 Price, 
 void UPBShopWidget::UnActiveSlotWidget(int32 SlotIndex)
 {
 	ShopSlotWidgets[SlotIndex]->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UPBShopWidget::OnExitButtonClicked()
+{
+	FPBChoiceType Message;
+	Message.Exit = 0;
+	
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_UI_Choice_Exit,Message);
+	
+	//RemoveFromParent();
 }
 
 

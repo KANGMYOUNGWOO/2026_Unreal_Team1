@@ -8,4 +8,5 @@ namespace GameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Phase_Prepare_Completed, "Event.Battle.Phase.Prepare.Completed");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Boss_Dead, "Event.Battle.Boss.Dead");
+	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Choice_Exit, "Event.UI.Choice.Exit");
 }

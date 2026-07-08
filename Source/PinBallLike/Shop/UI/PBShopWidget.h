@@ -12,6 +12,7 @@
 class UCanvasPanel;
 class UPBShopSlotWidget;
 class UTextBlock; 
+class UButton;
 struct FBallDataStruct;
 class UPBShopViewModel;
 
@@ -51,6 +52,9 @@ public :
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidget), Category="Shop|Widget")
 	TObjectPtr<UTextBlock> GoldTextBlock;
 	
+	UPROPERTY(meta = (BindWidget) )
+	TObjectPtr<UButton> ExitButton;
+	
 	UFUNCTION(BlueprintImplementableEvent)
 	void BP_SetShopViewModel(UPBShopViewModel* InViewModel);
 	
@@ -70,7 +74,8 @@ public:
 
 private:
 	
-
+	UFUNCTION()
+	void OnExitButtonClicked();
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> ShopCanvas;
