@@ -9,17 +9,21 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
+#include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Component/PBSnakeFormationComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Struct/Ball/PBBallInstanceData.h"
+#include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 static void AppendResourceData(TArray<FPBResourceData>& OutResources, const TMap<FName, int32>& ResourceValues)
 {
@@ -141,6 +145,7 @@ void APBCombatPartyActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	UpdateLauncherMotion(DeltaTime);
+	UpdateLeaderPromotion(DeltaTime);
 }
 
 void APBCombatPartyActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -231,33 +236,263 @@ void APBCombatPartyActor::UnbindPartyBallDeathEvents()
 {
 	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
 	{
-		if (!IsValid(Ball.Get()))
-		{
-			continue;
-		}
+		UnbindPartyBallDeathEvent(Ball.Get());
+	}
+}
 
-		if (UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent())
-		{
-			ResourceComponent->OnResourceCurrentChanged.RemoveAll(this);
-		}
+void APBCombatPartyActor::UnbindPartyBallDeathEvent(APBBallBase* Ball)
+{
+	if (!IsValid(Ball))
+	{
+		return;
+	}
+
+	if (UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent())
+	{
+		ResourceComponent->OnResourceCurrentChanged.RemoveAll(this);
 	}
 }
 
 void APBCombatPartyActor::HandlePartyBallResourceCurrentChanged(FName ResourceName, float CurrentValue)
 {
-	if (bLauncherActive || bAllBallsDeadBroadcasted || !AreAllPartyBallsDead())
+	(void)CurrentValue;
+
+	if (bLauncherActive || bAllBallsDeadBroadcasted || ResourceName != PBResourceNames::Health)
 	{
 		return;
 	}
 
-	BroadcastPartyAllBallsDead();
+	HandleDeadPartyBalls();
+}
+
+void APBCombatPartyActor::HandleDeadPartyBalls()
+{
+	TArray<APBBallBase*> DeadBalls;
+	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
+	{
+		if (!IsValid(Ball.Get()))
+		{
+			continue;
+		}
+
+		const UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
+		if (ResourceComponent && ResourceComponent->IsDead())
+		{
+			DeadBalls.Add(Ball.Get());
+		}
+	}
+
+	for (APBBallBase* DeadBall : DeadBalls)
+	{
+		HandleDeadPartyBall(DeadBall);
+	}
+
+	if (PartyBalls.IsEmpty())
+	{
+		bLeaderPromotionInProgress = false;
+		PromotingLeaderBall = nullptr;
+		SetActorTickEnabled(bLauncherActive);
+		BroadcastPartyAllBallsDead();
+	}
+}
+
+void APBCombatPartyActor::HandleDeadPartyBall(APBBallBase* DeadBall)
+{
+	if (!IsValid(DeadBall) || !PartyBalls.ContainsByPredicate([DeadBall](const TObjectPtr<APBBallBase>& Ball)
+	{
+		return Ball.Get() == DeadBall;
+	}))
+	{
+		return;
+	}
+
+	const bool bDeadLeader = DeadBall == LeaderBall.Get();
+	const FVector DeathLocation = DeadBall->GetActorLocation();
+	FVector InheritedVelocity = FVector::ZeroVector;
+	if (bDeadLeader)
+	{
+		if (const IMovable* DeadLeaderMovable = PBInterfaceUtils::FindInterface<IMovable>(DeadBall))
+		{
+			InheritedVelocity = DeadLeaderMovable->GetVelocity();
+			InheritedVelocity.Z = 0.0f;
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[CombatParty] Party ball died. Party=%s Ball=%s bLeader=%s Location=%s InheritedVelocity=%s"),
+		*GetNameSafe(this),
+		*GetNameSafe(DeadBall),
+		bDeadLeader ? TEXT("true") : TEXT("false"),
+		*DeathLocation.ToString(),
+		*InheritedVelocity.ToString());
+
+	SpawnBallDeathEffect(DeadBall);
+	RemoveDeadPartyBall(DeadBall);
+
+	if (bDeadLeader)
+	{
+		APBBallBase* NewLeaderBall = PartyBalls.IsValidIndex(0) ? PartyBalls[0].Get() : nullptr;
+		if (IsValid(NewLeaderBall))
+		{
+			StartLeaderPromotion(NewLeaderBall, DeathLocation, InheritedVelocity);
+		}
+		else
+		{
+			LeaderBall = nullptr;
+			FollowerBalls.Reset();
+		}
+	}
+	else
+	{
+		RebuildPartyRolesFromPartyBalls();
+		HandlePartyOrderChanged();
+	}
+}
+
+void APBCombatPartyActor::RemoveDeadPartyBall(APBBallBase* DeadBall)
+{
+	UnbindPartyBallDeathEvent(DeadBall);
+	PartyBalls.RemoveAll([DeadBall](const TObjectPtr<APBBallBase>& Ball)
+	{
+		return Ball.Get() == DeadBall;
+	});
+	FollowerBalls.RemoveAll([DeadBall](const TObjectPtr<APBBallBase>& Ball)
+	{
+		return Ball.Get() == DeadBall;
+	});
+	if (DeadBall == LeaderBall.Get())
+	{
+		LeaderBall = nullptr;
+	}
+
+	DeadBall->SetCombatRole(EPBBallPartyRole::None);
+	DeadBall->Destroy();
+}
+
+void APBCombatPartyActor::StartLeaderPromotion(
+	APBBallBase* NewLeaderBall,
+	const FVector TargetLocation,
+	FVector InheritedVelocity)
+{
+	if (!IsValid(NewLeaderBall))
+	{
+		return;
+	}
+
+	InheritedVelocity.Z = 0.0f;
+	RebuildPartyRolesFromPartyBalls();
+	ClearPartyRoles();
+
+	if (SnakeFormationComponent)
+	{
+		SnakeFormationComponent->SetComponentTickEnabled(false);
+	}
+
+	PromotingLeaderBall = NewLeaderBall;
+	LeaderPromotionStartLocation = NewLeaderBall->GetActorLocation();
+	LeaderPromotionTargetLocation = TargetLocation;
+	LeaderPromotionInheritedVelocity = InheritedVelocity;
+	LeaderPromotionElapsedTime = 0.0f;
+	bLeaderPromotionInProgress = true;
+	SetActorTickEnabled(true);
+
+	UE_LOG(LogTemp, Warning, TEXT("[CombatParty] Leader promotion started. Party=%s NewLeader=%s From=%s To=%s InheritedVelocity=%s Duration=%.2f"),
+		*GetNameSafe(this),
+		*GetNameSafe(NewLeaderBall),
+		*LeaderPromotionStartLocation.ToString(),
+		*LeaderPromotionTargetLocation.ToString(),
+		*LeaderPromotionInheritedVelocity.ToString(),
+		LeaderPromotionDuration);
+}
+
+void APBCombatPartyActor::UpdateLeaderPromotion(const float DeltaTime)
+{
+	if (!bLeaderPromotionInProgress)
+	{
+		return;
+	}
+
+	if (!IsValid(PromotingLeaderBall.Get()))
+	{
+		FinishLeaderPromotion();
+		return;
+	}
+
+	LeaderPromotionElapsedTime += FMath::Max(DeltaTime, 0.0f);
+	const float SafeDuration = FMath::Max(LeaderPromotionDuration, KINDA_SMALL_NUMBER);
+	const float Alpha = FMath::Clamp(LeaderPromotionElapsedTime / SafeDuration, 0.0f, 1.0f);
+	const float SmoothAlpha = FMath::InterpEaseOut(0.0f, 1.0f, Alpha, 2.0f);
+
+	PromotingLeaderBall->SetActorLocation(
+		FMath::Lerp(LeaderPromotionStartLocation, LeaderPromotionTargetLocation, SmoothAlpha),
+		false,
+		nullptr,
+		ETeleportType::None);
+
+	if (Alpha >= 1.0f)
+	{
+		FinishLeaderPromotion();
+	}
+}
+
+void APBCombatPartyActor::FinishLeaderPromotion()
+{
+	bLeaderPromotionInProgress = false;
+	LeaderPromotionElapsedTime = 0.0f;
+	PromotingLeaderBall = nullptr;
+	SetActorTickEnabled(bLauncherActive);
+
+	RebuildPartyRolesFromPartyBalls();
+	HandlePartyOrderChanged();
+
+	if (IsValid(LeaderBall.Get()) && !LeaderPromotionInheritedVelocity.IsNearlyZero())
+	{
+		if (IMovable* NewLeaderMovable = PBInterfaceUtils::FindInterface<IMovable>(LeaderBall.Get()))
+		{
+			NewLeaderMovable->AddVelocity(LeaderPromotionInheritedVelocity);
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[CombatParty] Leader promotion finished. Party=%s Leader=%s InheritedVelocity=%s RemainingBallCount=%d"),
+		*GetNameSafe(this),
+		*GetNameSafe(LeaderBall.Get()),
+		*LeaderPromotionInheritedVelocity.ToString(),
+		PartyBalls.Num());
+
+	LeaderPromotionInheritedVelocity = FVector::ZeroVector;
+}
+
+void APBCombatPartyActor::RebuildPartyRolesFromPartyBalls()
+{
+	LeaderBall = PartyBalls.IsValidIndex(0) ? PartyBalls[0] : nullptr;
+	FollowerBalls.Reset();
+	for (int32 BallIndex = 1; BallIndex < PartyBalls.Num(); ++BallIndex)
+	{
+		if (IsValid(PartyBalls[BallIndex].Get()))
+		{
+			FollowerBalls.Add(PartyBalls[BallIndex]);
+		}
+	}
+}
+
+void APBCombatPartyActor::SpawnBallDeathEffect(APBBallBase* DeadBall) const
+{
+	if (!BallDeathEffect || !IsValid(DeadBall))
+	{
+		return;
+	}
+
+	UGameplayStatics::SpawnEmitterAtLocation(
+		this,
+		BallDeathEffect,
+		DeadBall->GetActorLocation(),
+		DeadBall->GetActorRotation());
 }
 
 bool APBCombatPartyActor::AreAllPartyBallsDead() const
 {
 	if (PartyBalls.IsEmpty())
 	{
-		return false;
+		return true;
 	}
 
 	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)

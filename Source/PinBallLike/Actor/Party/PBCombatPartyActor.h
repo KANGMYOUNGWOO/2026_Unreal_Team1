@@ -14,6 +14,7 @@ class UPBBaseResourceComponent;
 class UPBBallDeckSubsystem;
 class UPBBallDataAsset;
 class UPBSnakeFormationComponent;
+class UParticleSystem;
 class UStaticMeshComponent;
 
 UCLASS()
@@ -59,7 +60,16 @@ private:
 	void HandlePartyLaunchApprovedMessage(FGameplayTag Channel, const FPBBattlePartyLaunchApprovedMessage& Message);
 	void BindPartyBallDeathEvents();
 	void UnbindPartyBallDeathEvents();
+	void UnbindPartyBallDeathEvent(APBBallBase* Ball);
 	void HandlePartyBallResourceCurrentChanged(FName ResourceName, float CurrentValue);
+	void HandleDeadPartyBalls();
+	void HandleDeadPartyBall(APBBallBase* DeadBall);
+	void RemoveDeadPartyBall(APBBallBase* DeadBall);
+	void StartLeaderPromotion(APBBallBase* NewLeaderBall, FVector TargetLocation, FVector InheritedVelocity);
+	void UpdateLeaderPromotion(float DeltaTime);
+	void FinishLeaderPromotion();
+	void RebuildPartyRolesFromPartyBalls();
+	void SpawnBallDeathEffect(APBBallBase* DeadBall) const;
 	bool AreAllPartyBallsDead() const;
 	void BroadcastPartyAllBallsDead();
 	void RefreshFromDeck();
@@ -93,6 +103,12 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Party|Launch", meta = (ClampMin = "0"))
 	float ReadyBallSpacing = 50.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Party|Death")
+	TObjectPtr<UParticleSystem> BallDeathEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Party|Death", meta = (ClampMin = "0.01"))
+	float LeaderPromotionDuration = 0.25f;
 	
 	UPROPERTY()
 	TObjectPtr<UPBBallDeckSubsystem> DeckSubsystem;
@@ -106,6 +122,12 @@ private:
 	FVector LauncherBaseLocation = FVector::ZeroVector;
 	float LauncherElapsedTime = 0.0f;
 	bool bAllBallsDeadBroadcasted = false;
+	bool bLeaderPromotionInProgress = false;
+	float LeaderPromotionElapsedTime = 0.0f;
+	FVector LeaderPromotionStartLocation = FVector::ZeroVector;
+	FVector LeaderPromotionTargetLocation = FVector::ZeroVector;
+	FVector LeaderPromotionInheritedVelocity = FVector::ZeroVector;
+	TObjectPtr<APBBallBase> PromotingLeaderBall = nullptr;
 
 	FGameplayMessageListenerHandle PartyDeploymentStartedListenerHandle;
 	FGameplayMessageListenerHandle PartyLaunchApprovedListenerHandle;
