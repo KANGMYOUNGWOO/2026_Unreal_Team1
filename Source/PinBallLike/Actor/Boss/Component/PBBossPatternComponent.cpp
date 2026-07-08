@@ -246,44 +246,14 @@ void UPBBossPatternComponent::InitializePatterns()
 	EnragedEntryPatternInstances.Reset();
 	CooldownEndTimeMap.Reset();
 
-	if (PatternDatas.Num() > 0 || EnragedPatternDatas.Num() > 0 || EnragedEntryPatternDatas.Num() > 0)
-	{
-		InitializePatternDatas(PatternDatas, PatternInstances);
-		InitializePatternDatas(EnragedPatternDatas, EnragedPatternInstances);
-		InitializePatternDatas(EnragedEntryPatternDatas, EnragedEntryPatternInstances);
-		return;
-	}
-
-	InitializePatternClasses(PatternClasses, PatternInstances);
-	InitializePatternClasses(EnragedPatternClasses, EnragedPatternInstances);
-	InitializePatternClasses(EnragedEntryPatternClasses, EnragedEntryPatternInstances);
+	InitializePatternDatas(PatternDatas, PatternInstances);
+	InitializePatternDatas(EnragedPatternDatas, EnragedPatternInstances);
+	InitializePatternDatas(EnragedEntryPatternDatas, EnragedEntryPatternInstances);
 }
 
 void UPBBossPatternComponent::ResetPatternStartTime()
 {
 	NextPatternAllowedTime = GetCurrentTimeSeconds() + MinPatternIntervalSeconds;
-}
-
-void UPBBossPatternComponent::InitializePatternClasses(
-	const TArray<TSubclassOf<UPBBossPatternBase>>& PatternClassList,
-	TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList)
-{
-	for (TSubclassOf<UPBBossPatternBase> PatternClass : PatternClassList)
-	{
-		if (!PatternClass)
-		{
-			continue;
-		}
-
-		UPBBossPatternBase* Pattern = NewObject<UPBBossPatternBase>(this, PatternClass);
-		if (!Pattern)
-		{
-			continue;
-		}
-
-		Pattern->InitializePattern(this);
-		PatternInstanceList.Add(Pattern);
-	}
 }
 
 void UPBBossPatternComponent::InitializePatternDatas(

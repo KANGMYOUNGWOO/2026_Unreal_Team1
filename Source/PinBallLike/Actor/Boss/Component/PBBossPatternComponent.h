@@ -71,15 +71,6 @@ public:
 		float NewMinPatternIntervalSeconds,
 		float NewPatternCheckIntervalSeconds);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (DisplayName = "Normal Pattern Classes"))
-	TArray<TSubclassOf<UPBBossPatternBase>> PatternClasses;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
-	TArray<TSubclassOf<UPBBossPatternBase>> EnragedPatternClasses;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
-	TArray<TSubclassOf<UPBBossPatternBase>> EnragedEntryPatternClasses;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
 	TArray<FPBBossPatternData> PatternDatas;
 
@@ -122,9 +113,6 @@ private:
 	void ResetPatternStartTime();
 	void InitializePatternDatas(
 		const TArray<FPBBossPatternData>& PatternDataList,
-		TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList);
-	void InitializePatternClasses(
-		const TArray<TSubclassOf<UPBBossPatternBase>>& PatternClassList,
 		TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList);
 	// 다음 패턴 시작 가능 여부를 확인할 타이머를 예약합니다.
 	void ScheduleNextPatternCheck();

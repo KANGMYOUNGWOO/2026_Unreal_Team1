@@ -173,15 +173,12 @@ void UPBBossPatternTableParser::UpdateLinkedBossDataAsset(
 	switch (PatternPhaseType)
 	{
 	case EPBBossPatternPhaseType::Normal:
-		BossDataAsset->PatternClasses.AddUnique(PatternClass);
 		BossDataAsset->PatternDatas.Add(PatternData);
 		break;
 	case EPBBossPatternPhaseType::Enraged:
-		BossDataAsset->EnragedPatternClasses.AddUnique(PatternClass);
 		BossDataAsset->EnragedPatternDatas.Add(PatternData);
 		break;
 	case EPBBossPatternPhaseType::EnragedEntry:
-		BossDataAsset->EnragedEntryPatternClasses.AddUnique(PatternClass);
 		BossDataAsset->EnragedEntryPatternDatas.Add(PatternData);
 		break;
 	default:
@@ -207,9 +204,6 @@ void UPBBossPatternTableParser::ClearBossPatternData(const FName BossRowName)
 		return;
 	}
 
-	BossDataAsset->PatternClasses.Reset();
-	BossDataAsset->EnragedPatternClasses.Reset();
-	BossDataAsset->EnragedEntryPatternClasses.Reset();
 	BossDataAsset->PatternDatas.Reset();
 	BossDataAsset->EnragedPatternDatas.Reset();
 	BossDataAsset->EnragedEntryPatternDatas.Reset();
