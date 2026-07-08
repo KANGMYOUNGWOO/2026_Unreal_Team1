@@ -6,9 +6,11 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerController.h"
-#include "PinBallLike/Actor/Party/PBCombatPartyActor.h"
 #include "PinBallLike/Actor/Flipper/Flipper.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 
 APinBallPlayer::APinBallPlayer()
 {
@@ -57,6 +59,19 @@ void APinBallPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("LaunchAction is not assigned on %s."), *GetName());
+	}
+
+	if (ShiftAction)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PinBallPlayer bound ShiftAction %s on %s."),
+			*GetNameSafe(ShiftAction.Get()),
+			*GetNameSafe(this));
+		EnhancedInputComponent->BindAction(
+			ShiftAction, ETriggerEvent::Started, this, &APinBallPlayer::RequestShiftDeploymentSlots);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ShiftAction is not assigned on %s."), *GetName());
 	}
 }
 
@@ -119,15 +134,30 @@ void APinBallPlayer::LaunchParty(const FInputActionValue& Value)
 	// UE_LOG(LogTemp, Warning, TEXT("PinBallPlayer received LaunchParty input. CombatPartyActor=%s"),
 	// 	*GetNameSafe(CombatPartyActor.Get()));
 
-	if (IsValid(CombatPartyActor))
+	if (!UGameplayMessageSubsystem::HasInstance(this))
 	{
-		const bool bLaunched = CombatPartyActor->LaunchPartyFromReadyPosition();
-		// UE_LOG(LogTemp, Warning, TEXT("CombatPartyActor launch result: %s"), bLaunched ? TEXT("Success") : TEXT("Failed"));
+		return;
 	}
-	else
+
+	FPBBattlePartyLaunchRequestedMessage Message;
+	Message.Requester = this;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_Battle_Party_Launch_Requested,
+		Message);
+}
+
+void APinBallPlayer::RequestShiftDeploymentSlots(const FInputActionValue& Value)
+{
+	if (!UGameplayMessageSubsystem::HasInstance(this))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("LaunchParty input ignored because CombatPartyActor is invalid."));
+		return;
 	}
+
+	FPBBattlePartyShiftRequestedMessage Message;
+	Message.Requester = this;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_Battle_Party_Shift_Requested,
+		Message);
 }
 
 void APinBallPlayer::SetFlippersRaised(const bool bRaised) const

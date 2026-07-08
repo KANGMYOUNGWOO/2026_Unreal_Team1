@@ -6,10 +6,10 @@
 #include "PBBallPhysicsComponent.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
+#include "PinBallLike/Interface/BossInterface.h"
 #include "PinBallLike/Interface/Damageable.h"
 #include "PinBallLike/Interface/StatProvider.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
-#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 
 UPBBallHitReactionComponent::UPBBallHitReactionComponent()
@@ -19,10 +19,12 @@ UPBBallHitReactionComponent::UPBBallHitReactionComponent()
 
 void UPBBallHitReactionComponent::InitializeDependencies(
 	UPBBallPhysicsComponent* InPhysicsComponent,
-	IStatProvider* InStatProvider)
+	IStatProvider* InStatProvider,
+	IDamageable* InOwnerDamageable)
 {
 	PhysicsComponent = InPhysicsComponent;
 	StatProvider = InStatProvider;
+	OwnerDamageable = InOwnerDamageable;
 }
 
 void UPBBallHitReactionComponent::BeginPlay()
@@ -52,28 +54,26 @@ void UPBBallHitReactionComponent::HandleMovementHit(const FHitResult& Hit)
 void UPBBallHitReactionComponent::ProcessBallContact(AActor* OtherActor)
 {
 	AActor* Owner = GetOwner();
-	// 이미 이번 프레임에 처리한 액터인 경우 무시합니다.
 	if (!Owner || !OtherActor || OtherActor == Owner || WasContactProcessedThisFrame(OtherActor))
 	{
 		return;
 	}
 	
-	// 현재 프레임에서 이 액터와의 충돌을 처리했음을 기록합니다.
-	MarkContactProcessed(OtherActor);
-
-	IDamageable* OtherDamageable = Cast<IDamageable>(OtherActor);
-	if (!OtherDamageable)
-	{
-		OtherDamageable = PBInterfaceUtils::FindInterface<IDamageable>(OtherActor);
-	}
-
-	if (!OtherDamageable || OtherDamageable->IsDead())
+	IBossInterface* Boss = Cast<IBossInterface>(OtherActor);
+	if (!Boss)
 	{
 		return;
 	}
 
 	const int32 Damage = StatProvider ? StatProvider->GetStat(PBStatNames::Attack) : 0;
-	OtherDamageable->TakeDamage(Damage);
+	Boss->DamageToBoss(Damage);
+
+	MarkContactProcessed(OtherActor);
+
+	if (OwnerDamageable && !OwnerDamageable->IsDead())
+	{
+		OwnerDamageable->TakeDamage(1);
+	}
 }
 
 bool UPBBallHitReactionComponent::WasContactProcessedThisFrame(AActor* OtherActor) const

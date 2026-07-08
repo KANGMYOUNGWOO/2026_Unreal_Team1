@@ -11,6 +11,10 @@ class APBBossSpawnController;
 class APBBumperSpawnController;
 enum class EPBBattlePreparationType : uint8;
 struct FPBBattleBossDeadMessage;
+struct FPBBattlePartyAllBallsDeadMessage;
+struct FPBBattlePartyLaunchedMessage;
+struct FPBBattlePartyLaunchRequestedMessage;
+struct FPBBattlePartyShiftRequestedMessage;
 struct FPBBattlePreparationCompletedMessage;
 
 UENUM(BlueprintType)
@@ -19,6 +23,7 @@ enum class EPBBattleLevelPhase : uint8
 	None UMETA(DisplayName = "None"),
 	LevelPreparing UMETA(DisplayName = "Level Preparing"),
 	BossIntro UMETA(DisplayName = "Boss Intro"),
+	BallDeployment UMETA(DisplayName = "Ball Deployment"),
 	Combat UMETA(DisplayName = "Combat"),
 	BossDead UMETA(DisplayName = "Boss Dead"),
 	Reward UMETA(DisplayName = "Reward")
@@ -72,12 +77,20 @@ protected:
 	void UnregisterBattleMessageListeners();
 	void HandlePreparationCompletedMessage(FGameplayTag Channel, const FPBBattlePreparationCompletedMessage& Message);
 	void HandleBossDeadMessage(FGameplayTag Channel, const FPBBattleBossDeadMessage& Message);
+	void HandlePartyLaunchRequestedMessage(FGameplayTag Channel, const FPBBattlePartyLaunchRequestedMessage& Message);
+	void HandlePartyLaunchedMessage(FGameplayTag Channel, const FPBBattlePartyLaunchedMessage& Message);
+	void HandlePartyAllBallsDeadMessage(FGameplayTag Channel, const FPBBattlePartyAllBallsDeadMessage& Message);
+	void HandlePartyShiftRequestedMessage(FGameplayTag Channel, const FPBBattlePartyShiftRequestedMessage& Message);
 	void ResetPreparationState();
 	void MarkPreparationCompleted(EPBBattlePreparationType PreparationType, bool bSuccess);
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Battle|Flow")
 	void HandleBossIntro();
 	virtual void HandleBossIntro_Implementation();
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Battle|Flow")
+	void HandleBallDeployment();
+	virtual void HandleBallDeployment_Implementation();
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Battle|Flow")
 	void HandleBattle();
@@ -93,6 +106,10 @@ protected:
 
 private:
 	void HandleCurrentPhase();
+	void InitializeBattleLaunchCount();
+	bool CanLaunchBattleParty() const;
+	bool NotifyBattlePartyLaunched();
+	void NotifyBattlePartyAllBallsDead();
 
 	UPROPERTY(EditAnywhere, Category = "Battle|Flow")
 	bool bStartFlowOnBeginPlay = true;
@@ -105,6 +122,10 @@ private:
 
 	FGameplayMessageListenerHandle PreparationCompletedListenerHandle;
 	FGameplayMessageListenerHandle BossDeadListenerHandle;
+	FGameplayMessageListenerHandle PartyLaunchRequestedListenerHandle;
+	FGameplayMessageListenerHandle PartyLaunchedListenerHandle;
+	FGameplayMessageListenerHandle PartyAllBallsDeadListenerHandle;
+	FGameplayMessageListenerHandle PartyShiftRequestedListenerHandle;
 
 	bool bBumperPrepared = false;
 	bool bBallPrepared = false;
@@ -112,4 +133,7 @@ private:
 
 	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Flow")
 	EPBBattleLevelPhase CurrentPhase = EPBBattleLevelPhase::None;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Flow")
+	int32 RemainingBattleLaunchCount = 0;
 };

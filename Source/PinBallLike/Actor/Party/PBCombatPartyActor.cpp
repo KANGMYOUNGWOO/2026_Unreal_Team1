@@ -8,9 +8,13 @@
 #include "Engine/GameInstance.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Component/PBSnakeFormationComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Struct/Ball/PBBallInstanceData.h"
 #include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
@@ -129,6 +133,7 @@ void APBCombatPartyActor::BeginPlay()
 
 	InitializeFromDeck();
 	BindDeckEvents();
+	RegisterBattleMessageListeners();
 	SetLauncherActive(bLauncherActive);
 }
 
@@ -140,14 +145,158 @@ void APBCombatPartyActor::Tick(float DeltaTime)
 
 void APBCombatPartyActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UnregisterBattleMessageListeners();
+	UnbindPartyBallDeathEvents();
 	ClearPartyRoles();
 	UnbindDeckEvents();
 	DestroyPartyBalls();
 	Super::EndPlay(EndPlayReason);
 }
 
+void APBCombatPartyActor::RegisterBattleMessageListeners()
+{
+	if (!UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	PartyDeploymentStartedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePartyDeploymentStartedMessage>(
+		GameplayTags::Event_Battle_Party_Deployment_Started,
+		this,
+		&APBCombatPartyActor::HandlePartyDeploymentStartedMessage);
+
+	PartyLaunchApprovedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePartyLaunchApprovedMessage>(
+		GameplayTags::Event_Battle_Party_Launch_Approved,
+		this,
+		&APBCombatPartyActor::HandlePartyLaunchApprovedMessage);
+}
+
+void APBCombatPartyActor::UnregisterBattleMessageListeners()
+{
+	if (PartyDeploymentStartedListenerHandle.IsValid())
+	{
+		PartyDeploymentStartedListenerHandle.Unregister();
+	}
+
+	if (PartyLaunchApprovedListenerHandle.IsValid())
+	{
+		PartyLaunchApprovedListenerHandle.Unregister();
+	}
+}
+
+void APBCombatPartyActor::HandlePartyDeploymentStartedMessage(
+	FGameplayTag Channel,
+	const FPBBattlePartyDeploymentStartedMessage& Message)
+{
+	PrepareForDeployment();
+}
+
+void APBCombatPartyActor::HandlePartyLaunchApprovedMessage(
+	FGameplayTag Channel,
+	const FPBBattlePartyLaunchApprovedMessage& Message)
+{
+	if (!LaunchPartyFromReadyPosition() || !UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	FPBBattlePartyLaunchedMessage LaunchedMessage;
+	LaunchedMessage.PartyActor = this;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_Battle_Party_Launched,
+		LaunchedMessage);
+}
+
+void APBCombatPartyActor::BindPartyBallDeathEvents()
+{
+	UnbindPartyBallDeathEvents();
+
+	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
+	{
+		if (!IsValid(Ball.Get()))
+		{
+			continue;
+		}
+
+		if (UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent())
+		{
+			ResourceComponent->OnResourceCurrentChanged.AddUObject(
+				this,
+				&APBCombatPartyActor::HandlePartyBallResourceCurrentChanged);
+		}
+	}
+}
+
+void APBCombatPartyActor::UnbindPartyBallDeathEvents()
+{
+	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
+	{
+		if (!IsValid(Ball.Get()))
+		{
+			continue;
+		}
+
+		if (UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent())
+		{
+			ResourceComponent->OnResourceCurrentChanged.RemoveAll(this);
+		}
+	}
+}
+
+void APBCombatPartyActor::HandlePartyBallResourceCurrentChanged(FName ResourceName, float CurrentValue)
+{
+	if (bLauncherActive || bAllBallsDeadBroadcasted || !AreAllPartyBallsDead())
+	{
+		return;
+	}
+
+	BroadcastPartyAllBallsDead();
+}
+
+bool APBCombatPartyActor::AreAllPartyBallsDead() const
+{
+	if (PartyBalls.IsEmpty())
+	{
+		return false;
+	}
+
+	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
+	{
+		if (!IsValid(Ball.Get()))
+		{
+			continue;
+		}
+
+		const UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
+		if (ResourceComponent && !ResourceComponent->IsDead())
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void APBCombatPartyActor::BroadcastPartyAllBallsDead()
+{
+	bAllBallsDeadBroadcasted = true;
+	UnbindPartyBallDeathEvents();
+
+	if (!UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	FPBBattlePartyAllBallsDeadMessage Message;
+	Message.PartyActor = this;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_Battle_Party_AllBallsDead,
+		Message);
+}
+
 void APBCombatPartyActor::RefreshFromDeck()
 {
+	UnbindPartyBallDeathEvents();
 	ClearPartyRoles();
 	DestroyPartyBalls();
 
@@ -288,15 +437,9 @@ void APBCombatPartyActor::SpawnPartyBallsAtLauncher()
 
 bool APBCombatPartyActor::LaunchPartyFromReadyPosition()
 {
-	if (bLaunchConsumed)
-	{
-		return false;
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("LaunchPartyFromReadyPosition called. Party=%s bLauncherActive=%s bLaunchConsumed=%s Leader=%s PartyBallCount=%d"),
+	UE_LOG(LogTemp, Warning, TEXT("LaunchPartyFromReadyPosition called. Party=%s bLauncherActive=%s Leader=%s PartyBallCount=%d"),
 		*GetNameSafe(this),
 		bLauncherActive ? TEXT("true") : TEXT("false"),
-		bLaunchConsumed ? TEXT("true") : TEXT("false"),
 		*GetNameSafe(LeaderBall.Get()),
 		PartyBalls.Num());
 
@@ -306,13 +449,22 @@ bool APBCombatPartyActor::LaunchPartyFromReadyPosition()
 		return false;
 	}
 
-	bLaunchConsumed = true;
+	bAllBallsDeadBroadcasted = false;
 	SetLauncherActive(false);
 	SpawnPartyBallsAtLauncher();
 	HandlePartyOrderChanged();
+	BindPartyBallDeathEvents();
 
 	UE_LOG(LogTemp, Warning, TEXT("LaunchPartyFromReadyPosition succeeded. Party balls placed at launcher."));
 	return true;
+}
+
+void APBCombatPartyActor::PrepareForDeployment()
+{
+	UnbindPartyBallDeathEvents();
+	bAllBallsDeadBroadcasted = false;
+	RefreshFromDeck();
+	SetLauncherActive(true);
 }
 
 void APBCombatPartyActor::SetLauncherActive(const bool bNewLauncherActive)

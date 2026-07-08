@@ -3,10 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/Actor.h"
 #include "PBCombatPartyActor.generated.h"
 
 class APBBallBase;
+struct FPBBattlePartyDeploymentStartedMessage;
+struct FPBBattlePartyLaunchApprovedMessage;
+class UPBBaseResourceComponent;
 class UPBBallDeckSubsystem;
 class UPBBallDataAsset;
 class UPBSnakeFormationComponent;
@@ -28,6 +32,9 @@ public:
 	bool LaunchPartyFromReadyPosition();
 
 	UFUNCTION(BlueprintCallable, Category = "Party|Launch")
+	void PrepareForDeployment();
+
+	UFUNCTION(BlueprintCallable, Category = "Party|Launch")
 	void SetLauncherActive(bool bNewLauncherActive);
 
 	UFUNCTION(BlueprintPure, Category = "Party|Launch")
@@ -46,6 +53,15 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 private:
+	void RegisterBattleMessageListeners();
+	void UnregisterBattleMessageListeners();
+	void HandlePartyDeploymentStartedMessage(FGameplayTag Channel, const FPBBattlePartyDeploymentStartedMessage& Message);
+	void HandlePartyLaunchApprovedMessage(FGameplayTag Channel, const FPBBattlePartyLaunchApprovedMessage& Message);
+	void BindPartyBallDeathEvents();
+	void UnbindPartyBallDeathEvents();
+	void HandlePartyBallResourceCurrentChanged(FName ResourceName, float CurrentValue);
+	bool AreAllPartyBallsDead() const;
+	void BroadcastPartyAllBallsDead();
 	void RefreshFromDeck();
 	void HandlePartyOrderChanged();
 	void UpdateLauncherMotion(float DeltaTime);
@@ -89,6 +105,9 @@ private:
 
 	FVector LauncherBaseLocation = FVector::ZeroVector;
 	float LauncherElapsedTime = 0.0f;
-	bool bLaunchConsumed = false;
+	bool bAllBallsDeadBroadcasted = false;
+
+	FGameplayMessageListenerHandle PartyDeploymentStartedListenerHandle;
+	FGameplayMessageListenerHandle PartyLaunchApprovedListenerHandle;
 	
 };

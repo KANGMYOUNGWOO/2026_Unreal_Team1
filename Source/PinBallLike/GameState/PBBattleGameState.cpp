@@ -10,6 +10,7 @@
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 
 APBBattleGameState::APBBattleGameState()
 {
@@ -38,6 +39,7 @@ void APBBattleGameState::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void APBBattleGameState::StartBattleLevelFlow()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Start battle level flow."));
+	InitializeBattleLaunchCount();
 	SetBattleLevelPhase(EPBBattleLevelPhase::LevelPreparing);
 }
 
@@ -72,6 +74,48 @@ void APBBattleGameState::CompleteLevelPreparing()
 	SetBattleLevelPhase(EPBBattleLevelPhase::BossIntro);
 }
 
+bool APBBattleGameState::CanLaunchBattleParty() const
+{
+	return CurrentPhase == EPBBattleLevelPhase::BallDeployment && RemainingBattleLaunchCount > 0;
+}
+
+bool APBBattleGameState::NotifyBattlePartyLaunched()
+{
+	if (!CanLaunchBattleParty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Ignore party launched. CurrentPhase=%s RemainingLaunchCount=%d"),
+			*UEnum::GetValueAsString(CurrentPhase),
+			RemainingBattleLaunchCount);
+		return false;
+	}
+
+	--RemainingBattleLaunchCount;
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Party launched. RemainingLaunchCount=%d"),
+		RemainingBattleLaunchCount);
+
+	SetBattleLevelPhase(EPBBattleLevelPhase::Combat);
+	return true;
+}
+
+void APBBattleGameState::NotifyBattlePartyAllBallsDead()
+{
+	if (CurrentPhase != EPBBattleLevelPhase::Combat)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Party all balls dead. RemainingLaunchCount=%d"),
+		RemainingBattleLaunchCount);
+
+	if (RemainingBattleLaunchCount > 0)
+	{
+		SetBattleLevelPhase(EPBBattleLevelPhase::BallDeployment);
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Party all balls dead with no remaining launch count."));
+}
+
 void APBBattleGameState::HandleCurrentPhase()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Handle phase. Current=%s"),
@@ -85,6 +129,9 @@ void APBBattleGameState::HandleCurrentPhase()
 	case EPBBattleLevelPhase::BossIntro:
 		HandleBossIntro();
 		break;
+	case EPBBattleLevelPhase::BallDeployment:
+		HandleBallDeployment();
+		break;
 	case EPBBattleLevelPhase::Combat:
 		HandleBattle();
 		break;
@@ -97,6 +144,17 @@ void APBBattleGameState::HandleCurrentPhase()
 	default:
 		break;
 	}
+}
+
+void APBBattleGameState::InitializeBattleLaunchCount()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	const UPBPlayerDataSubsystem* PlayerDataSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBPlayerDataSubsystem>() : nullptr;
+	RemainingBattleLaunchCount = PlayerDataSubsystem ? PlayerDataSubsystem->GetInitialBattleLaunchCount() : 0;
+
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Initialize battle launch count. Remaining=%d"),
+		RemainingBattleLaunchCount);
 }
 
 void APBBattleGameState::HandleLevelPreparing_Implementation()
@@ -197,6 +255,26 @@ void APBBattleGameState::RegisterBattleMessageListeners()
 		this,
 		&APBBattleGameState::HandleBossDeadMessage);
 
+	PartyLaunchRequestedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePartyLaunchRequestedMessage>(
+		GameplayTags::Event_Battle_Party_Launch_Requested,
+		this,
+		&APBBattleGameState::HandlePartyLaunchRequestedMessage);
+
+	PartyLaunchedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePartyLaunchedMessage>(
+		GameplayTags::Event_Battle_Party_Launched,
+		this,
+		&APBBattleGameState::HandlePartyLaunchedMessage);
+
+	PartyAllBallsDeadListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePartyAllBallsDeadMessage>(
+		GameplayTags::Event_Battle_Party_AllBallsDead,
+		this,
+		&APBBattleGameState::HandlePartyAllBallsDeadMessage);
+
+	PartyShiftRequestedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePartyShiftRequestedMessage>(
+		GameplayTags::Event_Battle_Party_Shift_Requested,
+		this,
+		&APBBattleGameState::HandlePartyShiftRequestedMessage);
+
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Registered preparation listener. Channel=%s"),
 		*FGameplayTag(GameplayTags::Event_Battle_Phase_Prepare_Completed).ToString());
 }
@@ -213,6 +291,26 @@ void APBBattleGameState::UnregisterBattleMessageListeners()
 	{
 		BossDeadListenerHandle.Unregister();
 		UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Unregistered boss dead listener."));
+	}
+
+	if (PartyLaunchRequestedListenerHandle.IsValid())
+	{
+		PartyLaunchRequestedListenerHandle.Unregister();
+	}
+
+	if (PartyLaunchedListenerHandle.IsValid())
+	{
+		PartyLaunchedListenerHandle.Unregister();
+	}
+
+	if (PartyAllBallsDeadListenerHandle.IsValid())
+	{
+		PartyAllBallsDeadListenerHandle.Unregister();
+	}
+
+	if (PartyShiftRequestedListenerHandle.IsValid())
+	{
+		PartyShiftRequestedListenerHandle.Unregister();
 	}
 }
 
@@ -247,6 +345,57 @@ void APBBattleGameState::HandleBossDeadMessage(
 		*GetNameSafe(Message.BossActor));
 
 	SetBattleLevelPhase(EPBBattleLevelPhase::BossDead);
+}
+
+void APBBattleGameState::HandlePartyLaunchRequestedMessage(
+	FGameplayTag Channel,
+	const FPBBattlePartyLaunchRequestedMessage& Message)
+{
+	if (!CanLaunchBattleParty() || !UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	FPBBattlePartyLaunchApprovedMessage ApprovedMessage;
+	ApprovedMessage.RemainingLaunchCountBeforeLaunch = RemainingBattleLaunchCount;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_Battle_Party_Launch_Approved,
+		ApprovedMessage);
+}
+
+void APBBattleGameState::HandlePartyLaunchedMessage(
+	FGameplayTag Channel,
+	const FPBBattlePartyLaunchedMessage& Message)
+{
+	NotifyBattlePartyLaunched();
+}
+
+void APBBattleGameState::HandlePartyAllBallsDeadMessage(
+	FGameplayTag Channel,
+	const FPBBattlePartyAllBallsDeadMessage& Message)
+{
+	NotifyBattlePartyAllBallsDead();
+}
+
+void APBBattleGameState::HandlePartyShiftRequestedMessage(
+	FGameplayTag Channel,
+	const FPBBattlePartyShiftRequestedMessage& Message)
+{
+	if (CurrentPhase != EPBBattleLevelPhase::BallDeployment)
+	{
+		return;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBBallDeckSubsystem* BallDeckSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBBallDeckSubsystem>() : nullptr;
+	if (!BallDeckSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Ignore party shift request. Missing BallDeckSubsystem."));
+		return;
+	}
+
+	BallDeckSubsystem->RotateDeploymentSlots();
 }
 
 void APBBattleGameState::ResetPreparationState()
@@ -291,7 +440,21 @@ void APBBattleGameState::MarkPreparationCompleted(
 void APBBattleGameState::HandleBossIntro_Implementation()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BossIntro."));
-	SetBattleLevelPhase(EPBBattleLevelPhase::Combat);
+	SetBattleLevelPhase(EPBBattleLevelPhase::BallDeployment);
+}
+
+void APBBattleGameState::HandleBallDeployment_Implementation()
+{
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BallDeployment."));
+
+	if (UGameplayMessageSubsystem::HasInstance(this))
+	{
+		FPBBattlePartyDeploymentStartedMessage Message;
+		Message.RemainingLaunchCount = RemainingBattleLaunchCount;
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_Battle_Party_Deployment_Started,
+			Message);
+	}
 }
 
 void APBBattleGameState::HandleBattle_Implementation()
