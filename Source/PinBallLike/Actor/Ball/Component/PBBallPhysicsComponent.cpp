@@ -250,10 +250,10 @@ void UPBBallPhysicsComponent::ApplyStat(FName StatName, int32 NewValue)
 {
 	if (StatName == PBStatNames::Mass)
 	{
-		SetMass(static_cast<float>(NewValue));
+		// SetMass(static_cast<float>(NewValue));
 	}
 	else if (StatName == PBStatNames::Bounciness)
 	{
-		SetBounceDamping(static_cast<float>(NewValue) / 100.0f);
+		// SetBounceDamping(static_cast<float>(NewValue));
 	}
 }
