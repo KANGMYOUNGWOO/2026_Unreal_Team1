@@ -42,6 +42,7 @@ public:
 private :
 	
 	void RefreshViewModel();
+	
 
 	
 private:
@@ -66,6 +67,9 @@ private:
 	void HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message);
 
 	FGameplayMessageListenerHandle ExitStartHandle;
+	
+private:
+	bool bPendingUpdateSlotPositions = false;
 	
 protected:
 	virtual void BeginPlay() override;
