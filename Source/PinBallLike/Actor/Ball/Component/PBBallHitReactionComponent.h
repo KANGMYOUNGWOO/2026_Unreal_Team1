@@ -10,6 +10,7 @@
 class UPrimitiveComponent;
 class UPBBallPhysicsComponent;
 class IStatProvider;
+class IDamageable;
 
 UCLASS(ClassGroup=(PinBall), meta=(BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBallHitReactionComponent : public UActorComponent
@@ -20,7 +21,8 @@ public:
 	UPBBallHitReactionComponent();
 	void InitializeDependencies(
 		UPBBallPhysicsComponent* InPhysicsComponent,
-		IStatProvider* InStatProvider);
+		IStatProvider* InStatProvider,
+		IDamageable* InOwnerDamageable);
 
 protected:
 	virtual void BeginPlay() override;
@@ -38,6 +40,7 @@ private:
 	TObjectPtr<UPBBallPhysicsComponent> PhysicsComponent;
 
 	IStatProvider* StatProvider = nullptr;
+	IDamageable* OwnerDamageable = nullptr;
 
 	TSet<TObjectKey<AActor>> ProcessedContactActors;
 	double ProcessedContactTime = -1.0;

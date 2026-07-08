@@ -36,6 +36,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Ball|Combat")
 	EPBBallPartyRole GetCombatRole() const { return CombatRole; }
+
+	UFUNCTION(BlueprintPure, Category = "Ball|Resource")
+	UPBBaseResourceComponent* GetResourceComponent() const { return ResourceComponent; }
 	
 protected:
 	virtual void BeginPlay() override;

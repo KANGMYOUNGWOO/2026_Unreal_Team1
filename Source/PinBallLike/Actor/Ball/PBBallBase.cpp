@@ -40,7 +40,7 @@ APBBallBase::APBBallBase()
 	
 	// Hit Reaction
 	HitReactionComponent = CreateDefaultSubobject<UPBBallHitReactionComponent>(TEXT("HitReactionComponent"));
-	HitReactionComponent->InitializeDependencies(PhysicsComponent.Get(), StatComponent.Get());
+	HitReactionComponent->InitializeDependencies(PhysicsComponent.Get(), StatComponent.Get(), ResourceComponent.Get());
 }
 
 void APBBallBase::ApplyStatData(const TArray<FPBStatData>& StatData)
