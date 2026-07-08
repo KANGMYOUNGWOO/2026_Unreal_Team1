@@ -51,7 +51,6 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 	virtual void StartIdleState_Implementation() override;
 
-	void InitializePatrolCenter();
 	void InitializeMoveArea();
 	void InitializeMoveDirection();
 	void MoveHead(float DeltaTime);
@@ -83,17 +82,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake", meta = (ClampMin = "1.0"))
 	float PatrolAcceptanceRadius = 50.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
-	FVector PatrolCenter = FVector::ZeroVector;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
-	FVector PatrolAreaExtent = FVector(700.0f, 700.0f, 0.0f);
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake", meta = (ClampMin = "0.0"))
 	float HeadExcludeRadius = 200.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
-	bool IsUseSpawnLocationAsPatrolCenter = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
 	TObjectPtr<APBBossMoveArea> BossMoveArea;
@@ -142,7 +132,6 @@ private:
 	TArray<FPBSnakePathSample> SnakePathSamples;
 	TArray<FVector> SnakeSplinePoints;
 	TArray<FVector> SnakeChargeHeadSplinePoints;
-	bool IsPatrolCenterInitialized = false;
 	bool IsPatrolTargetValid = false;
 	bool IsSnakeAnimationMoveActive = false;
 	bool IsSnakeChargePoseActiveValue = false;
