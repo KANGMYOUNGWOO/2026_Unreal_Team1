@@ -5,6 +5,9 @@
 #include "CoreMinimal.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallStarLevelRow.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
+#include "PinBallLike/Table/Boss/Struct/PBBossHitPointTableRow.h"
+#include "PinBallLike/Table/Boss/Struct/PBBossPatternTableRow.h"
+#include "PinBallLike/Table/Boss/Struct/PBBossTableRow.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
@@ -32,6 +35,7 @@ public:
 
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
 	void SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable);
+	void SetBossTables(UDataTable* InBossTable, UDataTable* InBossHitPointTable, UDataTable* InBossPatternTable);
 
 private:
 
@@ -85,6 +89,25 @@ private:
 	UPROPERTY()
 	TObjectPtr<UDataTable> BallStarLevelTable;
 	
+#pragma endregion
+
+#pragma region Boss
+
+public:
+	bool FindBossRow(FName RowName, FPBBossTableRow& OutRow) const;
+	bool FindBossHitPointRow(FName RowName, FPBBossHitPointTableRow& OutRow) const;
+	bool FindBossPatternRow(FName RowName, FPBBossPatternTableRow& OutRow) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> BossTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> BossHitPointTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> BossPatternTable;
+
 #pragma endregion
 };
 

@@ -16,7 +16,10 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 		&& IsValid(BumperTriggerTable)
 		&& IsValid(BumperEffectTable)
 		&& IsValid(BallTable)
-		&& IsValid(BallStarLevelTable);
+		&& IsValid(BallStarLevelTable)
+		&& IsValid(BossTable)
+		&& IsValid(BossHitPointTable)
+		&& IsValid(BossPatternTable);
 }
 
 void UPBTableDataSubsystem::SetCollectionTable(UDataTable* InCollectionTable)
@@ -75,10 +78,25 @@ void UPBTableDataSubsystem::SetBallTables(UDataTable* InBallTable, UDataTable* I
 {
 	BallTable = InBallTable;
 	BallStarLevelTable = InBallStarLevelTable;
-	
+
 	UE_LOG(LogTemp, Log, TEXT("[TableData] Ball tables assigned. Ball=%s StarLevel=%s"),
-	*GetNameSafe(BallTable),
-	*GetNameSafe(BallStarLevelTable));
+		*GetNameSafe(BallTable),
+		*GetNameSafe(BallStarLevelTable));
+}
+
+void UPBTableDataSubsystem::SetBossTables(
+	UDataTable* InBossTable,
+	UDataTable* InBossHitPointTable,
+	UDataTable* InBossPatternTable)
+{
+	BossTable = InBossTable;
+	BossHitPointTable = InBossHitPointTable;
+	BossPatternTable = InBossPatternTable;
+
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Boss tables assigned. Boss=%s HitPoint=%s Pattern=%s"),
+		*GetNameSafe(BossTable),
+		*GetNameSafe(BossHitPointTable),
+		*GetNameSafe(BossPatternTable));
 }
 
 #pragma region Bumper
@@ -131,7 +149,6 @@ bool UPBTableDataSubsystem::FindLinkedBumperEffectRow(
 	return FindBumperEffectRow(BumperRow.EffectID, OutRow);
 }
 
-
 #pragma endregion
 
 #pragma region Ball
@@ -173,4 +190,23 @@ bool UPBTableDataSubsystem::FindBallStarLevelRow(
 	return false;
 }
 
-#pragma endregion 
+#pragma endregion
+
+#pragma region Boss
+
+bool UPBTableDataSubsystem::FindBossRow(FName RowName, FPBBossTableRow& OutRow) const
+{
+	return FindTableRow(BossTable, RowName, OutRow, TEXT("FindBossRow"));
+}
+
+bool UPBTableDataSubsystem::FindBossHitPointRow(FName RowName, FPBBossHitPointTableRow& OutRow) const
+{
+	return FindTableRow(BossHitPointTable, RowName, OutRow, TEXT("FindBossHitPointRow"));
+}
+
+bool UPBTableDataSubsystem::FindBossPatternRow(FName RowName, FPBBossPatternTableRow& OutRow) const
+{
+	return FindTableRow(BossPatternTable, RowName, OutRow, TEXT("FindBossPatternRow"));
+}
+
+#pragma endregion
