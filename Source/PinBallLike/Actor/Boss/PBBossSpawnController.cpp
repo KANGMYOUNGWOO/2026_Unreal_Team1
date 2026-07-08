@@ -14,6 +14,48 @@
 #include "PinBallLike/Table/Boss/PBBossAssetIds.h"
 #include "PinBallLike/Table/PBAssetBundleNames.h"
 
+namespace
+{
+	const FName BossGameplayBundleKey(TEXT("BossGameplay"));
+	const FName BossUIBundleKey(TEXT("BossUI"));
+
+	FName MakeBundleKey(const TArray<FName>& BundleNames)
+	{
+		if (BundleNames.IsEmpty())
+		{
+			return NAME_None;
+		}
+
+		if (BundleNames.Num() == 1)
+		{
+			return BundleNames[0];
+		}
+
+		FString BundleKey;
+		for (const FName& BundleName : BundleNames)
+		{
+			if (!BundleKey.IsEmpty())
+			{
+				BundleKey.AppendChar(TEXT('+'));
+			}
+
+			BundleKey.Append(BundleName.ToString());
+		}
+
+		return FName(*BundleKey);
+	}
+
+	FName MakeBossGameplayBundleKey()
+	{
+		return MakeBundleKey({ PBAssetBundleNames::Gameplay, BossGameplayBundleKey });
+	}
+
+	FName MakeBossUIBundleKey()
+	{
+		return MakeBundleKey({ PBAssetBundleNames::UI, BossUIBundleKey });
+	}
+}
+
 APBBossSpawnController::APBBossSpawnController()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -35,6 +77,7 @@ void APBBossSpawnController::BeginPlay()
 void APBBossSpawnController::SpawnBossAsync()
 {
 	ClearSpawnedBoss();
+	UnregisterBossDeadEvent();
 
 	if (RequestBossDataAsync())
 	{
@@ -81,19 +124,35 @@ bool APBBossSpawnController::RequestBossDataAsync()
 	TArray<FName> BossAssetNames;
 	BossAssetNames.Add(BossRowName);
 
-	TArray<FName> BundleNames;
-	BundleNames.Add(PBAssetBundleNames::Gameplay);
+	TArray<FName> GameplayBundleNames;
+	GameplayBundleNames.Add(PBAssetBundleNames::Gameplay);
+	GameplayBundleNames.Add(BossGameplayBundleKey);
+
+	TArray<FName> UIBundleNames;
+	UIBundleNames.Add(PBAssetBundleNames::UI);
+	UIBundleNames.Add(BossUIBundleKey);
 
 	UE_LOG(LogTemp, Log, TEXT("[BossSpawn] Boss async load started. BossRowName=%s Bundle=%s"),
 		*BossRowName.ToString(),
-		*PBAssetBundleNames::Gameplay.ToString());
+		*MakeBossGameplayBundleKey().ToString());
 
-	PendingBossLoadRequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
+	IsBossGameplayLoadCompleted = false;
+	IsBossUILoadCompleted = false;
+	IsBossGameplayLoadSuccess = false;
+	IsBossUILoadSuccess = false;
+	IsBossAssetsUnloaded = false;
+
+	PendingBossGameplayLoadRequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
 		PBBossAssetIds::Type::BossData,
 		BossAssetNames,
-		BundleNames);
+		GameplayBundleNames);
 
-	if (!PendingBossLoadRequestId.IsValid())
+	PendingBossUILoadRequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
+		PBBossAssetIds::Type::BossData,
+		BossAssetNames,
+		UIBundleNames);
+
+	if (!PendingBossGameplayLoadRequestId.IsValid() || !PendingBossUILoadRequestId.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[BossSpawn] Boss async load failed to start. BossRowName=%s"),
 			*BossRowName.ToString());
@@ -103,42 +162,59 @@ bool APBBossSpawnController::RequestBossDataAsync()
 
 	UE_LOG(LogTemp, Log, TEXT("[BossSpawn] Boss async load request created. BossRowName=%s RequestId=%s"),
 		*BossRowName.ToString(),
-		*PendingBossLoadRequestId.ToString());
+		*PendingBossGameplayLoadRequestId.ToString());
 
 	return true;
 }
 
 void APBBossSpawnController::HandleBossDataLoaded(const FPBPrimaryAssetLoadResult& Result)
 {
-	if (Result.RequestId != PendingBossLoadRequestId)
+	const bool IsGameplayLoadResult = Result.RequestId == PendingBossGameplayLoadRequestId;
+	const bool IsUILoadResult = Result.RequestId == PendingBossUILoadRequestId;
+	if (!IsGameplayLoadResult && !IsUILoadResult)
 	{
 		UE_LOG(LogTemp, Verbose, TEXT("[BossSpawn] Ignore boss async load result. ExpectedRequestId=%s ActualRequestId=%s"),
-			*PendingBossLoadRequestId.ToString(),
+			*PendingBossGameplayLoadRequestId.ToString(),
 			*Result.RequestId.ToString());
 		return;
 	}
 
-	UnbindBossDataLoadEvent();
-	PendingBossLoadRequestId.Invalidate();
-
-	if (!Result.bSuccess || !IsValid(CachedGameDataLoadSubsystem))
+	if (IsGameplayLoadResult)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[BossSpawn] Boss async load completed with failure. BossRowName=%s RequestId=%s Success=%s Loaded=%d Requested=%d HasSubsystem=%s"),
+		IsBossGameplayLoadCompleted = true;
+		IsBossGameplayLoadSuccess = Result.bSuccess;
+	}
+
+	if (IsUILoadResult)
+	{
+		IsBossUILoadCompleted = true;
+		IsBossUILoadSuccess = Result.bSuccess;
+	}
+
+	if (!IsBossGameplayLoadCompleted || !IsBossUILoadCompleted)
+	{
+		return;
+	}
+
+	UnbindBossDataLoadEvent();
+	PendingBossGameplayLoadRequestId.Invalidate();
+	PendingBossUILoadRequestId.Invalidate();
+
+	if (!IsBossGameplayLoadSuccess || !IsBossUILoadSuccess || !IsValid(CachedGameDataLoadSubsystem))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BossSpawn] Boss async load completed with failure. BossRowName=%s GameplaySuccess=%s UISuccess=%s HasSubsystem=%s"),
 			*BossRowName.ToString(),
-			*Result.RequestId.ToString(),
-			Result.bSuccess ? TEXT("true") : TEXT("false"),
-			Result.LoadedAssetIds.Num(),
-			Result.RequestedAssetIds.Num(),
+			IsBossGameplayLoadSuccess ? TEXT("true") : TEXT("false"),
+			IsBossUILoadSuccess ? TEXT("true") : TEXT("false"),
 			IsValid(CachedGameDataLoadSubsystem) ? TEXT("true") : TEXT("false"));
 		CompleteBossPreparation(false);
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[BossSpawn] Boss async load completed. BossRowName=%s RequestId=%s Loaded=%d Requested=%d"),
+	UE_LOG(LogTemp, Log, TEXT("[BossSpawn] Boss async load completed. BossRowName=%s GameplayBundle=%s UIBundle=%s"),
 		*BossRowName.ToString(),
-		*Result.RequestId.ToString(),
-		Result.LoadedAssetIds.Num(),
-		Result.RequestedAssetIds.Num());
+		*MakeBossGameplayBundleKey().ToString(),
+		*MakeBossUIBundleKey().ToString());
 
 	const FPrimaryAssetId BossAssetId(PBBossAssetIds::Type::BossData, BossRowName);
 	const UPBBossDataAsset* BossDataAsset =
@@ -167,6 +243,11 @@ void APBBossSpawnController::HandleBossDataLoaded(const FPBPrimaryAssetLoadResul
 		*BossRowName.ToString(),
 		*GetNameSafe(LoadedBossClass),
 		IsSpawnSuccess ? TEXT("true") : TEXT("false"));
+
+	if (IsSpawnSuccess)
+	{
+		RegisterBossDeadEvent();
+	}
 
 	CompleteBossPreparation(IsSpawnSuccess);
 }
@@ -219,6 +300,7 @@ void APBBossSpawnController::ClearSpawnedBoss()
 void APBBossSpawnController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UnbindBossDataLoadEvent();
+	UnregisterBossDeadEvent();
 	ClearSpawnedBoss();
 
 	Super::EndPlay(EndPlayReason);
@@ -234,6 +316,52 @@ void APBBossSpawnController::UnbindBossDataLoadEvent()
 	CachedGameDataLoadSubsystem->OnPrimaryAssetLoadCompleted.RemoveDynamic(
 		this,
 		&APBBossSpawnController::HandleBossDataLoaded);
+}
+
+void APBBossSpawnController::RegisterBossDeadEvent()
+{
+	if (!UGameplayMessageSubsystem::HasInstance(this) || BossDeadListenerHandle.IsValid())
+	{
+		return;
+	}
+
+	BossDeadListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattleBossDeadMessage>(
+		GameplayTags::Event_Battle_Boss_Dead,
+		this,
+		&APBBossSpawnController::HandleBossDeadMessage);
+}
+
+void APBBossSpawnController::UnregisterBossDeadEvent()
+{
+	if (BossDeadListenerHandle.IsValid())
+	{
+		BossDeadListenerHandle.Unregister();
+	}
+}
+
+void APBBossSpawnController::HandleBossDeadMessage(FGameplayTag Channel, const FPBBattleBossDeadMessage& Message)
+{
+	static_cast<void>(Channel);
+
+	if (Message.BossActor != SpawnedBoss)
+	{
+		return;
+	}
+
+	UnloadBossAssets();
+	UnregisterBossDeadEvent();
+}
+
+void APBBossSpawnController::UnloadBossAssets()
+{
+	if (IsBossAssetsUnloaded || !IsValid(CachedGameDataLoadSubsystem))
+	{
+		return;
+	}
+
+	CachedGameDataLoadSubsystem->UnloadPrimaryAssetBundle(MakeBossGameplayBundleKey());
+	CachedGameDataLoadSubsystem->UnloadPrimaryAssetBundle(MakeBossUIBundleKey());
+	IsBossAssetsUnloaded = true;
 }
 
 void APBBossSpawnController::CompleteBossPreparation(const bool IsSuccess) const
