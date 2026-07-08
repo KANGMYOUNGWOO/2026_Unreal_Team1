@@ -14,7 +14,7 @@ struct PINBALLLIKE_API FPBBallInstanceData
 	int32 InstanceId = INDEX_NONE;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Instance")
-	int32 BallId = 0;
+	FName BallId = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Instance", meta = (ClampMin = "1", UIMin = "1"))
 	int32 StarLevel = 1;
@@ -27,6 +27,6 @@ struct PINBALLLIKE_API FPBBallInstanceData
 
 	bool IsValid() const
 	{
-		return InstanceId != INDEX_NONE && BallId != 0;
+		return InstanceId != INDEX_NONE && !BallId.IsNone();
 	}
 };

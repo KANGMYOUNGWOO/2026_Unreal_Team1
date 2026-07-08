@@ -14,9 +14,6 @@ struct PINBALLLIKE_API FPBBallTableRow : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
-	int32 BallId = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
 	FText DisplayName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")

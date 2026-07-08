@@ -27,7 +27,7 @@ struct PINBALLLIKE_API FPBBallDeckFusionRequest
 	int32 SurvivorSlotIndex = INDEX_NONE;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck|Fusion")
-	int32 BallId = 0;
+	FName BallId = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck|Fusion")
 	int32 SourceStarLevel = 1;
@@ -39,7 +39,7 @@ struct PINBALLLIKE_API FPBBallDeckFusionRequest
 	{
 		return SurvivorBallInstanceId != INDEX_NONE
 			&& ConsumedBallInstanceIds.Num() == RequiredFusionBallCount
-			&& BallId != 0
+			&& !BallId.IsNone()
 			&& SourceStarLevel > 0
 			&& SourceStarLevel < MaxFusionStarLevel
 			&& ResultStarLevel > SourceStarLevel

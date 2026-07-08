@@ -28,6 +28,7 @@ private:
 	void BindDeckEvents();
 	void UnbindDeckEvents();
 	void RefreshDeploymentSlots();
+	void RequestPlacedBallUIAssets();
 
 	UFUNCTION()
 	void HandleDeploymentSlotChanged(int32 SlotIndex, int32 BallInstanceId);
@@ -37,6 +38,8 @@ private:
 
 	UFUNCTION()
 	void HandleDeploymentSlotsRotated();
+
+	void HandlePlacedBallUIAssetsLoaded();
 
 	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
 	TObjectPtr<UUniformGridPanel> GridPanel_BallList;

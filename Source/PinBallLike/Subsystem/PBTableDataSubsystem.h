@@ -76,8 +76,7 @@ private:
 public:
 	bool FindBallRow(FName RowName, FPBBallTableRow& OutRow) const;
 	bool FindBallStarLevelRow(FName RowName, FPBBallStarLevelRow& OutRow) const;
-	bool FindBallRowByBallId(int32 BallId, FName& OutRowName, FPBBallTableRow& OutRow) const;
-	bool FindBallStarLevelRow(int32 BallId, int32 StarLevel, FName& OutRowName, FPBBallStarLevelRow& OutRow) const;
+	bool FindBallStarLevelRow(FName BallId, int32 StarLevel, FName& OutRowName, FPBBallStarLevelRow& OutRow) const;
 	
 private:
 	UPROPERTY()

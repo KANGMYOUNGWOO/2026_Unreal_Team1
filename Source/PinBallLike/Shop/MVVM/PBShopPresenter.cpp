@@ -53,7 +53,7 @@ void UPBShopPresenter::OpenShop()
 		
 	}
 	
-	TArray<int32> ShopItemsId = ShopManager->OpenShop();
+	TArray<FName> ShopItemsId = ShopManager->OpenShop();
 	if (ShopDisplayActor)
 	{/*
 		ShopDisplayActor->DisplayItems(ShopItemsId);

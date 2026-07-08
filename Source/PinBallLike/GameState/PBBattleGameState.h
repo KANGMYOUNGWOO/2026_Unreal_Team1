@@ -66,6 +66,8 @@ protected:
 
 	void PrepareBoss();
 
+	void HandleBallGameplayAssetsLoaded();
+
 	void RegisterBattleMessageListeners();
 	void UnregisterBattleMessageListeners();
 	void HandlePreparationCompletedMessage(FGameplayTag Channel, const FPBBattlePreparationCompletedMessage& Message);

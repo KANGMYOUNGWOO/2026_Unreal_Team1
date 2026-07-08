@@ -3,13 +3,12 @@
 
 #include "PBBallDeckSubsystem.h"
 
+#include "PBBallDeckAssetLoadService.h"
 #include "PBBallDeckFusionService.h"
 #include "PinBallLike/Subsystem/BallDataStruct.h"
 #include "PinBallLike/Subsystem/BallDataSubsystem.h"
-#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
-#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
 
 void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -24,13 +23,37 @@ void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		FusionService->OnBallFusionCompleted.AddDynamic(this, &UPBBallDeckSubsystem::HandleBallFusionCompleted);
 		FusionService->OnBallFusionCanceled.AddDynamic(this, &UPBBallDeckSubsystem::HandleBallFusionCanceled);
 	}
+
+	AssetLoadService = NewObject<UPBBallDeckAssetLoadService>(this);
+	if (AssetLoadService)
+	{
+		AssetLoadService->Initialize(this);
+	}
 }
 
-int32 UPBBallDeckSubsystem::AddOwnedBall(int32 BallId, int32 StarLevel)
+int32 UPBBallDeckSubsystem::AddOwnedBall(FName BallId, int32 StarLevel)
 {
-	if (BallId == 0)
+	if (BallId.IsNone())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem AddOwnedBall failed. Invalid BallId=%d"), BallId);
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem AddOwnedBall failed. Invalid BallId=%s"), *BallId.ToString());
+		return INDEX_NONE;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	const UPBTableDataSubsystem* TableDataSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBTableDataSubsystem>() : nullptr;
+	if (!TableDataSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem AddOwnedBall failed. Missing TableDataSubsystem. BallId=%s"),
+			*BallId.ToString());
+		return INDEX_NONE;
+	}
+
+	FPBBallTableRow BallRow;
+	if (!TableDataSubsystem->FindBallRow(BallId, BallRow))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem AddOwnedBall failed. Ball row not found. BallId=%s"),
+			*BallId.ToString());
 		return INDEX_NONE;
 	}
 
@@ -40,9 +63,9 @@ int32 UPBBallDeckSubsystem::AddOwnedBall(int32 BallId, int32 StarLevel)
 	NewBallData.BallId = BallId;
 	NewBallData.StarLevel = FMath::Max(StarLevel, 1);
 
-	UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem AddOwnedBall succeeded. BallInstanceId=%d BallId=%d StarLevel=%d OwnedCount=%d"),
+	UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem AddOwnedBall succeeded. BallInstanceId=%d BallId=%s StarLevel=%d OwnedCount=%d"),
 		NewBallData.InstanceId,
-		NewBallData.BallId,
+		*NewBallData.BallId.ToString(),
 		NewBallData.StarLevel,
 		OwnedBallDataMap.Num());
 	return NewInstanceId;
@@ -133,7 +156,7 @@ TArray<int32> UPBBallDeckSubsystem::GetAllPlacedBallInstanceIds() const
 	return BallInstanceIds;
 }
 
-bool UPBBallDeckSubsystem::AddNewBallToDeck(int32 BallId, int32 StarLevel)
+bool UPBBallDeckSubsystem::AddNewBallToDeck(FName BallId, int32 StarLevel)
 {
 	const int32 EmptyDeploymentSlotIndex = FindEmptySlot(EPBBallDeckSlotType::Deployment);
 	const int32 EmptyBenchSlotIndex = EmptyDeploymentSlotIndex == INDEX_NONE ? FindEmptySlot(EPBBallDeckSlotType::Bench) : INDEX_NONE;
@@ -236,30 +259,71 @@ bool UPBBallDeckSubsystem::BuildBallItemViewData(int32 BallInstanceId, EPBBallDe
 	const UGameInstance* GameInstance = GetGameInstance();
 	const UPBTableDataSubsystem* TableDataSubsystem =
 		GameInstance ? GameInstance->GetSubsystem<UPBTableDataSubsystem>() : nullptr;
-	const UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
-		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr;
 
-	FName BallRowName;
 	FPBBallTableRow BallRow;
 	const bool bFoundBallRow = TableDataSubsystem
-		&& TableDataSubsystem->FindBallRowByBallId(BallInstanceData->BallId, BallRowName, BallRow);
+		&& !BallInstanceData->BallId.IsNone()
+		&& TableDataSubsystem->FindBallRow(BallInstanceData->BallId, BallRow);
 	const UPBBallDataAsset* BallDataAsset = nullptr;
-	if (bFoundBallRow && GameDataLoadSubsystem)
+	if (bFoundBallRow && AssetLoadService)
 	{
-		const FPrimaryAssetId BallAssetId(PBBallAssetIds::Type::BallData, BallRowName);
-		BallDataAsset = Cast<UPBBallDataAsset>(GameDataLoadSubsystem->GetLoadedPrimaryAsset(BallAssetId));
-		OutViewData.Icon = BallDataAsset ? BallDataAsset->Icon.Get() : nullptr;
+		BallDataAsset = AssetLoadService->GetLoadedBallDataAsset(BallInstanceId);
+		OutViewData.Icon = AssetLoadService->GetLoadedBallIcon(BallInstanceId);
+	}
+	else if (!bFoundBallRow)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem BuildBallItemViewData could not find ball row. BallInstanceId=%d BallId=%s TableDataSubsystem=%s"),
+			BallInstanceId,
+			*BallInstanceData->BallId.ToString(),
+			TableDataSubsystem ? TEXT("valid") : TEXT("null"));
+	}
+	else if (!AssetLoadService)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem BuildBallItemViewData failed. AssetLoadService is null. BallInstanceId=%d BallId=%s"),
+			BallInstanceId,
+			*BallInstanceData->BallId.ToString());
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem BuildBallItemViewData finished. BallInstanceId=%d BallId=%d StarLevel=%d SlotType=%d SlotIndex=%d DataAsset=%s Icon=%s"),
+	UE_LOG(LogTemp, Warning, TEXT("BallDeckSubsystem BuildBallItemViewData finished. BallInstanceId=%d BallId=%s StarLevel=%d RowFound=%s SlotType=%d SlotIndex=%d DataAsset=%s Icon=%s"),
 		OutViewData.BallInstanceId,
-		OutViewData.BallId,
+		*OutViewData.BallId.ToString(),
 		OutViewData.StarLevel,
+		bFoundBallRow ? TEXT("true") : TEXT("false"),
 		static_cast<int32>(OutViewData.SourceSlotType),
 		OutViewData.SourceSlotIndex,
 		*GetNameSafe(BallDataAsset),
 		*GetNameSafe(OutViewData.Icon));
 	return true;
+}
+
+FGuid UPBBallDeckSubsystem::LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate OnLoaded)
+{
+	return AssetLoadService
+		? AssetLoadService->LoadPlacedBallGameplayAssetsAsync(OnLoaded)
+		: FGuid();
+}
+
+FGuid UPBBallDeckSubsystem::LoadPlacedBallUIAssetsAsync(FStreamableDelegate OnLoaded)
+{
+	return AssetLoadService
+		? AssetLoadService->LoadPlacedBallUIAssetsAsync(OnLoaded)
+		: FGuid();
+}
+
+void UPBBallDeckSubsystem::UnloadPlacedBallGameplayAssets()
+{
+	if (AssetLoadService)
+	{
+		AssetLoadService->UnloadGameplayAssets();
+	}
+}
+
+void UPBBallDeckSubsystem::UnloadPlacedBallUIAssets()
+{
+	if (AssetLoadService)
+	{
+		AssetLoadService->UnloadUIAssets();
+	}
 }
 
 bool UPBBallDeckSubsystem::MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, EPBBallDeckSlotType TargetSlotType, int32 TargetSlotIndex)
@@ -336,7 +400,7 @@ bool UPBBallDeckSubsystem::SellBall(int32 BallInstanceId, int32& OutSellPrice)
 		return false;
 	}
 
-	const int32 BallId = BallInstanceData->BallId;
+	const FName BallId = BallInstanceData->BallId;
 	if (!RemoveOwnedBall(BallInstanceId))
 	{
 		OutSellPrice = 0;
@@ -352,6 +416,11 @@ bool UPBBallDeckSubsystem::SellBall(int32 BallInstanceId, int32& OutSellPrice)
 UPBBallDeckFusionService* UPBBallDeckSubsystem::GetFusionService() const
 {
 	return FusionService;
+}
+
+UPBBallDeckAssetLoadService* UPBBallDeckSubsystem::GetAssetLoadService() const
+{
+	return AssetLoadService;
 }
 
 bool UPBBallDeckSubsystem::TryStartFusion()

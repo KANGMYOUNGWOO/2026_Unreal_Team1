@@ -12,7 +12,7 @@ struct PINBALLLIKE_API FPBBallStarLevelRow : public FTableRowBase
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
-	int32 BallId = 0;
+	FName BallId = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
 	int32 StarLevel = 1;

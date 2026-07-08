@@ -103,8 +103,8 @@ bool UPBBallDeckFusionService::BuildFusionRequests(TArray<FPBBallDeckFusionReque
 		return false;
 	}
 
-	TMap<int64, TArray<int32>> FusionCandidatesByKey;
-	TArray<int64> FusionCandidateKeys;
+	TMap<FString, TArray<int32>> FusionCandidatesByKey;
+	TArray<FString> FusionCandidateKeys;
 	const TArray<int32> PlacedBallInstanceIds = DeckSubsystem->GetAllPlacedBallInstanceIds();
 	for (const int32 BallInstanceId : PlacedBallInstanceIds)
 	{
@@ -119,8 +119,9 @@ bool UPBBallDeckFusionService::BuildFusionRequests(TArray<FPBBallDeckFusionReque
 			continue;
 		}
 
-		const int64 CandidateKey = (static_cast<int64>(BallInstanceData->BallId) << 32)
-			| static_cast<uint32>(BallInstanceData->StarLevel);
+		const FString CandidateKey = FString::Printf(TEXT("%s:%d"),
+			*BallInstanceData->BallId.ToString(),
+			BallInstanceData->StarLevel);
 		if (!FusionCandidatesByKey.Contains(CandidateKey))
 		{
 			FusionCandidateKeys.Add(CandidateKey);
@@ -130,7 +131,7 @@ bool UPBBallDeckFusionService::BuildFusionRequests(TArray<FPBBallDeckFusionReque
 		CandidateBallInstanceIds.Add(BallInstanceId);
 	}
 
-	for (const int64 CandidateKey : FusionCandidateKeys)
+	for (const FString& CandidateKey : FusionCandidateKeys)
 	{
 		const TArray<int32>* CandidateBallInstanceIdsPtr = FusionCandidatesByKey.Find(CandidateKey);
 		if (!CandidateBallInstanceIdsPtr)

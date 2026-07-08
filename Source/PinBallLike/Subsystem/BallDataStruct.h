@@ -12,7 +12,7 @@ struct FBallDataStruct : public FTableRowBase
     
 public :
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 BallId;
+	FName BallId = NAME_None;
     
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName NameKey;

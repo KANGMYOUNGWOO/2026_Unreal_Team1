@@ -12,13 +12,13 @@ struct PINBALLLIKE_API FPBDeckOwnedBallData
 	int32 InstanceId = INDEX_NONE;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck")
-	int32 BallId = 0;
+	FName BallId = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck", meta = (ClampMin = "1", UIMin = "1"))
 	int32 StarLevel = 1;
 
 	bool IsValid() const
 	{
-		return InstanceId != INDEX_NONE && BallId != 0;
+		return InstanceId != INDEX_NONE && !BallId.IsNone();
 	}
 };

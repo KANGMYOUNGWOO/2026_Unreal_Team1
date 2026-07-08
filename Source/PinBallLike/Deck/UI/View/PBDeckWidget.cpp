@@ -16,6 +16,7 @@ void UPBDeckWidget::NativeConstruct()
 
 	BuildBenchSlots();
 	BindDeckEvents();
+	RequestPlacedBallUIAssets();
 	RefreshBenchSlots();
 }
 
@@ -105,6 +106,27 @@ void UPBDeckWidget::RefreshBenchSlots()
 			BallSlotWidget->SetBallInstanceId(DeckSubsystem->GetSlotBallInstanceId(EPBBallDeckSlotType::Bench, SlotIndex));
 		}
 	}
+}
+
+void UPBDeckWidget::RequestPlacedBallUIAssets()
+{
+	if (!DeckSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BallDeckUI] Bench UI asset load skipped. DeckSubsystem is null."));
+		return;
+	}
+
+	const FGuid RequestId = DeckSubsystem->LoadPlacedBallUIAssetsAsync(FStreamableDelegate::CreateUObject(
+		this,
+		&UPBDeckWidget::HandlePlacedBallUIAssetsLoaded));
+	UE_LOG(LogTemp, Log, TEXT("[BallDeckUI] Bench UI asset load requested. RequestId=%s"),
+		*RequestId.ToString());
+}
+
+void UPBDeckWidget::HandlePlacedBallUIAssetsLoaded()
+{
+	UE_LOG(LogTemp, Log, TEXT("[BallDeckUI] Bench UI assets loaded. Refresh bench slots."));
+	RefreshBenchSlots();
 }
 
 void UPBDeckWidget::HandleBenchSlotChanged(int32 SlotIndex, int32 BallInstanceId)

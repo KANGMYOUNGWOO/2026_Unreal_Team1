@@ -24,7 +24,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<UDataTable> BallDataTable;
 	
-	TMap<int32, const FBallDataStruct*> BallDataMap;
+	TMap<FName, const FBallDataStruct*> BallDataMap;
 	TArray<const FBallDataStruct*> BallDataArray;
 
 public:
@@ -32,12 +32,12 @@ public:
 	
 	
 public :
-	TArray<int32> GetRandomBalls(int32 Count);
+	TArray<FName> GetRandomBalls(int32 Count);
 	
-	FText GetBallName(int32 BallId);
+	FText GetBallName(FName BallId);
 
-    FText GetBallSynergeny(int32 BallId);	
+    FText GetBallSynergeny(FName BallId);	
 	
-	const FBallDataStruct* GetBallData(int32 BallId);
+	const FBallDataStruct* GetBallData(FName BallId);
 	
 };

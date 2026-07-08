@@ -9,6 +9,7 @@
 #include "PinBallLike/Actor/Bumper/PBBumperSpawnController.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 
 APBBattleGameState::APBBattleGameState()
 {
@@ -132,7 +133,21 @@ void APBBattleGameState::PrepareBumpers()
 void APBBattleGameState::PrepareBalls()
 {
 	// TODO: 볼 소환 구현 전까지는 준비 완료로 간주한다.
-	MarkPreparationCompleted(EPBBattlePreparationType::Ball, true);
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Prepare placed balls."));
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBBallDeckSubsystem* BallDeckSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBBallDeckSubsystem>() : nullptr;
+	if (!BallDeckSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] PrepareBalls failed. Missing BallDeckSubsystem."));
+		MarkPreparationCompleted(EPBBattlePreparationType::Ball, false);
+		return;
+	}
+
+	BallDeckSubsystem->LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate::CreateUObject(
+		this,
+		&APBBattleGameState::HandleBallGameplayAssetsLoaded));
 }
 
 void APBBattleGameState::PrepareBoss()
@@ -154,6 +169,12 @@ void APBBattleGameState::PrepareBoss()
 	}
 
 	BossSpawnController->SpawnBossAsync();
+}
+
+void APBBattleGameState::HandleBallGameplayAssetsLoaded()
+{
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Placed ball gameplay assets loaded."));
+	MarkPreparationCompleted(EPBBattlePreparationType::Ball, true);
 }
 
 void APBBattleGameState::RegisterBattleMessageListeners()
