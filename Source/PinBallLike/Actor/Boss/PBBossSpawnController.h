@@ -7,6 +7,9 @@
 #include "PBBossSpawnController.generated.h"
 
 class APBBossBase;
+class UPBGameDataLoadSubsystem;
+class UPBBossDataAsset;
+struct FPBPrimaryAssetLoadResult;
 class USceneComponent;
 
 UCLASS(Blueprintable)
@@ -29,6 +32,12 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
+	UFUNCTION()
+	void HandleBossDataLoaded(const FPBPrimaryAssetLoadResult& Result);
+
+	bool RequestBossDataAsync();
+	void UnbindBossDataLoadEvent();
+	bool SpawnBossWithClass(TSubclassOf<APBBossBase> BossClassToSpawn, const UPBBossDataAsset* BossDataAsset = nullptr);
 	void CompleteBossPreparation(bool IsSuccess) const;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Spawn", meta = (AllowPrivateAccess = "true"))
@@ -38,8 +47,17 @@ private:
 	TSubclassOf<APBBossBase> BossClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Spawn", meta = (AllowPrivateAccess = "true"))
+	FName BossRowName = TEXT("Snake");
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Spawn", meta = (AllowPrivateAccess = "true"))
 	bool IsSpawnOnBeginPlay = false;
 
 	UPROPERTY(Transient)
 	TObjectPtr<APBBossBase> SpawnedBoss;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBGameDataLoadSubsystem> CachedGameDataLoadSubsystem;
+
+	UPROPERTY(Transient)
+	FGuid PendingBossLoadRequestId;
 };

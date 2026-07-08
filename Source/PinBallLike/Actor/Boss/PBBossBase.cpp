@@ -16,6 +16,7 @@
 #include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
+#include "PinBallLike/Table/Boss/DataAsset/PBBossDataAsset.h"
 
 namespace
 {
@@ -291,6 +292,91 @@ void APBBossBase::StartDeadState()
 FText APBBossBase::GetBossName() const
 {
 	return BossName;
+}
+
+void APBBossBase::InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAsset)
+{
+	if (!IsValid(BossDataAsset))
+	{
+		return;
+	}
+
+	if (!BossDataAsset->BossName.IsEmpty())
+	{
+		BossName = BossDataAsset->BossName;
+	}
+
+	BossMovementType = BossDataAsset->BossMovementType;
+	GroggyDurationSeconds = FMath::Max(0.1f, BossDataAsset->GroggyDurationSeconds);
+	BossStatusWidgetClass = BossDataAsset->BossStatusWidgetClass.Get();
+	EnrageCameraShakeClass = BossDataAsset->EnrageCameraShakeClass.Get();
+
+	if (BossStatComponent)
+	{
+		BossStatComponent->MaxHP = FMath::Max(1, BossDataAsset->MaxHP);
+		BossStatComponent->EnrageHPRatioPercent = FMath::Clamp(BossDataAsset->EnrageHPRatioPercent, 0, 100);
+		BossStatComponent->HitPointDataMap.Reset();
+
+		for (const FPBBossHitPointData& HitPointData : BossDataAsset->HitPointDatas)
+		{
+			if (HitPointData.HitPointName.IsNone())
+			{
+				continue;
+			}
+
+			FBossHitPointDamageData DamageData;
+			DamageData.HPDamageMultiplierPercent = FMath::Max(0, HitPointData.HPDamageMultiplierPercent);
+			BossStatComponent->HitPointDataMap.Add(HitPointData.HitPointName, DamageData);
+		}
+	}
+
+	if (BossGroggyComponent)
+	{
+		BossGroggyComponent->MaxGroggyGauge = FMath::Max(1, BossDataAsset->MaxGroggyGauge);
+		BossGroggyComponent->GroggyPointDataMap.Reset();
+
+		for (const FPBBossHitPointData& HitPointData : BossDataAsset->HitPointDatas)
+		{
+			if (HitPointData.HitPointName.IsNone())
+			{
+				continue;
+			}
+
+			FBossGroggyPointData GroggyData;
+			GroggyData.GroggyMultiplierPercent = FMath::Max(0, HitPointData.GroggyMultiplierPercent);
+			BossGroggyComponent->GroggyPointDataMap.Add(HitPointData.HitPointName, GroggyData);
+		}
+	}
+
+	if (BossDamageComponent)
+	{
+		BossDamageComponent->ConfigureDamageSettings(
+			BossDataAsset->DefaultHitPointName,
+			BossDataAsset->DamageCooldownSeconds);
+	}
+
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->ConfigurePatternData(
+			BossDataAsset->PatternDatas,
+			BossDataAsset->EnragedPatternDatas,
+			BossDataAsset->EnragedEntryPatternDatas,
+			BossDataAsset->MinPatternIntervalSeconds,
+			BossDataAsset->PatternCheckIntervalSeconds);
+	}
+
+	if (BossWeaknessComponent)
+	{
+		BossWeaknessComponent->WeaknessPointNames.Reset();
+
+		for (const FPBBossHitPointData& HitPointData : BossDataAsset->HitPointDatas)
+		{
+			if (HitPointData.IsWeaknessPoint && !HitPointData.HitPointName.IsNone())
+			{
+				BossWeaknessComponent->WeaknessPointNames.Add(HitPointData.HitPointName);
+			}
+		}
+	}
 }
 
 void APBBossBase::SetPinballCollisionDamageBlocked(bool IsBlocked)

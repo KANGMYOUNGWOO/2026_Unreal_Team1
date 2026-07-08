@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "PinBallLike/Table/Boss/Struct/PBBossPatternData.h"
 #include "TimerManager.h"
 #include "PBBossPatternComponent.generated.h"
 
@@ -63,6 +64,13 @@ public:
 	// 현재 실행 중인 패턴 인스턴스를 반환합니다.
 	UPBBossPatternBase* GetCurrentPattern() const;
 
+	void ConfigurePatternData(
+		const TArray<FPBBossPatternData>& NewPatternDatas,
+		const TArray<FPBBossPatternData>& NewEnragedPatternDatas,
+		const TArray<FPBBossPatternData>& NewEnragedEntryPatternDatas,
+		float NewMinPatternIntervalSeconds,
+		float NewPatternCheckIntervalSeconds);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (DisplayName = "Normal Pattern Classes"))
 	TArray<TSubclassOf<UPBBossPatternBase>> PatternClasses;
 
@@ -71,6 +79,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
 	TArray<TSubclassOf<UPBBossPatternBase>> EnragedEntryPatternClasses;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
+	TArray<FPBBossPatternData> PatternDatas;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
+	TArray<FPBBossPatternData> EnragedPatternDatas;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
+	TArray<FPBBossPatternData> EnragedEntryPatternDatas;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (ClampMin = "0"))
 	float MinPatternIntervalSeconds = 2.0f;
@@ -103,6 +120,9 @@ private:
 	// 설정된 패턴 클래스들로 패턴 인스턴스를 생성합니다.
 	void InitializePatterns();
 	void ResetPatternStartTime();
+	void InitializePatternDatas(
+		const TArray<FPBBossPatternData>& PatternDataList,
+		TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList);
 	void InitializePatternClasses(
 		const TArray<TSubclassOf<UPBBossPatternBase>>& PatternClassList,
 		TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList);

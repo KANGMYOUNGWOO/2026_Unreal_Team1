@@ -30,6 +30,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Damage")
 	bool IsPinballCollisionDamageBlocked() const;
 
+	void ConfigureDamageSettings(FName NewDefaultHitPointName, float NewDamageCooldownSeconds);
+
 	FPBBossDamageSourceHitAppliedSignature OnDamageSourceHitApplied;
 
 protected:

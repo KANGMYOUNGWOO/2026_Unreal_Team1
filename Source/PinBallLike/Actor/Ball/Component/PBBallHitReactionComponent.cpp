@@ -59,14 +59,13 @@ void UPBBallHitReactionComponent::ProcessBallContact(AActor* OtherActor)
 		return;
 	}
 	
-	IBossInterface* Boss = Cast<IBossInterface>(OtherActor);
-	if (!Boss)
+	if (!OtherActor->GetClass()->ImplementsInterface(UBossInterface::StaticClass()))
 	{
 		return;
 	}
 
 	const int32 Damage = StatProvider ? StatProvider->GetStat(PBStatNames::Attack) : 0;
-	Boss->DamageToBoss(Damage);
+	IBossInterface::Execute_DamageToBoss(OtherActor, Damage);
 
 	MarkContactProcessed(OtherActor);
 
