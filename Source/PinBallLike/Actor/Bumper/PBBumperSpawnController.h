@@ -5,11 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PBBumperSpawnController.generated.h"
 
 class APBModularBumperBase;
 class UPBBumperDataAsset;
-class UPBGameDataLoadSubsystem;
 class UPBPlayerDataSubsystem;
 class UPBTableDataSubsystem;
 class USceneComponent;
@@ -52,7 +52,7 @@ protected:
 
 private:
 	UFUNCTION()
-	void HandleEquippedBumperAssetsLoaded();
+	void HandleEquippedBumperAssetsLoaded(const FPBPrimaryAssetLoadResult& Result);
 
 	bool RequestEquippedBumperGameplayAssetsAsync();
 
@@ -86,6 +86,12 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<FName> PendingBumperRowIds;
+
+	UPROPERTY(Transient)
+	FGuid PendingBumperAssetLoadRequestId;
+
+	UPROPERTY(Transient)
+	bool bPendingBumperAssetLoadCompleted = false;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<APBModularBumperBase>> SpawnedBumpers;
