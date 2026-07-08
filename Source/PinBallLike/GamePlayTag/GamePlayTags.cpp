@@ -7,4 +7,5 @@ namespace GameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Collection_Notification, "Event.UI.Collection.Notification");
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Phase_Prepare_Completed, "Event.Battle.Phase.Prepare.Completed");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Boss_Dead, "Event.Battle.Boss.Dead");
 }
