@@ -132,6 +132,10 @@ bool APBBossSpawnController::RequestBossDataAsync()
 	UIBundleNames.Add(PBAssetBundleNames::UI);
 	UIBundleNames.Add(BossUIBundleKey);
 
+	TArray<FName> BossBundleNames;
+	BossBundleNames.Append(GameplayBundleNames);
+	BossBundleNames.Append(UIBundleNames);
+
 	UE_LOG(LogTemp, Log, TEXT("[BossSpawn] Boss async load started. BossRowName=%s Bundle=%s"),
 		*BossRowName.ToString(),
 		*MakeBossGameplayBundleKey().ToString());
@@ -145,12 +149,8 @@ bool APBBossSpawnController::RequestBossDataAsync()
 	PendingBossGameplayLoadRequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
 		PBBossAssetIds::Type::BossData,
 		BossAssetNames,
-		GameplayBundleNames);
-
-	PendingBossUILoadRequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
-		PBBossAssetIds::Type::BossData,
-		BossAssetNames,
-		UIBundleNames);
+		BossBundleNames);
+	PendingBossUILoadRequestId = PendingBossGameplayLoadRequestId;
 
 	if (!PendingBossGameplayLoadRequestId.IsValid() || !PendingBossUILoadRequestId.IsValid())
 	{
