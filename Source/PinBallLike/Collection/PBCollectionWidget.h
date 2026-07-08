@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
+#include "PinBallLike/UI/PBUserWidget.h"
 #include "Types/SlateEnums.h"
 #include "PBCollectionWidget.generated.h"
 
@@ -24,7 +25,7 @@ class UWidgetTree;
  * 카테고리 탭, 검색 / 필터 / 정렬, 카드 목록, 상세 패널, 시연용 상태 변경 버튼을 제공합니다.
  */
 UCLASS()
-class PINBALLLIKE_API UPBCollectionWidget : public UUserWidget
+class PINBALLLIKE_API UPBCollectionWidget : public UPBUserWidget
 {
 	GENERATED_BODY()
 
