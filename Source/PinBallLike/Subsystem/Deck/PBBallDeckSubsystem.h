@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/StreamableManager.h"
 #include "PBBallDeckFusionService.h"
 #include "PinBallLike/Struct/Ball/PBBallItemViewData.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
@@ -16,7 +17,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsReordered);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnDeploymentSlotsRotated);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBOnBenchSlotChanged, int32, SlotIndex, int32, BallInstanceId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBOnBenchSlotsSwapped);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPBOnBallSold, int32, BallInstanceId, int32, BallId, int32, SellPrice);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPBOnBallSold, int32, BallInstanceId, FName, BallId, int32, SellPrice);
+
+class UPBBallDeckAssetLoadService;
 
 UCLASS()
 class PINBALLLIKE_API UPBBallDeckSubsystem : public UGameInstanceSubsystem
@@ -28,9 +31,9 @@ public:
 
 #pragma region Common
 
-	int32 AddOwnedBall(int32 BallId, int32 StarLevel = 1);
+	int32 AddOwnedBall(FName BallId, int32 StarLevel = 1);
 	// 외부에서 덱에 볼을 추가할때 사용하는 함수
-	bool AddNewBallToDeck(int32 BallId, int32 StarLevel = 1);
+	bool AddNewBallToDeck(FName BallId, int32 StarLevel = 1);
 	bool RemoveOwnedBall(int32 BallInstanceId);
 	bool SetOwnedBallStarLevel(int32 BallInstanceId, int32 StarLevel);
 
@@ -59,8 +62,19 @@ public:
 	bool HasOwnedBall(int32 BallInstanceId) const;
 	bool BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const;
 
+
 #pragma endregion
 
+#pragma region Load
+	
+public:
+	FGuid LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate OnLoaded);
+	FGuid LoadPlacedBallUIAssetsAsync(FStreamableDelegate OnLoaded);
+	void UnloadPlacedBallGameplayAssets();
+	void UnloadPlacedBallUIAssets();
+	
+#pragma endregion
+	
 #pragma region Fusion
 
 public:
@@ -75,6 +89,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "BallDeck|Fusion")
 	UPBBallDeckFusionService* GetFusionService() const;
+
+	UPBBallDeckAssetLoadService* GetAssetLoadService() const;
 
 	UFUNCTION(BlueprintCallable, Category = "BallDeck|Fusion")
 	bool TryStartFusion();
@@ -168,6 +184,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallDeckFusionService> FusionService;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBBallDeckAssetLoadService> AssetLoadService;
 
 	int32 NextBallInstanceId = 1;
 };

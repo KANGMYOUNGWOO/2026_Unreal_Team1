@@ -21,7 +21,7 @@ public :
 	
 	
 	
-	TArray<int32> OpenShop();
+	TArray<FName> OpenShop();
 	
 	bool BuyItem(int32 SlotIndex) override;
 	
@@ -32,7 +32,7 @@ public :
 private :
 	
 	int32 CurrentGold;
-	TArray<int32> CurrentShopItemBallIds;
+	TArray<FName> CurrentShopItemBallIds;
 	TArray<bool> ShopItemIsSell;
 	
 	IIShopActorHandler* ShopActorHandler;

@@ -16,5 +16,8 @@ class PINBALLLIKE_API UPBCheatManager : public UCheatManager
 	
 public:
 	UFUNCTION(exec)
-	void AddBenchBall(int32 BallId);
+	void AddBenchBall(FName BallId);
+
+private:
+	void HandleCheatPlacedBallGameplayAssetsLoaded();
 };

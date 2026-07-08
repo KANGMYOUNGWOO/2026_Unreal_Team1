@@ -33,22 +33,9 @@ void UBallDataSubsystem::InitializeData()
 		BallDataArray.Add(Row);
 	}
 	
-	if (GEngine)
-	{
-		if (const FBallDataStruct* const* Found = BallDataMap.Find(11001))
-		{
-			const FBallDataStruct* BallData = *Found;
-			
-			UE_LOG(LogTemp, Warning, TEXT("BallData"));
-		}
-	}
-	
-	
-
-	
 }
 
-const FBallDataStruct* UBallDataSubsystem::GetBallData(int32 BallId)
+const FBallDataStruct* UBallDataSubsystem::GetBallData(FName BallId)
 {
 	if (const FBallDataStruct* const* Found = BallDataMap.Find(BallId))
 	{
@@ -64,7 +51,7 @@ void UBallDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	InitializeData();
 }
 
-FText UBallDataSubsystem::GetBallName(int32 BallId)
+FText UBallDataSubsystem::GetBallName(FName BallId)
 {
 	const FBallDataStruct* Data = GetBallData(BallId);
 	
@@ -80,7 +67,7 @@ FText UBallDataSubsystem::GetBallName(int32 BallId)
 	   Data->NameKey.ToString());
 }
 
-FText UBallDataSubsystem::GetBallSynergeny(int32 BallId)
+FText UBallDataSubsystem::GetBallSynergeny(FName BallId)
 {
 	const FBallDataStruct* Data = GetBallData(BallId);
 	
@@ -100,7 +87,7 @@ FText UBallDataSubsystem::GetBallSynergeny(int32 BallId)
 	
 }
 
-TArray<int32> UBallDataSubsystem::GetRandomBalls(int32 Count)
+TArray<FName> UBallDataSubsystem::GetRandomBalls(int32 Count)
 {
 	if (BallDataArray.IsEmpty())
 	{
@@ -108,7 +95,7 @@ TArray<int32> UBallDataSubsystem::GetRandomBalls(int32 Count)
 	}
 	
 	TArray<const FBallDataStruct*> TempArray = BallDataArray;
-	TArray<int32> ResultArray;
+	TArray<FName> ResultArray;
 	Algo::RandomShuffle(TempArray);
 	
 	

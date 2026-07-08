@@ -146,41 +146,15 @@ bool UPBTableDataSubsystem::FindBallStarLevelRow(FName RowName, FPBBallStarLevel
 	return FindTableRow(BallStarLevelTable, RowName, OutRow, TEXT("FindBallStarLevelRow"));
 }
 
-bool UPBTableDataSubsystem::FindBallRowByBallId(
-	const int32 BallId,
-	FName& OutRowName,
-	FPBBallTableRow& OutRow) const
-{
-	OutRowName = NAME_None;
-	OutRow = FPBBallTableRow();
-	if (!IsValid(BallTable) || BallId == 0)
-	{
-		return false;
-	}
-
-	for (const TPair<FName, uint8*>& RowPair : BallTable->GetRowMap())
-	{
-		const FPBBallTableRow* Row = reinterpret_cast<FPBBallTableRow*>(RowPair.Value);
-		if (Row && Row->BallId == BallId)
-		{
-			OutRowName = RowPair.Key;
-			OutRow = *Row;
-			return true;
-		}
-	}
-
-	return false;
-}
-
 bool UPBTableDataSubsystem::FindBallStarLevelRow(
-	const int32 BallId,
+	const FName BallId,
 	const int32 StarLevel,
 	FName& OutRowName,
 	FPBBallStarLevelRow& OutRow) const
 {
 	OutRowName = NAME_None;
 	OutRow = FPBBallStarLevelRow();
-	if (!IsValid(BallStarLevelTable) || BallId == 0 || StarLevel <= 0)
+	if (!IsValid(BallStarLevelTable) || BallId.IsNone() || StarLevel <= 0)
 	{
 		return false;
 	}

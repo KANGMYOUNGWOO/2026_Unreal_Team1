@@ -28,10 +28,10 @@ void UPBBallItemWidget::InitializeBallItem(const FPBBallItemViewData& InViewData
 		ItemViewModel->SetBallItemViewData(ViewData);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("BallItemWidget InitializeBallItem. Widget=%s BallInstanceId=%d BallId=%d StarLevel=%d SlotType=%d SlotIndex=%d Icon=%s"),
+	UE_LOG(LogTemp, Warning, TEXT("BallItemWidget InitializeBallItem. Widget=%s BallInstanceId=%d BallId=%s StarLevel=%d SlotType=%d SlotIndex=%d Icon=%s"),
 		*GetNameSafe(this),
 		ViewData.BallInstanceId,
-		ViewData.BallId,
+		*ViewData.BallId.ToString(),
 		ViewData.StarLevel,
 		static_cast<int32>(ViewData.SourceSlotType),
 		ViewData.SourceSlotIndex,

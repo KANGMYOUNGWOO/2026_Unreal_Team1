@@ -37,7 +37,7 @@ UScriptStruct* UPBBallStarLevelTableParser::GetRowStruct() const
 bool UPBBallStarLevelTableParser::ParseRow(const FName RowName, const TMap<FString, FString>& RowData)
 {
 	FPBBallStarLevelRow NewRow;
-	NewRow.BallId = ParseIntValue(RowData.FindRef(TEXT("BallId")), 0);
+	NewRow.BallId = FName(*TrimCell(RowData.FindRef(TEXT("BallId"))));
 	NewRow.StarLevel = ParseIntValue(RowData.FindRef(TEXT("StarLevel")), 0);
 
 	NewRow.BaseResources.Add(PBResourceNames::Health, ParseIntValue(RowData.FindRef(TEXT("Health")), 0));

@@ -52,7 +52,6 @@ UScriptStruct* UPBBallTableParser::GetRowStruct() const
 bool UPBBallTableParser::ParseRow(const FName RowName, const TMap<FString, FString>& RowData)
 {
 	FPBBallTableRow NewRow;
-	NewRow.BallId = ParseIntValue(RowData.FindRef(TEXT("BallId")), 0);
 	NewRow.DisplayName = FText::FromString(RowData.FindRef(TEXT("DisplayName")));
 	NewRow.DescriptionKey = FText::FromString(RowData.FindRef(TEXT("DescriptionKey")));
 	NewRow.PowerFlipType = ParseEnumValue(RowData.FindRef(TEXT("PowerFlipType")), EPBPowerFlipType::Sword);

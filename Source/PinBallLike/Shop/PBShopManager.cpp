@@ -7,7 +7,7 @@
 #include "Engine/GameInstance.h"
 
 
-TArray<int32> UPBShopManager::OpenShop()
+TArray<FName> UPBShopManager::OpenShop()
 {
 	
 	CurrentShopItemBallIds.Empty();
@@ -56,7 +56,7 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
 	
 	if (SlotIndex >= CurrentShopItemBallIds.Num()) { return false; }
 	
-	int32 SelectedBallId = CurrentShopItemBallIds[SlotIndex];
+	FName SelectedBallId = CurrentShopItemBallIds[SlotIndex];
 	
 	const FBallDataStruct* BallData = DataSub->GetBallData(SelectedBallId);
 

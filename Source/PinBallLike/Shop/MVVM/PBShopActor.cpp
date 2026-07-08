@@ -67,7 +67,7 @@ void APBShopActor::OpenShop()
         return;
     }
 
-    const TArray<int32> ShopItemIds = ShopManager->OpenShop();
+    const TArray<FName> ShopItemIds = ShopManager->OpenShop();
 
    
 
