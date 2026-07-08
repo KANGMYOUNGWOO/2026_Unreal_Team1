@@ -6,6 +6,9 @@
 #include "GameFramework/Actor.h"
 #include "../../Interface/IShopActorHandler.h"
 #include  "../../Interface/IShopPurchaseHandler.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include "PinBallLike/Struct/Choice/PBChoiceType.h"
+#include "PinBallLike/Interface/PBChoiceNodeAction.h"
 #include "PBShopActor.generated.h"
 
 class UPBShopViewModel;
@@ -14,7 +17,7 @@ class APBShopDisplayActor;
 class UPBShopWidget;
 
 UCLASS()
-class PINBALLLIKE_API APBShopActor : public AActor , public IIShopActorHandler
+class PINBALLLIKE_API APBShopActor : public AActor , public IIShopActorHandler , public IPBChoiceNodeAction
 {
 	GENERATED_BODY()
 	
@@ -31,6 +34,8 @@ public:
 	void CloseShop();
 	
 	void BuyItem(int32 SlotIndex) override;
+	
+	void OpenAbility() override;
 	
 	bool ApplyViewModelToWidget(UUserWidget* Widget);
 	
@@ -58,8 +63,10 @@ private:
 	UPROPERTY()
 	TObjectPtr<UPBShopWidget> ShopWidget;
 	
-	
+	void HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message);
 
+	FGameplayMessageListenerHandle ExitStartHandle;
+	
 protected:
 	virtual void BeginPlay() override;
 	

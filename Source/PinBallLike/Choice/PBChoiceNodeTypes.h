@@ -11,7 +11,7 @@ enum class EPBChoiceNodeType : uint8
 	   None    UMETA(DisplayName = "None"),
 	   Shop    UMETA(DisplayName = "Shop"),
 	   Enhance UMETA(DisplayName = "Enhance"),
-	   Combine UMETA(DisplayName = "Combine"),
+	   Bet     UMETA(DisplayName = "Bet"),
 	   Battle  UMETA(DisplayName = "Battle"),
 	   Event   UMETA(DisplayName = "Event"),
 	   Boss    UMETA(DisplayName = "Boss")

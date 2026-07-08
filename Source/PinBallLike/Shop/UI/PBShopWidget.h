@@ -52,7 +52,7 @@ public :
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidget), Category="Shop|Widget")
 	TObjectPtr<UTextBlock> GoldTextBlock;
 	
-	UPROPERTY(meta = (BindWidget) , Category = "Shop|Widget")
+	UPROPERTY(meta = (BindWidget) )
 	TObjectPtr<UButton> ExitButton;
 	
 	UFUNCTION(BlueprintImplementableEvent)
@@ -74,7 +74,8 @@ public:
 
 private:
 	
-
+	UFUNCTION()
+	void OnExitButtonClicked();
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> ShopCanvas;

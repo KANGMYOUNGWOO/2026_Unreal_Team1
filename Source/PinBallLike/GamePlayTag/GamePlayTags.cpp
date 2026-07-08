@@ -6,4 +6,5 @@ namespace GameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Deck_Drag_Ended, "Event.UI.Deck.Drag.Ended");
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Phase_Prepare_Completed, "Event.Battle.Phase.Prepare.Completed");
+	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Choice_Exit, "Event.UI.Choice.Exit");
 }

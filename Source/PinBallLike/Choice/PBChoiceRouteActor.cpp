@@ -2,7 +2,7 @@
 
 #include "Components/SplineComponent.h"
 #include "Kismet/GameplayStatics.h"
-
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PBChoiceBallActor.h"
 #include "PBChoiceNodeManager.h"
 #include "Blueprint/UserWidget.h"
@@ -46,6 +46,13 @@ void APBChoiceRouteActor::BeginPlay()
             
         }
     }
+    UGameplayMessageSubsystem& MessageSubsystem =
+      UGameplayMessageSubsystem::Get(this);
+    
+    ExitStartHandle =
+        MessageSubsystem.RegisterListener<FPBChoiceType>(GameplayTags::Event_UI_Choice_Exit,
+            this,
+            &APBChoiceRouteActor::HandleExitStart);
 }
 
 void APBChoiceRouteActor::ChooseLeft()
@@ -171,32 +178,12 @@ void APBChoiceRouteActor::OnReachPoint(EPBChoiceNodeType NodeType)
     switch (NodeType)
     {
     case EPBChoiceNodeType::Shop:
-        FadeToShop();
-        break;
-
     case EPBChoiceNodeType::Enhance:
-        UE_LOG(LogTemp, Warning, TEXT("Enhance Node Reached"));
-        MoveToNextPoint();
-        break;
-
-    case EPBChoiceNodeType::Combine:
-        UE_LOG(LogTemp, Warning, TEXT("Combine Node Reached"));
-        MoveToNextPoint();
-        break;
-
+    case EPBChoiceNodeType::Bet:
     case EPBChoiceNodeType::Battle:
-        UE_LOG(LogTemp, Warning, TEXT("Battle Node Reached"));
-        MoveToNextPoint();
-        break;
-
     case EPBChoiceNodeType::Event:
-        UE_LOG(LogTemp, Warning, TEXT("Event Node Reached"));
-        MoveToNextPoint();
-        break;
-
     case EPBChoiceNodeType::Boss:
-        UE_LOG(LogTemp, Warning, TEXT("Boss Node Reached"));
-        FinishMove();
+        FadeToNodeDestination(NodeType);
         break;
 
     case EPBChoiceNodeType::None:
@@ -237,7 +224,88 @@ void APBChoiceRouteActor::FinishMove()
     UE_LOG(LogTemp, Warning, TEXT("Route Finished"));
 }
 
-void APBChoiceRouteActor::FadeToShop()
+
+void APBChoiceRouteActor::FadeToNodeDestination(EPBChoiceNodeType NodeType)
+{
+    const FPBChoiceNodeDestination* Destination =
+       NodeDestinations.Find(NodeType);
+
+    if (!Destination)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No destination for NodeType=%d"), static_cast<int32>(NodeType));
+        MoveToNextPoint();
+        return;
+    }
+
+    PendingNodeType = NodeType;
+    PendingCameraActor = Destination->CameraActor;
+    PendingActionActor = Destination->ActionActor;
+
+    APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+    if (!PC || !PC->PlayerCameraManager)
+    {
+        return;
+    }
+
+    PC->PlayerCameraManager->StartCameraFade(
+        0.f,
+        1.f,
+        FadeOutTime,
+        FLinearColor::Black,
+        false,
+        true);
+
+    GetWorld()->GetTimerManager().SetTimer(
+        FadeToDestinationTimerHandle,
+        this,
+        &APBChoiceRouteActor::OnFadeToDestinationFinished,
+        FadeOutTime,
+        false);
+}
+
+void APBChoiceRouteActor::OnFadeToDestinationFinished()
+{
+    APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+    if (!PC || !PC->PlayerCameraManager)
+    {
+        return;
+    }
+
+    if (PendingCameraActor)
+    {
+        PC->SetViewTarget(PendingCameraActor);
+    }
+
+    if (PendingActionActor)
+    {
+        if (IPBChoiceNodeAction* Action =
+            Cast<IPBChoiceNodeAction>(PendingActionActor))
+        {
+            Action->OpenAbility();
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning,
+                TEXT("PendingActionActor does not implement IPBChoiceNodeAction: %s"),
+                *GetNameSafe(PendingActionActor));
+        }
+    }
+
+    PC->PlayerCameraManager->StartCameraFade(
+        1.f,
+        0.f,
+        FadeInTime,
+        FLinearColor::Black,
+        false,
+        false);
+}
+
+void APBChoiceRouteActor::HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message)
+{
+    FadeBackToBallAndMove();
+}
+
+void APBChoiceRouteActor::FadeBackToBallAndMove()
 {
     APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
 
@@ -255,14 +323,14 @@ void APBChoiceRouteActor::FadeToShop()
         true);
 
     GetWorld()->GetTimerManager().SetTimer(
-        FadeTimerHandle,
+        FadeBackTimerHandle,
         this,
-        &APBChoiceRouteActor::OnFadeOutFinished,
+        &APBChoiceRouteActor::OnFadeBackToBallFinished,
         FadeOutTime,
         false);
 }
 
-void APBChoiceRouteActor::OnFadeOutFinished()
+void APBChoiceRouteActor::OnFadeBackToBallFinished()
 {
     APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
 
@@ -271,14 +339,9 @@ void APBChoiceRouteActor::OnFadeOutFinished()
         return;
     }
 
-    if (ShopCameraActor)
+    if (ChoiceBallActor)
     {
-        PC->SetViewTarget(ShopCameraActor);
-    }
-
-    if (ShopActor)
-    {
-        ShopActor->OpenShop();
+        PC->SetViewTarget(ChoiceBallActor);
     }
 
     PC->PlayerCameraManager->StartCameraFade(
@@ -288,4 +351,6 @@ void APBChoiceRouteActor::OnFadeOutFinished()
         FLinearColor::Black,
         false,
         false);
+
+    MoveToNextPoint();
 }

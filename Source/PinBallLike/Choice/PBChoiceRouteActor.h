@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "PBChoiceNodeTypes.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include "PinBallLike/Struct/Choice/PBChoiceType.h"
 #include "PBChoiceRouteActor.generated.h"
 
 class USceneComponent;
@@ -11,6 +13,19 @@ class APBChoiceBallActor;
 class APBChoiceNodeManager;
 class APBShopActor;
 class UPBChoiceWidget;
+
+USTRUCT(BlueprintType)
+struct FPBChoiceNodeDestination
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere)
+    TObjectPtr<AActor> CameraActor = nullptr;
+
+    UPROPERTY(EditAnywhere)
+    TObjectPtr<AActor> ActionActor = nullptr;
+};
+
 
 UCLASS()
 class PINBALLLIKE_API APBChoiceRouteActor : public AActor
@@ -64,10 +79,7 @@ private:
 
     UPROPERTY(EditAnywhere, Category = "Choice Route|Camera")
     TObjectPtr<AActor> OverviewCameraActor;
-
-    UPROPERTY(EditAnywhere, Category = "Choice Route|Camera")
-    TObjectPtr<AActor> ShopCameraActor;
-
+    
     UPROPERTY(EditAnywhere, Category = "Choice Route|Move")
     float MoveSpeed = 500.f;
 
@@ -80,6 +92,22 @@ private:
     UPROPERTY(EditAnywhere, Category = "Choice Route|Camera")
     float FadeInTime = 0.5f;
     
+    UPROPERTY(EditAnywhere, Category="Choice Route|Destination")
+    TMap<EPBChoiceNodeType, FPBChoiceNodeDestination> NodeDestinations;
+    
+    void FadeToNodeDestination(EPBChoiceNodeType NodeType);
+    void OnFadeToDestinationFinished();
+
+    EPBChoiceNodeType PendingNodeType = EPBChoiceNodeType::None;
+
+    UPROPERTY()
+    TObjectPtr<AActor> PendingCameraActor;
+
+    UPROPERTY()
+    TObjectPtr<AActor> PendingActionActor;
+
+    FTimerHandle FadeToDestinationTimerHandle;
+    
     UPROPERTY()
     TObjectPtr<USplineComponent> CurrentSpline;
 
@@ -88,6 +116,10 @@ private:
     
     UPROPERTY(EditAnywhere, Category = "Choice Route|UI")
     TSubclassOf<UPBChoiceWidget> ChoiceWidgetClass;
+    
+    void HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message);
+    void FadeBackToBallAndMove();
+    void OnFadeBackToBallFinished();
     
     EPBChoiceRouteSide CurrentRouteSide = EPBChoiceRouteSide::Left;
 
@@ -99,5 +131,11 @@ private:
 
     bool bMoving = false;
 
+    FGameplayMessageListenerHandle ExitStartHandle;
+    
     FTimerHandle FadeTimerHandle;
+    FTimerHandle FadeBackTimerHandle; 
+  
+
+   
 };
