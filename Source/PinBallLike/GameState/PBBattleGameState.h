@@ -7,8 +7,10 @@
 #include "GameFramework/GameStateBase.h"
 #include "PBBattleGameState.generated.h"
 
+class APBBossSpawnController;
 class APBBumperSpawnController;
 enum class EPBBattlePreparationType : uint8;
+struct FPBBattleBossDeadMessage;
 struct FPBBattlePreparationCompletedMessage;
 
 UENUM(BlueprintType)
@@ -67,6 +69,7 @@ protected:
 	void RegisterBattleMessageListeners();
 	void UnregisterBattleMessageListeners();
 	void HandlePreparationCompletedMessage(FGameplayTag Channel, const FPBBattlePreparationCompletedMessage& Message);
+	void HandleBossDeadMessage(FGameplayTag Channel, const FPBBattleBossDeadMessage& Message);
 	void ResetPreparationState();
 	void MarkPreparationCompleted(EPBBattlePreparationType PreparationType, bool bSuccess);
 
@@ -95,7 +98,11 @@ private:
 	UPROPERTY()
 	TObjectPtr<APBBumperSpawnController> BumperSpawnController;
 
+	UPROPERTY()
+	TObjectPtr<APBBossSpawnController> BossSpawnController;
+
 	FGameplayMessageListenerHandle PreparationCompletedListenerHandle;
+	FGameplayMessageListenerHandle BossDeadListenerHandle;
 
 	bool bBumperPrepared = false;
 	bool bBallPrepared = false;

@@ -1,14 +1,43 @@
 #include "PBBossBase.h"
 
-#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 #include "Component/PBBossDamageComponent.h"
 #include "Component/PBBossGroggyComponent.h"
 #include "Component/PBBossPatternComponent.h"
+#include "Component/PBBossPinballReactionComponent.h"
 #include "Component/PBBossStatComponent.h"
+#include "Component/PBBossUIComponent.h"
 #include "Component/PBBossWeaknessComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StateTreeComponent.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include "GameFramework/PlayerController.h"
+#include "PinBallLike/Actor/Boss/StateTree/PBBossStateTreeTags.h"
+#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
+
+namespace
+{
+	FGameplayTag GetBossStateRequestTag(EPBBossState BossState)
+	{
+		switch (BossState)
+		{
+		case EPBBossState::Idle:
+			return PBBossStateTreeTags::RequestIdle;
+		case EPBBossState::Pattern:
+			return PBBossStateTreeTags::RequestPattern;
+		case EPBBossState::Groggy:
+			return PBBossStateTreeTags::RequestGroggy;
+		case EPBBossState::Enraged:
+			return PBBossStateTreeTags::RequestEnraged;
+		case EPBBossState::Dead:
+			return PBBossStateTreeTags::RequestDead;
+		default:
+			return FGameplayTag();
+		}
+	}
+}
 
 APBBossBase::APBBossBase()
 {
@@ -27,8 +56,11 @@ APBBossBase::APBBossBase()
 	BossGroggyComponent = CreateDefaultSubobject<UPBBossGroggyComponent>(TEXT("BossGroggyComponent"));
 	BossDamageComponent = CreateDefaultSubobject<UPBBossDamageComponent>(TEXT("BossDamageComponent"));
 	BossPatternComponent = CreateDefaultSubobject<UPBBossPatternComponent>(TEXT("BossPatternComponent"));
+	BossPinballReactionComponent = CreateDefaultSubobject<UPBBossPinballReactionComponent>(TEXT("BossPinballReactionComponent"));
 	BossWeaknessComponent = CreateDefaultSubobject<UPBBossWeaknessComponent>(TEXT("BossWeaknessComponent"));
 	BossStateTreeComponent = CreateDefaultSubobject<UStateTreeComponent>(TEXT("BossStateTreeComponent"));
+	BossStateTreeComponent->SetStartLogicAutomatically(false);
+	BossUIComponent = CreateDefaultSubobject<UPBBossUIComponent>(TEXT("BossUIComponent"));
 }
 
 UPBBossStatComponent* APBBossBase::GetBossStatComponent() const
@@ -61,14 +93,199 @@ UStateTreeComponent* APBBossBase::GetBossStateTreeComponent() const
 	return BossStateTreeComponent;
 }
 
+UPBBossUIComponent* APBBossBase::GetBossUIComponent() const
+{
+	return BossUIComponent;
+}
+
 void APBBossBase::SetBossState(EPBBossState NewBossState)
 {
 	BossState = NewBossState;
 }
 
+void APBBossBase::RequestBossState(EPBBossState NewBossState)
+{
+	const FGameplayTag StateRequestTag = GetBossStateRequestTag(NewBossState);
+	if (BossStateTreeComponent && StateRequestTag.IsValid())
+	{
+		BossStateTreeComponent->SendStateTreeEvent(StateRequestTag);
+	}
+}
+
 EPBBossState APBBossBase::GetBossState() const
 {
 	return BossState;
+}
+
+bool APBBossBase::IsIdleState() const
+{
+	return BossState == EPBBossState::Idle;
+}
+
+bool APBBossBase::IsPatternState() const
+{
+	return BossState == EPBBossState::Pattern;
+}
+
+bool APBBossBase::IsGroggyState() const
+{
+	return BossState == EPBBossState::Groggy;
+}
+
+bool APBBossBase::IsEnragedState() const
+{
+	return BossState == EPBBossState::Enraged;
+}
+
+bool APBBossBase::IsDeadState() const
+{
+	return BossState == EPBBossState::Dead;
+}
+
+bool APBBossBase::IsEnragedPhase() const
+{
+	return BossStatComponent && BossStatComponent->IsEnraged;
+}
+
+bool APBBossBase::IsFixedBoss() const
+{
+	return BossMovementType == EPBBossMovementType::Fixed;
+}
+
+bool APBBossBase::IsMovableBoss() const
+{
+	return BossMovementType == EPBBossMovementType::Movable;
+}
+
+void APBBossBase::StartIdleState_Implementation()
+{
+	SetBossState(EPBBossState::Idle);
+}
+
+void APBBossBase::StartPatternState()
+{
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->StartPatternSystem();
+	}
+}
+
+void APBBossBase::StopPatternState()
+{
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->StopPatternSystem();
+	}
+}
+
+void APBBossBase::StartGroggyState()
+{
+	if (IsGroggyStateActive || IsDead())
+	{
+		return;
+	}
+
+	IsGroggyStateActive = true;
+	SetBossState(EPBBossState::Groggy);
+
+	if (BossPatternComponent)
+	{
+		if (BossPatternComponent->GetCurrentPattern())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Cancel Current Pattern."));
+		}
+		BossPatternComponent->PausePatternSystem();
+	}
+
+	SetWeaknessState(true);
+
+	StartGroggyResetTimer();
+	BP_OnGroggyStarted();
+}
+
+void APBBossBase::FinishGroggyState()
+{
+	if (!IsGroggyStateActive || !BossGroggyComponent || IsDead())
+	{
+		return;
+	}
+
+	IsGroggyStateActive = false;
+	SetWeaknessState(false);
+	ClearGroggyResetTimer();
+
+	BossGroggyComponent->ResetGroggy();
+
+	if (BossPatternComponent && BossPatternComponent->ResumePatternSystem())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Finished. Restart Pattern System."));
+	}
+}
+
+void APBBossBase::StartEnragedState()
+{
+	SetBossState(EPBBossState::Enraged);
+
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->NotifyEnragedPhaseStarted();
+	}
+
+	if (BossUIComponent)
+	{
+		BossUIComponent->ShowEnrageWarning();
+	}
+
+	if (EnrageCameraShakeClass)
+	{
+		UWorld* World = GetWorld();
+		APlayerController* PlayerController = World ? World->GetFirstPlayerController() : nullptr;
+		if (PlayerController)
+		{
+			PlayerController->ClientStartCameraShake(EnrageCameraShakeClass);
+		}
+	}
+
+	BP_OnEnragedStarted();
+
+	if (!IsDead())
+	{
+		RequestBossState(EPBBossState::Idle);
+	}
+}
+
+void APBBossBase::StartDeadState()
+{
+	if (IsDeadStateActive)
+	{
+		return;
+	}
+
+	IsDeadStateActive = true;
+	IsGroggyStateActive = false;
+	SetBossState(EPBBossState::Dead);
+
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->StopPatternSystem();
+	}
+
+	SetWeaknessState(false);
+
+	ClearGroggyResetTimer();
+	BP_OnDead();
+
+	if (UGameplayMessageSubsystem::HasInstance(this))
+	{
+		FPBBattleBossDeadMessage Message;
+		Message.BossActor = this;
+
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_Battle_Boss_Dead,
+			Message);
+	}
+
+	Destroy();
 }
 
 FText APBBossBase::GetBossName() const
@@ -99,148 +316,87 @@ void APBBossBase::BeginPlay()
 	Super::BeginPlay();
 
 	SetBossState(EPBBossState::Idle);
-	BindBossCollisionEvents();
 	SetWeaknessState(false);
-	CreateBossStatusWidget();
+
+	if (BossStateTreeComponent)
+	{
+		BossStateTreeComponent->StartLogic();
+	}
+
+	if (BossUIComponent && BossStatusWidgetClass)
+	{
+		BossUIComponent->ConfigureBossStatusWidget(BossStatusWidgetClass, BossStatusWidgetZOrder);
+	}
 }
 
 void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	RemoveBossStatusWidget();
-
 	SetWeaknessState(false);
+
+	if (BossStateTreeComponent)
+	{
+		BossStateTreeComponent->StopLogic(TEXT("Boss EndPlay"));
+	}
 
 	ClearGroggyResetTimer();
 	Super::EndPlay(EndPlayReason);
 }
 
-void APBBossBase::TakeBossDamage_Implementation(FName GroggyPointName, int32 DamageAmount)
+void APBBossBase::DamageToBoss_Implementation(
+	AActor* DamageSource,
+	int32 DamageAmount,
+	UPrimitiveComponent* HitComponent,
+	const FHitResult& Hit)
 {
 	if (!BossDamageComponent)
 	{
 		return;
 	}
 
-	BossDamageComponent->ApplyPointDamage(GroggyPointName, DamageAmount);
+	BossDamageComponent->ApplyHitPartDamage(DamageSource, HitComponent, DamageAmount, Hit);
 }
 
 void APBBossBase::OnGroggyTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Started."));
-	SetBossState(EPBBossState::Groggy);
+	RequestBossState(EPBBossState::Groggy);
+}
 
-	if (BossPatternComponent)
+void APBBossBase::IncreaseGroggy_Implementation(int32 GroggyAmount, UPrimitiveComponent* HitComponent)
+{
+	if (!BossGroggyComponent || IsDead())
 	{
-		if (BossPatternComponent->GetCurrentPattern())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Cancel Current Pattern."));
-		}
-		BossPatternComponent->PausePatternSystem();
+		return;
 	}
 
-	SetWeaknessState(true);
-
-	StartGroggyResetTimer();
-	BP_OnGroggyStarted();
+	BossGroggyComponent->ApplyGroggyDamage(GroggyAmount, HitComponent);
 }
 
 void APBBossBase::OnEnragedTriggered_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Enraged Started."));
-	SetBossState(EPBBossState::Enraged);
-	BP_OnEnragedStarted();
+	RequestBossState(EPBBossState::Enraged);
 }
 
 void APBBossBase::OnDeadTriggered_Implementation()
 {
+	HandleDeadTriggered();
+}
+
+void APBBossBase::HandleDeadTriggered()
+{
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Dead."));
-	SetBossState(EPBBossState::Dead);
+	StartDeadState();
 
-	if (BossPatternComponent)
+	if (BossStateTreeComponent && BossStateTreeComponent->IsRunning())
 	{
-		BossPatternComponent->StopPatternSystem();
+		RequestBossState(EPBBossState::Dead);
 	}
-
-	SetWeaknessState(false);
-
-	ClearGroggyResetTimer();
-	BP_OnDead();
 }
 
 bool APBBossBase::IsDead() const
 {
 	return BossStatComponent ? BossStatComponent->IsDead() : true;
-}
-
-void APBBossBase::HandleCollisionHit(
-	UPrimitiveComponent* HitComponent,
-	AActor* OtherActor,
-	UPrimitiveComponent* OtherComponent,
-	FVector NormalImpulse,
-	const FHitResult& Hit)
-{
-	static_cast<void>(NormalImpulse);
-
-	if (BossDamageComponent && BossDamageComponent->IsValidDamageSource(OtherActor, OtherComponent))
-	{
-		BossDamageComponent->ApplyHitPartDamage(
-			OtherActor,
-			HitComponent,
-			BossDamageComponent->GetPinballHitDamage(OtherActor),
-			Hit);
-	}
-}
-
-void APBBossBase::BindBossCollisionEvents()
-{
-	TArray<UPrimitiveComponent*> PrimitiveComponents;
-	GetComponents<UPrimitiveComponent>(PrimitiveComponents);
-
-	for (UPrimitiveComponent* PrimitiveComponent : PrimitiveComponents)
-	{
-		if (!PrimitiveComponent)
-		{
-			continue;
-		}
-
-		PrimitiveComponent->SetNotifyRigidBodyCollision(true);
-		PrimitiveComponent->OnComponentHit.AddUniqueDynamic(this, &APBBossBase::HandleCollisionHit);
-	}
-}
-
-void APBBossBase::CreateBossStatusWidget()
-{
-	if (BossStatusWidget || !BossStatusWidgetClass)
-	{
-		return;
-	}
-
-	APlayerController* PlayerController = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	BossStatusWidget = CreateWidget<UPBBossStatusWidget>(PlayerController, BossStatusWidgetClass);
-	if (!BossStatusWidget)
-	{
-		return;
-	}
-
-	BossStatusWidget->SetBoss(this);
-	BossStatusWidget->AddToViewport(BossStatusWidgetZOrder);
-}
-
-void APBBossBase::RemoveBossStatusWidget()
-{
-	if (!BossStatusWidget)
-	{
-		return;
-	}
-
-	BossStatusWidget->ClearBoss();
-	BossStatusWidget->RemoveFromParent();
-	BossStatusWidget = nullptr;
 }
 
 void APBBossBase::StartGroggyResetTimer()
@@ -276,15 +432,7 @@ void APBBossBase::HandleGroggyDurationFinished()
 		return;
 	}
 
-	SetWeaknessState(false);
-
-	BossGroggyComponent->ResetGroggy();
-	SetBossState(EPBBossState::Idle);
-
-	if (BossPatternComponent && BossPatternComponent->ResumePatternSystem())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("BossBase Groggy Finished. Restart Pattern System."));
-	}
+	RequestBossState(EPBBossState::Idle);
 }
 
 void APBBossBase::SetWeaknessState(bool IsOpen)
@@ -300,60 +448,4 @@ void APBBossBase::SetWeaknessState(bool IsOpen)
 			BossWeaknessComponent->CloseWeakness();
 		}
 	}
-
-	SetWeaknessCollisionEnabled(IsOpen);
-}
-
-void APBBossBase::SetWeaknessCollisionEnabled(bool IsEnabled)
-{
-	if (!BossWeaknessComponent)
-	{
-		return;
-	}
-
-	TArray<UPrimitiveComponent*> PrimitiveComponents;
-	GetComponents<UPrimitiveComponent>(PrimitiveComponents);
-
-	for (UPrimitiveComponent* PrimitiveComponent : PrimitiveComponents)
-	{
-		if (!PrimitiveComponent || !IsWeaknessCollisionComponent(PrimitiveComponent))
-		{
-			continue;
-		}
-
-		if (!WeaknessCollisionEnabledMap.Contains(PrimitiveComponent))
-		{
-			WeaknessCollisionEnabledMap.Add(PrimitiveComponent, PrimitiveComponent->GetCollisionEnabled());
-		}
-
-		PrimitiveComponent->SetHiddenInGame(!IsEnabled, true);
-		PrimitiveComponent->SetVisibility(IsEnabled, true);
-
-		if (IsEnabled)
-		{
-			const ECollisionEnabled::Type* OriginalCollisionEnabled = WeaknessCollisionEnabledMap.Find(PrimitiveComponent);
-			PrimitiveComponent->SetCollisionEnabled(OriginalCollisionEnabled ? *OriginalCollisionEnabled : ECollisionEnabled::QueryAndPhysics);
-			continue;
-		}
-
-		PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	}
-}
-
-bool APBBossBase::IsWeaknessCollisionComponent(const UPrimitiveComponent* PrimitiveComponent) const
-{
-	if (!PrimitiveComponent || !BossWeaknessComponent)
-	{
-		return false;
-	}
-
-	for (const FName ComponentTag : PrimitiveComponent->ComponentTags)
-	{
-		if (BossWeaknessComponent->IsWeaknessPoint(ComponentTag))
-		{
-			return true;
-		}
-	}
-
-	return false;
 }

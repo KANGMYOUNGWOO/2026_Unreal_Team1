@@ -1,40 +1,65 @@
 #include "PBBossStatusWidget.h"
 
-#include "Components/ProgressBar.h"
-#include "Components/TextBlock.h"
-#include "PinBallLike/Actor/Boss/PBBossBase.h"
-#include "PinBallLike/Actor/Boss/Component/PBBossGroggyComponent.h"
-#include "PinBallLike/Actor/Boss/Component/PBBossStatComponent.h"
+#include "PBBossStatusViewModel.h"
+#include "View/MVVMView.h"
 
 void UPBBossStatusWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	RefreshBossStatus();
+	EnsureStatusViewModel();
 }
 
 void UPBBossStatusWidget::SetBoss(APBBossBase* NewBoss)
 {
-	if (Boss == NewBoss)
+	EnsureStatusViewModel();
+	if (StatusViewModel)
 	{
-		RefreshBossStatus();
-		return;
+		StatusViewModel->SetBoss(NewBoss);
 	}
-
-	UnbindBossEvents();
-	Boss = NewBoss;
-	BindBossEvents();
-	RefreshBossStatus();
 }
 
 void UPBBossStatusWidget::ClearBoss()
 {
-	UnbindBossEvents();
-	Boss = nullptr;
+	ClearEnrageWarningTimer();
 
-	RefreshBossName();
-	HandleHPChanged(0, 1);
-	HandleGroggyGaugeChanged(0, 1);
+	if (StatusViewModel)
+	{
+		StatusViewModel->HideEnrageWarning();
+		StatusViewModel->ClearBoss();
+	}
+}
+
+void UPBBossStatusWidget::ShowEnrageWarning()
+{
+	EnsureStatusViewModel();
+	if (StatusViewModel)
+	{
+		StatusViewModel->ShowEnrageWarning();
+	}
+
+	ClearEnrageWarningTimer();
+
+	UWorld* World = GetWorld();
+	if (World && EnrageWarningVisibleSeconds > 0.0f)
+	{
+		World->GetTimerManager().SetTimer(
+			EnrageWarningTimerHandle,
+			this,
+			&UPBBossStatusWidget::HideEnrageWarning,
+			EnrageWarningVisibleSeconds,
+			false);
+	}
+}
+
+void UPBBossStatusWidget::HideEnrageWarning()
+{
+	ClearEnrageWarningTimer();
+
+	if (StatusViewModel)
+	{
+		StatusViewModel->HideEnrageWarning();
+	}
 }
 
 void UPBBossStatusWidget::NativeDestruct()
@@ -43,101 +68,51 @@ void UPBBossStatusWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void UPBBossStatusWidget::HandleHPChanged(int32 HP, int32 MaxHP)
+void UPBBossStatusWidget::EnsureStatusViewModel()
 {
-	if (HPProgressBar)
+	if (!StatusViewModel)
 	{
-		HPProgressBar->SetPercent(CalculateGaugePercent(HP, MaxHP));
+		StatusViewModel = NewObject<UPBBossStatusViewModel>(this);
 	}
 
-	if (HPText)
+	if (StatusViewModel)
 	{
-		HPText->SetText(FText::Format(NSLOCTEXT("BossStatusWidget", "HPTextFormat", "{0} / {1}"), HP, MaxHP));
+		ApplyViewModelToWidget();
 	}
 }
 
-void UPBBossStatusWidget::HandleGroggyGaugeChanged(int32 GroggyGauge, int32 MaxGroggyGauge)
+bool UPBBossStatusWidget::ApplyViewModelToWidget()
 {
-	if (GroggyProgressBar)
+	if (!StatusViewModel)
 	{
-		GroggyProgressBar->SetPercent(CalculateGaugePercent(GroggyGauge, MaxGroggyGauge));
+		return false;
 	}
+
+	UMVVMView* View = GetExtension<UMVVMView>();
+	if (!View)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BossStatusWidget ApplyViewModelToWidget failed. Widget=%s MVVMView extension is null"),
+			*GetNameSafe(this));
+		return false;
+	}
+
+	TScriptInterface<INotifyFieldValueChanged> ViewModelInterface(StatusViewModel);
+	const bool IsResult = View->SetViewModelByClass(ViewModelInterface);
+	if (!IsResult)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BossStatusWidget ApplyViewModelToWidget failed. Widget=%s ViewModel=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(StatusViewModel));
+	}
+
+	return IsResult;
 }
 
-void UPBBossStatusWidget::BindBossEvents()
+void UPBBossStatusWidget::ClearEnrageWarningTimer()
 {
-	if (!Boss)
+	UWorld* World = GetWorld();
+	if (World)
 	{
-		return;
+		World->GetTimerManager().ClearTimer(EnrageWarningTimerHandle);
 	}
-
-	if (UPBBossStatComponent* BossStatComponent = Boss->GetBossStatComponent())
-	{
-		BossStatComponent->OnHPChanged.AddUniqueDynamic(this, &UPBBossStatusWidget::HandleHPChanged);
-	}
-
-	if (UPBBossGroggyComponent* BossGroggyComponent = Boss->GetBossGroggyComponent())
-	{
-		BossGroggyComponent->OnGroggyGaugeChanged.AddUniqueDynamic(this, &UPBBossStatusWidget::HandleGroggyGaugeChanged);
-	}
-}
-
-void UPBBossStatusWidget::UnbindBossEvents()
-{
-	if (!Boss)
-	{
-		return;
-	}
-
-	if (UPBBossStatComponent* BossStatComponent = Boss->GetBossStatComponent())
-	{
-		BossStatComponent->OnHPChanged.RemoveDynamic(this, &UPBBossStatusWidget::HandleHPChanged);
-	}
-
-	if (UPBBossGroggyComponent* BossGroggyComponent = Boss->GetBossGroggyComponent())
-	{
-		BossGroggyComponent->OnGroggyGaugeChanged.RemoveDynamic(this, &UPBBossStatusWidget::HandleGroggyGaugeChanged);
-	}
-}
-
-void UPBBossStatusWidget::RefreshBossName()
-{
-	if (!BossNameText)
-	{
-		return;
-	}
-
-	BossNameText->SetText(Boss ? Boss->GetBossName() : FText::GetEmpty());
-}
-
-void UPBBossStatusWidget::RefreshBossStatus()
-{
-	RefreshBossName();
-
-	if (!Boss)
-	{
-		HandleHPChanged(0, 1);
-		HandleGroggyGaugeChanged(0, 1);
-		return;
-	}
-
-	if (const UPBBossStatComponent* BossStatComponent = Boss->GetBossStatComponent())
-	{
-		HandleHPChanged(BossStatComponent->HP, BossStatComponent->MaxHP);
-	}
-
-	if (const UPBBossGroggyComponent* BossGroggyComponent = Boss->GetBossGroggyComponent())
-	{
-		HandleGroggyGaugeChanged(BossGroggyComponent->GroggyGauge, BossGroggyComponent->MaxGroggyGauge);
-	}
-}
-
-float UPBBossStatusWidget::CalculateGaugePercent(int32 CurrentValue, int32 MaxValue)
-{
-	if (MaxValue <= 0)
-	{
-		return 0.0f;
-	}
-
-	return FMath::Clamp(static_cast<float>(CurrentValue) / static_cast<float>(MaxValue), 0.0f, 1.0f);
 }
