@@ -87,12 +87,10 @@ void UPBGameDataLoadSubsystem::LoadStartupGameDataAsync()
 			TablePaths));
 }
 
-void UPBGameDataLoadSubsystem::LoadPrimaryAssetsAsync(
+FGuid UPBGameDataLoadSubsystem::LoadPrimaryAssetsAsync(
 	const TArray<FPrimaryAssetType>& AssetTypes,
 	const TArray<FName>& BundleNames)
 {
-	UnloadPrimaryAssets();
-
 	TArray<FPrimaryAssetId> AssetIds;
 	for (const FPrimaryAssetType& AssetType : AssetTypes)
 	{
@@ -103,29 +101,27 @@ void UPBGameDataLoadSubsystem::LoadPrimaryAssetsAsync(
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[GameDataLoad] No primary assets found. TypeCount=%d"),
 			AssetTypes.Num());
-		CompletePrimaryAssetLoad(false);
-		return;
+		bIsPrimaryAssetsReady = LoadedPrimaryAssets.Num() > 0;
+		OnPrimaryAssetsLoaded.Broadcast();
+		return FGuid();
 	}
 
-	LoadPrimaryAssetsByIdsAsync(
+	return LoadPrimaryAssetsByIdsAsync(
 		AssetIds,
 		BundleNames,
-		FStreamableDelegate::CreateUObject(
-			this,
-			&UPBGameDataLoadSubsystem::OnPrimaryAssetsLoadedInternal,
-			AssetIds));
+		FStreamableDelegate());
 }
 
-void UPBGameDataLoadSubsystem::LoadPrimaryAssetTypeAsync(
+FGuid UPBGameDataLoadSubsystem::LoadPrimaryAssetTypeAsync(
 	const FPrimaryAssetType AssetType,
 	const TArray<FName>& BundleNames)
 {
 	TArray<FPrimaryAssetType> AssetTypes;
 	AssetTypes.Add(AssetType);
-	LoadPrimaryAssetsAsync(AssetTypes, BundleNames);
+	return LoadPrimaryAssetsAsync(AssetTypes, BundleNames);
 }
 
-void UPBGameDataLoadSubsystem::LoadPrimaryAssetsByIdsAsync(
+FGuid UPBGameDataLoadSubsystem::LoadPrimaryAssetsByIdsAsync(
 	const TArray<FPrimaryAssetId>& AssetIds,
 	const TArray<FName>& BundleNames,
 	FStreamableDelegate OnLoaded)
@@ -133,20 +129,13 @@ void UPBGameDataLoadSubsystem::LoadPrimaryAssetsByIdsAsync(
 	if (AssetIds.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[GameDataLoad] No primary asset ids."));
-		CompletePrimaryAssetLoad(false);
-		return;
+		bIsPrimaryAssetsReady = LoadedPrimaryAssets.Num() > 0;
+		OnLoaded.ExecuteIfBound();
+		OnPrimaryAssetsLoaded.Broadcast();
+		return FGuid();
 	}
 
-	const FName BundleKey = MakePrimaryAssetBundleKey(BundleNames);
-	UnloadPrimaryAssetBundle(BundleKey);
-	bIsPrimaryAssetsReady = false;
-
-	PrimaryAssetLoadHandlesByBundle.Add(BundleKey, UAssetManager::Get().LoadPrimaryAssets(
-		AssetIds,
-		BundleNames,
-		OnLoaded));
-
-	LoadedPrimaryAssetIdsByBundle.Add(BundleKey, AssetIds);
+	return CreatePrimaryAssetLoadRequest(AssetIds, BundleNames, OnLoaded);
 }
 
 void UPBGameDataLoadSubsystem::LoadSoftReferencesAsync(
@@ -170,60 +159,34 @@ void UPBGameDataLoadSubsystem::LoadSoftReferencesAsync(
 		OnLoaded);
 }
 
-void UPBGameDataLoadSubsystem::LoadPrimaryAssetsByNamesAsync(
+FGuid UPBGameDataLoadSubsystem::LoadPrimaryAssetsByNamesAsync(
 	const FPrimaryAssetType AssetType,
 	const TArray<FName>& AssetNames,
 	const TArray<FName>& BundleNames)
 {
-	PendingPrimaryAssetType = AssetType;
-	PendingPrimaryAssetNames = AssetNames;
-	PendingPrimaryAssetBundleNames = BundleNames;
-
-	if (!IsStartupGameDataReady())
-	{
-		OnStartupGameDataLoaded.AddUniqueDynamic(
-			this,
-			&UPBGameDataLoadSubsystem::ResumePrimaryAssetLoadByNamesAfterStartupDataReady);
-		return;
-	}
-
 	TArray<FPrimaryAssetId> AssetIds;
-	AssetIds.Reserve(PendingPrimaryAssetNames.Num());
-	for (const FName& AssetName : PendingPrimaryAssetNames)
+	AssetIds.Reserve(AssetNames.Num());
+	for (const FName& AssetName : AssetNames)
 	{
 		if (!AssetName.IsNone())
 		{
-			AssetIds.Add(FPrimaryAssetId(PendingPrimaryAssetType, AssetName));
+			AssetIds.Add(FPrimaryAssetId(AssetType, AssetName));
 		}
 	}
 
 	if (AssetIds.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[GameDataLoad] No primary asset names. Type=%s"),
-			*PendingPrimaryAssetType.ToString());
-		CompletePrimaryAssetLoad(false);
-		return;
+			*AssetType.ToString());
+		bIsPrimaryAssetsReady = LoadedPrimaryAssets.Num() > 0;
+		OnPrimaryAssetsLoaded.Broadcast();
+		return FGuid();
 	}
 
-	LoadPrimaryAssetsByIdsAsync(
+	return LoadPrimaryAssetsByIdsAsync(
 		AssetIds,
-		PendingPrimaryAssetBundleNames,
-		FStreamableDelegate::CreateUObject(
-			this,
-			&UPBGameDataLoadSubsystem::OnPrimaryAssetsLoadedInternal,
-			AssetIds));
-}
-
-void UPBGameDataLoadSubsystem::ResumePrimaryAssetLoadByNamesAfterStartupDataReady()
-{
-	OnStartupGameDataLoaded.RemoveDynamic(
-		this,
-		&UPBGameDataLoadSubsystem::ResumePrimaryAssetLoadByNamesAfterStartupDataReady);
-
-	LoadPrimaryAssetsByNamesAsync(
-		PendingPrimaryAssetType,
-		PendingPrimaryAssetNames,
-		PendingPrimaryAssetBundleNames);
+		BundleNames,
+		FStreamableDelegate());
 }
 
 void UPBGameDataLoadSubsystem::UnloadStartupGameData()
@@ -251,10 +214,11 @@ void UPBGameDataLoadSubsystem::UnloadPrimaryAssets()
 {
 	LoadedPrimaryAssets.Empty();
 	LoadedPrimaryAssetIdsByBundle.Empty();
+	ActivePrimaryAssetLoadRequests.Empty();
 	bIsPrimaryAssetsReady = false;
 
 	// 핸들을 해제하면 Subsystem이 유지하던 스트리밍 참조가 정리된다.
-	for (TPair<FName, TSharedPtr<FStreamableHandle>>& HandlePair : PrimaryAssetLoadHandlesByBundle)
+	for (TPair<FGuid, TSharedPtr<FStreamableHandle>>& HandlePair : ActivePrimaryAssetLoadHandles)
 	{
 		if (HandlePair.Value.IsValid())
 		{
@@ -262,7 +226,7 @@ void UPBGameDataLoadSubsystem::UnloadPrimaryAssets()
 			HandlePair.Value.Reset();
 		}
 	}
-	PrimaryAssetLoadHandlesByBundle.Empty();
+	ActivePrimaryAssetLoadHandles.Empty();
 
 	if (SoftReferenceLoadHandle.IsValid())
 	{
@@ -273,11 +237,25 @@ void UPBGameDataLoadSubsystem::UnloadPrimaryAssets()
 
 void UPBGameDataLoadSubsystem::UnloadPrimaryAssetBundle(const FName BundleName)
 {
-	TSharedPtr<FStreamableHandle> LoadHandle;
-	if (PrimaryAssetLoadHandlesByBundle.RemoveAndCopyValue(BundleName, LoadHandle) && LoadHandle.IsValid())
+	TArray<FGuid> RequestIdsToRemove;
+	for (const TPair<FGuid, FPBPrimaryAssetLoadRequest>& RequestPair : ActivePrimaryAssetLoadRequests)
 	{
-		LoadHandle->ReleaseHandle();
-		LoadHandle.Reset();
+		if (RequestPair.Value.BundleKey == BundleName)
+		{
+			RequestIdsToRemove.Add(RequestPair.Key);
+		}
+	}
+
+	for (const FGuid& RequestId : RequestIdsToRemove)
+	{
+		TSharedPtr<FStreamableHandle> LoadHandle;
+		if (ActivePrimaryAssetLoadHandles.RemoveAndCopyValue(RequestId, LoadHandle) && LoadHandle.IsValid())
+		{
+			LoadHandle->ReleaseHandle();
+			LoadHandle.Reset();
+		}
+
+		ActivePrimaryAssetLoadRequests.Remove(RequestId);
 	}
 
 	RemoveLoadedPrimaryAssetsForBundle(BundleName);
@@ -293,6 +271,17 @@ UObject* UPBGameDataLoadSubsystem::GetLoadedPrimaryAsset(const FPrimaryAssetId P
 {
 	const TObjectPtr<UObject>* LoadedAsset = LoadedPrimaryAssets.Find(PrimaryAssetId);
 	return LoadedAsset ? LoadedAsset->Get() : nullptr;
+}
+
+bool UPBGameDataLoadSubsystem::IsPrimaryAssetLoadRequestActive(const FGuid RequestId) const
+{
+	const TSharedPtr<FStreamableHandle>* LoadHandle = ActivePrimaryAssetLoadHandles.Find(RequestId);
+	return LoadHandle && LoadHandle->IsValid() && (*LoadHandle)->IsLoadingInProgress();
+}
+
+bool UPBGameDataLoadSubsystem::IsPrimaryAssetBundleLoaded(const FName BundleName) const
+{
+	return LoadedPrimaryAssetIdsByBundle.Contains(BundleName);
 }
 
 void UPBGameDataLoadSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPath> LoadedPaths)
@@ -343,35 +332,6 @@ void UPBGameDataLoadSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjec
 	OnStartupGameDataLoaded.Broadcast();
 }
 
-void UPBGameDataLoadSubsystem::OnPrimaryAssetsLoadedInternal(TArray<FPrimaryAssetId> LoadedAssetIds)
-{
-	CachePrimaryAssetsFromManager(LoadedAssetIds);
-	CompletePrimaryAssetLoad(LoadedPrimaryAssets.Num() > 0);
-}
-
-void UPBGameDataLoadSubsystem::CachePrimaryAssetsFromManager(const TArray<FPrimaryAssetId>& AssetIds)
-{
-	UAssetManager& AssetManager = UAssetManager::Get();
-	for (const FPrimaryAssetId& AssetId : AssetIds)
-	{
-		if (UObject* LoadedAsset = AssetManager.GetPrimaryAssetObject(AssetId))
-		{
-			LoadedPrimaryAssets.Add(AssetId, LoadedAsset);
-		}
-	}
-}
-
-void UPBGameDataLoadSubsystem::CompletePrimaryAssetLoad(const bool bReady)
-{
-	bIsPrimaryAssetsReady = bReady;
-
-	UE_LOG(LogTemp, Log, TEXT("[GameDataLoad] Primary assets loaded. Ready=%s AssetCount=%d"),
-		bIsPrimaryAssetsReady ? TEXT("true") : TEXT("false"),
-		LoadedPrimaryAssets.Num());
-
-	OnPrimaryAssetsLoaded.Broadcast();
-}
-
 void UPBGameDataLoadSubsystem::AppendPrimaryAssetIds(
 	const FPrimaryAssetType AssetType,
 	TArray<FPrimaryAssetId>& OutAssetIds) const
@@ -379,6 +339,137 @@ void UPBGameDataLoadSubsystem::AppendPrimaryAssetIds(
 	TArray<FPrimaryAssetId> AssetIds;
 	UAssetManager::Get().GetPrimaryAssetIdList(AssetType, AssetIds);
 	OutAssetIds.Append(AssetIds);
+}
+
+FGuid UPBGameDataLoadSubsystem::CreatePrimaryAssetLoadRequest(
+	const TArray<FPrimaryAssetId>& AssetIds,
+	const TArray<FName>& BundleNames,
+	FStreamableDelegate OnLoaded)
+{
+	FPBPrimaryAssetLoadRequest Request;
+	Request.RequestId = FGuid::NewGuid();
+	Request.AssetIds = AssetIds;
+	Request.BundleNames = BundleNames;
+	Request.BundleKey = MakePrimaryAssetBundleKey(BundleNames);
+	Request.OnLoaded = OnLoaded;
+
+	StartPrimaryAssetLoadRequest(Request);
+	return Request.RequestId;
+}
+
+void UPBGameDataLoadSubsystem::StartPrimaryAssetLoadRequest(const FPBPrimaryAssetLoadRequest& Request)
+{
+	bIsPrimaryAssetsReady = false;
+
+	ActivePrimaryAssetLoadRequests.Add(Request.RequestId, Request);
+	TSharedPtr<FStreamableHandle> LoadHandle = UAssetManager::Get().LoadPrimaryAssets(
+		Request.AssetIds,
+		Request.BundleNames,
+		FStreamableDelegate::CreateUObject(
+			this,
+			&UPBGameDataLoadSubsystem::OnPrimaryAssetsLoadedInternal,
+			Request.RequestId));
+
+	if (!LoadHandle.IsValid())
+	{
+		FPBPrimaryAssetLoadRequest RemovedRequest;
+		ActivePrimaryAssetLoadRequests.RemoveAndCopyValue(Request.RequestId, RemovedRequest);
+		CompletePrimaryAssetLoad(Request, TArray<FPrimaryAssetId>());
+		return;
+	}
+
+	if (ActivePrimaryAssetLoadRequests.Contains(Request.RequestId))
+	{
+		ActivePrimaryAssetLoadHandles.Add(Request.RequestId, LoadHandle);
+	}
+}
+
+void UPBGameDataLoadSubsystem::OnPrimaryAssetsLoadedInternal(const FGuid RequestId)
+{
+	const FPBPrimaryAssetLoadRequest* Request = ActivePrimaryAssetLoadRequests.Find(RequestId);
+	if (!Request)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GameDataLoad] Unknown primary asset load completed. RequestId=%s"),
+			*RequestId.ToString());
+		return;
+	}
+
+	TArray<FPrimaryAssetId> LoadedAssetIds;
+	CachePrimaryAssetsFromManager(Request->AssetIds, LoadedAssetIds);
+	CompletePrimaryAssetLoad(*Request, LoadedAssetIds);
+}
+
+void UPBGameDataLoadSubsystem::CachePrimaryAssetsFromManager(
+	const TArray<FPrimaryAssetId>& AssetIds,
+	TArray<FPrimaryAssetId>& OutLoadedAssetIds)
+{
+	UAssetManager& AssetManager = UAssetManager::Get();
+	for (const FPrimaryAssetId& AssetId : AssetIds)
+	{
+		if (UObject* LoadedAsset = AssetManager.GetPrimaryAssetObject(AssetId))
+		{
+			LoadedPrimaryAssets.Add(AssetId, LoadedAsset);
+			OutLoadedAssetIds.Add(AssetId);
+		}
+	}
+}
+
+void UPBGameDataLoadSubsystem::CompletePrimaryAssetLoad(
+	const FPBPrimaryAssetLoadRequest& Request,
+	const TArray<FPrimaryAssetId>& LoadedAssetIds)
+{
+	if (!LoadedAssetIds.IsEmpty())
+	{
+		TArray<FPrimaryAssetId>& BundleAssetIds = LoadedPrimaryAssetIdsByBundle.FindOrAdd(Request.BundleKey);
+		for (const FPrimaryAssetId& AssetId : LoadedAssetIds)
+		{
+			BundleAssetIds.AddUnique(AssetId);
+		}
+	}
+
+	bIsPrimaryAssetsReady = LoadedPrimaryAssets.Num() > 0;
+
+	FPBPrimaryAssetLoadResult Result;
+	Result.RequestId = Request.RequestId;
+	Result.BundleKey = Request.BundleKey;
+	Result.RequestedAssetIds = Request.AssetIds;
+	Result.LoadedAssetIds = LoadedAssetIds;
+	Result.bSuccess = LoadedAssetIds.Num() == Request.AssetIds.Num();
+
+	if (!Result.bSuccess)
+	{
+		FString MissingAssetIdText;
+		for (const FPrimaryAssetId& RequestedAssetId : Request.AssetIds)
+		{
+			if (LoadedAssetIds.Contains(RequestedAssetId))
+			{
+				continue;
+			}
+
+			if (!MissingAssetIdText.IsEmpty())
+			{
+				MissingAssetIdText.Append(TEXT(", "));
+			}
+			MissingAssetIdText.Append(RequestedAssetId.ToString());
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("[GameDataLoad] Primary asset load incomplete. RequestId=%s Bundle=%s Missing=[%s]"),
+			*Request.RequestId.ToString(),
+			*Request.BundleKey.ToString(),
+			*MissingAssetIdText);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[GameDataLoad] Primary assets loaded. RequestId=%s Bundle=%s Success=%s Loaded=%d Requested=%d TotalCached=%d"),
+		*Request.RequestId.ToString(),
+		*Request.BundleKey.ToString(),
+		Result.bSuccess ? TEXT("true") : TEXT("false"),
+		LoadedAssetIds.Num(),
+		Request.AssetIds.Num(),
+		LoadedPrimaryAssets.Num());
+
+	Request.OnLoaded.ExecuteIfBound();
+	OnPrimaryAssetLoadCompleted.Broadcast(Result);
+	OnPrimaryAssetsLoaded.Broadcast();
 }
 
 FName UPBGameDataLoadSubsystem::MakePrimaryAssetBundleKey(const TArray<FName>& BundleNames) const
