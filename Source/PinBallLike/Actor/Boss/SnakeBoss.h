@@ -5,6 +5,7 @@
 #include "SnakeBoss.generated.h"
 
 class USkeletalMeshComponent;
+class APBBossMoveArea;
 
 USTRUCT(BlueprintType)
 struct FPBSnakePathSample
@@ -51,6 +52,7 @@ protected:
 	virtual void StartIdleState_Implementation() override;
 
 	void InitializePatrolCenter();
+	void InitializeMoveArea();
 	void InitializeMoveDirection();
 	void MoveHead(float DeltaTime);
 	void UpdateSnakeAnimationData(float DeltaTime, const FVector& NextLocation, const FVector& PreviousLocation);
@@ -62,6 +64,7 @@ protected:
 	bool FindSnakePathLocationAtDistance(float Distance, FVector& OutLocation) const;
 	void SelectNextPatrolTarget();
 	FVector ClampLocationToPatrolArea(const FVector& SourceLocation) const;
+	APBBossMoveArea* FindNearestMoveArea() const;
 	bool IsInsideHeadExcludedArea(const FVector& SourceLocation) const;
 	FVector GetPatrolCurveLocation(float Alpha) const;
 	float CalculatePatrolCurveDistance() const;
@@ -91,6 +94,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
 	bool IsUseSpawnLocationAsPatrolCenter = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake")
+	TObjectPtr<APBBossMoveArea> BossMoveArea;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake", meta = (ClampMin = "0.0"))
 	float PatrolCurveOffsetScale = 0.35f;

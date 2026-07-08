@@ -2,6 +2,8 @@
 
 #include "Components/SkeletalMeshComponent.h"
 #include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
+#include "PinBallLike/Actor/Boss/PBBossMoveArea.h"
 
 namespace
 {
@@ -40,7 +42,7 @@ void ASnakeBoss::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitializePatrolCenter();
+	InitializeMoveArea();
 	SetActorLocation(ClampLocationToPatrolArea(GetActorLocation()), false, nullptr, ETeleportType::TeleportPhysics);
 	InitializeMoveDirection();
 	ResetSnakePath();
@@ -147,6 +149,24 @@ void ASnakeBoss::InitializePatrolCenter()
 	}
 
 	IsPatrolCenterInitialized = true;
+}
+
+void ASnakeBoss::InitializeMoveArea()
+{
+	if (!BossMoveArea)
+	{
+		BossMoveArea = FindNearestMoveArea();
+	}
+
+	if (BossMoveArea)
+	{
+		PatrolCenter = BossMoveArea->GetAreaCenter();
+		PatrolAreaExtent = BossMoveArea->GetAreaExtent();
+		IsPatrolCenterInitialized = true;
+		return;
+	}
+
+	InitializePatrolCenter();
 }
 
 void ASnakeBoss::InitializeMoveDirection()
@@ -441,12 +461,53 @@ void ASnakeBoss::SelectNextPatrolTarget()
 
 FVector ASnakeBoss::ClampLocationToPatrolArea(const FVector& SourceLocation) const
 {
+	if (BossMoveArea)
+	{
+		FVector ClampedLocation = BossMoveArea->ClampLocation(SourceLocation);
+		ClampedLocation.Z = GetActorLocation().Z;
+		return ClampedLocation;
+	}
+
 	const FVector PatrolExtent = PatrolAreaExtent.GetAbs();
 	FVector ClampedLocation = SourceLocation;
 	ClampedLocation.X = FMath::Clamp(ClampedLocation.X, PatrolCenter.X - PatrolExtent.X, PatrolCenter.X + PatrolExtent.X);
 	ClampedLocation.Y = FMath::Clamp(ClampedLocation.Y, PatrolCenter.Y - PatrolExtent.Y, PatrolCenter.Y + PatrolExtent.Y);
 	ClampedLocation.Z = GetActorLocation().Z;
 	return ClampedLocation;
+}
+
+APBBossMoveArea* ASnakeBoss::FindNearestMoveArea() const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	TArray<AActor*> MoveAreaActors;
+	UGameplayStatics::GetAllActorsOfClass(World, APBBossMoveArea::StaticClass(), MoveAreaActors);
+
+	APBBossMoveArea* NearestMoveArea = nullptr;
+	float NearestDistanceSquared = TNumericLimits<float>::Max();
+	const FVector BossLocation = GetActorLocation();
+
+	for (AActor* MoveAreaActor : MoveAreaActors)
+	{
+		APBBossMoveArea* MoveArea = Cast<APBBossMoveArea>(MoveAreaActor);
+		if (!MoveArea)
+		{
+			continue;
+		}
+
+		const float DistanceSquared = FVector::DistSquared2D(BossLocation, MoveArea->GetAreaCenter());
+		if (DistanceSquared < NearestDistanceSquared)
+		{
+			NearestMoveArea = MoveArea;
+			NearestDistanceSquared = DistanceSquared;
+		}
+	}
+
+	return NearestMoveArea;
 }
 
 bool ASnakeBoss::IsInsideHeadExcludedArea(const FVector& SourceLocation) const
