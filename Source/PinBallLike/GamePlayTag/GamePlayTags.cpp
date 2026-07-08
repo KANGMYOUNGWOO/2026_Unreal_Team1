@@ -7,6 +7,12 @@ namespace GameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Collection_Notification, "Event.UI.Collection.Notification");
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Phase_Prepare_Completed, "Event.Battle.Phase.Prepare.Completed");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Party_Deployment_Started, "Event.Battle.Party.Deployment.Started");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Party_Launch_Requested, "Event.Battle.Party.Launch.Requested");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Party_Launch_Approved, "Event.Battle.Party.Launch.Approved");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Party_Launched, "Event.Battle.Party.Launched");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Party_AllBallsDead, "Event.Battle.Party.AllBallsDead");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Party_Shift_Requested, "Event.Battle.Party.Shift.Requested");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Boss_Dead, "Event.Battle.Boss.Dead");
 	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Choice_Exit, "Event.UI.Choice.Exit");
 }

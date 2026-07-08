@@ -35,6 +35,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PinBall|Input")
 	TObjectPtr<UInputAction> LaunchAction;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PinBall|Input")
+	TObjectPtr<UInputAction> ShiftAction;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PinBall|Input")
 	TArray<TObjectPtr<AFlipper>> Flippers;
 
@@ -47,6 +50,7 @@ private:
 	void UpFlippers(const FInputActionValue& Value);
 	void DownFlippers(const FInputActionValue& Value);
 	void LaunchParty(const FInputActionValue& Value);
+	void RequestShiftDeploymentSlots(const FInputActionValue& Value);
 	void SetFlippersRaised(bool bRaised) const;
 
 };

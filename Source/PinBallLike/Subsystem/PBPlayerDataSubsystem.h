@@ -23,6 +23,11 @@ class PINBALLLIKE_API UPBPlayerDataSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
+#pragma region Battle
+	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
+	int32 GetInitialBattleLaunchCount() const { return InitialBattleLaunchCount; }
+#pragma endregion
+
 #pragma region Bumper
 	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
 	bool EquipBumper(EPBBumperSlotType SlotType, FName BumperRowId);
@@ -43,4 +48,8 @@ private:
 
 	UPROPERTY(Transient)
 	TMap<EPBBumperSlotType, FName> EquippedBumperRowIds;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
+	int32 InitialBattleLaunchCount = 5;
+
 };

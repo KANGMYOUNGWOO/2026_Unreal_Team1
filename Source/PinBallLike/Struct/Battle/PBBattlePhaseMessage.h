@@ -34,3 +34,57 @@ struct PINBALLLIKE_API FPBBattleBossDeadMessage
 	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
 	TObjectPtr<AActor> BossActor = nullptr;
 };
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattlePartyDeploymentStartedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 RemainingLaunchCount = 0;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattlePartyLaunchRequestedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> Requester = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattlePartyLaunchApprovedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 RemainingLaunchCountBeforeLaunch = 0;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattlePartyLaunchedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> PartyActor = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattlePartyAllBallsDeadMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> PartyActor = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattlePartyShiftRequestedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> Requester = nullptr;
+};
