@@ -17,6 +17,43 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 		&& IsValid(BumperEffectTable);
 }
 
+void UPBTableDataSubsystem::SetCollectionTable(UDataTable* InCollectionTable)
+{
+	CollectionTable = InCollectionTable;
+
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Collection table assigned. Collection=%s"),
+		*GetNameSafe(CollectionTable));
+}
+
+bool UPBTableDataSubsystem::IsCollectionTableReady() const
+{
+	return IsValid(CollectionTable);
+}
+
+bool UPBTableDataSubsystem::FindCollectionRow(const FName RowName, FPBCollectionTableRow& OutRow) const
+{
+	return FindTableRow(CollectionTable, RowName, OutRow, TEXT("FindCollectionRow"));
+}
+
+void UPBTableDataSubsystem::GetAllCollectionRows(TArray<FPBCollectionTableRow>& OutRows) const
+{
+	OutRows.Reset();
+	if (!IsValid(CollectionTable))
+	{
+		return;
+	}
+
+	TArray<FPBCollectionTableRow*> Rows;
+	CollectionTable->GetAllRows<FPBCollectionTableRow>(TEXT("GetAllCollectionRows"), Rows);
+	for (const FPBCollectionTableRow* Row : Rows)
+	{
+		if (Row && !Row->CollectionId.IsNone())
+		{
+			OutRows.Add(*Row);
+		}
+	}
+}
+
 void UPBTableDataSubsystem::SetBumperTables(
 	UDataTable* InBumperTable,
 	UDataTable* InBumperTriggerTable,
@@ -33,6 +70,13 @@ void UPBTableDataSubsystem::SetBumperTables(
 }
 
 #pragma region Bumper
+
+bool UPBTableDataSubsystem::GetAllBumperRows(
+	TArray<FName>& OutRowNames,
+	TArray<FPBBumperTableRow>& OutRows) const
+{
+	return GetAllTableRows(BumperTable, OutRowNames, OutRows, TEXT("GetAllBumperRows"));
+}
 
 bool UPBTableDataSubsystem::FindBumperRow(const FName RowName, FPBBumperTableRow& OutRow) const
 {
