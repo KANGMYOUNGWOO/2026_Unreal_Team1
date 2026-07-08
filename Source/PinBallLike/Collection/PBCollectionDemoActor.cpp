@@ -1,8 +1,9 @@
 #include "PBCollectionDemoActor.h"
 
 #include "PinBallLike/Collection/PBCollectionWidget.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
+#include "PinBallLike/UI/PBUserWidget.h"
 
-#include "Blueprint/UserWidget.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -51,31 +52,28 @@ void APBCollectionDemoActor::OpenCollection()
 	}
 	CollectionWidget = nullptr;
 
-	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-	if (!PlayerController || !CollectionWidgetClass)
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance || !CollectionWidgetClass)
 	{
 		return;
 	}
 
-	CollectionWidget = CreateWidget<UPBCollectionWidget>(PlayerController, CollectionWidgetClass);
-	if (!CollectionWidget)
+	UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UPBUIManagerSubsystem>();
+	if (!IsValid(UIManagerSubsystem))
 	{
 		return;
 	}
 
-	CollectionWidget->AddToViewport(ViewportZOrder);
-	ApplyUIInputMode(true);
+	CollectionWidget = UIManagerSubsystem->PushWidget(CollectionWidgetClass, ViewportZOrder);
 }
 
 void APBCollectionDemoActor::CloseCollection()
 {
 	if (CollectionWidget && CollectionWidget->IsInViewport())
 	{
-		CollectionWidget->RemoveFromParent();
+		CollectionWidget->CompletePop();
 	}
 	CollectionWidget = nullptr;
-
-	ApplyUIInputMode(false);
 }
 
 void APBCollectionDemoActor::ToggleCollection()
@@ -87,26 +85,4 @@ void APBCollectionDemoActor::ToggleCollection()
 	}
 
 	OpenCollection();
-}
-
-void APBCollectionDemoActor::ApplyUIInputMode(bool bEnableUI)
-{
-	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	PlayerController->bShowMouseCursor = bEnableUI;
-
-	if (bEnableUI)
-	{
-		FInputModeGameAndUI InputMode;
-		InputMode.SetHideCursorDuringCapture(false);
-		PlayerController->SetInputMode(InputMode);
-	}
-	else
-	{
-		PlayerController->SetInputMode(FInputModeGameOnly());
-	}
 }

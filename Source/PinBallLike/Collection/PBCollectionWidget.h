@@ -7,6 +7,7 @@
 #include "Types/SlateEnums.h"
 #include "PBCollectionWidget.generated.h"
 
+class APlayerController;
 class UBorder;
 class UButton;
 class UComboBoxString;
@@ -37,6 +38,8 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual void OnPushed_Implementation() override;
+	virtual void OnPopped_Implementation() override;
 
 private:
 	void BuildDefaultWidgetTree();
@@ -60,6 +63,8 @@ private:
 	void RefreshDetail();
 	void SetCategory(EPBCollectionCategory NewCategory);
 	void SelectEntry(FName CollectionId);
+	APlayerController* ResolvePlayerController() const;
+	void ApplyCollectionInputMode(bool bEnableUI) const;
 
 	UFUNCTION()
 	void HandleAllTabClicked();

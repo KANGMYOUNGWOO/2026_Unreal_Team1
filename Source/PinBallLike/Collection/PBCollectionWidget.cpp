@@ -18,6 +18,7 @@
 #include "Components/UniformGridSlot.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 
 namespace
@@ -201,6 +202,20 @@ void UPBCollectionWidget::NativeDestruct()
 	}
 
 	Super::NativeDestruct();
+}
+
+void UPBCollectionWidget::OnPushed_Implementation()
+{
+	Super::OnPushed_Implementation();
+
+	ApplyCollectionInputMode(true);
+}
+
+void UPBCollectionWidget::OnPopped_Implementation()
+{
+	ApplyCollectionInputMode(false);
+
+	Super::OnPopped_Implementation();
 }
 
 void UPBCollectionWidget::RefreshCollection()
@@ -676,7 +691,7 @@ void UPBCollectionWidget::RefreshEntryList()
 		}
 
 		UPBCollectionEntryWidget* EntryWidget = CreateWidget<UPBCollectionEntryWidget>(
-			GetOwningPlayer(),
+			ResolvePlayerController(),
 			ActualEntryWidgetClass);
 		if (!EntryWidget)
 		{
@@ -811,6 +826,43 @@ void UPBCollectionWidget::SelectEntry(FName CollectionId)
 	RefreshDetail();
 }
 
+APlayerController* UPBCollectionWidget::ResolvePlayerController() const
+{
+	if (APlayerController* OwningPlayer = GetOwningPlayer())
+	{
+		return OwningPlayer;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		return World->GetFirstPlayerController();
+	}
+
+	return nullptr;
+}
+
+void UPBCollectionWidget::ApplyCollectionInputMode(const bool bEnableUI) const
+{
+	APlayerController* PlayerController = ResolvePlayerController();
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	PlayerController->bShowMouseCursor = bEnableUI;
+
+	if (bEnableUI)
+	{
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		PlayerController->SetInputMode(InputMode);
+	}
+	else
+	{
+		PlayerController->SetInputMode(FInputModeGameOnly());
+	}
+}
+
 void UPBCollectionWidget::HandleAllTabClicked()
 {
 	SetCategory(EPBCollectionCategory::All);
@@ -843,13 +895,7 @@ void UPBCollectionWidget::HandleAchievementTabClicked()
 
 void UPBCollectionWidget::HandleCloseClicked()
 {
-	if (APlayerController* PlayerController = GetOwningPlayer())
-	{
-		PlayerController->bShowMouseCursor = false;
-		PlayerController->SetInputMode(FInputModeGameOnly());
-	}
-
-	RemoveFromParent();
+	CompletePop();
 }
 
 void UPBCollectionWidget::HandleSearchTextChanged(const FText& Text)

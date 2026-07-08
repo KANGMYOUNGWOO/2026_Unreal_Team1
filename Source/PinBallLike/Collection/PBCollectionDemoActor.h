@@ -6,10 +6,11 @@
 #include "PBCollectionDemoActor.generated.h"
 
 class UPBCollectionWidget;
+class UPBUserWidget;
 
 /**
  * 도감 프로토타입을 테스트 레벨에서 열기 위한 임시 진입점입니다.
- * 레벨에 배치한 뒤 BeginPlay 자동 열기 또는 ToggleKey 입력으로 도감 UI를 표시합니다.
+ * 레벨에 배치한 뒤 BeginPlay 자동 열기 또는 ToggleKey 입력으로 UIManager Push / Pop 흐름을 검증합니다.
  */
 UCLASS()
 class PINBALLLIKE_API APBCollectionDemoActor : public AActor
@@ -33,8 +34,6 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	void ApplyUIInputMode(bool bEnableUI);
-
 	UPROPERTY(EditAnywhere, Category = "Collection|Demo")
 	TSubclassOf<UPBCollectionWidget> CollectionWidgetClass;
 
@@ -51,5 +50,5 @@ private:
 	int32 ViewportZOrder = 50;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UPBCollectionWidget> CollectionWidget;
+	TObjectPtr<UPBUserWidget> CollectionWidget;
 };
