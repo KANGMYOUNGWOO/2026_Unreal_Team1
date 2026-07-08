@@ -1,0 +1,572 @@
+#include "SnakeBoss.h"
+
+#include "Components/SkeletalMeshComponent.h"
+#include "DrawDebugHelpers.h"
+
+namespace
+{
+	FVector CalculateCubicBezierLocation(
+		const FVector& StartLocation,
+		const FVector& FirstControlLocation,
+		const FVector& SecondControlLocation,
+		const FVector& EndLocation,
+		float Alpha)
+	{
+		const float ClampedAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+		const float InverseAlpha = 1.0f - ClampedAlpha;
+
+		return StartLocation * InverseAlpha * InverseAlpha * InverseAlpha
+			+ FirstControlLocation * 3.0f * InverseAlpha * InverseAlpha * ClampedAlpha
+			+ SecondControlLocation * 3.0f * InverseAlpha * ClampedAlpha * ClampedAlpha
+			+ EndLocation * ClampedAlpha * ClampedAlpha * ClampedAlpha;
+	}
+}
+
+ASnakeBoss::ASnakeBoss()
+{
+	PrimaryActorTick.bCanEverTick = true;
+	BossMovementType = EPBBossMovementType::Movable;
+
+	SnakeMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SnakeMesh"));
+	SnakeMesh->SetupAttachment(GetRootComponent());
+	SnakeMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	SnakeMesh->SetCollisionResponseToAllChannels(ECR_Block);
+	SnakeMesh->SetGenerateOverlapEvents(false);
+	SnakeMesh->SetNotifyRigidBodyCollision(true);
+	SnakeMesh->SetMobility(EComponentMobility::Movable);
+}
+
+void ASnakeBoss::BeginPlay()
+{
+	Super::BeginPlay();
+
+	InitializePatrolCenter();
+	SetActorLocation(ClampLocationToPatrolArea(GetActorLocation()), false, nullptr, ETeleportType::TeleportPhysics);
+	InitializeMoveDirection();
+	ResetSnakePath();
+
+	IsPatrolTargetValid = false;
+	SelectNextPatrolTarget();
+}
+
+void ASnakeBoss::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (IsIdleState())
+	{
+		MoveHead(DeltaTime);
+	}
+	else
+	{
+		UpdateSnakeAnimationData(DeltaTime, GetActorLocation(), GetActorLocation());
+	}
+
+	DrawDebugSnake();
+}
+
+void ASnakeBoss::StartIdleState_Implementation()
+{
+	Super::StartIdleState_Implementation();
+
+	IsPatrolTargetValid = false;
+	SelectNextPatrolTarget();
+}
+
+void ASnakeBoss::SetSnakeChargePose(bool IsActive, const FVector& Direction, float BlendAlpha)
+{
+	IsSnakeChargePoseActiveValue = IsActive;
+	SnakeChargePoseAlpha = IsActive ? FMath::Clamp(BlendAlpha, 0.0f, 1.0f) : 0.0f;
+
+	FVector SafeDirection = Direction;
+	SafeDirection.Z = 0.0f;
+	if (SafeDirection.Normalize())
+	{
+		SnakeChargeDirection = SafeDirection;
+	}
+
+	if (IsSnakeChargePoseActiveValue)
+	{
+		UpdateSnakeChargeHeadSplinePoints();
+		return;
+	}
+
+	SnakeChargeHeadSplinePoints.Reset();
+}
+
+float ASnakeBoss::GetSnakeAnimationSpeed() const
+{
+	return SnakeAnimationSpeed;
+}
+
+float ASnakeBoss::GetSnakeAnimationTurnAmount() const
+{
+	return SnakeAnimationTurnAmount;
+}
+
+float ASnakeBoss::GetSnakeAnimationMovePhase() const
+{
+	return SnakeAnimationMovePhase;
+}
+
+bool ASnakeBoss::IsSnakeAnimationMoving() const
+{
+	return IsSnakeAnimationMoveActive;
+}
+
+const TArray<FVector>& ASnakeBoss::GetSnakeSplinePoints() const
+{
+	return SnakeSplinePoints;
+}
+
+const TArray<FVector>& ASnakeBoss::GetSnakeChargeHeadSplinePoints() const
+{
+	return SnakeChargeHeadSplinePoints;
+}
+
+bool ASnakeBoss::IsSnakeChargePoseActive() const
+{
+	return IsSnakeChargePoseActiveValue;
+}
+
+float ASnakeBoss::GetSnakeChargePoseAlpha() const
+{
+	return SnakeChargePoseAlpha;
+}
+
+void ASnakeBoss::InitializePatrolCenter()
+{
+	if (IsPatrolCenterInitialized)
+	{
+		return;
+	}
+
+	if (IsUseSpawnLocationAsPatrolCenter)
+	{
+		PatrolCenter = GetActorLocation();
+	}
+
+	IsPatrolCenterInitialized = true;
+}
+
+void ASnakeBoss::InitializeMoveDirection()
+{
+	CurrentMoveDirection = GetActorForwardVector();
+	CurrentMoveDirection.Z = 0.0f;
+	if (!CurrentMoveDirection.Normalize())
+	{
+		CurrentMoveDirection = FVector::ForwardVector;
+	}
+}
+
+void ASnakeBoss::MoveHead(float DeltaTime)
+{
+	if (DeltaTime <= 0.0f)
+	{
+		return;
+	}
+
+	if (!IsPatrolTargetValid)
+	{
+		SelectNextPatrolTarget();
+		if (!IsPatrolTargetValid)
+		{
+			UpdateSnakeAnimationData(DeltaTime, GetActorLocation(), GetActorLocation());
+			return;
+		}
+	}
+
+	const FVector CurrentLocation = GetActorLocation();
+	const float MoveDistance = MoveSpeed * DeltaTime;
+	const float CurveDistance = FMath::Max(PatrolCurveDistance, PatrolAcceptanceRadius);
+	PatrolCurveAlpha = FMath::Clamp(PatrolCurveAlpha + MoveDistance / CurveDistance, 0.0f, 1.0f);
+
+	if (PatrolCurveAlpha >= 1.0f || FVector::Dist2D(CurrentLocation, PatrolTargetLocation) <= PatrolAcceptanceRadius)
+	{
+		SetActorLocation(PatrolTargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
+		UpdateSnakeAnimationData(DeltaTime, PatrolTargetLocation, CurrentLocation);
+		RecordSnakePathLocation(PatrolTargetLocation);
+		UpdateSnakeSplinePoints();
+		SelectNextPatrolTarget();
+		return;
+	}
+
+	const FVector NextLocation = ClampLocationToPatrolArea(GetPatrolCurveLocation(PatrolCurveAlpha));
+	FVector MoveDirection = NextLocation - CurrentLocation;
+	MoveDirection.Z = 0.0f;
+	if (!MoveDirection.Normalize())
+	{
+		SelectNextPatrolTarget();
+		return;
+	}
+
+	CurrentMoveDirection = FMath::VInterpNormalRotationTo(CurrentMoveDirection, MoveDirection, DeltaTime, TurnSpeed);
+	SetActorLocation(NextLocation, false, nullptr, ETeleportType::TeleportPhysics);
+	UpdateSnakeAnimationData(DeltaTime, NextLocation, CurrentLocation);
+	RecordSnakePathLocation(NextLocation);
+	UpdateSnakeSplinePoints();
+	FaceMovementDirection(CurrentMoveDirection);
+}
+
+void ASnakeBoss::UpdateSnakeAnimationData(float DeltaTime, const FVector& NextLocation, const FVector& PreviousLocation)
+{
+	if (DeltaTime <= 0.0f)
+	{
+		SnakeAnimationSpeed = 0.0f;
+		IsSnakeAnimationMoveActive = false;
+		return;
+	}
+
+	FVector DeltaLocation = NextLocation - PreviousLocation;
+	DeltaLocation.Z = 0.0f;
+
+	SnakeAnimationSpeed = DeltaLocation.Size() / DeltaTime;
+	IsSnakeAnimationMoveActive = SnakeAnimationSpeed > KINDA_SMALL_NUMBER && !IsSnakeChargePoseActiveValue;
+
+	FVector MoveDirection = DeltaLocation;
+	if (MoveDirection.Normalize())
+	{
+		const FVector ForwardDirection = GetActorForwardVector().GetSafeNormal2D();
+		const FVector CrossProduct = FVector::CrossProduct(ForwardDirection, MoveDirection);
+		const float DotProduct = FMath::Clamp(FVector::DotProduct(ForwardDirection, MoveDirection), -1.0f, 1.0f);
+		SnakeAnimationTurnAmount = FMath::RadiansToDegrees(FMath::Atan2(CrossProduct.Z, DotProduct));
+	}
+	else
+	{
+		SnakeAnimationTurnAmount = 0.0f;
+	}
+
+	if (IsSnakeAnimationMoveActive)
+	{
+		SnakeAnimationMovePhase = FMath::Fmod(SnakeAnimationMovePhase + SnakeAnimationSpeed * DeltaTime, 360.0f);
+	}
+}
+
+void ASnakeBoss::ResetSnakePath()
+{
+	SnakePathSamples.Reset();
+	SnakePathTotalDistance = 0.0f;
+	RecordSnakePathLocation(GetActorLocation());
+	UpdateSnakeSplinePoints();
+}
+
+void ASnakeBoss::RecordSnakePathLocation(const FVector& Location)
+{
+	FVector PathLocation = Location;
+	PathLocation.Z = GetActorLocation().Z;
+
+	if (SnakePathSamples.Num() > 0)
+	{
+		const float MoveDistance = FVector::Dist2D(SnakePathSamples.Last().Location, PathLocation);
+		if (MoveDistance <= KINDA_SMALL_NUMBER)
+		{
+			return;
+		}
+
+		SnakePathTotalDistance += MoveDistance;
+	}
+
+	FPBSnakePathSample PathSample;
+	PathSample.Location = PathLocation;
+	PathSample.Distance = SnakePathTotalDistance;
+	SnakePathSamples.Add(PathSample);
+
+	TrimSnakePath();
+}
+
+void ASnakeBoss::UpdateSnakeSplinePoints()
+{
+	const int32 SplinePointCount = FMath::Max(SnakeSplinePointCount, 2);
+	const float SplineLength = FMath::Max(SnakeSplineLength, 1.0f);
+	const float PointSpacing = SplineLength / static_cast<float>(SplinePointCount - 1);
+	const FTransform MeshTransform = SnakeMesh ? SnakeMesh->GetComponentTransform() : GetActorTransform();
+
+	SnakeSplinePoints.Reset();
+	SnakeSplinePoints.Reserve(SplinePointCount);
+
+	for (int32 PointIndex = 0; PointIndex < SplinePointCount; ++PointIndex)
+	{
+		const float TargetDistance = SnakePathTotalDistance - PointSpacing * static_cast<float>(PointIndex);
+		FVector PointLocation = GetActorLocation();
+		FindSnakePathLocationAtDistance(TargetDistance, PointLocation);
+		SnakeSplinePoints.Add(MeshTransform.InverseTransformPosition(PointLocation));
+	}
+}
+
+void ASnakeBoss::UpdateSnakeChargeHeadSplinePoints()
+{
+	const int32 SplinePointCount = FMath::Max(SnakeChargeHeadSplinePointCount, 2);
+	const float SplineLength = FMath::Max(SnakeChargeHeadSplineLength, 1.0f);
+	const float ControlDistance = SplineLength * FMath::Max(SnakeChargeHeadCurveOffsetScale, 0.0f);
+	const FTransform MeshTransform = SnakeMesh ? SnakeMesh->GetComponentTransform() : GetActorTransform();
+
+	FVector StartDirection = CurrentMoveDirection;
+	StartDirection.Z = 0.0f;
+	if (!StartDirection.Normalize())
+	{
+		StartDirection = GetActorForwardVector().GetSafeNormal2D();
+	}
+
+	FVector EndDirection = SnakeChargeDirection;
+	EndDirection.Z = 0.0f;
+	if (!EndDirection.Normalize())
+	{
+		EndDirection = StartDirection;
+	}
+
+	const FVector StartLocation = GetActorLocation();
+	const FVector EndLocation = StartLocation + EndDirection * SplineLength;
+	const FVector ControlLocation = StartLocation + StartDirection * ControlDistance;
+	const FVector EndControlLocation = EndLocation - EndDirection * ControlDistance;
+
+	SnakeChargeHeadSplinePoints.Reset();
+	SnakeChargeHeadSplinePoints.Reserve(SplinePointCount);
+
+	for (int32 PointIndex = 0; PointIndex < SplinePointCount; ++PointIndex)
+	{
+		const float Alpha = static_cast<float>(PointIndex) / static_cast<float>(SplinePointCount - 1);
+		const FVector PointLocation = CalculateCubicBezierLocation(
+			StartLocation,
+			ControlLocation,
+			EndControlLocation,
+			EndLocation,
+			Alpha);
+
+		SnakeChargeHeadSplinePoints.Add(MeshTransform.InverseTransformPosition(PointLocation));
+	}
+}
+
+void ASnakeBoss::TrimSnakePath()
+{
+	const float KeepDistance = FMath::Max(SnakeSplineLength, 1.0f) + MoveSpeed;
+	const float OldestDistance = SnakePathTotalDistance - KeepDistance;
+
+	while (SnakePathSamples.Num() > 1 && SnakePathSamples[1].Distance < OldestDistance)
+	{
+		SnakePathSamples.RemoveAt(0, 1, EAllowShrinking::No);
+	}
+}
+
+bool ASnakeBoss::FindSnakePathLocationAtDistance(float Distance, FVector& OutLocation) const
+{
+	if (SnakePathSamples.Num() == 0)
+	{
+		return false;
+	}
+
+	if (Distance <= SnakePathSamples[0].Distance)
+	{
+		OutLocation = SnakePathSamples[0].Location;
+		return true;
+	}
+
+	for (int32 SampleIndex = 1; SampleIndex < SnakePathSamples.Num(); ++SampleIndex)
+	{
+		const FPBSnakePathSample& PreviousSample = SnakePathSamples[SampleIndex - 1];
+		const FPBSnakePathSample& CurrentSample = SnakePathSamples[SampleIndex];
+		if (CurrentSample.Distance < Distance)
+		{
+			continue;
+		}
+
+		const float SampleDistance = CurrentSample.Distance - PreviousSample.Distance;
+		if (FMath::IsNearlyZero(SampleDistance))
+		{
+			OutLocation = CurrentSample.Location;
+			return true;
+		}
+
+		const float SampleAlpha = FMath::Clamp((Distance - PreviousSample.Distance) / SampleDistance, 0.0f, 1.0f);
+		OutLocation = FMath::Lerp(PreviousSample.Location, CurrentSample.Location, SampleAlpha);
+		return true;
+	}
+
+	OutLocation = SnakePathSamples.Last().Location;
+	return true;
+}
+
+void ASnakeBoss::SelectNextPatrolTarget()
+{
+	PatrolStartLocation = ClampLocationToPatrolArea(GetActorLocation());
+	const FVector PatrolExtent = PatrolAreaExtent.GetAbs();
+	constexpr int32 MaxTargetSelectCount = 20;
+	bool IsTargetSelected = false;
+
+	for (int32 TargetSelectIndex = 0; TargetSelectIndex < MaxTargetSelectCount; ++TargetSelectIndex)
+	{
+		const FVector RandomLocation = PatrolCenter + FVector(
+			FMath::FRandRange(-PatrolExtent.X, PatrolExtent.X),
+			FMath::FRandRange(-PatrolExtent.Y, PatrolExtent.Y),
+			0.0f);
+
+		PatrolTargetLocation = RandomLocation;
+		PatrolTargetLocation.Z = GetActorLocation().Z;
+
+		FVector CandidateDirection = PatrolTargetLocation - PatrolStartLocation;
+		CandidateDirection.Z = 0.0f;
+		if (!CandidateDirection.Normalize())
+		{
+			continue;
+		}
+
+		const float ForwardDot = FVector::DotProduct(CurrentMoveDirection, CandidateDirection);
+		if (!IsInsideHeadExcludedArea(PatrolTargetLocation) && ForwardDot >= PatrolTargetForwardDot)
+		{
+			IsTargetSelected = true;
+			break;
+		}
+	}
+
+	if (!IsTargetSelected)
+	{
+		IsPatrolTargetValid = false;
+		return;
+	}
+
+	const FVector TargetOffset = PatrolTargetLocation - PatrolStartLocation;
+	FVector TargetDirection = TargetOffset;
+	TargetDirection.Z = 0.0f;
+	if (!TargetDirection.Normalize())
+	{
+		TargetDirection = CurrentMoveDirection;
+	}
+
+	const float ControlDistance = FMath::Max(TargetOffset.Size2D() * PatrolCurveOffsetScale, PatrolMinCurveControlDistance);
+	PatrolCurveControlLocation = ClampLocationToPatrolArea(PatrolStartLocation + CurrentMoveDirection * ControlDistance);
+	PatrolCurveEndControlLocation = ClampLocationToPatrolArea(PatrolTargetLocation - TargetDirection * ControlDistance);
+	PatrolCurveAlpha = 0.0f;
+	PatrolCurveDistance = CalculatePatrolCurveDistance();
+	IsPatrolTargetValid = true;
+}
+
+FVector ASnakeBoss::ClampLocationToPatrolArea(const FVector& SourceLocation) const
+{
+	const FVector PatrolExtent = PatrolAreaExtent.GetAbs();
+	FVector ClampedLocation = SourceLocation;
+	ClampedLocation.X = FMath::Clamp(ClampedLocation.X, PatrolCenter.X - PatrolExtent.X, PatrolCenter.X + PatrolExtent.X);
+	ClampedLocation.Y = FMath::Clamp(ClampedLocation.Y, PatrolCenter.Y - PatrolExtent.Y, PatrolCenter.Y + PatrolExtent.Y);
+	ClampedLocation.Z = GetActorLocation().Z;
+	return ClampedLocation;
+}
+
+bool ASnakeBoss::IsInsideHeadExcludedArea(const FVector& SourceLocation) const
+{
+	if (HeadExcludeRadius <= 0.0f)
+	{
+		return false;
+	}
+
+	return FVector::DistSquared2D(GetActorLocation(), SourceLocation) <= FMath::Square(HeadExcludeRadius);
+}
+
+FVector ASnakeBoss::GetPatrolCurveLocation(float Alpha) const
+{
+	return CalculateCubicBezierLocation(
+		PatrolStartLocation,
+		PatrolCurveControlLocation,
+		PatrolCurveEndControlLocation,
+		PatrolTargetLocation,
+		Alpha);
+}
+
+float ASnakeBoss::CalculatePatrolCurveDistance() const
+{
+	constexpr int32 SampleCount = 12;
+	float CurveDistance = 0.0f;
+	FVector PreviousLocation = PatrolStartLocation;
+
+	for (int32 SampleIndex = 1; SampleIndex <= SampleCount; ++SampleIndex)
+	{
+		const float Alpha = static_cast<float>(SampleIndex) / static_cast<float>(SampleCount);
+		const FVector CurrentLocation = GetPatrolCurveLocation(Alpha);
+		CurveDistance += FVector::Dist2D(PreviousLocation, CurrentLocation);
+		PreviousLocation = CurrentLocation;
+	}
+
+	return CurveDistance;
+}
+
+void ASnakeBoss::FaceMovementDirection(const FVector& Direction)
+{
+	FVector MoveDirection = Direction;
+	MoveDirection.Z = 0.0f;
+	if (!MoveDirection.Normalize())
+	{
+		return;
+	}
+
+	CurrentMoveDirection = MoveDirection;
+	SetActorRotation(CurrentMoveDirection.Rotation());
+}
+
+void ASnakeBoss::DrawDebugSnake() const
+{
+	UWorld* World = GetWorld();
+	if (!World || !IsDrawDebugSnake)
+	{
+		return;
+	}
+
+	const FTransform MeshTransform = SnakeMesh ? SnakeMesh->GetComponentTransform() : GetActorTransform();
+	for (const FVector& SnakeSplinePoint : SnakeSplinePoints)
+	{
+		DrawDebugSphere(
+			World,
+			MeshTransform.TransformPosition(SnakeSplinePoint),
+			24.0f,
+			10,
+			FColor::Yellow,
+			false,
+			0.0f,
+			0,
+			2.0f);
+	}
+
+	for (const FVector& SnakeChargeHeadSplinePoint : SnakeChargeHeadSplinePoints)
+	{
+		DrawDebugSphere(
+			World,
+			MeshTransform.TransformPosition(SnakeChargeHeadSplinePoint),
+			30.0f,
+			10,
+			FColor::Purple,
+			false,
+			0.0f,
+			0,
+			2.0f);
+	}
+
+	const FVector PatrolExtent = PatrolAreaExtent.GetAbs();
+	DrawDebugBox(
+		World,
+		PatrolCenter,
+		FVector(PatrolExtent.X, PatrolExtent.Y, 10.0f),
+		FColor::Red,
+		false,
+		0.0f,
+		0,
+		2.0f);
+
+	if (IsPatrolTargetValid)
+	{
+		DrawDebugSphere(
+			World,
+			PatrolTargetLocation,
+			35.0f,
+			12,
+			FColor::Red,
+			false,
+			0.0f,
+			0,
+			2.0f);
+		DrawDebugLine(
+			World,
+			GetActorLocation(),
+			PatrolTargetLocation,
+			FColor::Red,
+			false,
+			0.0f,
+			0,
+			2.0f);
+	}
+}

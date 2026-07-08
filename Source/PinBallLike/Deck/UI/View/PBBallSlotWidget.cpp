@@ -61,12 +61,12 @@ void UPBBallSlotWidget::SetBallInstanceId(int32 InBallInstanceId)
 				SlotViewModel->SetHasBall(true);
 			}
 
-			UE_LOG(LogTemp, Warning, TEXT("BallSlotWidget SetBallInstanceId built ViewData. Slot=%s SlotType=%d SlotIndex=%d BallInstanceId=%d BallId=%d Icon=%s"),
+			UE_LOG(LogTemp, Warning, TEXT("BallSlotWidget SetBallInstanceId built ViewData. Slot=%s SlotType=%d SlotIndex=%d BallInstanceId=%d BallId=%s Icon=%s"),
 				*GetNameSafe(this),
 				static_cast<int32>(SlotType),
 				SlotIndex,
 				ViewData.BallInstanceId,
-				ViewData.BallId,
+				*ViewData.BallId.ToString(),
 				*GetNameSafe(ViewData.Icon));
 			BallItem->InitializeBallItem(ViewData);
 		}
@@ -162,10 +162,10 @@ void UPBBallSlotWidget::EnsureSlotViewModel()
 		SlotViewModel = NewObject<UPBBallSlotViewModel>(this);
 	}
 
-	if (SlotViewModel)
-	{
-		ApplyViewModelToWidget();
-	}
+	// if (SlotViewModel)
+	// {
+	// 	ApplyViewModelToWidget();
+	// }
 }
 
 bool UPBBallSlotWidget::ApplyViewModelToWidget()

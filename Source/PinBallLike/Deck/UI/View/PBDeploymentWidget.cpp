@@ -16,6 +16,7 @@ void UPBDeploymentWidget::NativeConstruct()
 
 	BuildDeploymentSlots();
 	BindDeckEvents();
+	RequestPlacedBallUIAssets();
 	RefreshDeploymentSlots();
 }
 
@@ -104,6 +105,27 @@ void UPBDeploymentWidget::RefreshDeploymentSlots()
 			BallSlotWidget->SetBallInstanceId(DeckSubsystem->GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, SlotIndex));
 		}
 	}
+}
+
+void UPBDeploymentWidget::RequestPlacedBallUIAssets()
+{
+	if (!DeckSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BallDeckUI] Deployment UI asset load skipped. DeckSubsystem is null."));
+		return;
+	}
+
+	const FGuid RequestId = DeckSubsystem->LoadPlacedBallUIAssetsAsync(FStreamableDelegate::CreateUObject(
+		this,
+		&UPBDeploymentWidget::HandlePlacedBallUIAssetsLoaded));
+	UE_LOG(LogTemp, Log, TEXT("[BallDeckUI] Deployment UI asset load requested. RequestId=%s"),
+		*RequestId.ToString());
+}
+
+void UPBDeploymentWidget::HandlePlacedBallUIAssetsLoaded()
+{
+	UE_LOG(LogTemp, Log, TEXT("[BallDeckUI] Deployment UI assets loaded. Refresh deployment slots."));
+	RefreshDeploymentSlots();
 }
 
 void UPBDeploymentWidget::HandleDeploymentSlotChanged(int32 SlotIndex, int32 BallInstanceId)

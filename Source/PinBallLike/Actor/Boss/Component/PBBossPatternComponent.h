@@ -52,6 +52,9 @@ public:
 	// 패턴 완료 알림을 받아 상태와 쿨다운을 갱신합니다.
 	void NotifyPatternFinished(UPBBossPatternBase* FinishedPattern);
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern")
+	void NotifyEnragedPhaseStarted();
+
 	UFUNCTION(BlueprintPure, Category = "Boss|Pattern")
 	// 현재 보스가 새 패턴을 시작할 수 있는지 확인합니다.
 	bool CanStartPattern() const;
@@ -60,8 +63,14 @@ public:
 	// 현재 실행 중인 패턴 인스턴스를 반환합니다.
 	UPBBossPatternBase* GetCurrentPattern() const;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (DisplayName = "Normal Pattern Classes"))
 	TArray<TSubclassOf<UPBBossPatternBase>> PatternClasses;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
+	TArray<TSubclassOf<UPBBossPatternBase>> EnragedPatternClasses;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
+	TArray<TSubclassOf<UPBBossPatternBase>> EnragedEntryPatternClasses;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (ClampMin = "0"))
 	float MinPatternIntervalSeconds = 2.0f;
@@ -78,6 +87,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Pattern")
 	bool IsPatternSystemPaused = false;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Pattern")
+	bool IsEnragedEntryPatternPending = false;
+
 	UPROPERTY(BlueprintAssignable, Category = "Boss|Pattern")
 	FPBBossPatternChangedSignature OnPatternStarted;
 
@@ -90,12 +102,18 @@ public:
 private:
 	// 설정된 패턴 클래스들로 패턴 인스턴스를 생성합니다.
 	void InitializePatterns();
+	void ResetPatternStartTime();
+	void InitializePatternClasses(
+		const TArray<TSubclassOf<UPBBossPatternBase>>& PatternClassList,
+		TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList);
 	// 다음 패턴 시작 가능 여부를 확인할 타이머를 예약합니다.
 	void ScheduleNextPatternCheck();
 	// 패턴 검사 타이머를 해제합니다.
 	void ClearPatternCheckTimer();
 	// 패턴 시스템을 비활성화하고 필요하면 현재 패턴 쿨다운을 적용합니다.
 	void DeactivatePatternSystem(bool IsApplyCurrentPatternCooldown);
+	// 패턴 쿨다운을 광폭화 전환 기준으로 초기화합니다.
+	void ResetPatternCooldowns();
 	// 지정 패턴의 쿨다운 종료 시간을 기록합니다.
 	void SetPatternCooldown(UPBBossPatternBase* Pattern);
 	// 현재 패턴을 내부적으로 취소하고 필요하면 쿨다운을 적용합니다.
@@ -114,6 +132,9 @@ private:
 	bool IsPatternCooldownReady(const UPBBossPatternBase* Pattern) const;
 	// 현재 실행 가능한 패턴 중 하나를 선택합니다.
 	UPBBossPatternBase* SelectExecutablePattern() const;
+	UPBBossPatternBase* SelectExecutablePatternFromList(const TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList) const;
+	const TArray<TObjectPtr<UPBBossPatternBase>>& GetCurrentPhasePatternInstances() const;
+	bool IsEnragedEntryPattern(const UPBBossPatternBase* Pattern) const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<APBBossBase> OwnerBoss;
@@ -123,6 +144,12 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBBossPatternBase>> PatternInstances;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UPBBossPatternBase>> EnragedPatternInstances;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UPBBossPatternBase>> EnragedEntryPatternInstances;
 
 	float NextPatternAllowedTime = 0.0f;
 	float PatternSystemPausedTime = 0.0f;

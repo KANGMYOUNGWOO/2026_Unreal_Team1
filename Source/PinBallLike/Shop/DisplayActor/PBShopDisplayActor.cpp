@@ -35,7 +35,7 @@ APBShopDisplayActor::APBShopDisplayActor()
 
 }
 
-TArray<FVector> APBShopDisplayActor::DisplayItems(const TArray<int32>& ItemIds,const TArray<UStaticMesh*>& Meshes , IIShopPurchaseHandler* handler)
+TArray<FVector> APBShopDisplayActor::DisplayItems(const TArray<FName>& ItemIds,const TArray<UStaticMesh*>& Meshes , IIShopPurchaseHandler* handler)
 {
 	TArray<FVector> UIWorldLocations;
 

@@ -78,7 +78,10 @@ bool APBBumperSpawnController::RequestEquippedBumperGameplayAssetsAsync()
 
 	TArray<FName> BundleNames;
 	BundleNames.Add(PBAssetBundleNames::Gameplay);
-	CachedGameDataLoadSubsystem->LoadBumperAssetsAsync(PendingBumperRowIds, BundleNames);
+	CachedGameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
+		PBBumperAssetIds::Type::BumperData,
+		PendingBumperRowIds,
+		BundleNames);
 
 	return true;
 }
@@ -94,6 +97,20 @@ void APBBumperSpawnController::ClearSpawnedBumpers()
 	}
 
 	SpawnedBumpers.Reset();
+}
+
+void APBBumperSpawnController::GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpers) const
+{
+	OutBumpers.Reset();
+	OutBumpers.Reserve(SpawnedBumpers.Num());
+
+	for (APBModularBumperBase* Bumper : SpawnedBumpers)
+	{
+		if (IsValid(Bumper))
+		{
+			OutBumpers.Add(Bumper);
+		}
+	}
 }
 
 void APBBumperSpawnController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -288,8 +305,12 @@ APBModularBumperBase* APBBumperSpawnController::SpawnInitializedBumper(
 	return Bumper;
 }
 
-void APBBumperSpawnController::CompleteBumperPreparation(const bool bSuccess) const
+void APBBumperSpawnController::CompleteBumperPreparation(const bool bSuccess)
 {
+	TArray<APBModularBumperBase*> SpawnedBumperActors;
+	GetSpawnedBumpers(SpawnedBumperActors);
+	OnSpawnedBumpersReady.Broadcast(bSuccess, SpawnedBumperActors);
+
 	if (!UGameplayMessageSubsystem::HasInstance(this))
 	{
 		return;

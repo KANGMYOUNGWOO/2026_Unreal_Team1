@@ -25,3 +25,12 @@ struct PINBALLLIKE_API FPBBattlePreparationCompletedMessage
 	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
 	bool bSuccess = false;
 };
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleBossDeadMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> BossActor = nullptr;
+};

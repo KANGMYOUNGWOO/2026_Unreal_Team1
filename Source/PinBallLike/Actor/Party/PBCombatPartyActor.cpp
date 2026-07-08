@@ -11,10 +11,37 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Component/PBSnakeFormationComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
-#include "PinBallLike/DataAsset/Ball/BPBallDataAsset.h"
-#include "PinBallLike/Struct/Deck/PBBallInstanceData.h"
-#include "PinBallLike/Subsystem/BallDataSubsystem.h"
+#include "PinBallLike/Struct/Ball/PBBallInstanceData.h"
+#include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+
+static void AppendResourceData(TArray<FPBResourceData>& OutResources, const TMap<FName, int32>& ResourceValues)
+{
+	for (const TPair<FName, int32>& ResourceValue : ResourceValues)
+	{
+		if (!ResourceValue.Key.IsNone())
+		{
+			OutResources.Add(FPBResourceData(
+				ResourceValue.Key,
+				static_cast<float>(ResourceValue.Value),
+				static_cast<float>(ResourceValue.Value),
+				0.0f));
+		}
+	}
+}
+
+static void AppendStatData(TArray<FPBStatData>& OutStats, const TMap<FName, int32>& StatValues)
+{
+	for (const TPair<FName, int32>& StatValue : StatValues)
+	{
+		if (!StatValue.Key.IsNone())
+		{
+			OutStats.Add(FPBStatData(StatValue.Key, StatValue.Value));
+		}
+	}
+}
 
 APBCombatPartyActor::APBCombatPartyActor()
 {
@@ -373,47 +400,100 @@ APBBallBase* APBCombatPartyActor::SpawnBallFromInstanceId(int32 BallInstanceId)
 {
 	if (!DeckSubsystem)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[CombatParty] SpawnBall failed. DeckSubsystem is null. BallInstanceId=%d"),
+			BallInstanceId);
 		return nullptr;
 	}
 
-	const FPBBallInstanceData* BallInstanceData = DeckSubsystem->GetOwnedBallData(BallInstanceId);
+	const FPBDeckOwnedBallData* BallInstanceData = DeckSubsystem->GetOwnedBallData(BallInstanceId);
 	if (!BallInstanceData)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[CombatParty] SpawnBall failed. Missing owned ball data. BallInstanceId=%d"),
+			BallInstanceId);
 		return nullptr;
 	}
 
 	UGameInstance* GameInstance = GetGameInstance();
-	const UBallDataSubsystem* BallDataSubsystem = GameInstance ? GameInstance->GetSubsystem<UBallDataSubsystem>() : nullptr;
-	if (!BallDataSubsystem)
+	const UPBTableDataSubsystem* TableDataSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBTableDataSubsystem>() : nullptr;
+	const UPBBallDeckAssetLoadService* AssetLoadService = DeckSubsystem->GetAssetLoadService();
+	if (!TableDataSubsystem || !AssetLoadService)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[CombatParty] SpawnBall failed. Missing subsystem. BallInstanceId=%d BallId=%s TableData=%s AssetLoadService=%s"),
+			BallInstanceId,
+			*BallInstanceData->BallId.ToString(),
+			TableDataSubsystem ? TEXT("valid") : TEXT("null"),
+			AssetLoadService ? TEXT("valid") : TEXT("null"));
 		return nullptr;
 	}
 
-	const UPBBallDataAsset* BallDataAsset = BallDataSubsystem->GetBallDataAsset(BallInstanceData->BallId);
-	if (!BallDataAsset || !BallDataAsset->Ball)
+	FPBBallTableRow BallRow;
+	if (BallInstanceData->BallId.IsNone() || !TableDataSubsystem->FindBallRow(BallInstanceData->BallId, BallRow))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[CombatParty] SpawnBall failed. Ball row not found. BallInstanceId=%d BallId=%s"),
+			BallInstanceId,
+			*BallInstanceData->BallId.ToString());
+		return nullptr;
+	}
+
+	FName StarLevelRowName;
+	FPBBallStarLevelRow StarLevelRow;
+	if (!TableDataSubsystem->FindBallStarLevelRow(
+		BallInstanceData->BallId,
+		BallInstanceData->StarLevel,
+		StarLevelRowName,
+		StarLevelRow))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CombatParty] SpawnBall failed. Star level row not found. BallInstanceId=%d BallId=%s StarLevel=%d"),
+			BallInstanceId,
+			*BallInstanceData->BallId.ToString(),
+			BallInstanceData->StarLevel);
+		return nullptr;
+	}
+
+	UClass* BallActorClass = AssetLoadService->GetLoadedBallActorClass(BallInstanceId);
+	if (!IsValid(BallActorClass))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CombatParty] SpawnBall failed. Ball actor class is not loaded. BallInstanceId=%d BallId=%s StarLevel=%d"),
+			BallInstanceId,
+			*BallInstanceData->BallId.ToString(),
+			BallInstanceData->StarLevel);
 		return nullptr;
 	}
 
 	UWorld* World = GetWorld();
 	if (!World)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[CombatParty] SpawnBall failed. World is null. BallInstanceId=%d BallId=%s"),
+			BallInstanceId,
+			*BallInstanceData->BallId.ToString());
 		return nullptr;
 	}
 
 	const FTransform SpawnTransform(GetActorRotation(), GetActorLocation());
 	APBBallBase* SpawnedBall = World->SpawnActorDeferred<APBBallBase>(
-		BallDataAsset->Ball,
+		BallActorClass,
 		SpawnTransform,
 		this,
 		nullptr,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (!SpawnedBall)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[CombatParty] SpawnBall failed. SpawnActorDeferred returned null. BallInstanceId=%d BallId=%s ActorClass=%s"),
+			BallInstanceId,
+			*BallInstanceData->BallId.ToString(),
+			*GetNameSafe(BallActorClass));
 		return nullptr;
 	}
 
-	SpawnedBall->InitializeFromBallData(const_cast<UPBBallDataAsset*>(BallDataAsset), BallInstanceData->StarLevel);
+	FPBBallInstanceData NewBallInstanceData;
+	NewBallInstanceData.InstanceId = BallInstanceData->InstanceId;
+	NewBallInstanceData.BallId = BallInstanceData->BallId;
+	NewBallInstanceData.StarLevel = BallInstanceData->StarLevel;
+	AppendResourceData(NewBallInstanceData.BaseResources, StarLevelRow.BaseResources);
+	AppendStatData(NewBallInstanceData.BaseStats, StarLevelRow.BaseStats);
+
+	SpawnedBall->InitializeFromBallInstanceData(NewBallInstanceData);
 	SpawnedBall->FinishSpawning(SpawnTransform);
 	SpawnedBall->SetActorHiddenInGame(true);
 

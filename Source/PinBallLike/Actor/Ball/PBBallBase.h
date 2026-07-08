@@ -4,12 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "PinBallLike/Struct/Common/PBResourceData.h"
-#include "PinBallLike/Struct/Common/PBStatData.h"
+#include "PinBallLike/Struct/Ball/PBBallInstanceData.h"
 #include "PinBallLike/Struct/Party/PBPartyTypes.h"
 #include "PBBallBase.generated.h"
 
-class UPBBallDataAsset;
 class UPBBaseStatComponent;
 class UPBBaseResourceComponent;
 class UPBBallComboComponent;
@@ -31,7 +29,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ball|Resource")
 	void ApplyResourceData(const TArray<FPBResourceData>& ResourceData);
 
-	void InitializeFromBallData(UPBBallDataAsset* InBallData, int32 InStarLevel);
+	void InitializeFromBallInstanceData(const FPBBallInstanceData& InBallInstanceData);
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Combat")
 	void SetCombatRole(EPBBallPartyRole NewCombatRole);
@@ -42,10 +40,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	
-private:
-	void InitializeStatsFromBallData();
-	void InitializeResourcesFromBallData();
-
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
 	TObjectPtr<USphereComponent> CollisionSphere;
 
@@ -67,9 +61,6 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Combat", meta = (AllowPrivateAccess = "true"))
 	EPBBallPartyRole CombatRole = EPBBallPartyRole::None;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ball|Data", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UPBBallDataAsset> BallData;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Progression", meta = (AllowPrivateAccess = "true", ClampMin = "1", UIMin = "1"))
-	int32 CurrentStarLevel = 1;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Ball|Data", meta = (AllowPrivateAccess = "true"))
+	FPBBallInstanceData BallInstanceData;
 };

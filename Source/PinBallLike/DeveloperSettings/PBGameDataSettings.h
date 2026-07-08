@@ -13,6 +13,12 @@ class PINBALLLIKE_API UPBGameDataSettings : public UDeveloperSettings
 	GENERATED_BODY()
 
 public:
+#pragma region Collection
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Collection|Table")
+	TSoftObjectPtr<UDataTable> CollectionTable;
+
+#pragma endregion
 #pragma region Bumper
 	
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Bumper|Table")
@@ -25,4 +31,15 @@ public:
 	TSoftObjectPtr<UDataTable> BumperEffectTable;
 	
 #pragma endregion
+	
+#pragma region Ball
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Ball|Table")
+	TSoftObjectPtr<UDataTable> BallTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Ball|Table")
+	TSoftObjectPtr<UDataTable> BallStarLevelTable;
+	
+	
+#pragma endregion 
 };
