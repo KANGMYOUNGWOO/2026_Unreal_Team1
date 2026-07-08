@@ -43,7 +43,10 @@ void APBChoiceRouteActor::BeginPlay()
             
             PC->SetViewTarget(OverviewCameraActor);
             
-            
+            PC->bShowMouseCursor = true;
+            PC->SetInputMode(FInputModeGameAndUI());
+            PC->bEnableClickEvents = true;
+            PC->bEnableMouseOverEvents = true;
         }
     }
     UGameplayMessageSubsystem& MessageSubsystem =
