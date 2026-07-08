@@ -126,6 +126,7 @@ void APBShopActor::OpenShop()
 
 	if (ShopDisplayActor)
 	{
+		const TArray<FVector> UIWorldLocations =
 		ShopDisplayActor->DisplayItems(
 			ShopItemIds,
 			LoadedMeshes,
@@ -134,9 +135,15 @@ void APBShopActor::OpenShop()
 
 		if (ShopWidget)
 		{
-			ShopWidget->SetShopSlotWorldLocations(
-				ShopDisplayActor->GetSlotWorldLocation()
-			);
+			ShopWidget->SetShopSlotWorldLocations(UIWorldLocations);
+		}
+		
+		for (int32 i = 0; i < UIWorldLocations.Num(); ++i)
+		{
+			UE_LOG(LogTemp, Warning,
+				TEXT("UIWorldLocations[%d] %s"),
+				i,
+				*UIWorldLocations[i].ToString());
 		}
 	}
 
@@ -232,6 +239,8 @@ void APBShopActor::RefreshViewModel()
 
 	ShopViewModel->SetGold(ShopManager->GetCurrentGold());
 }
+
+
 
 void APBShopActor::HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message)
 {

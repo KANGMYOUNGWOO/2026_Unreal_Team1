@@ -61,7 +61,7 @@ void UPBShopWidget::UpdateSlotWidgetPositionsOnce()
 		}
 		
 		CanvasSlot->SetAlignment(FVector2D(0.5f, 1.0f));
-		CanvasSlot->SetPosition(WidgetPosition + FVector2D(0.f, -40.f));
+		//CanvasSlot->SetPosition(WidgetPosition + FVector2D(0.f, 0));
 		CanvasSlot->SetPosition(WidgetPosition);
 		
 		
@@ -97,8 +97,9 @@ void UPBShopWidget::NativeConstruct()
 void UPBShopWidget::SetShopSlotWorldLocations(const TArray<FVector>& InWorldLocations)
 {
 	ShopSlotWorldLocations = InWorldLocations;
-	
-	UpdateSlotWidgetPositionsOnce();
+
+	// 바로 갱신하지 말고 다음 Tick에서 갱신
+	bPendingUpdateSlotPositions = true;
 	
 	
 }
@@ -132,6 +133,17 @@ void UPBShopWidget::OnExitButtonClicked()
 		GameplayTags::Event_UI_Choice_Exit,Message);
 	
 	//RemoveFromParent();
+}
+
+void UPBShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	
+	if (bPendingUpdateSlotPositions)
+	{
+		bPendingUpdateSlotPositions = false;
+		UpdateSlotWidgetPositionsOnce();
+	}
 }
 
 

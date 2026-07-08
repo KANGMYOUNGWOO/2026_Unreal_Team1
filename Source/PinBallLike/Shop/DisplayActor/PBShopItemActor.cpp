@@ -41,6 +41,8 @@ void APBShopItemActor::SetMesh(UStaticMesh* InMesh)
 	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Mesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	
+	
 }
 
 void APBShopItemActor::SetSlotIndex(int32 InSlotIndex)
@@ -73,12 +75,14 @@ void APBShopItemActor::HandleEndCursorOver(UPrimitiveComponent* TouchedComponent
 
 void APBShopItemActor::HandleClicked(UPrimitiveComponent* TouchedComponent, FKey ButtonPressed)
 {
+	UE_LOG(LogTemp, Warning, TEXT("Clicked"));
 	if (PurchaseHandler)
 	{
 		bool IsSuccess = PurchaseHandler->BuyItem(SlotIndex);
-		
+		UE_LOG(LogTemp, Warning, TEXT("Purch"));
 		if (IsSuccess)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("suc"));
 			Destroy();
 			
 			//SetActorHiddenInGame(!IsSuccess);

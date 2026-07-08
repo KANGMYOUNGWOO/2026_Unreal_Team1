@@ -84,7 +84,15 @@ private:
 
 	UPROPERTY()
 	TArray<FVector> ShopSlotWorldLocations;
+	
+public:
+	virtual void NativeTick(
+		const FGeometry& MyGeometry,
+		float InDeltaTime) override;
+	
+private:
+	bool bPendingUpdateSlotPositions = false;
 
 	UPROPERTY(EditAnywhere, Category = "Shop UI")
-	FVector SlotWidgetWorldOffset = FVector(0.f, -30.f, 40.f);
+	FVector SlotWidgetWorldOffset = FVector(0.f, 0.f, 0.f);
 };
