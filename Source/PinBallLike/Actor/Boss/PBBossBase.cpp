@@ -284,6 +284,8 @@ void APBBossBase::StartDeadState()
 			GameplayTags::Event_Battle_Boss_Dead,
 			Message);
 	}
+
+	Destroy();
 }
 
 FText APBBossBase::GetBossName() const
