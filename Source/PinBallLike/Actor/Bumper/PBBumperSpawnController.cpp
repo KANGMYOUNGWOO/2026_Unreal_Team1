@@ -78,12 +78,18 @@ bool APBBumperSpawnController::RequestEquippedBumperGameplayAssetsAsync()
 
 	TArray<FName> BundleNames;
 	BundleNames.Add(PBAssetBundleNames::Gameplay);
-	CachedGameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
+	bPendingBumperAssetLoadCompleted = false;
+	const FGuid RequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
 		PBBumperAssetIds::Type::BumperData,
 		PendingBumperRowIds,
 		BundleNames);
 
-	return true;
+	if (!bPendingBumperAssetLoadCompleted)
+	{
+		PendingBumperAssetLoadRequestId = RequestId;
+	}
+
+	return RequestId.IsValid() || bPendingBumperAssetLoadCompleted;
 }
 
 void APBBumperSpawnController::ClearSpawnedBumpers()
@@ -117,7 +123,7 @@ void APBBumperSpawnController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (IsValid(CachedGameDataLoadSubsystem))
 	{
-		CachedGameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
+		CachedGameDataLoadSubsystem->OnPrimaryAssetLoadCompleted.RemoveDynamic(
 			this,
 			&APBBumperSpawnController::HandleEquippedBumperAssetsLoaded);
 	}
@@ -135,29 +141,53 @@ void APBBumperSpawnController::PrepareEquippedBumpersAsync()
 		return;
 	}
 
-	CachedGameDataLoadSubsystem->OnPrimaryAssetsLoaded.AddUniqueDynamic(
+	CachedGameDataLoadSubsystem->OnPrimaryAssetLoadCompleted.AddUniqueDynamic(
 		this,
 		&APBBumperSpawnController::HandleEquippedBumperAssetsLoaded);
 
 	if (!RequestEquippedBumperGameplayAssetsAsync())
 	{
-		CachedGameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
+		CachedGameDataLoadSubsystem->OnPrimaryAssetLoadCompleted.RemoveDynamic(
 			this,
 			&APBBumperSpawnController::HandleEquippedBumperAssetsLoaded);
 		CompleteBumperPreparation(false);
 	}
 }
 
-void APBBumperSpawnController::HandleEquippedBumperAssetsLoaded()
+void APBBumperSpawnController::HandleEquippedBumperAssetsLoaded(const FPBPrimaryAssetLoadResult& Result)
 {
+	bool bMatchesPendingRequest = PendingBumperAssetLoadRequestId.IsValid()
+		&& Result.RequestId == PendingBumperAssetLoadRequestId;
+
+	if (!bMatchesPendingRequest && !PendingBumperRowIds.IsEmpty() && Result.BundleKey == PBAssetBundleNames::Gameplay)
+	{
+		bMatchesPendingRequest = Result.RequestedAssetIds.Num() == PendingBumperRowIds.Num();
+		for (const FName& BumperRowId : PendingBumperRowIds)
+		{
+			if (!Result.RequestedAssetIds.Contains(FPrimaryAssetId(PBBumperAssetIds::Type::BumperData, BumperRowId)))
+			{
+				bMatchesPendingRequest = false;
+				break;
+			}
+		}
+	}
+
+	if (!bMatchesPendingRequest)
+	{
+		return;
+	}
+
 	if (IsValid(CachedGameDataLoadSubsystem))
 	{
-		CachedGameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
+		CachedGameDataLoadSubsystem->OnPrimaryAssetLoadCompleted.RemoveDynamic(
 			this,
 			&APBBumperSpawnController::HandleEquippedBumperAssetsLoaded);
 	}
+
+	PendingBumperAssetLoadRequestId = FGuid();
+	bPendingBumperAssetLoadCompleted = true;
 	
-	if (!CacheRequiredSubsystems())
+	if (!Result.bSuccess || !CacheRequiredSubsystems())
 	{
 		CompleteBumperPreparation(false);
 		return;
