@@ -4,6 +4,8 @@
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Interface/Damageable.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBBossProjectile::APBBossProjectile()
 {
@@ -120,6 +122,17 @@ void APBBossProjectile::ProcessPinballOverlap(APBBallBase* Pinball)
 	}
 
 	ProcessedPinballs.Add(PinballKey);
+
+	IDamageable* Damageable = Cast<IDamageable>(Pinball);
+	if (!Damageable)
+	{
+		Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Pinball);
+	}
+
+	if (Damageable && !Damageable->IsDead())
+	{
+		Damageable->TakeDamage(DamageAmount);
+	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Boss Projectile Hit Pinball: Projectile=%s, Pinball=%s"),
 		*GetNameSafe(this),

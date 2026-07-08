@@ -342,18 +342,14 @@ void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void APBBossBase::DamageToBoss_Implementation(
-	AActor* DamageSource,
-	int32 DamageAmount,
-	UPrimitiveComponent* HitComponent,
-	const FHitResult& Hit)
+void APBBossBase::DamageToBoss_Implementation(int32 DamageAmount)
 {
 	if (!BossDamageComponent)
 	{
 		return;
 	}
 
-	BossDamageComponent->ApplyHitPartDamage(DamageSource, HitComponent, DamageAmount, Hit);
+	BossDamageComponent->ApplyHitPartDamage(DamageAmount);
 }
 
 void APBBossBase::OnGroggyTriggered_Implementation()
@@ -362,14 +358,14 @@ void APBBossBase::OnGroggyTriggered_Implementation()
 	RequestBossState(EPBBossState::Groggy);
 }
 
-void APBBossBase::IncreaseGroggy_Implementation(int32 GroggyAmount, UPrimitiveComponent* HitComponent)
+void APBBossBase::IncreaseGroggy_Implementation(int32 GroggyAmount)
 {
 	if (!BossGroggyComponent || IsDead())
 	{
 		return;
 	}
 
-	BossGroggyComponent->ApplyGroggyDamage(GroggyAmount, HitComponent);
+	BossGroggyComponent->ApplyGroggyDamage(GroggyAmount);
 }
 
 void APBBossBase::OnEnragedTriggered_Implementation()
@@ -449,3 +445,4 @@ void APBBossBase::SetWeaknessState(bool IsOpen)
 		}
 	}
 }
+

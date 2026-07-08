@@ -41,9 +41,11 @@ void APBBossSpawnController::SpawnBossAsync()
 		return;
 	}
 
+	const FTransform SpawnTransform(GetActorRotation(), GetActorLocation());
+
 	SpawnedBoss = World->SpawnActorDeferred<APBBossBase>(
 		BossClass,
-		GetActorTransform(),
+		SpawnTransform,
 		this,
 		nullptr,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
@@ -53,7 +55,7 @@ void APBBossSpawnController::SpawnBossAsync()
 		return;
 	}
 
-	UGameplayStatics::FinishSpawningActor(SpawnedBoss, GetActorTransform());
+	UGameplayStatics::FinishSpawningActor(SpawnedBoss, SpawnTransform);
 
 	UE_LOG(LogTemp, Log, TEXT("[BossSpawn] Spawned boss. Boss=%s"),
 		*GetNameSafe(SpawnedBoss.Get()));

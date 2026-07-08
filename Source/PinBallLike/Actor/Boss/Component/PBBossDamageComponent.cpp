@@ -1,6 +1,5 @@
 #include "PBBossDamageComponent.h"
 
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossStatComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossWeaknessComponent.h"
@@ -15,15 +14,26 @@ void UPBBossDamageComponent::BeginPlay()
 	Super::BeginPlay();
 
 	OwnerBoss = Cast<APBBossBase>(GetOwner());
+	BindHitPartCollisionEvents();
 }
 
-void UPBBossDamageComponent::ApplyHitPartDamage(
-	AActor* DamageSource,
-	UPrimitiveComponent* HitComponent,
-	int32 DamageAmount,
-	const FHitResult& Hit)
+void UPBBossDamageComponent::ApplyHitPartDamage(int32 DamageAmount)
 {
-	ApplyResolvedDamage(DamageSource, ResolveHitPartInfo(HitComponent, Hit), DamageAmount, Hit);
+	const FName HitPointName = ResolveHitPointName();
+
+	if (!CanApplyDamage(HitPointName, DamageAmount)
+		|| IsPinballCollisionDamageBlockedValue
+		|| !CanApplyDamageRateLimit()
+		|| IsWeakPointHitBlocked(HitPointName))
+	{
+		return;
+	}
+
+	ApplyDamageToBoss(HitPointName, DamageAmount);
+	UE_LOG(LogTemp, Warning, TEXT("Boss Damage Resolved: %s, Damage %d"),
+		*HitPointName.ToString(),
+		DamageAmount);
+	RecordDamageRateLimit();
 }
 
 void UPBBossDamageComponent::SetPinballCollisionDamageBlocked(bool IsBlocked)
@@ -36,39 +46,28 @@ bool UPBBossDamageComponent::IsPinballCollisionDamageBlocked() const
 	return IsPinballCollisionDamageBlockedValue;
 }
 
-UPBBossDamageComponent::FPBBossHitPartInfo UPBBossDamageComponent::ResolveHitPartInfo(const UPrimitiveComponent* HitComponent, const FHitResult& Hit) const
+bool UPBBossDamageComponent::CanApplyDamage(FName HitPointName, int32 DamageAmount) const
 {
+	return OwnerBoss && DamageAmount > 0 && !OwnerBoss->IsDead() && HitPointName != NAME_None;
+}
+
+void UPBBossDamageComponent::HandleHitPartComponentHit(
+	UPrimitiveComponent* HitComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComponent,
+	FVector NormalImpulse,
+	const FHitResult& Hit)
+{
+	static_cast<void>(OtherActor);
+	static_cast<void>(OtherComponent);
+	static_cast<void>(NormalImpulse);
+	static_cast<void>(Hit);
+
 	if (const UPBBossHitPartComponent* HitPartComponent = FindHitPartComponent(HitComponent))
 	{
-		FPBBossHitPartInfo HitPartInfo;
-		HitPartInfo.HitPartType = HitPartComponent->GetHitPartType();
-		HitPartInfo.HitPointName = HitPartComponent->GetHitPointName();
-		return HitPartInfo;
+		LastHitPointName = HitPartComponent->GetHitPointName();
+		LastHitFrameNumber = GFrameCounter;
 	}
-
-	if (Hit.BoneName != NAME_None)
-	{
-		if (const UPBBossHitPartComponent* HitPartComponent = FindHitPartComponent(Hit.BoneName))
-		{
-			FPBBossHitPartInfo HitPartInfo;
-			HitPartInfo.HitPartType = HitPartComponent->GetHitPartType();
-			HitPartInfo.HitPointName = HitPartComponent->GetHitPointName();
-			return HitPartInfo;
-		}
-	}
-
-	FPBBossHitPartInfo HitPartInfo;
-	HitPartInfo.HitPartType = EPBBossHitPartType::Body;
-	HitPartInfo.HitPointName = Hit.BoneName != NAME_None
-		? Hit.BoneName
-		: DefaultHitPointName;
-
-	if (OwnerBoss && OwnerBoss->GetBossWeaknessComponent() && OwnerBoss->GetBossWeaknessComponent()->IsWeaknessPoint(HitPartInfo.HitPointName))
-	{
-		HitPartInfo.HitPartType = EPBBossHitPartType::WeakPoint;
-	}
-
-	return HitPartInfo;
 }
 
 const UPBBossHitPartComponent* UPBBossDamageComponent::FindHitPartComponent(const UPrimitiveComponent* HitComponent) const
@@ -92,11 +91,11 @@ const UPBBossHitPartComponent* UPBBossDamageComponent::FindHitPartComponent(cons
 	return nullptr;
 }
 
-const UPBBossHitPartComponent* UPBBossDamageComponent::FindHitPartComponent(FName HitPointName) const
+void UPBBossDamageComponent::BindHitPartCollisionEvents()
 {
-	if (!OwnerBoss || HitPointName == NAME_None)
+	if (!OwnerBoss)
 	{
-		return nullptr;
+		return;
 	}
 
 	TArray<UPBBossHitPartComponent*> HitPartComponents;
@@ -104,23 +103,33 @@ const UPBBossHitPartComponent* UPBBossDamageComponent::FindHitPartComponent(FNam
 
 	for (const UPBBossHitPartComponent* HitPartComponent : HitPartComponents)
 	{
-		if (HitPartComponent && HitPartComponent->GetHitPointName() == HitPointName)
+		if (!HitPartComponent)
 		{
-			return HitPartComponent;
+			continue;
+		}
+
+		TArray<UPrimitiveComponent*> HitCollisionComponents;
+		HitPartComponent->GetHitCollisionComponents(HitCollisionComponents);
+
+		for (UPrimitiveComponent* HitCollisionComponent : HitCollisionComponents)
+		{
+			if (HitCollisionComponent)
+			{
+				HitCollisionComponent->SetNotifyRigidBodyCollision(true);
+				HitCollisionComponent->OnComponentHit.AddUniqueDynamic(this, &UPBBossDamageComponent::HandleHitPartComponentHit);
+			}
 		}
 	}
-
-	return nullptr;
 }
 
-bool UPBBossDamageComponent::CanApplyDamage(FName HitPointName, int32 DamageAmount) const
+FName UPBBossDamageComponent::ResolveHitPointName() const
 {
-	return OwnerBoss && DamageAmount > 0 && !OwnerBoss->IsDead() && HitPointName != NAME_None;
-}
+	if (LastHitFrameNumber == GFrameCounter && LastHitPointName != NAME_None)
+	{
+		return LastHitPointName;
+	}
 
-bool UPBBossDamageComponent::IsDamageBlocked(AActor* DamageSource) const
-{
-	return IsPinballCollisionDamageBlockedValue && Cast<APBBallBase>(DamageSource);
+	return DefaultHitPointName;
 }
 
 bool UPBBossDamageComponent::CanApplyDamageRateLimit() const
@@ -154,38 +163,12 @@ bool UPBBossDamageComponent::CanApplyDamageRateLimit() const
 	return World->GetTimeSeconds() - LastDamageTimeSeconds >= DamageCooldownSeconds;
 }
 
-bool UPBBossDamageComponent::IsWeakPointHitBlocked(const FPBBossHitPartInfo& HitPartInfo) const
+bool UPBBossDamageComponent::IsWeakPointHitBlocked(FName HitPointName) const
 {
-	if (HitPartInfo.HitPartType != EPBBossHitPartType::WeakPoint)
-	{
-		return false;
-	}
-
 	const UPBBossWeaknessComponent* WeaknessComponent = OwnerBoss ? OwnerBoss->GetBossWeaknessComponent() : nullptr;
-	return WeaknessComponent && !WeaknessComponent->IsWeaknessPointOpen(HitPartInfo.HitPointName);
-}
-
-void UPBBossDamageComponent::ApplyResolvedDamage(
-	AActor* DamageSource,
-	const FPBBossHitPartInfo& HitPartInfo,
-	int32 DamageAmount,
-	const FHitResult& Hit)
-{
-	if (IsDamageBlocked(DamageSource)
-		|| !CanApplyDamage(HitPartInfo.HitPointName, DamageAmount)
-		|| !CanApplyDamageRateLimit()
-		|| IsWeakPointHitBlocked(HitPartInfo))
-	{
-		return;
-	}
-
-	ApplyDamageToBoss(HitPartInfo.HitPointName, DamageAmount);
-	UE_LOG(LogTemp, Warning, TEXT("Boss Damage Resolved: %s, Type %d, Damage %d"),
-		*HitPartInfo.HitPointName.ToString(),
-		static_cast<int32>(HitPartInfo.HitPartType),
-		DamageAmount);
-	RecordDamageRateLimit();
-	OnDamageSourceHitApplied.Broadcast(DamageSource, Hit);
+	return WeaknessComponent
+		&& WeaknessComponent->IsWeaknessPoint(HitPointName)
+		&& !WeaknessComponent->IsWeaknessPointOpen(HitPointName);
 }
 
 void UPBBossDamageComponent::ApplyDamageToBoss(FName HitPointName, int32 DamageAmount)

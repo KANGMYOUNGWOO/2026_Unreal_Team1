@@ -37,6 +37,9 @@ protected:
 		bool IsFromSweep,
 		const FHitResult& SweepResult) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile", meta = (ClampMin = "0"))
+	int32 DamageAmount = 1;
+
 private:
 	// ProjectileMovementComponent에 현재 속도 값을 적용합니다.
 	void ApplyProjectileSpeed();

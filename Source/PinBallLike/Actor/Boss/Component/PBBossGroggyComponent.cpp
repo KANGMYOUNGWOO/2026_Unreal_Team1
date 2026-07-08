@@ -1,8 +1,12 @@
 #include "PBBossGroggyComponent.h"
 
 #include "GameFramework/Actor.h"
-#include "PinBallLike/Actor/Boss/Component/PBBossHitPartComponent.h"
 #include "PinBallLike/Utils/PBFixedPoint.h"
+
+namespace
+{
+	const FName DefaultGroggyPointName = TEXT("Normal");
+}
 
 UPBBossGroggyComponent::UPBBossGroggyComponent()
 {
@@ -26,14 +30,14 @@ void UPBBossGroggyComponent::BeginPlay()
 	}
 }
 
-void UPBBossGroggyComponent::ApplyGroggyDamage(int32 GroggyAmount, UPrimitiveComponent* HitComponent)
+void UPBBossGroggyComponent::ApplyGroggyDamage(int32 GroggyAmount)
 {
 	if (IsGroggy || GroggyAmount <= 0)
 	{
 		return;
 	}
 
-	const FName GroggyPointName = ResolveGroggyPointName(HitComponent);
+	const FName GroggyPointName = DefaultGroggyPointName;
 	const int32 AppliedGroggyAmount = CalculateGroggyAmount(GroggyPointName, GroggyAmount);
 	const int32 PreviousGroggyGauge = GroggyGauge;
 	const int32 GroggyAmountRaw = FPBFixedPoint::ToRaw(static_cast<float>(AppliedGroggyAmount));
@@ -73,25 +77,6 @@ void UPBBossGroggyComponent::ResetGroggy()
 	OnGroggyGaugeChanged.Broadcast(GroggyGauge, MaxGroggyGauge);
 
 	UE_LOG(LogTemp, Warning, TEXT("Boss Groggy Reset."));
-}
-
-FName UPBBossGroggyComponent::ResolveGroggyPointName(UPrimitiveComponent* HitComponent) const
-{
-	if (OwnerActor && HitComponent)
-	{
-		TArray<UPBBossHitPartComponent*> HitPartComponents;
-		OwnerActor->GetComponents<UPBBossHitPartComponent>(HitPartComponents);
-
-		for (const UPBBossHitPartComponent* HitPartComponent : HitPartComponents)
-		{
-			if (HitPartComponent && HitPartComponent->IsTargetHitComponent(HitComponent))
-			{
-				return HitPartComponent->GetHitPointName();
-			}
-		}
-	}
-
-	return NAME_None;
 }
 
 int32 UPBBossGroggyComponent::CalculateGroggyAmount(FName GroggyPointName, int32 GroggyAmount) const

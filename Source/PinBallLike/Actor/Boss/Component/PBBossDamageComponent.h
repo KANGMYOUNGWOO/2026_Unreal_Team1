@@ -22,7 +22,7 @@ public:
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
-	void ApplyHitPartDamage(AActor* DamageSource, UPrimitiveComponent* HitComponent, int32 DamageAmount, const FHitResult& Hit);
+	void ApplyHitPartDamage(int32 DamageAmount);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
 	void SetPinballCollisionDamageBlocked(bool IsBlocked);
@@ -46,20 +46,20 @@ protected:
 	float DamageCooldownSeconds = 0.25f;
 
 private:
-	struct FPBBossHitPartInfo
-	{
-		EPBBossHitPartType HitPartType = EPBBossHitPartType::Body;
-		FName HitPointName = TEXT("Normal");
-	};
+	UFUNCTION()
+	void HandleHitPartComponentHit(
+		UPrimitiveComponent* HitComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComponent,
+		FVector NormalImpulse,
+		const FHitResult& Hit);
 
-	FPBBossHitPartInfo ResolveHitPartInfo(const UPrimitiveComponent* HitComponent, const FHitResult& Hit) const;
 	const UPBBossHitPartComponent* FindHitPartComponent(const UPrimitiveComponent* HitComponent) const;
-	const UPBBossHitPartComponent* FindHitPartComponent(FName HitPointName) const;
-	bool IsDamageBlocked(AActor* DamageSource) const;
+	void BindHitPartCollisionEvents();
 	bool CanApplyDamage(FName HitPointName, int32 DamageAmount) const;
+	FName ResolveHitPointName() const;
 	bool CanApplyDamageRateLimit() const;
-	bool IsWeakPointHitBlocked(const FPBBossHitPartInfo& HitPartInfo) const;
-	void ApplyResolvedDamage(AActor* DamageSource, const FPBBossHitPartInfo& HitPartInfo, int32 DamageAmount, const FHitResult& Hit);
+	bool IsWeakPointHitBlocked(FName HitPointName) const;
 	void ApplyDamageToBoss(FName HitPointName, int32 DamageAmount);
 	void RecordDamageRateLimit();
 
@@ -68,5 +68,7 @@ private:
 
 	float LastDamageTimeSeconds = -1.0f;
 	uint64 LastDamageFrameNumber = 0;
+	uint64 LastHitFrameNumber = 0;
 	int32 CurrentFrameDamageCount = 0;
+	FName LastHitPointName = NAME_None;
 };

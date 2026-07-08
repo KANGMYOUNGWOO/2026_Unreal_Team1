@@ -6,8 +6,6 @@
 #include "PBBossGroggyComponent.generated.h"
 
 class AActor;
-class UPrimitiveComponent;
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPBBossGroggyGaugeChangedSignature, int32, GroggyGauge, int32, MaxGroggyGauge);
 
 UCLASS(ClassGroup = (Boss), meta = (BlueprintSpawnableComponent))
@@ -21,7 +19,7 @@ public:
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Groggy Component")
-	void ApplyGroggyDamage(int32 GroggyAmount, UPrimitiveComponent* HitComponent);
+	void ApplyGroggyDamage(int32 GroggyAmount);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Groggy Component")
 	void ResetGroggy();
@@ -45,7 +43,6 @@ public:
 	FPBBossGroggyGaugeChangedSignature OnGroggyGaugeChanged;
 
 private:
-	FName ResolveGroggyPointName(UPrimitiveComponent* HitComponent) const;
 	int32 CalculateGroggyAmount(FName GroggyPointName, int32 GroggyAmount) const;
 	int32 GetGroggyMultiplierPercent(FName GroggyPointName) const;
 	int32 GetDisplayedGroggyGauge() const;
