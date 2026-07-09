@@ -3,7 +3,6 @@
 #include "PBCollectionNotificationRouter.h"
 #include "Internationalization/Text.h"
 #include "Misc/DateTime.h"
-#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 
@@ -25,13 +24,12 @@ void UPBCollectionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 
 	Collection.InitializeDependency(UPBTableDataSubsystem::StaticClass());
-	Collection.InitializeDependency(UPBGameDataLoadSubsystem::StaticClass());
 
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem = GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>())
+		if (UPBTableDataSubsystem* TableDataSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>())
 		{
-			GameDataLoadSubsystem->OnStartupGameDataLoaded.AddUniqueDynamic(
+			TableDataSubsystem->OnStartupGameDataLoaded.AddUniqueDynamic(
 				this,
 				&UPBCollectionSubsystem::HandleStartupGameDataLoaded);
 		}
@@ -44,9 +42,9 @@ void UPBCollectionSubsystem::Deinitialize()
 {
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem = GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>())
+		if (UPBTableDataSubsystem* TableDataSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>())
 		{
-			GameDataLoadSubsystem->OnStartupGameDataLoaded.RemoveDynamic(
+			TableDataSubsystem->OnStartupGameDataLoaded.RemoveDynamic(
 				this,
 				&UPBCollectionSubsystem::HandleStartupGameDataLoaded);
 		}

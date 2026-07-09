@@ -167,34 +167,36 @@ void UPBBumperEquipUI::CacheRequiredSubsystems()
 
 void UPBBumperEquipUI::BindDataLoadEvents()
 {
-	if (!IsValid(GameDataLoadSubsystem))
+	if (IsValid(TableDataSubsystem))
 	{
-		return;
+		TableDataSubsystem->OnStartupGameDataLoaded.AddUniqueDynamic(
+			this,
+			&UPBBumperEquipUI::HandleStartupGameDataLoaded);
 	}
 
-	GameDataLoadSubsystem->OnStartupGameDataLoaded.AddUniqueDynamic(
-		this,
-		&UPBBumperEquipUI::HandleStartupGameDataLoaded);
-
-	GameDataLoadSubsystem->OnPrimaryAssetsLoaded.AddUniqueDynamic(
-		this,
-		&UPBBumperEquipUI::HandleBumperUIAssetsLoaded);
+	if (IsValid(GameDataLoadSubsystem))
+	{
+		GameDataLoadSubsystem->OnPrimaryAssetsLoaded.AddUniqueDynamic(
+			this,
+			&UPBBumperEquipUI::HandleBumperUIAssetsLoaded);
+	}
 }
 
 void UPBBumperEquipUI::UnbindDataLoadEvents()
 {
-	if (!IsValid(GameDataLoadSubsystem))
+	if (IsValid(TableDataSubsystem))
 	{
-		return;
+		TableDataSubsystem->OnStartupGameDataLoaded.RemoveDynamic(
+			this,
+			&UPBBumperEquipUI::HandleStartupGameDataLoaded);
 	}
 
-	GameDataLoadSubsystem->OnStartupGameDataLoaded.RemoveDynamic(
-		this,
-		&UPBBumperEquipUI::HandleStartupGameDataLoaded);
-
-	GameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
-		this,
-		&UPBBumperEquipUI::HandleBumperUIAssetsLoaded);
+	if (IsValid(GameDataLoadSubsystem))
+	{
+		GameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
+			this,
+			&UPBBumperEquipUI::HandleBumperUIAssetsLoaded);
+	}
 }
 
 void UPBBumperEquipUI::EnsureInfoPanelViewModel()

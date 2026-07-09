@@ -3,18 +3,26 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/StreamableManager.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
-#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
-#include "PBBumperSpawnController.generated.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
+#include "UObject/PrimaryAssetId.h"
+#include "PBBumperSpawner.generated.h"
 
 class APBModularBumperBase;
 class UPBBumperDataAsset;
+class UPBGameDataLoadSubsystem;
 class UPBPlayerDataSubsystem;
 class UPBTableDataSubsystem;
 class USceneComponent;
-struct FPBBumperTableRow;
-struct FPBBumperTriggerRow;
+
+struct FPBPreparedBumperSpawnData
+{
+	// Modular Bumper 생성 직전에 필요한 값만 모아둔다.
+	FPBBumperTableRow BumperRow;
+	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
+};
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	FPBSpawnedBumpersReadySignature,
@@ -22,12 +30,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	const TArray<APBModularBumperBase*>&, SpawnedBumperActors);
 
 UCLASS(Blueprintable)
-class PINBALLLIKE_API APBBumperSpawnController : public AActor
+class PINBALLLIKE_API APBBumperSpawner : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	APBBumperSpawnController();
+	APBBumperSpawner();
 
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -35,8 +43,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Spawn")
 	void CollectBumperAnchors();
 
+	FGuid LoadEquippedBumperDataAssetAsync(const FStreamableDelegate& OnLoaded);
+
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Spawn")
-	void PrepareEquippedBumpersAsync();
+	void SpawnLoadedBumpers();
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Spawn")
 	void ClearSpawnedBumpers();
@@ -51,27 +61,21 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	UFUNCTION()
-	void HandleEquippedBumperAssetsLoaded(const FPBPrimaryAssetLoadResult& Result);
+	void BuildPendingBumperAssetIds(TArray<FPrimaryAssetId>& OutAssetIds) const;
 
-	bool RequestEquippedBumperGameplayAssetsAsync();
-
-	// Spawn steps.
-	void SpawnPreparedBumpers();
-	APBModularBumperBase* SpawnSingleBumper(FName BumperRowId);
-	bool TryMakeBumperSpawnData(
+	bool BuildPreparedBumperSpawnData();
+	bool TryBuildBumperSpawnData(
 		FName BumperRowId,
-		FPBBumperTableRow& OutBumperRow,
-		FPBBumperTriggerRow& OutTriggerRow,
-		const UPBBumperDataAsset*& OutBumperDataAsset) const;
-	TArray<FPBBumperTriggerSpawnInfo> MakeTriggerSpawnInfos(
-		const FPBBumperTriggerRow& TriggerRow,
-		const UPBBumperDataAsset* BumperDataAsset) const;
-	APBModularBumperBase* SpawnInitializedBumper(
-		const FPBBumperTableRow& BumperRow,
-		const TArray<FPBBumperTriggerSpawnInfo>& TriggerSpawnInfos);
+		FPBPreparedBumperSpawnData& OutSpawnData) const;
+	bool TryBuildTriggerSpawnInfos(
+		FName BumperRowId,
+		const UPBBumperDataAsset* BumperDataAsset,
+		TArray<FPBBumperTriggerSpawnInfo>& OutTriggerSpawnInfos) const;
 
-	// 완료 처리와 의존성 캐싱.
+	void PlacePreparedBumperActors();
+	APBModularBumperBase* PlaceBumperActor(const FPBPreparedBumperSpawnData& SpawnData);
+
+	// 준비 결과를 delegate와 Gameplay Message로 알린다.
 	void CompleteBumperPreparation(bool bSuccess);
 	bool CacheRequiredSubsystems();
 
@@ -87,11 +91,7 @@ private:
 	UPROPERTY(Transient)
 	TArray<FName> PendingBumperRowIds;
 
-	UPROPERTY(Transient)
-	FGuid PendingBumperAssetLoadRequestId;
-
-	UPROPERTY(Transient)
-	bool bPendingBumperAssetLoadCompleted = false;
+	TArray<FPBPreparedBumperSpawnData> PreparedBumperSpawnDataList;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<APBModularBumperBase>> SpawnedBumpers;
