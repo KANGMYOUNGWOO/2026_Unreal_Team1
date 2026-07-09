@@ -32,7 +32,6 @@ public:
 #pragma region Common
 
 	int32 AddOwnedBall(FName BallId, int32 StarLevel = 1);
-	// 외부에서 덱에 볼을 추가할때 사용하는 함수
 	bool AddNewBallToDeck(FName BallId, int32 StarLevel = 1);
 	bool RemoveOwnedBall(int32 BallInstanceId);
 	bool SetOwnedBallStarLevel(int32 BallInstanceId, int32 StarLevel);
@@ -175,6 +174,7 @@ private:
 	int32 ToGlobalSlotIndex(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;
 	const FPBBallDeckSlot* GetDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;
 	FPBBallDeckSlot* GetMutableDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex);
+	bool HasOwnedBallWithBallId(FName BallId) const;
 
 	UPROPERTY()
 	TArray<FPBBallDeckSlot> DeckSlots;
