@@ -34,6 +34,57 @@ FGuid UPBBallDeckAssetLoadService::LoadPlacedBallUIAssetsAsync(FStreamableDelega
 	return LoadPlacedBallAssetsAsync({ PBAssetBundleNames::UI, BallUIBundleKey }, OnLoaded);
 }
 
+FGuid UPBBallDeckAssetLoadService::LoadOwnedBallIconAsync(const FName BallId, FStreamableDelegate OnLoaded)
+{
+	if (!DeckSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BallDeckAssetLoad] Owned icon load skipped. DeckSubsystem is null. BallId=%s"),
+			*BallId.ToString());
+		OnLoaded.ExecuteIfBound();
+		return FGuid();
+	}
+
+	if (BallId.IsNone())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BallDeckAssetLoad] Owned icon load skipped. BallId is none."));
+		OnLoaded.ExecuteIfBound();
+		return FGuid();
+	}
+
+	UGameInstance* GameInstance = DeckSubsystem->GetGameInstance();
+	UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr;
+	if (!GameDataLoadSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BallDeckAssetLoad] Owned icon load skipped. GameDataLoadSubsystem is null. BallId=%s"),
+			*BallId.ToString());
+		OnLoaded.ExecuteIfBound();
+		return FGuid();
+	}
+
+	FPrimaryAssetId BallAssetId;
+	if (!ResolveBallDataAssetId(BallId, BallAssetId))
+	{
+		BallAssetId = FPrimaryAssetId(PBBallAssetIds::Type::BallData, BallId);
+		UE_LOG(LogTemp, Warning, TEXT("[BallDeckAssetLoad] Owned icon asset id is not registered. BallId=%s ExpectedAssetId=%s"),
+			*BallId.ToString(),
+			*BallAssetId.ToString());
+	}
+
+	const FName OwnedIconBundleKey = MakeOwnedBallIconBundleKey(BallId);
+	const FGuid RequestId = GameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
+		{ BallAssetId },
+		{ PBAssetBundleNames::UI, OwnedIconBundleKey },
+		OnLoaded);
+
+	UE_LOG(LogTemp, Log, TEXT("[BallDeckAssetLoad] Owned icon load requested. RequestId=%s BallId=%s AssetId=%s Bundle=%s"),
+		*RequestId.ToString(),
+		*BallId.ToString(),
+		*BallAssetId.ToString(),
+		*OwnedIconBundleKey.ToString());
+	return RequestId;
+}
+
 void UPBBallDeckAssetLoadService::UnloadGameplayAssets()
 {
 	UnloadPlacedBallAssets({ PBAssetBundleNames::Gameplay, BallGameplayBundleKey });
@@ -42,6 +93,25 @@ void UPBBallDeckAssetLoadService::UnloadGameplayAssets()
 void UPBBallDeckAssetLoadService::UnloadUIAssets()
 {
 	UnloadPlacedBallAssets({ PBAssetBundleNames::UI, BallUIBundleKey });
+}
+
+void UPBBallDeckAssetLoadService::UnloadOwnedBallIcon(const FName BallId)
+{
+	if (BallId.IsNone())
+	{
+		return;
+	}
+
+	if (DeckSubsystem)
+	{
+		if (UGameInstance* GameInstance = DeckSubsystem->GetGameInstance())
+		{
+			if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem = GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>())
+			{
+				GameDataLoadSubsystem->UnloadPrimaryAssetBundle(MakeOwnedBallIconBundleKey(BallId));
+			}
+		}
+	}
 }
 
 const UPBBallDataAsset* UPBBallDeckAssetLoadService::GetLoadedBallDataAsset(const int32 BallInstanceId) const
@@ -198,6 +268,13 @@ FName UPBBallDeckAssetLoadService::MakeBundleKey(const TArray<FName>& BundleName
 	}
 
 	return FName(*BundleKey);
+}
+
+FName UPBBallDeckAssetLoadService::MakeOwnedBallIconBundleKey(const FName BallId) const
+{
+	return BallId.IsNone()
+		? NAME_None
+		: FName(*FString::Printf(TEXT("OwnedBallIcon_%s"), *BallId.ToString()));
 }
 
 bool UPBBallDeckAssetLoadService::ResolveBallDataAssetId(const FName BallId, FPrimaryAssetId& OutAssetId) const

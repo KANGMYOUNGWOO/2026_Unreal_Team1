@@ -56,6 +56,7 @@ int32 UPBBallDeckSubsystem::AddOwnedBall(FName BallId, int32 StarLevel)
 		return INDEX_NONE;
 	}
 
+	const bool bHadOwnedBallWithSameId = HasOwnedBallWithBallId(BallId);
 	const int32 NewInstanceId = NextBallInstanceId++;
 	FPBDeckOwnedBallData& NewBallData = OwnedBallDataMap.Add(NewInstanceId);
 	NewBallData.InstanceId = NewInstanceId;
@@ -67,6 +68,12 @@ int32 UPBBallDeckSubsystem::AddOwnedBall(FName BallId, int32 StarLevel)
 		*NewBallData.BallId.ToString(),
 		NewBallData.StarLevel,
 		OwnedBallDataMap.Num());
+
+	if (AssetLoadService && !bHadOwnedBallWithSameId)
+	{
+		AssetLoadService->LoadOwnedBallIconAsync(BallId, FStreamableDelegate());
+	}
+
 	return NewInstanceId;
 }
 
@@ -180,10 +187,13 @@ bool UPBBallDeckSubsystem::AddNewBallToDeck(FName BallId, int32 StarLevel)
 
 bool UPBBallDeckSubsystem::RemoveOwnedBall(int32 BallInstanceId)
 {
-	if (!HasOwnedBall(BallInstanceId))
+	const FPBDeckOwnedBallData* BallInstanceData = GetOwnedBallData(BallInstanceId);
+	if (!BallInstanceData || !BallInstanceData->IsValid())
 	{
 		return false;
 	}
+
+	const FName RemovedBallId = BallInstanceData->BallId;
 
 	FPBBallDeckSlot BallLocation;
 	const bool bWasPlaced = FindBallLocation(BallInstanceId, BallLocation);
@@ -207,6 +217,11 @@ bool UPBBallDeckSubsystem::RemoveOwnedBall(int32 BallInstanceId)
 	}
 
 	OwnedBallDataMap.Remove(BallInstanceId);
+	if (AssetLoadService && !HasOwnedBallWithBallId(RemovedBallId))
+	{
+		AssetLoadService->UnloadOwnedBallIcon(RemovedBallId);
+	}
+
 	return true;
 }
 
@@ -799,4 +814,22 @@ FPBBallDeckSlot* UPBBallDeckSubsystem::GetMutableDeckSlot(EPBBallDeckSlotType Sl
 {
 	const int32 GlobalSlotIndex = ToGlobalSlotIndex(SlotType, SlotIndex);
 	return DeckSlots.IsValidIndex(GlobalSlotIndex) ? &DeckSlots[GlobalSlotIndex] : nullptr;
+}
+
+bool UPBBallDeckSubsystem::HasOwnedBallWithBallId(const FName BallId) const
+{
+	if (BallId.IsNone())
+	{
+		return false;
+	}
+
+	for (const TPair<int32, FPBDeckOwnedBallData>& OwnedBallDataPair : OwnedBallDataMap)
+	{
+		if (OwnedBallDataPair.Value.BallId == BallId)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
