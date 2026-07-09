@@ -6,7 +6,7 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Boss/PBBossSpawnController.h"
-#include "PinBallLike/Actor/Bumper/PBBumperSpawnController.h"
+#include "PinBallLike/Actor/Bumper/PBBumperSpawner.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
@@ -217,8 +217,19 @@ void APBBattleGameMode::LoadBumpers()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Load bumper data."));
 
-	// TODO 범퍼 데이터 로드 분할 필요
-	HandleBumperDataLoaded();
+	APBBumperSpawner* FoundBumperSpawner = FindBumperSpawner();
+	if (!IsValid(FoundBumperSpawner))
+	{
+		MarkDataLoaded(EPBBattlePreparationType::Bumper, false);
+		return;
+	}
+
+	const FGuid RequestId = FoundBumperSpawner->LoadEquippedBumperDataAssetAsync(
+		FStreamableDelegate::CreateUObject(this, &APBBattleGameMode::HandleBumperDataLoaded));
+	if (!RequestId.IsValid())
+	{
+		MarkDataLoaded(EPBBattlePreparationType::Bumper, false);
+	}
 }
 
 void APBBattleGameMode::LoadBalls()
@@ -307,24 +318,30 @@ void APBBattleGameMode::ResetBattlePreparationState()
 	bStartPlayCompleted = false;
 }
 
+APBBumperSpawner* APBBattleGameMode::FindBumperSpawner()
+{
+	if (!IsValid(BumperSpawner))
+	{
+		BumperSpawner = Cast<APBBumperSpawner>(
+			UGameplayStatics::GetActorOfClass(this, APBBumperSpawner::StaticClass()));
+	}
+
+	return BumperSpawner;
+}
+
 void APBBattleGameMode::PrepareBumpers()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Prepare equipped bumpers."));
 
-	if (!IsValid(BumperSpawnController))
+	APBBumperSpawner* FoundBumperSpawner = FindBumperSpawner();
+	if (!IsValid(FoundBumperSpawner))
 	{
-		BumperSpawnController = Cast<APBBumperSpawnController>(
-			UGameplayStatics::GetActorOfClass(this, APBBumperSpawnController::StaticClass()));
-	}
-
-	if (!IsValid(BumperSpawnController))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Missing BumperSpawnController in level."));
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Missing BumperSpawner in level."));
 		MarkPreparationCompleted(EPBBattlePreparationType::Bumper, false);
 		return;
 	}
 
-	BumperSpawnController->PrepareEquippedBumpersAsync();
+	FoundBumperSpawner->SpawnLoadedBumpers();
 }
 
 void APBBattleGameMode::PrepareBoss()

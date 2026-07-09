@@ -9,7 +9,7 @@
 #include "PBBattleGameMode.generated.h"
 
 class APBBossSpawnController;
-class APBBumperSpawnController;
+class APBBumperSpawner;
 enum class EPBBattlePreparationType : uint8;
 struct FPBBattleBossDeadMessage;
 struct FPBBattlePartyAllBallsDeadMessage;
@@ -84,6 +84,7 @@ private:
 
 private:
 	void ResetBattlePreparationState();
+	APBBumperSpawner* FindBumperSpawner();
 	void PrepareBumpers();
 	void PrepareBoss();
 	
@@ -118,7 +119,7 @@ private:
 
 private:
 	UPROPERTY()
-	TObjectPtr<APBBumperSpawnController> BumperSpawnController;
+	TObjectPtr<APBBumperSpawner> BumperSpawner;
 
 	UPROPERTY()
 	TObjectPtr<APBBossSpawnController> BossSpawnController;
