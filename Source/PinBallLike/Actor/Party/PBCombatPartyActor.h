@@ -8,7 +8,7 @@
 #include "PBCombatPartyActor.generated.h"
 
 class APBBallBase;
-struct FPBBattlePartyDeploymentStartedMessage;
+struct FPBBattlePhaseChangedMessage;
 struct FPBBattlePartyLaunchApprovedMessage;
 class UPBBaseResourceComponent;
 class UPBBallDeckSubsystem;
@@ -56,7 +56,7 @@ protected:
 private:
 	void RegisterBattleMessageListeners();
 	void UnregisterBattleMessageListeners();
-	void HandlePartyDeploymentStartedMessage(FGameplayTag Channel, const FPBBattlePartyDeploymentStartedMessage& Message);
+	void HandleBattlePhaseChangedMessage(FGameplayTag Channel, const FPBBattlePhaseChangedMessage& Message);
 	void HandlePartyLaunchApprovedMessage(FGameplayTag Channel, const FPBBattlePartyLaunchApprovedMessage& Message);
 	void BindPartyBallDeathEvents();
 	void UnbindPartyBallDeathEvents();
@@ -129,7 +129,7 @@ private:
 	FVector LeaderPromotionInheritedVelocity = FVector::ZeroVector;
 	TObjectPtr<APBBallBase> PromotingLeaderBall = nullptr;
 
-	FGameplayMessageListenerHandle PartyDeploymentStartedListenerHandle;
+	FGameplayMessageListenerHandle BattlePhaseChangedListenerHandle;
 	FGameplayMessageListenerHandle PartyLaunchApprovedListenerHandle;
 	
 };

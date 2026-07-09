@@ -165,10 +165,10 @@ void APBCombatPartyActor::RegisterBattleMessageListeners()
 		return;
 	}
 
-	PartyDeploymentStartedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePartyDeploymentStartedMessage>(
-		GameplayTags::Event_Battle_Party_Deployment_Started,
+	BattlePhaseChangedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePhaseChangedMessage>(
+		GameplayTags::Event_Battle_Phase_Changed,
 		this,
-		&APBCombatPartyActor::HandlePartyDeploymentStartedMessage);
+		&APBCombatPartyActor::HandleBattlePhaseChangedMessage);
 
 	PartyLaunchApprovedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePartyLaunchApprovedMessage>(
 		GameplayTags::Event_Battle_Party_Launch_Approved,
@@ -178,9 +178,9 @@ void APBCombatPartyActor::RegisterBattleMessageListeners()
 
 void APBCombatPartyActor::UnregisterBattleMessageListeners()
 {
-	if (PartyDeploymentStartedListenerHandle.IsValid())
+	if (BattlePhaseChangedListenerHandle.IsValid())
 	{
-		PartyDeploymentStartedListenerHandle.Unregister();
+		BattlePhaseChangedListenerHandle.Unregister();
 	}
 
 	if (PartyLaunchApprovedListenerHandle.IsValid())
@@ -189,11 +189,14 @@ void APBCombatPartyActor::UnregisterBattleMessageListeners()
 	}
 }
 
-void APBCombatPartyActor::HandlePartyDeploymentStartedMessage(
+void APBCombatPartyActor::HandleBattlePhaseChangedMessage(
 	FGameplayTag Channel,
-	const FPBBattlePartyDeploymentStartedMessage& Message)
+	const FPBBattlePhaseChangedMessage& Message)
 {
-	PrepareForDeployment();
+	if (Message.NewPhase == EPBBattleLevelPhase::BallDeployment)
+	{
+		PrepareForDeployment();
+	}
 }
 
 void APBCombatPartyActor::HandlePartyLaunchApprovedMessage(
