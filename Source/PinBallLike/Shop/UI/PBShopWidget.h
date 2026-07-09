@@ -94,5 +94,5 @@ private:
 	bool bPendingUpdateSlotPositions = false;
 
 	UPROPERTY(EditAnywhere, Category = "Shop UI")
-	FVector SlotWidgetWorldOffset = FVector(0.f, 0.f, 0.f);
+	FVector SlotWidgetWorldOffset = FVector(0.f, 0.f, -20.f);
 };

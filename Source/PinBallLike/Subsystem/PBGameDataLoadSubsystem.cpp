@@ -47,7 +47,8 @@ void UPBGameDataLoadSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath BumperEffectTablePath = Settings->BumperEffectTable.ToSoftObjectPath();
 	const FSoftObjectPath BallTablePath = Settings->BallTable.ToSoftObjectPath();
 	const FSoftObjectPath BallStarLevelTablePath = Settings->BallStarLevelTable.ToSoftObjectPath();
-
+    //const FSoftObjectPath ShopTablePath = Settings->ShopTable.ToSoftObjectPath();
+	
 	if (CollectionTablePath.IsValid())
 	{
 		TablePaths.Add(CollectionTablePath);
