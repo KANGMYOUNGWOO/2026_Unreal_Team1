@@ -50,16 +50,13 @@ protected:
 private:
 	void SetChargePatternState(EPBBossSnakeChargePatternState NewState);
 	void StartAiming(APBBossBase* Boss);
-	void FinishAiming();
+	UFUNCTION()
+	void HandleChargeTelegraphFinished(FVector TargetLocation, FVector Direction);
 	float GetChargeTelegraphDurationSeconds() const;
 	void PrepareCharge(APBBossBase* Boss);
 	void RefreshChargeDirection(APBBossBase* Boss);
 	void ApplySnakeChargePose(APBBossBase* Boss, float Alpha) const;
 	void SpawnChargeTelegraph(APBBossBase* Boss);
-	void StartChargeAim(float AimDurationSeconds);
-	void UpdateChargeAim();
-	void ClearChargeAimTimers();
-	void UpdateChargeTelegraph() const;
 	void StartCharge();
 	void UpdateCharge();
 	bool MoveBossByChargeDistance(
@@ -74,7 +71,6 @@ private:
 	void StartGroggy();
 	void FinishGroggy();
 	void ClearPatternTimers();
-	void ClearChargeTelegraphTimer();
 	void DestroyChargeTelegraph();
 	void SetPinballCollisionDamageBlocked(bool IsBlocked) const;
 
@@ -89,9 +85,6 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<class APBBossChargeTelegraph> SpawnedChargeTelegraph;
-
-	FTimerHandle ChargeAimTimerHandle;
-	FTimerHandle ChargeTelegraphTimerHandle;
 	FTimerHandle ChargeTimerHandle;
 	FTimerHandle ReboundTimerHandle;
 	FTimerHandle GroggyTimerHandle;

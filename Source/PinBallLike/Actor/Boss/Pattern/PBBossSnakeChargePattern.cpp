@@ -113,26 +113,26 @@ void UPBBossSnakeChargePattern::StartAiming(APBBossBase* Boss)
 	SpawnChargeTelegraph(Boss);
 
 	const float TelegraphDurationSeconds = GetChargeTelegraphDurationSeconds();
-	if (TelegraphDurationSeconds <= 0.0f)
+	if (TelegraphDurationSeconds <= 0.0f || !IsValid(SpawnedChargeTelegraph))
 	{
-		FinishAiming();
+		HandleChargeTelegraphFinished(ChargeStartLocation + ChargeDirection * ChargeMaxDistance, ChargeDirection);
 		return;
 	}
-
-	StartChargeAim(TelegraphDurationSeconds);
-	Boss->GetWorldTimerManager().SetTimer(
-		ChargeTelegraphTimerHandle,
-		this,
-		&UPBBossSnakeChargePattern::FinishAiming,
-		TelegraphDurationSeconds,
-		false);
 }
 
-void UPBBossSnakeChargePattern::FinishAiming()
+void UPBBossSnakeChargePattern::HandleChargeTelegraphFinished(FVector TargetLocation, FVector Direction)
 {
-	ClearChargeAimTimers();
-	ClearChargeTelegraphTimer();
 	DestroyChargeTelegraph();
+
+	ChargeDirection = Direction;
+	ChargeDirection.Z = 0.0f;
+	ChargeDirection = ChargeDirection.GetSafeNormal();
+	if (ChargeDirection.IsNearlyZero())
+	{
+		ChargeDirection = FVector::ForwardVector;
+	}
+
+	static_cast<void>(TargetLocation);
 
 	if (APBBossBase* Boss = GetOwnerBoss())
 	{
@@ -212,93 +212,20 @@ void UPBBossSnakeChargePattern::SpawnChargeTelegraph(APBBossBase* Boss)
 		return;
 	}
 
-	UClass* TelegraphClass = TelegraphDataList[0].TelegraphClass.Get();
-	if (!TelegraphClass || !TelegraphClass->IsChildOf(APBBossChargeTelegraph::StaticClass()))
+	const TArray<APBBossPatternTelegraph*> SpawnedTelegraphList = SpawnTelegraph(Boss);
+	for (APBBossPatternTelegraph* SpawnedTelegraph : SpawnedTelegraphList)
 	{
-		return;
+		SpawnedChargeTelegraph = Cast<APBBossChargeTelegraph>(SpawnedTelegraph);
+		if (!SpawnedChargeTelegraph)
+		{
+			continue;
+		}
+
+		SpawnedChargeTelegraph->OnChargeTelegraphFinished.AddUniqueDynamic(
+			this,
+			&UPBBossSnakeChargePattern::HandleChargeTelegraphFinished);
+		break;
 	}
-
-	UWorld* World = Boss->GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.Owner = Boss;
-	SpawnParameters.Instigator = Boss;
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	SpawnedChargeTelegraph = World->SpawnActor<APBBossChargeTelegraph>(
-		TelegraphClass,
-		ChargeStartLocation,
-		ChargeDirection.Rotation(),
-		SpawnParameters);
-
-	if (SpawnedChargeTelegraph)
-	{
-		SpawnedChargeTelegraph->InitChargeTelegraph(
-			TelegraphDataList[0].DurationSeconds,
-			ChargeStartLocation,
-			ChargeDirection,
-			ChargeMaxDistance,
-			TelegraphDataList[0].Scale);
-	}
-}
-
-void UPBBossSnakeChargePattern::StartChargeAim(float AimDurationSeconds)
-{
-	APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss || AimDurationSeconds <= 0.0f)
-	{
-		return;
-	}
-
-	ChargeAimElapsedSeconds = 0.0f;
-	ChargeAimDurationSeconds = AimDurationSeconds;
-	UpdateChargeAim();
-
-	Boss->GetWorldTimerManager().SetTimer(
-		ChargeAimTimerHandle,
-		this,
-		&UPBBossSnakeChargePattern::UpdateChargeAim,
-		UpdateIntervalSeconds,
-		true);
-}
-
-void UPBBossSnakeChargePattern::UpdateChargeAim()
-{
-	APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss)
-	{
-		return;
-	}
-
-	RefreshChargeDirection(Boss);
-	ApplySnakeChargePose(Boss, 0.0f);
-	ChargeAimElapsedSeconds = FMath::Min(ChargeAimElapsedSeconds + UpdateIntervalSeconds, ChargeAimDurationSeconds);
-	UpdateChargeTelegraph();
-}
-
-void UPBBossSnakeChargePattern::ClearChargeAimTimers()
-{
-	if (APBBossBase* Boss = GetOwnerBoss())
-	{
-		Boss->GetWorldTimerManager().ClearTimer(ChargeAimTimerHandle);
-	}
-}
-
-void UPBBossSnakeChargePattern::UpdateChargeTelegraph() const
-{
-	if (!IsValid(SpawnedChargeTelegraph))
-	{
-		return;
-	}
-
-	SpawnedChargeTelegraph->UpdateChargeTelegraphTransform(
-		ChargeStartLocation,
-		ChargeDirection,
-		ChargeMaxDistance);
 }
 
 void UPBBossSnakeChargePattern::StartCharge()
@@ -523,19 +450,9 @@ void UPBBossSnakeChargePattern::ClearPatternTimers()
 		return;
 	}
 
-	ClearChargeTelegraphTimer();
-	ClearChargeAimTimers();
 	Boss->GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
 	Boss->GetWorldTimerManager().ClearTimer(ReboundTimerHandle);
 	Boss->GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
-}
-
-void UPBBossSnakeChargePattern::ClearChargeTelegraphTimer()
-{
-	if (APBBossBase* Boss = GetOwnerBoss())
-	{
-		Boss->GetWorldTimerManager().ClearTimer(ChargeTelegraphTimerHandle);
-	}
 }
 
 void UPBBossSnakeChargePattern::DestroyChargeTelegraph()
@@ -543,11 +460,16 @@ void UPBBossSnakeChargePattern::DestroyChargeTelegraph()
 	if (!IsValid(SpawnedChargeTelegraph))
 	{
 		SpawnedChargeTelegraph = nullptr;
+		DestroySpawnedTelegraphs();
 		return;
 	}
 
+	SpawnedChargeTelegraph->OnChargeTelegraphFinished.RemoveDynamic(
+		this,
+		&UPBBossSnakeChargePattern::HandleChargeTelegraphFinished);
 	SpawnedChargeTelegraph->DestroyTelegraph();
 	SpawnedChargeTelegraph = nullptr;
+	DestroySpawnedTelegraphs();
 }
 
 void UPBBossSnakeChargePattern::SetPinballCollisionDamageBlocked(bool IsBlocked) const
