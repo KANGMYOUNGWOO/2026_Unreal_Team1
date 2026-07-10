@@ -8,7 +8,7 @@
 #include "PinBallLike/GameState/PBBattleGameState.h"
 #include "PBBattleGameMode.generated.h"
 
-class APBBossSpawnController;
+class APBBossSpawner;
 class APBBumperSpawner;
 enum class EPBBattlePreparationType : uint8;
 struct FPBBattleBossDeadMessage;
@@ -85,6 +85,7 @@ private:
 private:
 	void ResetBattlePreparationState();
 	APBBumperSpawner* FindBumperSpawner();
+	APBBossSpawner* FindBossSpawner();
 	void PrepareBumpers();
 	void PrepareBoss();
 	
@@ -122,7 +123,7 @@ private:
 	TObjectPtr<APBBumperSpawner> BumperSpawner;
 
 	UPROPERTY()
-	TObjectPtr<APBBossSpawnController> BossSpawnController;
+	TObjectPtr<APBBossSpawner> BossSpawner;
 
 	bool bStartPlayCompleted = false;
 };
