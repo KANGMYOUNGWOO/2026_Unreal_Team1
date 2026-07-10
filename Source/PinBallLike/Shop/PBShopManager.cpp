@@ -2,8 +2,10 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "Engine/GameInstance.h"
+#include "Engine/StreamableManager.h"
 
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
 
 TArray<FName> UPBShopManager::OpenShop()
@@ -11,18 +13,18 @@ TArray<FName> UPBShopManager::OpenShop()
     CurrentShopItemBallIds.Empty();
     CurrentGold = 1000;
 
-    // 임시 하드코딩.
-    // 실제 RowName은 팀원 BallTable의 RowName과 반드시 일치해야 함.
+    // 임시 상품 목록.
+    // 반드시 BallTable에 실제 존재하는 RowName이어야 한다.
     CurrentShopItemBallIds =
     {
-        FName(TEXT("Ball_001")),
-        FName(TEXT("Ball_002")),
-        FName(TEXT("Ball_003")),
-        FName(TEXT("Ball_004")),
-        FName(TEXT("Ball_005")),
-        FName(TEXT("Ball_006")),
-        FName(TEXT("Ball_007")),
-        FName(TEXT("Ball_008"))
+        FName(TEXT("Ball_Test01")),
+        FName(TEXT("Ball_Test02")),
+        FName(TEXT("Ball_Test01")),
+        FName(TEXT("Ball_Test02")),
+        FName(TEXT("Ball_Test01")),
+        FName(TEXT("Ball_Test02")),
+        FName(TEXT("Ball_Test01")),
+        FName(TEXT("Ball_Test02"))
     };
 
     ShopItemIsSell.Init(false, CurrentShopItemBallIds.Num());
@@ -54,6 +56,13 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
         return false;
     }
 
+    UPBBallDeckSubsystem* DeckSubsystem = GI->GetSubsystem<UPBBallDeckSubsystem>();
+    if (!DeckSubsystem)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("BuyItem failed: DeckSubsystem is null."));
+        return false;
+    }
+
     const FName SelectedBallId = CurrentShopItemBallIds[SlotIndex];
 
     FPBBallTableRow BallRow;
@@ -63,13 +72,24 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
         return false;
     }
 
-    // TODO: 나중에 BallRow.ShopId 기반으로 ShopTable에서 가격 조회하도록 교체
     constexpr int32 TempPrice = 100;
 
     if (CurrentGold < TempPrice)
     {
+        UE_LOG(LogTemp, Warning, TEXT("돈 부족 : Gold=%d Price=%d"), CurrentGold, TempPrice);
         return false;
     }
+
+    if (!DeckSubsystem->AddNewBallToDeck(SelectedBallId))
+    {
+        UE_LOG(LogTemp, Warning,
+            TEXT("BuyItem failed: AddNewBallToDeck failed. BallId=%s"),
+            *SelectedBallId.ToString());
+        return false;
+    }
+
+    DeckSubsystem->LoadPlacedBallUIAssetsAsync(FStreamableDelegate());
+    DeckSubsystem->LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate());
 
     ShopItemIsSell[SlotIndex] = true;
     CurrentGold -= TempPrice;
@@ -78,6 +98,12 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
     {
         ShopActorHandler->BuyItem(SlotIndex);
     }
+
+    UE_LOG(LogTemp, Warning,
+        TEXT("BuyItem succeeded. Slot=%d BallId=%s Gold=%d"),
+        SlotIndex,
+        *SelectedBallId.ToString(),
+        CurrentGold);
 
     return true;
 }

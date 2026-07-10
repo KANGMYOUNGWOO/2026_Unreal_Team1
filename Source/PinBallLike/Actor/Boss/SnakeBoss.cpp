@@ -136,37 +136,12 @@ float ASnakeBoss::GetSnakeChargePoseAlpha() const
 	return SnakeChargePoseAlpha;
 }
 
-void ASnakeBoss::InitializePatrolCenter()
-{
-	if (IsPatrolCenterInitialized)
-	{
-		return;
-	}
-
-	if (IsUseSpawnLocationAsPatrolCenter)
-	{
-		PatrolCenter = GetActorLocation();
-	}
-
-	IsPatrolCenterInitialized = true;
-}
-
 void ASnakeBoss::InitializeMoveArea()
 {
 	if (!BossMoveArea)
 	{
 		BossMoveArea = FindNearestMoveArea();
 	}
-
-	if (BossMoveArea)
-	{
-		PatrolCenter = BossMoveArea->GetAreaCenter();
-		PatrolAreaExtent = BossMoveArea->GetAreaExtent();
-		IsPatrolCenterInitialized = true;
-		return;
-	}
-
-	InitializePatrolCenter();
 }
 
 void ASnakeBoss::InitializeMoveDirection()
@@ -407,8 +382,15 @@ bool ASnakeBoss::FindSnakePathLocationAtDistance(float Distance, FVector& OutLoc
 
 void ASnakeBoss::SelectNextPatrolTarget()
 {
+	if (!BossMoveArea)
+	{
+		IsPatrolTargetValid = false;
+		return;
+	}
+
 	PatrolStartLocation = ClampLocationToPatrolArea(GetActorLocation());
-	const FVector PatrolExtent = PatrolAreaExtent.GetAbs();
+	const FVector PatrolCenter = BossMoveArea->GetAreaCenter();
+	const FVector PatrolExtent = BossMoveArea->GetAreaExtent().GetAbs();
 	constexpr int32 MaxTargetSelectCount = 20;
 	bool IsTargetSelected = false;
 
@@ -461,17 +443,14 @@ void ASnakeBoss::SelectNextPatrolTarget()
 
 FVector ASnakeBoss::ClampLocationToPatrolArea(const FVector& SourceLocation) const
 {
-	if (BossMoveArea)
+	if (!BossMoveArea)
 	{
-		FVector ClampedLocation = BossMoveArea->ClampLocation(SourceLocation);
-		ClampedLocation.Z = GetActorLocation().Z;
-		return ClampedLocation;
+		FVector Location = SourceLocation;
+		Location.Z = GetActorLocation().Z;
+		return Location;
 	}
 
-	const FVector PatrolExtent = PatrolAreaExtent.GetAbs();
-	FVector ClampedLocation = SourceLocation;
-	ClampedLocation.X = FMath::Clamp(ClampedLocation.X, PatrolCenter.X - PatrolExtent.X, PatrolCenter.X + PatrolExtent.X);
-	ClampedLocation.Y = FMath::Clamp(ClampedLocation.Y, PatrolCenter.Y - PatrolExtent.Y, PatrolCenter.Y + PatrolExtent.Y);
+	FVector ClampedLocation = BossMoveArea->ClampLocation(SourceLocation);
 	ClampedLocation.Z = GetActorLocation().Z;
 	return ClampedLocation;
 }
@@ -597,16 +576,20 @@ void ASnakeBoss::DrawDebugSnake() const
 			2.0f);
 	}
 
-	const FVector PatrolExtent = PatrolAreaExtent.GetAbs();
-	DrawDebugBox(
-		World,
-		PatrolCenter,
-		FVector(PatrolExtent.X, PatrolExtent.Y, 10.0f),
-		FColor::Red,
-		false,
-		0.0f,
-		0,
-		2.0f);
+	if (BossMoveArea)
+	{
+		const FVector PatrolCenter = BossMoveArea->GetAreaCenter();
+		const FVector PatrolExtent = BossMoveArea->GetAreaExtent().GetAbs();
+		DrawDebugBox(
+			World,
+			PatrolCenter,
+			FVector(PatrolExtent.X, PatrolExtent.Y, 10.0f),
+			FColor::Red,
+			false,
+			0.0f,
+			0,
+			2.0f);
+	}
 
 	if (IsPatrolTargetValid)
 	{

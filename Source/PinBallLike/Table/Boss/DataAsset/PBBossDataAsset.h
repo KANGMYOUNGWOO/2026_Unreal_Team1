@@ -61,15 +61,6 @@ public:
 	float PatternCheckIntervalSeconds = 0.25f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern", meta = (AssetBundles = "Gameplay"))
-	TArray<TSoftClassPtr<UPBBossPatternBase>> PatternClasses;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern", meta = (AssetBundles = "Gameplay"))
-	TArray<TSoftClassPtr<UPBBossPatternBase>> EnragedPatternClasses;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern", meta = (AssetBundles = "Gameplay"))
-	TArray<TSoftClassPtr<UPBBossPatternBase>> EnragedEntryPatternClasses;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern", meta = (AssetBundles = "Gameplay"))
 	TArray<FPBBossPatternData> PatternDatas;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern", meta = (AssetBundles = "Gameplay"))

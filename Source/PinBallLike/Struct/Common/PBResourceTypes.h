@@ -6,4 +6,5 @@ namespace PBResourceNames
 {
 	static const FName Health(TEXT("HP"));
 	static const FName Mana(TEXT("MP"));
+	static const FName Shield(TEXT("Shield"));
 }

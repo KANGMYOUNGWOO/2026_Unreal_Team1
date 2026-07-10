@@ -9,6 +9,8 @@ namespace GameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_UI_Collection_Notification);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Phase_Prepare_Completed);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Phase_Changed);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_LaunchCount_Changed);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Party_Deployment_Started);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Party_Launch_Requested);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Party_Launch_Approved);

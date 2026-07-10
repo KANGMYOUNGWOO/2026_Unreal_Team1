@@ -29,15 +29,12 @@ private:
 	void BindDeckEvents();
 	void UnbindDeckEvents();
 	void RefreshBenchSlots();
-	void RequestPlacedBallUIAssets();
 
 	UFUNCTION()
 	void HandleBenchSlotChanged(int32 SlotIndex, int32 BallInstanceId);
 
 	UFUNCTION()
 	void HandleBenchSlotsSwapped();
-
-	void HandlePlacedBallUIAssetsLoaded();
 
 	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
 	TObjectPtr<UButton> Button_Exit;

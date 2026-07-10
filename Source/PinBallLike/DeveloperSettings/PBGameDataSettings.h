@@ -41,5 +41,38 @@ public:
 	TSoftObjectPtr<UDataTable> BallStarLevelTable;
 	
 	
+#pragma endregion
+
+#pragma region Shop
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Shop|Table")
+	TSoftObjectPtr<UDataTable> ShopTable;
+	
+#pragma endregion
+
+#pragma region Boss
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Boss|Table")
+	TSoftObjectPtr<UDataTable> Boss;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Boss|Table")
+	TSoftObjectPtr<UDataTable> BossHitPoint;
+	
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Boss|Table")
+	TSoftObjectPtr<UDataTable> BossPattern;
+	
 #pragma endregion 
+
+#pragma region StatusEffect
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "StatusEffect|Table")
+	TSoftObjectPtr<UDataTable> StatusEffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "StatusEffect|Table")
+	TSoftObjectPtr<UDataTable> StatusEffectModifierTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "StatusEffect|Table")
+	TSoftObjectPtr<UDataTable> StatusEffectTriggerTable;
+
+#pragma endregion
 };

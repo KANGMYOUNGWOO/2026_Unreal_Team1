@@ -10,22 +10,6 @@
 
 using namespace PBSheetParserUtils;
 
-namespace
-{
-bool ParseBoolCell(const FString& Value, const bool IsDefaultValue)
-{
-	const FString TrimmedValue = TrimCell(Value);
-	if (IsUnsetValue(TrimmedValue))
-	{
-		return IsDefaultValue;
-	}
-
-	return TrimmedValue.Equals(TEXT("true"), ESearchCase::IgnoreCase)
-		|| TrimmedValue.Equals(TEXT("1"), ESearchCase::IgnoreCase)
-		|| TrimmedValue.Equals(TEXT("yes"), ESearchCase::IgnoreCase);
-}
-}
-
 UPBBossHitPointTableParser::UPBBossHitPointTableParser()
 {
 	BossDataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Boss");
@@ -60,7 +44,7 @@ bool UPBBossHitPointTableParser::ParseRow(const FName RowName, const TMap<FStrin
 	NewRow.GroggyMultiplierPercent = FMath::Max(
 		ParseIntValue(RowData.FindRef(TEXT("GroggyMultiplierPercent")), 100),
 		0);
-	NewRow.IsWeaknessPoint = ParseBoolCell(RowData.FindRef(TEXT("IsWeaknessPoint")), false);
+	NewRow.IsWeaknessPoint = ParseBoolValue(RowData.FindRef(TEXT("IsWeaknessPoint")), false);
 
 	TargetTable->AddRow(RowName, NewRow);
 

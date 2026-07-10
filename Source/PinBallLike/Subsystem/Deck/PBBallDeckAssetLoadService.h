@@ -23,9 +23,11 @@ public:
 
 	FGuid LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate OnLoaded);
 	FGuid LoadPlacedBallUIAssetsAsync(FStreamableDelegate OnLoaded);
+	FGuid LoadOwnedBallIconAsync(FName BallId, FStreamableDelegate OnLoaded);
 
 	void UnloadGameplayAssets();
 	void UnloadUIAssets();
+	void UnloadOwnedBallIcon(FName BallId);
 
 	const UPBBallDataAsset* GetLoadedBallDataAsset(int32 BallInstanceId) const;
 	UClass* GetLoadedBallActorClass(int32 BallInstanceId) const;
@@ -36,6 +38,7 @@ private:
 	void UnloadPlacedBallAssets(const TArray<FName>& BundleNames);
 	bool BuildPlacedBallAssetIds(TArray<FPrimaryAssetId>& OutAssetIds) const;
 	FName MakeBundleKey(const TArray<FName>& BundleNames) const;
+	FName MakeOwnedBallIconBundleKey(FName BallId) const;
 	bool ResolveBallDataAssetId(FName BallId, FPrimaryAssetId& OutAssetId) const;
 	const UPBBallDataAsset* GetLoadedBallDataAssetById(FName BallId) const;
 	bool FindBallId(int32 BallInstanceId, FName& OutBallId) const;

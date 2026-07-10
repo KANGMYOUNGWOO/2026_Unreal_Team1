@@ -87,7 +87,7 @@ TArray<FVector> APBShopDisplayActor::DisplayItems(const TArray<FName>& ItemIds,c
 		SpawnedItem->SetHandler(handler);
 		
 		SpawnedItems.Add(SpawnedItem);
-		
+	
 		UIWorldLocations.Add(SpawnedItem->GetUIWorldLocation());
 	}
 	
@@ -107,6 +107,15 @@ TArray<FVector> APBShopDisplayActor::GetSlotWorldLocation() const
 
 void APBShopDisplayActor::ClearItems()
 {
+	for (APBShopItemActor* ItemActor : SpawnedItems)
+	{
+		if (IsValid(ItemActor))
+		{
+			ItemActor->Destroy();
+		}
+	}
+
+	SpawnedItems.Empty();
 }
 
 // Called when the game starts or when spawned

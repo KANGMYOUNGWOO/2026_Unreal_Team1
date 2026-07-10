@@ -14,7 +14,7 @@ APBActionBattleActor::APBActionBattleActor()
 void APBActionBattleActor::OpenAbility()
 {
 	
-	UGameplayStatics::OpenLevel(this, FName(TEXT("Lv_Battle")));
+	UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("/Game/Map/Lv_Battle")));
 }
 
 // Called when the game starts or when spawned

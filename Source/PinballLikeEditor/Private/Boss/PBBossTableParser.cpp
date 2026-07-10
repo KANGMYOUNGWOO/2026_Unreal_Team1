@@ -12,13 +12,10 @@
 
 using namespace PBSheetParserUtils;
 
-namespace
-{
-FName GetClassIdOrRowName(const TMap<FString, FString>& RowData, const FString& ColumnName, const FName RowName)
+FName UPBBossTableParser::GetClassIdOrRowName(const TMap<FString, FString>& RowData, const FString& ColumnName, const FName RowName) const
 {
 	const FString ClassId = TrimCell(RowData.FindRef(ColumnName));
 	return IsUnsetValue(ClassId) ? RowName : FName(*ClassId);
-}
 }
 
 UPBBossTableParser::UPBBossTableParser()
