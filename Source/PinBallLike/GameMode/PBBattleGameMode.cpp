@@ -5,7 +5,7 @@
 
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "Kismet/GameplayStatics.h"
-#include "PinBallLike/Actor/Boss/PBBossSpawnController.h"
+#include "PinBallLike/Actor/Boss/PBBossSpawner.h"
 #include "PinBallLike/Actor/Bumper/PBBumperSpawner.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
@@ -255,15 +255,15 @@ void APBBattleGameMode::LoadBoss()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Load boss data."));
 
-	APBBossSpawnController* FoundBossSpawnController = FindBossSpawnController();
-	if (!IsValid(FoundBossSpawnController))
+	APBBossSpawner* FoundBossSpawner = FindBossSpawner();
+	if (!IsValid(FoundBossSpawner))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Boss data load failed. Missing BossSpawnController."));
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Boss data load failed. Missing BossSpawner."));
 		MarkDataLoaded(EPBBattlePreparationType::Boss, false);
 		return;
 	}
 
-	const FGuid RequestId = FoundBossSpawnController->LoadBossDataAssetAsync(
+	const FGuid RequestId = FoundBossSpawner->LoadBossDataAssetAsync(
 		FStreamableDelegate::CreateUObject(this, &APBBattleGameMode::HandleBossDataLoaded));
 	if (!RequestId.IsValid())
 	{
@@ -288,7 +288,7 @@ void APBBattleGameMode::HandleBossDataLoaded()
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Boss data loaded."));
 	MarkDataLoaded(
 		EPBBattlePreparationType::Boss,
-		IsValid(BossSpawnController) && BossSpawnController->IsLoadedBossDataReady());
+		IsValid(BossSpawner) && BossSpawner->IsLoadedBossDataReady());
 }
 
 void APBBattleGameMode::MarkDataLoaded(
@@ -343,15 +343,15 @@ APBBumperSpawner* APBBattleGameMode::FindBumperSpawner()
 	return BumperSpawner;
 }
 
-APBBossSpawnController* APBBattleGameMode::FindBossSpawnController()
+APBBossSpawner* APBBattleGameMode::FindBossSpawner()
 {
-	if (!IsValid(BossSpawnController))
+	if (!IsValid(BossSpawner))
 	{
-		BossSpawnController = Cast<APBBossSpawnController>(
-			UGameplayStatics::GetActorOfClass(this, APBBossSpawnController::StaticClass()));
+		BossSpawner = Cast<APBBossSpawner>(
+			UGameplayStatics::GetActorOfClass(this, APBBossSpawner::StaticClass()));
 	}
 
-	return BossSpawnController;
+	return BossSpawner;
 }
 
 void APBBattleGameMode::PrepareBumpers()
@@ -373,15 +373,15 @@ void APBBattleGameMode::PrepareBoss()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Prepare boss."));
 
-	APBBossSpawnController* FoundBossSpawnController = FindBossSpawnController();
-	if (!IsValid(FoundBossSpawnController))
+	APBBossSpawner* FoundBossSpawner = FindBossSpawner();
+	if (!IsValid(FoundBossSpawner))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Missing BossSpawnController in level."));
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Missing BossSpawner in level."));
 		MarkPreparationCompleted(EPBBattlePreparationType::Boss, false);
 		return;
 	}
 
-	FoundBossSpawnController->SpawnLoadedBoss();
+	FoundBossSpawner->SpawnLoadedBoss();
 }
 
 void APBBattleGameMode::MarkPreparationCompleted(

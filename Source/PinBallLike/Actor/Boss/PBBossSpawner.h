@@ -6,7 +6,7 @@
 #include "Engine/StreamableManager.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/Actor.h"
-#include "PBBossSpawnController.generated.h"
+#include "PBBossSpawner.generated.h"
 
 class APBBossBase;
 class UPBGameDataLoadSubsystem;
@@ -16,12 +16,12 @@ class USceneComponent;
 struct FGameplayTag;
 
 UCLASS(Blueprintable)
-class PINBALLLIKE_API APBBossSpawnController : public AActor
+class PINBALLLIKE_API APBBossSpawner : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	APBBossSpawnController();
+	APBBossSpawner();
 
 	virtual void BeginPlay() override;
 

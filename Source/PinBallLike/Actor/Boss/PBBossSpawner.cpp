@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "PBBossSpawnController.h"
+#include "PBBossSpawner.h"
 
 #include "Components/SceneComponent.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
@@ -51,7 +51,7 @@ namespace
 	}
 }
 
-APBBossSpawnController::APBBossSpawnController()
+APBBossSpawner::APBBossSpawner()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -59,7 +59,7 @@ APBBossSpawnController::APBBossSpawnController()
 	SetRootComponent(SceneRoot);
 }
 
-void APBBossSpawnController::BeginPlay()
+void APBBossSpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -69,7 +69,7 @@ void APBBossSpawnController::BeginPlay()
 	}
 }
 
-void APBBossSpawnController::SpawnBossAsync()
+void APBBossSpawner::SpawnBossAsync()
 {
 	if (BossRowName.IsNone())
 	{
@@ -78,14 +78,14 @@ void APBBossSpawnController::SpawnBossAsync()
 	}
 
 	const FGuid RequestId = LoadBossDataAssetAsync(
-		FStreamableDelegate::CreateUObject(this, &APBBossSpawnController::SpawnLoadedBoss));
+		FStreamableDelegate::CreateUObject(this, &APBBossSpawner::SpawnLoadedBoss));
 	if (!RequestId.IsValid())
 	{
 		CompleteBossPreparation(false);
 	}
 }
 
-FGuid APBBossSpawnController::LoadBossDataAssetAsync(FStreamableDelegate OnLoaded)
+FGuid APBBossSpawner::LoadBossDataAssetAsync(FStreamableDelegate OnLoaded)
 {
 	if (RequestBossDataAsync(OnLoaded))
 	{
@@ -95,7 +95,7 @@ FGuid APBBossSpawnController::LoadBossDataAssetAsync(FStreamableDelegate OnLoade
 	return FGuid();
 }
 
-void APBBossSpawnController::SpawnLoadedBoss()
+void APBBossSpawner::SpawnLoadedBoss()
 {
 	ClearSpawnedBoss();
 	UnregisterBossDeadEvent();
@@ -156,12 +156,12 @@ void APBBossSpawnController::SpawnLoadedBoss()
 	CompleteBossPreparation(IsSpawnSuccess);
 }
 
-bool APBBossSpawnController::IsLoadedBossDataReady() const
+bool APBBossSpawner::IsLoadedBossDataReady() const
 {
 	return IsBossDataLoaded;
 }
 
-bool APBBossSpawnController::RequestBossDataAsync(FStreamableDelegate OnLoaded)
+bool APBBossSpawner::RequestBossDataAsync(FStreamableDelegate OnLoaded)
 {
 	if (BossRowName.IsNone())
 	{
@@ -210,7 +210,7 @@ bool APBBossSpawnController::RequestBossDataAsync(FStreamableDelegate OnLoaded)
 	PendingBossDataLoadRequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
 		BossAssetIds,
 		BossBundleNames,
-		FStreamableDelegate::CreateUObject(this, &APBBossSpawnController::HandleBossDataLoadCompleted));
+		FStreamableDelegate::CreateUObject(this, &APBBossSpawner::HandleBossDataLoadCompleted));
 
 	if (!PendingBossDataLoadRequestId.IsValid())
 	{
@@ -226,7 +226,7 @@ bool APBBossSpawnController::RequestBossDataAsync(FStreamableDelegate OnLoaded)
 	return true;
 }
 
-void APBBossSpawnController::HandleBossDataLoadCompleted()
+void APBBossSpawner::HandleBossDataLoadCompleted()
 {
 	PendingBossDataLoadRequestId.Invalidate();
 
@@ -257,7 +257,7 @@ void APBBossSpawnController::HandleBossDataLoadCompleted()
 	PendingBossDataLoadedDelegate.Unbind();
 }
 
-bool APBBossSpawnController::SpawnBossWithClass(const TSubclassOf<APBBossBase> BossClassToSpawn, const UPBBossDataAsset* BossDataAsset)
+bool APBBossSpawner::SpawnBossWithClass(const TSubclassOf<APBBossBase> BossClassToSpawn, const UPBBossDataAsset* BossDataAsset)
 {
 	UWorld* World = GetWorld();
 	if (!IsValid(World) || !BossClassToSpawn)
@@ -293,7 +293,7 @@ bool APBBossSpawnController::SpawnBossWithClass(const TSubclassOf<APBBossBase> B
 	return true;
 }
 
-void APBBossSpawnController::ClearSpawnedBoss()
+void APBBossSpawner::ClearSpawnedBoss()
 {
 	if (IsValid(SpawnedBoss))
 	{
@@ -302,7 +302,7 @@ void APBBossSpawnController::ClearSpawnedBoss()
 	}
 }
 
-void APBBossSpawnController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void APBBossSpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UnregisterBossDeadEvent();
 	ClearSpawnedBoss();
@@ -310,7 +310,7 @@ void APBBossSpawnController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void APBBossSpawnController::RegisterBossDeadEvent()
+void APBBossSpawner::RegisterBossDeadEvent()
 {
 	if (!UGameplayMessageSubsystem::HasInstance(this) || BossDeadListenerHandle.IsValid())
 	{
@@ -320,10 +320,10 @@ void APBBossSpawnController::RegisterBossDeadEvent()
 	BossDeadListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattleBossDeadMessage>(
 		GameplayTags::Event_Battle_Boss_Dead,
 		this,
-		&APBBossSpawnController::HandleBossDeadMessage);
+		&APBBossSpawner::HandleBossDeadMessage);
 }
 
-void APBBossSpawnController::UnregisterBossDeadEvent()
+void APBBossSpawner::UnregisterBossDeadEvent()
 {
 	if (BossDeadListenerHandle.IsValid())
 	{
@@ -331,7 +331,7 @@ void APBBossSpawnController::UnregisterBossDeadEvent()
 	}
 }
 
-void APBBossSpawnController::HandleBossDeadMessage(FGameplayTag Channel, const FPBBattleBossDeadMessage& Message)
+void APBBossSpawner::HandleBossDeadMessage(FGameplayTag Channel, const FPBBattleBossDeadMessage& Message)
 {
 	static_cast<void>(Channel);
 
@@ -344,7 +344,7 @@ void APBBossSpawnController::HandleBossDeadMessage(FGameplayTag Channel, const F
 	UnregisterBossDeadEvent();
 }
 
-void APBBossSpawnController::UnloadBossAssets()
+void APBBossSpawner::UnloadBossAssets()
 {
 	if (IsBossAssetsUnloaded || !IsValid(CachedGameDataLoadSubsystem))
 	{
@@ -355,7 +355,7 @@ void APBBossSpawnController::UnloadBossAssets()
 	IsBossAssetsUnloaded = true;
 }
 
-void APBBossSpawnController::CompleteBossPreparation(const bool IsSuccess) const
+void APBBossSpawner::CompleteBossPreparation(const bool IsSuccess) const
 {
 	if (!UGameplayMessageSubsystem::HasInstance(this))
 	{
