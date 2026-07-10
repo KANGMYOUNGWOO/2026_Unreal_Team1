@@ -285,8 +285,6 @@ void APBBossBase::StartDeadState()
 			GameplayTags::Event_Battle_Boss_Dead,
 			Message);
 	}
-
-	Destroy();
 }
 
 FText APBBossBase::GetBossName() const
@@ -468,12 +466,14 @@ void APBBossBase::OnDeadTriggered_Implementation()
 void APBBossBase::HandleDeadTriggered()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Dead."));
-	StartDeadState();
 
 	if (BossStateTreeComponent && BossStateTreeComponent->IsRunning())
 	{
 		RequestBossState(EPBBossState::Dead);
+		return;
 	}
+
+	StartDeadState();
 }
 
 bool APBBossBase::IsDead() const
