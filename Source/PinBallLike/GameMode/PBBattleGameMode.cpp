@@ -255,8 +255,20 @@ void APBBattleGameMode::LoadBoss()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Load boss data."));
 
-	// TODO 보스 데이터 로드 분할 필요
-	HandleBossDataLoaded();
+	APBBossSpawnController* FoundBossSpawnController = FindBossSpawnController();
+	if (!IsValid(FoundBossSpawnController))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Boss data load failed. Missing BossSpawnController."));
+		MarkDataLoaded(EPBBattlePreparationType::Boss, false);
+		return;
+	}
+
+	const FGuid RequestId = FoundBossSpawnController->LoadBossDataAssetAsync(
+		FStreamableDelegate::CreateUObject(this, &APBBattleGameMode::HandleBossDataLoaded));
+	if (!RequestId.IsValid())
+	{
+		MarkDataLoaded(EPBBattlePreparationType::Boss, false);
+	}
 }
 
 void APBBattleGameMode::HandleBumperDataLoaded()
@@ -274,7 +286,9 @@ void APBBattleGameMode::HandleBallDataLoaded()
 void APBBattleGameMode::HandleBossDataLoaded()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Boss data loaded."));
-	MarkDataLoaded(EPBBattlePreparationType::Boss, true);
+	MarkDataLoaded(
+		EPBBattlePreparationType::Boss,
+		IsValid(BossSpawnController) && BossSpawnController->IsLoadedBossDataReady());
 }
 
 void APBBattleGameMode::MarkDataLoaded(
@@ -329,6 +343,17 @@ APBBumperSpawner* APBBattleGameMode::FindBumperSpawner()
 	return BumperSpawner;
 }
 
+APBBossSpawnController* APBBattleGameMode::FindBossSpawnController()
+{
+	if (!IsValid(BossSpawnController))
+	{
+		BossSpawnController = Cast<APBBossSpawnController>(
+			UGameplayStatics::GetActorOfClass(this, APBBossSpawnController::StaticClass()));
+	}
+
+	return BossSpawnController;
+}
+
 void APBBattleGameMode::PrepareBumpers()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Prepare equipped bumpers."));
@@ -348,20 +373,15 @@ void APBBattleGameMode::PrepareBoss()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Prepare boss."));
 
-	if (!IsValid(BossSpawnController))
-	{
-		BossSpawnController = Cast<APBBossSpawnController>(
-			UGameplayStatics::GetActorOfClass(this, APBBossSpawnController::StaticClass()));
-	}
-
-	if (!IsValid(BossSpawnController))
+	APBBossSpawnController* FoundBossSpawnController = FindBossSpawnController();
+	if (!IsValid(FoundBossSpawnController))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Missing BossSpawnController in level."));
 		MarkPreparationCompleted(EPBBattlePreparationType::Boss, false);
 		return;
 	}
 
-	BossSpawnController->SpawnBossAsync();
+	FoundBossSpawnController->SpawnLoadedBoss();
 }
 
 void APBBattleGameMode::MarkPreparationCompleted(

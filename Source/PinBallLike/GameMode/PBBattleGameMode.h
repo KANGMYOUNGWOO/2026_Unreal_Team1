@@ -85,6 +85,7 @@ private:
 private:
 	void ResetBattlePreparationState();
 	APBBumperSpawner* FindBumperSpawner();
+	APBBossSpawnController* FindBossSpawnController();
 	void PrepareBumpers();
 	void PrepareBoss();
 	

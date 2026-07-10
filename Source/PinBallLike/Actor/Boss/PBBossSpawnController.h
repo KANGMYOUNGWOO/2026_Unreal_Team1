@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/StreamableManager.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/Actor.h"
 #include "PBBossSpawnController.generated.h"
@@ -10,7 +11,6 @@
 class APBBossBase;
 class UPBGameDataLoadSubsystem;
 class UPBBossDataAsset;
-struct FPBPrimaryAssetLoadResult;
 struct FPBBattleBossDeadMessage;
 class USceneComponent;
 struct FGameplayTag;
@@ -28,6 +28,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|Spawn")
 	void SpawnBossAsync();
 
+	FGuid LoadBossDataAssetAsync(FStreamableDelegate OnLoaded);
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Spawn")
+	void SpawnLoadedBoss();
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Spawn")
+	bool IsLoadedBossDataReady() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Boss|Spawn")
 	void ClearSpawnedBoss();
 
@@ -35,11 +43,8 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	UFUNCTION()
-	void HandleBossDataLoaded(const FPBPrimaryAssetLoadResult& Result);
-
-	bool RequestBossDataAsync();
-	void UnbindBossDataLoadEvent();
+	void HandleBossDataLoadCompleted();
+	bool RequestBossDataAsync(FStreamableDelegate OnLoaded);
 	void RegisterBossDeadEvent();
 	void UnregisterBossDeadEvent();
 	void HandleBossDeadMessage(FGameplayTag Channel, const FPBBattleBossDeadMessage& Message);
@@ -66,15 +71,10 @@ private:
 	TObjectPtr<UPBGameDataLoadSubsystem> CachedGameDataLoadSubsystem;
 
 	UPROPERTY(Transient)
-	FGuid PendingBossGameplayLoadRequestId;
+	FGuid PendingBossDataLoadRequestId;
 
-	UPROPERTY(Transient)
-	FGuid PendingBossUILoadRequestId;
-
+	FStreamableDelegate PendingBossDataLoadedDelegate;
 	FGameplayMessageListenerHandle BossDeadListenerHandle;
-	bool IsBossGameplayLoadCompleted = false;
-	bool IsBossUILoadCompleted = false;
-	bool IsBossGameplayLoadSuccess = false;
-	bool IsBossUILoadSuccess = false;
+	bool IsBossDataLoaded = false;
 	bool IsBossAssetsUnloaded = true;
 };
