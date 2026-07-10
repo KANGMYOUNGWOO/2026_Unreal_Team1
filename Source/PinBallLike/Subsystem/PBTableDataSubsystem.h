@@ -17,6 +17,9 @@
 #include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
 #include "PBTableDataSubsystem.generated.h"
 
+struct FPBStatusEffectTriggerRow;
+struct FPBStatusEffectModifierRow;
+struct FPBStatusEffectRow;
 class UDataTable;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBTableDataLoadEvent);
@@ -44,6 +47,10 @@ public:
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
 	void SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable);
 	void SetBossTables(UDataTable* InBossTable, UDataTable* InBossHitPointTable, UDataTable* InBossPatternTable);
+	void SetStatusEffectTables(
+		UDataTable* InStatusEffectTable,
+		UDataTable* InStatusEffectModifierTable,
+		UDataTable* InStatusEffectTriggerTable);
 
 	UPROPERTY(BlueprintAssignable, Category = "TableData")
 	FPBTableDataLoadEvent OnStartupGameDataLoaded;
@@ -108,7 +115,6 @@ private:
 
 #pragma endregion
 
-
 #pragma region Shop
 
 public:
@@ -136,6 +142,25 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> BossPatternTable;
+
+#pragma endregion
+
+#pragma region StatusEffect
+
+public:
+	bool FindStatusEffectRow(FName RowName, FPBStatusEffectRow& OutRow) const;
+	bool GetStatusEffectModifierRows(FName StatusEffectId, TArray<FPBStatusEffectModifierRow>& OutRows) const;
+	bool GetStatusEffectTriggerRows(FName StatusEffectId, TArray<FPBStatusEffectTriggerRow>& OutRows) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> StatusEffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> StatusEffectModifierTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> StatusEffectTriggerTable;
 
 #pragma endregion
 };
