@@ -8,7 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossStatComponent.h"
-#include "PinBallLike/Actor/Party/PBCombatPartyActor.h"
+#include "PinBallLike/Actor/Party/PBCombatPartyController.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Table/Ball/PBBallAssetIds.h"
@@ -217,8 +217,8 @@ void UPBCheatManager::HandleCheatPlacedBallGameplayAssetsLoaded()
 		return;
 	}
 
-	APBCombatPartyActor* CombatPartyActor = Cast<APBCombatPartyActor>(
-		UGameplayStatics::GetActorOfClass(World, APBCombatPartyActor::StaticClass()));
+	APBCombatPartyController* CombatPartyActor = Cast<APBCombatPartyController>(
+		UGameplayStatics::GetActorOfClass(World, APBCombatPartyController::StaticClass()));
 	if (!CombatPartyActor)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AddBenchBall asset reload finished but CombatPartyActor is missing."));

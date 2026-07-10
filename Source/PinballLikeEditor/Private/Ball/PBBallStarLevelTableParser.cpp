@@ -10,13 +10,12 @@
 
 using namespace PBSheetParserUtils;
 
-static void AddParsedValue(TMap<FName, int32>& Values, const FName ValueName, const TMap<FString, FString>& RowData)
+void UPBBallStarLevelTableParser::AddParsedValue(TMap<FName, int32>& Values, const FName ValueName, const TMap<FString, FString>& RowData)
 {
 	if (ValueName.IsNone())
 	{
 		return;
 	}
-
 	Values.Add(ValueName, ParseIntValue(RowData.FindRef(ValueName.ToString()), 0));
 }
 

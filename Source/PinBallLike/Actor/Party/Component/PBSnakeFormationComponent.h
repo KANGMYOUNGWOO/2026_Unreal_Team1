@@ -8,6 +8,14 @@
 
 class APBBallBase;
 
+struct FPBSnakeFormationDependencies
+{
+	TFunction<TArray<APBBallBase*>()> GetValidPartyBalls;
+	TFunction<bool()> IsLauncherActive;
+	TFunction<void()> ApplyPartyRoles;
+	TFunction<void()> HidePartyBallsForLaunchReady;
+};
+
 UENUM(BlueprintType)
 enum class EPBSnakeFormationMode : uint8
 {
@@ -33,6 +41,9 @@ class PINBALLLIKE_API UPBSnakeFormationComponent : public UActorComponent
 public:
 	UPBSnakeFormationComponent();
 
+	void InitializeDependencies(FPBSnakeFormationDependencies InDependencies);
+	void RefreshPartyOrder();
+
 	UFUNCTION(BlueprintCallable, Category = "Party|Snake")
 	void SetPartyBalls(const TArray<APBBallBase*>& OrderedBalls);
 
@@ -54,6 +65,8 @@ private:
 	bool FindTrailLocationAtDistance(float TargetDistance, FVector& OutLocation) const;
 	FVector ClampTargetDistanceFromPreviousBall(const FVector& PreviousBallLocation, const FVector& TargetLocation) const;
 	void TrimTrail(float CurrentTime);
+
+	FPBSnakeFormationDependencies Dependencies;
 
 	UPROPERTY(EditAnywhere, Category = "Party|Snake")
 	EPBSnakeFormationMode FormationMode = EPBSnakeFormationMode::FixedDistance;
