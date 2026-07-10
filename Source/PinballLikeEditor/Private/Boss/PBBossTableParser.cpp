@@ -4,7 +4,9 @@
 #include "Boss/PBBossTableParser.h"
 
 #include "PBSheetParserUtils.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Camera/CameraShakeBase.h"
+#include "Modules/ModuleManager.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 #include "PinBallLike/Table/Boss/DataAsset/PBBossDataAsset.h"
@@ -19,6 +21,38 @@ FName GetClassIdOrRowName(const TMap<FString, FString>& RowData, const FString& 
 	const FString ClassId = TrimCell(RowData.FindRef(ColumnName));
 	return IsUnsetValue(ClassId) ? RowName : FName(*ClassId);
 }
+
+TSoftClassPtr<APBBossBase> FindBossClassRecursive(const FName BossClassId)
+{
+	if (BossClassId.IsNone())
+	{
+		return nullptr;
+	}
+
+	const FName BossClassName(*FString::Printf(TEXT("BP_%s"), *BossClassId.ToString()));
+
+	FAssetRegistryModule& AssetRegistryModule =
+		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+
+	FARFilter Filter;
+	Filter.PackagePaths.Add(TEXT("/Game/Blueprints/Boss"));
+	Filter.bRecursivePaths = true;
+
+	TArray<FAssetData> AssetDatas;
+	AssetRegistryModule.Get().GetAssets(Filter, AssetDatas);
+	for (const FAssetData& AssetData : AssetDatas)
+	{
+		if (AssetData.AssetName != BossClassName)
+		{
+			continue;
+		}
+
+		const FString ClassPath = FString::Printf(TEXT("%s_C"), *AssetData.GetSoftObjectPath().ToString());
+		return TSoftClassPtr<APBBossBase>(FSoftObjectPath(ClassPath));
+	}
+
+	return nullptr;
+}
 }
 
 UPBBossTableParser::UPBBossTableParser()
@@ -30,11 +64,6 @@ UPBBossTableParser::UPBBossTableParser()
 	BossRootClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss");
 	BossRootClassPreset.NameFormat = TEXT("BP_{0}");
 	BossClassPresets.Add(BossRootClassPreset);
-
-	FPBSheetAssetPathPreset SnakeBossClassPreset;
-	SnakeBossClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/Snake");
-	SnakeBossClassPreset.NameFormat = TEXT("BP_{0}");
-	BossClassPresets.Add(SnakeBossClassPreset);
 
 	BossStatusWidgetClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/UI");
 	BossStatusWidgetClassPreset.NameFormat = TEXT("WBP_{0}");
@@ -148,5 +177,5 @@ TSoftClassPtr<APBBossBase> UPBBossTableParser::FindBossClass(const FName BossCla
 		}
 	}
 
-	return nullptr;
+	return FindBossClassRecursive(BossClassId);
 }
