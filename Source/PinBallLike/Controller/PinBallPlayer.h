@@ -7,7 +7,7 @@
 #include "PinBallPlayer.generated.h"
 
 struct FInputActionValue;
-class APBCombatPartyActor;
+class APBCombatPartyController;
 class AFlipper;
 class UInputComponent;
 class UInputAction;
@@ -42,7 +42,7 @@ protected:
 	TArray<TObjectPtr<AFlipper>> Flippers;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PinBall|Launch")
-	TObjectPtr<APBCombatPartyActor> CombatPartyActor;
+	TObjectPtr<APBCombatPartyController> CombatPartyActor;
 	
 private:
 	void AddInputMappingContext();
