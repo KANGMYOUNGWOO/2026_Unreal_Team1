@@ -35,7 +35,7 @@ void UPBCollectionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		}
 	}
 
-	ResetDemoData();
+	ReloadCollectionData();
 }
 
 void UPBCollectionSubsystem::Deinitialize()
@@ -53,31 +53,34 @@ void UPBCollectionSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UPBCollectionSubsystem::ResetDemoData()
-{
-	if (!BuildEntriesFromCollectionTable())
-	{
-		BuildDemoEntries();
-	}
-
-	BuildDemoProgress();
-	OnCollectionEntryChanged.Broadcast(NAME_None);
-}
-
 void UPBCollectionSubsystem::HandleStartupGameDataLoaded()
 {
-	ResetDemoData();
+	ReloadCollectionData();
 }
 
-void UPBCollectionSubsystem::ResetAllProgress()
+bool UPBCollectionSubsystem::ReloadCollectionData()
 {
-	if (DemoEntries.IsEmpty() && !BuildEntriesFromCollectionTable())
+	TArray<FPBCollectionEntryData> LoadedEntries;
+	if (!BuildEntriesFromCollectionTable(LoadedEntries))
 	{
-		BuildDemoEntries();
+		// 일시적인 재로딩 실패가 이미 표시 중인 정상 데이터를 지우지 않게 합니다.
+		bIsDataReady = !Entries.IsEmpty();
+		return false;
 	}
 
-	BuildLockedProgress();
+	Entries = MoveTemp(LoadedEntries);
+	ReconcileProgressWithEntries();
+	bIsDataReady = true;
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("[Collection] Data reload completed. EntryCount=%d ProgressCount=%d"),
+		Entries.Num(),
+		ProgressMap.Num());
+
+	OnCollectionDataReady.Broadcast(true);
 	OnCollectionEntryChanged.Broadcast(NAME_None);
+	return true;
 }
 
 TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntries(EPBCollectionCategory Category) const
@@ -91,10 +94,14 @@ TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntriesByQuer
 {
 	TArray<FPBCollectionDisplayData> Result;
 
-	for (const FPBCollectionEntryData& EntryData : DemoEntries)
+	for (const FPBCollectionEntryData& EntryData : Entries)
 	{
 		const FPBCollectionProgressData* ProgressData = FindProgressData(EntryData.CollectionId);
 		if (!ProgressData)
+		{
+			continue;
+		}
+		if (EntryData.bHiddenUntilDiscovered && ProgressData->State == EPBCollectionState::Locked)
 		{
 			continue;
 		}
@@ -109,25 +116,34 @@ TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntriesByQuer
 
 	Result.Sort([Query](const FPBCollectionDisplayData& A, const FPBCollectionDisplayData& B)
 	{
+		const auto CompareBySortOrderThenId = [](const FPBCollectionDisplayData& Left, const FPBCollectionDisplayData& Right)
+		{
+			return Left.SortOrder != Right.SortOrder
+				? Left.SortOrder < Right.SortOrder
+				: Left.CollectionId.ToString() < Right.CollectionId.ToString();
+		};
+
 		switch (Query.SortMode)
 		{
 		case EPBCollectionSortMode::NameAsc:
-			return A.DisplayName.ToString() < B.DisplayName.ToString();
+			return A.DisplayName.EqualTo(B.DisplayName)
+				? A.CollectionId.ToString() < B.CollectionId.ToString()
+				: A.DisplayName.ToString() < B.DisplayName.ToString();
 		case EPBCollectionSortMode::StarGradeDesc:
 			return A.StarGrade != B.StarGrade
 				? A.StarGrade > B.StarGrade
-				: A.SortOrder < B.SortOrder;
+				: CompareBySortOrderThenId(A, B);
 		case EPBCollectionSortMode::StarGradeAsc:
 			return A.StarGrade != B.StarGrade
 				? A.StarGrade < B.StarGrade
-				: A.SortOrder < B.SortOrder;
+				: CompareBySortOrderThenId(A, B);
 		case EPBCollectionSortMode::StateDesc:
 			return A.State != B.State
 				? static_cast<uint8>(A.State) > static_cast<uint8>(B.State)
-				: A.SortOrder < B.SortOrder;
+				: CompareBySortOrderThenId(A, B);
 		case EPBCollectionSortMode::SortOrder:
 		default:
-			return A.SortOrder < B.SortOrder;
+			return CompareBySortOrderThenId(A, B);
 		}
 	});
 
@@ -138,7 +154,8 @@ bool UPBCollectionSubsystem::GetDisplayEntry(FName CollectionId, FPBCollectionDi
 {
 	const FPBCollectionEntryData* EntryData = FindEntryData(CollectionId);
 	const FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	if (!EntryData || !ProgressData)
+	if (!EntryData || !ProgressData
+		|| (EntryData->bHiddenUntilDiscovered && ProgressData->State == EPBCollectionState::Locked))
 	{
 		return false;
 	}
@@ -150,8 +167,15 @@ bool UPBCollectionSubsystem::GetDisplayEntry(FName CollectionId, FPBCollectionDi
 TArray<FName> UPBCollectionSubsystem::GetAvailableMetadataIds(EPBCollectionFilterField Field) const
 {
 	TSet<FName> UniqueIds;
-	for (const FPBCollectionEntryData& EntryData : DemoEntries)
+	for (const FPBCollectionEntryData& EntryData : Entries)
 	{
+		const FPBCollectionProgressData* ProgressData = FindProgressData(EntryData.CollectionId);
+		if (!ProgressData
+			|| (EntryData.bHiddenUntilDiscovered && ProgressData->State == EPBCollectionState::Locked))
+		{
+			continue;
+		}
+
 		FName MetadataId = NAME_None;
 		switch (Field)
 		{
@@ -185,8 +209,15 @@ TArray<FName> UPBCollectionSubsystem::GetAvailableMetadataIds(EPBCollectionFilte
 TArray<int32> UPBCollectionSubsystem::GetAvailableStarGrades() const
 {
 	TSet<int32> UniqueGrades;
-	for (const FPBCollectionEntryData& EntryData : DemoEntries)
+	for (const FPBCollectionEntryData& EntryData : Entries)
 	{
+		const FPBCollectionProgressData* ProgressData = FindProgressData(EntryData.CollectionId);
+		if (!ProgressData
+			|| (EntryData.bHiddenUntilDiscovered && ProgressData->State == EPBCollectionState::Locked))
+		{
+			continue;
+		}
+
 		if (EntryData.StarGrade > 0)
 		{
 			UniqueGrades.Add(EntryData.StarGrade);
@@ -198,6 +229,44 @@ TArray<int32> UPBCollectionSubsystem::GetAvailableStarGrades() const
 	{
 		return A > B;
 	});
+	return Result;
+}
+
+TArray<FName> UPBCollectionSubsystem::FindCollectionIdsBySourceId(FName SourceId) const
+{
+	TArray<FName> Result;
+	if (SourceId.IsNone())
+	{
+		return Result;
+	}
+
+	for (const FPBCollectionEntryData& EntryData : Entries)
+	{
+		if (EntryData.SourceId == SourceId)
+		{
+			Result.Add(EntryData.CollectionId);
+		}
+	}
+	return Result;
+}
+
+TArray<FName> UPBCollectionSubsystem::FindCollectionIdsBySourceRow(
+	FName SourceTableName,
+	FName SourceRowName) const
+{
+	TArray<FName> Result;
+	if (SourceTableName.IsNone() || SourceRowName.IsNone())
+	{
+		return Result;
+	}
+
+	for (const FPBCollectionEntryData& EntryData : Entries)
+	{
+		if (EntryData.SourceTableName == SourceTableName && EntryData.SourceRowName == SourceRowName)
+		{
+			Result.Add(EntryData.CollectionId);
+		}
+	}
 	return Result;
 }
 
@@ -214,12 +283,12 @@ bool UPBCollectionSubsystem::DiscoverEntry(FName CollectionId)
 	if (ProgressData->State == EPBCollectionState::Locked)
 	{
 		ProgressData->State = EPBCollectionState::Discovered;
-		if (ProgressData->FirstDiscoveredAtText.IsEmpty())
+		if (!HasTimestamp(ProgressData->FirstDiscoveredAt))
 		{
-			ProgressData->FirstDiscoveredAtText = MakeNowText();
+			ProgressData->FirstDiscoveredAt = MakeNow();
 		}
 		ProgressData->bIsNew = true;
-		OnCollectionEntryChanged.Broadcast(CollectionId);
+		NotifyProgressChanged(CollectionId);
 		BroadcastProgressNotification(*EntryData, PreviousState, ProgressData->State);
 	}
 
@@ -236,21 +305,22 @@ bool UPBCollectionSubsystem::UnlockEntry(FName CollectionId)
 	}
 
 	const EPBCollectionState PreviousState = ProgressData->State;
-	if (ProgressData->State == EPBCollectionState::Locked)
+	const FDateTime Now = MakeNow();
+	if (ProgressData->State == EPBCollectionState::Locked
+		&& !HasTimestamp(ProgressData->FirstDiscoveredAt))
 	{
-		ProgressData->FirstDiscoveredAtText = MakeNowText();
+		ProgressData->FirstDiscoveredAt = Now;
 	}
 
 	if (ProgressData->State == EPBCollectionState::Locked || ProgressData->State == EPBCollectionState::Discovered)
 	{
 		ProgressData->State = EPBCollectionState::Unlocked;
-		if (ProgressData->FirstUnlockedAtText.IsEmpty())
+		if (!HasTimestamp(ProgressData->FirstUnlockedAt))
 		{
-			ProgressData->FirstUnlockedAtText = MakeNowText();
+			ProgressData->FirstUnlockedAt = Now;
 		}
-		++ProgressData->AcquireCount;
 		ProgressData->bIsNew = true;
-		OnCollectionEntryChanged.Broadcast(CollectionId);
+		NotifyProgressChanged(CollectionId);
 		BroadcastProgressNotification(*EntryData, PreviousState, ProgressData->State);
 	}
 
@@ -268,30 +338,39 @@ bool UPBCollectionSubsystem::CompleteEntry(FName CollectionId, const FString& Co
 
 	const EPBCollectionState PreviousState = ProgressData->State;
 	const bool bWasCompleted = ProgressData->State == EPBCollectionState::Completed;
+	bool bChanged = false;
 	if (!bWasCompleted)
 	{
-		if (ProgressData->FirstDiscoveredAtText.IsEmpty())
+		const FDateTime Now = MakeNow();
+		if (!HasTimestamp(ProgressData->FirstDiscoveredAt))
 		{
-			ProgressData->FirstDiscoveredAtText = MakeNowText();
+			ProgressData->FirstDiscoveredAt = Now;
 		}
-		if (ProgressData->FirstUnlockedAtText.IsEmpty())
+		if (!HasTimestamp(ProgressData->FirstUnlockedAt))
 		{
-			ProgressData->FirstUnlockedAtText = MakeNowText();
+			ProgressData->FirstUnlockedAt = Now;
 		}
-		if (ProgressData->CompletedAtText.IsEmpty())
+		if (!HasTimestamp(ProgressData->CompletedAt))
 		{
-			ProgressData->CompletedAtText = MakeNowText();
+			ProgressData->CompletedAt = Now;
 		}
+
+		ProgressData->State = EPBCollectionState::Completed;
+		ProgressData->bIsNew = true;
+		bChanged = true;
 	}
 
-	ProgressData->State = EPBCollectionState::Completed;
-	ProgressData->CompletedByCharacterName = CompletedByCharacterName.IsEmpty()
-		? TEXT("검사 볼")
-		: CompletedByCharacterName;
-	ProgressData->DefeatCount = FMath::Max(1, ProgressData->DefeatCount + 1);
-	ProgressData->bIsNew = !bWasCompleted;
+	if (!CompletedByCharacterName.IsEmpty()
+		&& ProgressData->CompletedByCharacterName.IsEmpty())
+	{
+		ProgressData->CompletedByCharacterName = CompletedByCharacterName;
+		bChanged = true;
+	}
 
-	OnCollectionEntryChanged.Broadcast(CollectionId);
+	if (bChanged)
+	{
+		NotifyProgressChanged(CollectionId);
+	}
 	if (!bWasCompleted)
 	{
 		BroadcastProgressNotification(*EntryData, PreviousState, ProgressData->State);
@@ -299,27 +378,97 @@ bool UPBCollectionSubsystem::CompleteEntry(FName CollectionId, const FString& Co
 	return true;
 }
 
-bool UPBCollectionSubsystem::AdvanceDemoState(FName CollectionId)
+bool UPBCollectionSubsystem::MarkEntryAsSeen(FName CollectionId)
 {
-	const FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	if (!ProgressData)
+	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
+	if (!ProgressData || !FindEntryData(CollectionId))
 	{
 		return false;
 	}
 
-	switch (ProgressData->State)
+	if (ProgressData->bIsNew)
 	{
-	case EPBCollectionState::Locked:
-		return DiscoverEntry(CollectionId);
-	case EPBCollectionState::Discovered:
-		return UnlockEntry(CollectionId);
-	case EPBCollectionState::Unlocked:
-		return CompleteEntry(CollectionId, TEXT("검사 볼"));
-	case EPBCollectionState::Completed:
-		return true;
-	default:
+		ProgressData->bIsNew = false;
+		NotifyProgressChanged(CollectionId);
+	}
+	return true;
+}
+
+bool UPBCollectionSubsystem::UpdateEntryStatistics(
+	FName CollectionId,
+	int32 AcquireDelta,
+	int32 UseDelta,
+	int32 DefeatDelta,
+	int32 BestComboCandidate,
+	int32 TotalDamageDelta)
+{
+	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
+	if (!ProgressData || !FindEntryData(CollectionId))
+	{
 		return false;
 	}
+
+	const auto AddClamped = [](int32 CurrentValue, int32 Delta)
+	{
+		return static_cast<int32>(FMath::Min<int64>(
+			static_cast<int64>(MAX_int32),
+			static_cast<int64>(CurrentValue) + FMath::Max(0, Delta)));
+	};
+
+	const int32 NewAcquireCount = AddClamped(ProgressData->AcquireCount, AcquireDelta);
+	const int32 NewUseCount = AddClamped(ProgressData->UseCount, UseDelta);
+	const int32 NewDefeatCount = AddClamped(ProgressData->DefeatCount, DefeatDelta);
+	const int32 NewBestCombo = FMath::Max(ProgressData->BestCombo, FMath::Max(0, BestComboCandidate));
+	const int32 NewTotalDamage = AddClamped(ProgressData->TotalDamage, TotalDamageDelta);
+
+	const bool bChanged = NewAcquireCount != ProgressData->AcquireCount
+		|| NewUseCount != ProgressData->UseCount
+		|| NewDefeatCount != ProgressData->DefeatCount
+		|| NewBestCombo != ProgressData->BestCombo
+		|| NewTotalDamage != ProgressData->TotalDamage;
+
+	ProgressData->AcquireCount = NewAcquireCount;
+	ProgressData->UseCount = NewUseCount;
+	ProgressData->DefeatCount = NewDefeatCount;
+	ProgressData->BestCombo = NewBestCombo;
+	ProgressData->TotalDamage = NewTotalDamage;
+
+	if (bChanged)
+	{
+		NotifyProgressChanged(CollectionId);
+	}
+	return true;
+}
+
+TArray<FPBCollectionProgressData> UPBCollectionSubsystem::GetProgressSnapshot() const
+{
+	TArray<FPBCollectionProgressData> Result;
+	ProgressMap.GenerateValueArray(Result);
+	Result.Sort([](const FPBCollectionProgressData& A, const FPBCollectionProgressData& B)
+	{
+		return A.CollectionId.ToString() < B.CollectionId.ToString();
+	});
+	return Result;
+}
+
+void UPBCollectionSubsystem::ApplyProgressSnapshot(
+	const TArray<FPBCollectionProgressData>& ProgressSnapshot)
+{
+	ProgressMap.Reset();
+	for (FPBCollectionProgressData ProgressData : ProgressSnapshot)
+	{
+		if (ProgressData.CollectionId.IsNone())
+		{
+			continue;
+		}
+
+		SanitizeProgressData(ProgressData);
+		ProgressMap.Add(ProgressData.CollectionId, MoveTemp(ProgressData));
+	}
+
+	ReconcileProgressWithEntries();
+	OnCollectionProgressChanged.Broadcast(NAME_None);
+	OnCollectionEntryChanged.Broadcast(NAME_None);
 }
 
 FText UPBCollectionSubsystem::GetCategoryDisplayText(EPBCollectionCategory Category)
@@ -474,17 +623,19 @@ FText UPBCollectionSubsystem::GetMetadataDisplayText(FName MetadataId)
 	return FText::FromName(MetadataId);
 }
 
-bool UPBCollectionSubsystem::BuildEntriesFromCollectionTable()
+bool UPBCollectionSubsystem::BuildEntriesFromCollectionTable(
+	TArray<FPBCollectionEntryData>& OutEntries) const
 {
-	DemoEntries.Reset();
+	OutEntries.Reset();
 
-	UGameInstance* GameInstance = GetGameInstance();
+	const UGameInstance* GameInstance = GetGameInstance();
 	if (!IsValid(GameInstance))
 	{
 		return false;
 	}
 
-	UPBTableDataSubsystem* TableDataSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>();
+	const UPBTableDataSubsystem* TableDataSubsystem =
+		GameInstance->GetSubsystem<UPBTableDataSubsystem>();
 	if (!IsValid(TableDataSubsystem) || !TableDataSubsystem->IsCollectionTableReady())
 	{
 		return false;
@@ -494,301 +645,76 @@ bool UPBCollectionSubsystem::BuildEntriesFromCollectionTable()
 	TableDataSubsystem->GetAllCollectionRows(CollectionRows);
 	if (CollectionRows.IsEmpty())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("DT_Collection이 준비되었지만 유효한 행이 없습니다."));
 		return false;
 	}
 
+	TSet<FName> AddedCollectionIds;
 	for (const FPBCollectionTableRow& Row : CollectionRows)
 	{
 		FPBCollectionEntryData EntryData = Row.ToEntryData();
-		if (!EntryData.CollectionId.IsNone())
+		if (EntryData.CollectionId.IsNone())
 		{
-			DemoEntries.Add(MoveTemp(EntryData));
+			UE_LOG(LogTemp, Warning, TEXT("CollectionId가 비어 있는 DT_Collection 행을 건너뜁니다."));
+			continue;
 		}
+		if (AddedCollectionIds.Contains(EntryData.CollectionId))
+		{
+			UE_LOG(
+				LogTemp,
+				Error,
+				TEXT("중복 CollectionId '%s'를 건너뜁니다."),
+				*EntryData.CollectionId.ToString());
+			continue;
+		}
+
+		AddedCollectionIds.Add(EntryData.CollectionId);
+		OutEntries.Add(MoveTemp(EntryData));
 	}
 
-	DemoEntries.Sort([](const FPBCollectionEntryData& A, const FPBCollectionEntryData& B)
+	OutEntries.Sort([](const FPBCollectionEntryData& A, const FPBCollectionEntryData& B)
 	{
-		return A.SortOrder < B.SortOrder;
+		return A.SortOrder != B.SortOrder
+			? A.SortOrder < B.SortOrder
+			: A.CollectionId.ToString() < B.CollectionId.ToString();
 	});
 
-	return !DemoEntries.IsEmpty();
+	return !OutEntries.IsEmpty();
 }
 
-void UPBCollectionSubsystem::BuildDemoEntries()
+void UPBCollectionSubsystem::ReconcileProgressWithEntries()
 {
-	DemoEntries.Reset();
-
-	AddDemoEntry(TEXT("BALL_SWORD"), EPBCollectionCategory::Ball,
-		NSLOCTEXT("PBCollection", "BallSwordName", "검사 볼"),
-		NSLOCTEXT("PBCollection", "BallSwordShort", "파워 플립으로 기본 피해를 안정적으로 넣는 리더 후보입니다."),
-		NSLOCTEXT("PBCollection", "BallSwordDetail", "충돌 피해와 기본 공격을 담당하는 Ball입니다. 리더로 배치하면 파워 플립 피해가 안정적으로 증가합니다."),
-		NSLOCTEXT("PBCollection", "BallSwordUnlock", "기본 지급"),
-		TEXT("PowerFlip"),
-		TEXT("Leader"),
-		TEXT("Physical"),
-		3,
-		{ TEXT("Leader"), TEXT("PowerFlip"), TEXT("Attack") },
-		10,
-		FLinearColor(0.72f, 0.20f, 0.18f, 1.0f));
-
-	AddDemoEntry(TEXT("BALL_FIGHTER"), EPBCollectionCategory::Ball,
-		NSLOCTEXT("PBCollection", "BallFighterName", "격투 볼"),
-		NSLOCTEXT("PBCollection", "BallFighterShort", "보스 그로기 게이지를 빠르게 압박합니다."),
-		NSLOCTEXT("PBCollection", "BallFighterDetail", "약점 개방 타이밍에 강한 Ball입니다. 그로기 중심 Boss를 상대할 때 효율이 좋습니다."),
-		NSLOCTEXT("PBCollection", "BallFighterUnlock", "훈련 보스 1회 처치"),
-		TEXT("Melee"),
-		TEXT("Groggy"),
-		TEXT("Physical"),
-		2,
-		{ TEXT("Groggy"), TEXT("Melee") },
-		20,
-		FLinearColor(0.91f, 0.49f, 0.16f, 1.0f));
-
-	AddDemoEntry(TEXT("BALL_SHOOTER"), EPBCollectionCategory::Ball,
-		NSLOCTEXT("PBCollection", "BallShooterName", "사격 볼"),
-		NSLOCTEXT("PBCollection", "BallShooterShort", "투사체형 파워 플립으로 원거리 피해를 줍니다."),
-		NSLOCTEXT("PBCollection", "BallShooterDetail", "충돌 각도가 나쁘더라도 투사체로 보스를 견제할 수 있는 Ball입니다."),
-		NSLOCTEXT("PBCollection", "BallShooterUnlock", "사격 시너지 2개 발견"),
-		TEXT("Projectile"),
-		TEXT("Damage"),
-		TEXT("Fire"),
-		4,
-		{ TEXT("Projectile"), TEXT("Ranged") },
-		30,
-		FLinearColor(0.20f, 0.45f, 0.86f, 1.0f));
-
-	AddDemoEntry(TEXT("BALL_SUPPORT"), EPBCollectionCategory::Ball,
-		NSLOCTEXT("PBCollection", "BallSupportName", "보조 볼"),
-		NSLOCTEXT("PBCollection", "BallSupportShort", "파티 유지력과 스킬 회전을 돕습니다."),
-		NSLOCTEXT("PBCollection", "BallSupportDetail", "직접 피해보다는 버프와 회복 보조에 집중하는 Ball입니다."),
-		NSLOCTEXT("PBCollection", "BallSupportUnlock", "보조형 Ball 1개 획득"),
-		TEXT("Support"),
-		TEXT("Support"),
-		TEXT("Light"),
-		3,
-		{ TEXT("Support"), TEXT("Resource") },
-		40,
-		FLinearColor(0.16f, 0.64f, 0.40f, 1.0f));
-
-	AddDemoEntry(TEXT("BUMPER_REBOUND"), EPBCollectionCategory::Bumper,
-		NSLOCTEXT("PBCollection", "BumperReboundName", "리바운드 범퍼"),
-		NSLOCTEXT("PBCollection", "BumperReboundShort", "충돌 각도를 바꿔 Ball을 다시 전투 구역으로 돌려보냅니다."),
-		NSLOCTEXT("PBCollection", "BumperReboundDetail", "기본형 설치 범퍼입니다. 일정 횟수 충돌하면 추가 반발력과 소량 피해를 발생시킵니다."),
-		NSLOCTEXT("PBCollection", "BumperReboundUnlock", "기본 해금"),
-		TEXT("Collision"),
-		TEXT("Controller"),
-		TEXT("Neutral"),
-		1,
-		{ TEXT("Bumper"), TEXT("Rebound") },
-		110,
-		FLinearColor(0.18f, 0.56f, 0.78f, 1.0f));
-
-	AddDemoEntry(TEXT("BUMPER_GATE"), EPBCollectionCategory::Bumper,
-		NSLOCTEXT("PBCollection", "BumperGateName", "게이트 범퍼"),
-		NSLOCTEXT("PBCollection", "BumperGateShort", "관문 통과를 조건으로 발동하는 설치형 범퍼입니다."),
-		NSLOCTEXT("PBCollection", "BumperGateDetail", "Ball이 지정된 관문을 통과하면 발동 횟수를 누적하고, 조건 충족 시 보스에게 피해를 줍니다."),
-		NSLOCTEXT("PBCollection", "BumperGateUnlock", "관문 트리거 5회 발동"),
-		TEXT("Collision"),
-		TEXT("Controller"),
-		TEXT("Arcane"),
-		2,
-		{ TEXT("Bumper"), TEXT("Gate") },
-		120,
-		FLinearColor(0.38f, 0.48f, 0.24f, 1.0f));
-
-	AddDemoEntry(TEXT("BUMPER_TURRET"), EPBCollectionCategory::Bumper,
-		NSLOCTEXT("PBCollection", "BumperTurretName", "터렛 범퍼"),
-		NSLOCTEXT("PBCollection", "BumperTurretShort", "소환체를 만들어 일정 시간 보스를 공격합니다."),
-		NSLOCTEXT("PBCollection", "BumperTurretDetail", "충돌 조건을 만족하면 터렛을 소환합니다. 터렛은 짧은 시간 동안 보스를 향해 투사체를 발사합니다."),
-		NSLOCTEXT("PBCollection", "BumperTurretUnlock", "소환형 범퍼 최초 발견"),
-		TEXT("Summon"),
-		TEXT("Damage"),
-		TEXT("Fire"),
-		3,
-		{ TEXT("Bumper"), TEXT("Summon"), TEXT("Projectile") },
-		130,
-		FLinearColor(0.58f, 0.34f, 0.78f, 1.0f));
-
-	AddDemoEntry(TEXT("BUMPER_SHIELD"), EPBCollectionCategory::Bumper,
-		NSLOCTEXT("PBCollection", "BumperShieldName", "보호막 범퍼"),
-		NSLOCTEXT("PBCollection", "BumperShieldShort", "리더 Ball의 생존을 돕는 지원형 범퍼입니다."),
-		NSLOCTEXT("PBCollection", "BumperShieldDetail", "발동 시 리더 Ball에게 임시 보호막을 부여합니다. 보호 대상 범위는 팀 기획 확정이 필요합니다."),
-		NSLOCTEXT("PBCollection", "BumperShieldUnlock", "지원형 범퍼 1회 장착"),
-		TEXT("Support"),
-		TEXT("Tank"),
-		TEXT("Water"),
-		2,
-		{ TEXT("Bumper"), TEXT("Shield"), TEXT("Support") },
-		140,
-		FLinearColor(0.16f, 0.52f, 0.54f, 1.0f));
-
-	AddDemoEntry(TEXT("BOSS_TRAINING"), EPBCollectionCategory::Boss,
-		NSLOCTEXT("PBCollection", "BossTrainingName", "훈련 보스"),
-		NSLOCTEXT("PBCollection", "BossTrainingShort", "도감과 전투 흐름 확인용 기본 보스입니다."),
-		NSLOCTEXT("PBCollection", "BossTrainingDetail", "약점 개방과 그로기 흐름을 익히는 첫 보스입니다. 패턴은 단순하지만 도감 완료 기록의 기준이 됩니다."),
-		NSLOCTEXT("PBCollection", "BossTrainingUnlock", "첫 전투 조우"),
-		TEXT("Melee"),
-		TEXT("Boss"),
-		TEXT("Neutral"),
-		2,
-		{ TEXT("Boss"), TEXT("Tutorial") },
-		210,
-		FLinearColor(0.70f, 0.24f, 0.24f, 1.0f));
-
-	AddDemoEntry(TEXT("BOSS_PART_BREAK"), EPBCollectionCategory::Boss,
-		NSLOCTEXT("PBCollection", "BossPartBreakName", "부위 파괴 보스"),
-		NSLOCTEXT("PBCollection", "BossPartBreakShort", "특정 부위를 파괴해 패턴을 약화시키는 보스입니다."),
-		NSLOCTEXT("PBCollection", "BossPartBreakDetail", "부위 파괴 시 일부 패턴이 취소되거나 약화됩니다. 도감에는 약점 부위와 최초 처치 기록을 남깁니다."),
-		NSLOCTEXT("PBCollection", "BossPartBreakUnlock", "훈련 보스 처치 후 등장"),
-		TEXT("Pattern"),
-		TEXT("Boss"),
-		TEXT("Dark"),
-		4,
-		{ TEXT("Boss"), TEXT("PartBreak"), TEXT("Weakness") },
-		220,
-		FLinearColor(0.55f, 0.20f, 0.20f, 1.0f));
-
-	AddDemoEntry(TEXT("BOSS_PATTERN"), EPBCollectionCategory::Boss,
-		NSLOCTEXT("PBCollection", "BossPatternName", "패턴 보스"),
-		NSLOCTEXT("PBCollection", "BossPatternShort", "보드 방해 패턴과 투사체를 섞어 사용하는 보스입니다."),
-		NSLOCTEXT("PBCollection", "BossPatternDetail", "전투 중 보드 효율을 떨어뜨리는 패턴을 사용합니다. 도감에서는 주요 패턴과 공략 힌트를 단계적으로 공개합니다."),
-		NSLOCTEXT("PBCollection", "BossPatternUnlock", "부위 파괴 보스 최초 조우"),
-		TEXT("Projectile"),
-		TEXT("Boss"),
-		TEXT("Arcane"),
-		5,
-		{ TEXT("Boss"), TEXT("Pattern"), TEXT("Projectile") },
-		230,
-		FLinearColor(0.40f, 0.23f, 0.63f, 1.0f));
-
-	AddDemoEntry(TEXT("ACHIEVEMENT_FIRST_CLEAR"), EPBCollectionCategory::Achievement,
-		NSLOCTEXT("PBCollection", "AchievementFirstClearName", "첫 승리"),
-		NSLOCTEXT("PBCollection", "AchievementFirstClearShort", "첫 보스 전투를 완료하면 기록되는 기본 업적입니다."),
-		NSLOCTEXT("PBCollection", "AchievementFirstClearDetail", "플레이어가 첫 보스 전투를 완료했는지 확인하는 업적입니다. 도감에서는 달성 시점과 사용 캐릭터 기록을 확인합니다."),
-		NSLOCTEXT("PBCollection", "AchievementFirstClearUnlock", "훈련 보스 1회 처치"),
-		TEXT("Achievement"),
-		TEXT("Objective"),
-		TEXT("Account"),
-		1,
-		{ TEXT("Achievement"), TEXT("Clear"), TEXT("Tutorial") },
-		410,
-		FLinearColor(0.88f, 0.78f, 0.30f, 1.0f));
-
-	AddDemoEntry(TEXT("ACHIEVEMENT_COMBO_30"), EPBCollectionCategory::Achievement,
-		NSLOCTEXT("PBCollection", "AchievementCombo30Name", "콤보 입문"),
-		NSLOCTEXT("PBCollection", "AchievementCombo30Short", "전투 중 30콤보를 달성하면 해금되는 업적입니다."),
-		NSLOCTEXT("PBCollection", "AchievementCombo30Detail", "보드 컨트롤과 범퍼 배치를 활용해 30콤보를 달성한 기록입니다. 최고 콤보 기록과 함께 보여줄 수 있습니다."),
-		NSLOCTEXT("PBCollection", "AchievementCombo30Unlock", "최고 콤보 30 이상 달성"),
-		TEXT("Achievement"),
-		TEXT("Challenge"),
-		TEXT("Account"),
-		3,
-		{ TEXT("Achievement"), TEXT("Combo"), TEXT("Challenge") },
-		420,
-		FLinearColor(0.45f, 0.78f, 0.42f, 1.0f));
-
-	AddDemoEntry(TEXT("ACHIEVEMENT_BUMPER_MASTER"), EPBCollectionCategory::Achievement,
-		NSLOCTEXT("PBCollection", "AchievementBumperMasterName", "범퍼 연구자"),
-		NSLOCTEXT("PBCollection", "AchievementBumperMasterShort", "범퍼 도감을 일정 수 이상 해금하면 달성하는 업적입니다."),
-		NSLOCTEXT("PBCollection", "AchievementBumperMasterDetail", "설치형 범퍼를 발견하고 해금하는 진행도를 묶어 보여주는 업적입니다. 업적 도감은 장기 목표를 확인하는 용도로 사용합니다."),
-		NSLOCTEXT("PBCollection", "AchievementBumperMasterUnlock", "범퍼 도감 3종 해금"),
-		TEXT("Achievement"),
-		TEXT("Objective"),
-		TEXT("Account"),
-		4,
-		{ TEXT("Achievement"), TEXT("Bumper"), TEXT("Collection") },
-		430,
-		FLinearColor(0.38f, 0.62f, 0.90f, 1.0f));
-}
-
-void UPBCollectionSubsystem::BuildDemoProgress()
-{
-	BuildLockedProgress();
-
-	SetInitialProgress(TEXT("BALL_SWORD"), EPBCollectionState::Unlocked);
-	SetInitialProgress(TEXT("BALL_FIGHTER"), EPBCollectionState::Discovered);
-	SetInitialProgress(TEXT("BUMPER_REBOUND"), EPBCollectionState::Unlocked);
-	SetInitialProgress(TEXT("BUMPER_GATE"), EPBCollectionState::Discovered);
-	SetInitialProgress(TEXT("BUMPER_BASIC_COMBO"), EPBCollectionState::Unlocked);
-	SetInitialProgress(TEXT("BUMPER_TEST01"), EPBCollectionState::Discovered);
-	SetInitialProgress(TEXT("BOSS_TRAINING"), EPBCollectionState::Completed);
-	SetInitialProgress(TEXT("BOSS_PART_BREAK"), EPBCollectionState::Discovered);
-	SetInitialProgress(TEXT("ACHIEVEMENT_FIRST_CLEAR"), EPBCollectionState::Completed);
-	SetInitialProgress(TEXT("ACHIEVEMENT_COMBO_30"), EPBCollectionState::Discovered);
-}
-
-void UPBCollectionSubsystem::BuildLockedProgress()
-{
-	ProgressMap.Reset();
-
-	for (const FPBCollectionEntryData& EntryData : DemoEntries)
+	for (const FPBCollectionEntryData& EntryData : Entries)
 	{
-		SetInitialProgress(EntryData.CollectionId, EPBCollectionState::Locked);
+		FPBCollectionProgressData& ProgressData = ProgressMap.FindOrAdd(EntryData.CollectionId);
+		ProgressData.CollectionId = EntryData.CollectionId;
+		SanitizeProgressData(ProgressData);
 	}
 }
 
-void UPBCollectionSubsystem::AddDemoEntry(
-	FName CollectionId,
-	EPBCollectionCategory Category,
-	const FText& DisplayName,
-	const FText& ShortDescription,
-	const FText& DetailDescription,
-	const FText& UnlockConditionText,
-	FName AttackTypeId,
-	FName RoleId,
-	FName AttributeId,
-	int32 StarGrade,
-	const TArray<FName>& Tags,
-	int32 SortOrder,
-	const FLinearColor& AccentColor)
+void UPBCollectionSubsystem::NotifyProgressChanged(FName CollectionId)
 {
-	FPBCollectionEntryData EntryData;
-	EntryData.CollectionId = CollectionId;
-	EntryData.Category = Category;
-	EntryData.DisplayName = DisplayName;
-	EntryData.LockedName = NSLOCTEXT("PBCollection", "LockedName", "???");
-	EntryData.ShortDescription = ShortDescription;
-	EntryData.DetailDescription = DetailDescription;
-	EntryData.UnlockConditionText = UnlockConditionText;
-	EntryData.AttackTypeId = AttackTypeId;
-	EntryData.RoleId = RoleId;
-	EntryData.AttributeId = AttributeId;
-	EntryData.StarGrade = StarGrade;
-	EntryData.Tags = Tags;
-	EntryData.SortOrder = SortOrder;
-	EntryData.AccentColor = AccentColor;
-	DemoEntries.Add(EntryData);
+	OnCollectionProgressChanged.Broadcast(CollectionId);
+	OnCollectionEntryChanged.Broadcast(CollectionId);
 }
 
-void UPBCollectionSubsystem::SetInitialProgress(FName CollectionId, EPBCollectionState State)
+void UPBCollectionSubsystem::SanitizeProgressData(FPBCollectionProgressData& ProgressData)
 {
-	FPBCollectionProgressData& ProgressData = ProgressMap.FindOrAdd(CollectionId);
-	ProgressData.CollectionId = CollectionId;
-	ProgressData.State = State;
+	if (static_cast<uint8>(ProgressData.State) > static_cast<uint8>(EPBCollectionState::Completed))
+	{
+		ProgressData.State = EPBCollectionState::Locked;
+	}
 
-	if (State != EPBCollectionState::Locked)
-	{
-		ProgressData.FirstDiscoveredAtText = TEXT("2026-06-30 15:00");
-	}
-	if (State == EPBCollectionState::Unlocked || State == EPBCollectionState::Completed)
-	{
-		ProgressData.FirstUnlockedAtText = TEXT("2026-06-30 15:05");
-		ProgressData.AcquireCount = 1;
-		ProgressData.UseCount = 2;
-		ProgressData.BestCombo = 14;
-		ProgressData.TotalDamage = 320;
-	}
-	if (State == EPBCollectionState::Completed)
-	{
-		ProgressData.CompletedAtText = TEXT("2026-06-30 15:12");
-		ProgressData.CompletedByCharacterName = TEXT("검사 볼");
-		ProgressData.DefeatCount = 1;
-	}
+	ProgressData.AcquireCount = FMath::Max(0, ProgressData.AcquireCount);
+	ProgressData.UseCount = FMath::Max(0, ProgressData.UseCount);
+	ProgressData.DefeatCount = FMath::Max(0, ProgressData.DefeatCount);
+	ProgressData.BestCombo = FMath::Max(0, ProgressData.BestCombo);
+	ProgressData.TotalDamage = FMath::Max(0, ProgressData.TotalDamage);
 }
 
 const FPBCollectionEntryData* UPBCollectionSubsystem::FindEntryData(FName CollectionId) const
 {
-	return DemoEntries.FindByPredicate([CollectionId](const FPBCollectionEntryData& EntryData)
+	return Entries.FindByPredicate([CollectionId](const FPBCollectionEntryData& EntryData)
 	{
 		return EntryData.CollectionId == CollectionId;
 	});
@@ -811,6 +737,9 @@ FPBCollectionDisplayData UPBCollectionSubsystem::MakeDisplayData(
 	FPBCollectionDisplayData DisplayData;
 	DisplayData.CollectionId = EntryData.CollectionId;
 	DisplayData.Category = EntryData.Category;
+	DisplayData.SourceId = EntryData.SourceId;
+	DisplayData.SourceTableName = EntryData.SourceTableName;
+	DisplayData.SourceRowName = EntryData.SourceRowName;
 	DisplayData.State = ProgressData.State;
 	DisplayData.CategoryText = GetCategoryDisplayText(EntryData.Category);
 	DisplayData.StateText = GetStateDisplayText(ProgressData.State);
@@ -827,6 +756,9 @@ FPBCollectionDisplayData UPBCollectionSubsystem::MakeDisplayData(
 	DisplayData.bIsNew = ProgressData.bIsNew;
 	DisplayData.bCanShowFullData = ProgressData.State == EPBCollectionState::Unlocked
 		|| ProgressData.State == EPBCollectionState::Completed;
+	DisplayData.IconAssetKey = EntryData.IconAssetKey;
+	DisplayData.PreviewAssetKey = EntryData.PreviewAssetKey;
+	DisplayData.AssetBundleName = EntryData.AssetBundleName;
 	DisplayData.AccentColor = EntryData.AccentColor;
 
 	if (ProgressData.State == EPBCollectionState::Locked)
@@ -935,34 +867,69 @@ bool UPBCollectionSubsystem::DoesEntryMatchQuery(
 
 FText UPBCollectionSubsystem::BuildRecordText(const FPBCollectionProgressData& ProgressData) const
 {
-	FString Record;
+	TArray<FString> RecordLines;
 
-	if (!ProgressData.FirstDiscoveredAtText.IsEmpty())
+	if (HasTimestamp(ProgressData.FirstDiscoveredAt))
 	{
-		Record += FString::Printf(TEXT("최초 발견: %s\n"), *ProgressData.FirstDiscoveredAtText);
+		RecordLines.Add(FString::Printf(
+			TEXT("최초 발견: %s"),
+			*FormatTimestamp(ProgressData.FirstDiscoveredAt)));
 	}
-	if (!ProgressData.FirstUnlockedAtText.IsEmpty())
+	if (HasTimestamp(ProgressData.FirstUnlockedAt))
 	{
-		Record += FString::Printf(TEXT("최초 해금: %s\n"), *ProgressData.FirstUnlockedAtText);
+		RecordLines.Add(FString::Printf(
+			TEXT("최초 해금: %s"),
+			*FormatTimestamp(ProgressData.FirstUnlockedAt)));
 	}
-	if (!ProgressData.CompletedAtText.IsEmpty())
+	if (HasTimestamp(ProgressData.CompletedAt))
 	{
-		Record += FString::Printf(TEXT("완료 시점: %s\n"), *ProgressData.CompletedAtText);
+		RecordLines.Add(FString::Printf(
+			TEXT("완료 시점: %s"),
+			*FormatTimestamp(ProgressData.CompletedAt)));
 	}
 	if (!ProgressData.CompletedByCharacterName.IsEmpty())
 	{
-		Record += FString::Printf(TEXT("완료 캐릭터: %s\n"), *ProgressData.CompletedByCharacterName);
+		RecordLines.Add(FString::Printf(
+			TEXT("완료 캐릭터: %s"),
+			*ProgressData.CompletedByCharacterName));
 	}
 
-	Record += FString::Printf(TEXT("획득/사용: %d / %d\n"), ProgressData.AcquireCount, ProgressData.UseCount);
-	Record += FString::Printf(TEXT("처치 횟수: %d\n"), ProgressData.DefeatCount);
-	Record += FString::Printf(TEXT("최고 콤보: %d\n"), ProgressData.BestCombo);
-	Record += FString::Printf(TEXT("누적 피해: %d"), ProgressData.TotalDamage);
+	if (ProgressData.AcquireCount > 0 || ProgressData.UseCount > 0)
+	{
+		RecordLines.Add(FString::Printf(
+			TEXT("획득/사용: %d / %d"),
+			ProgressData.AcquireCount,
+			ProgressData.UseCount));
+	}
+	if (ProgressData.DefeatCount > 0)
+	{
+		RecordLines.Add(FString::Printf(TEXT("처치 횟수: %d"), ProgressData.DefeatCount));
+	}
+	if (ProgressData.BestCombo > 0)
+	{
+		RecordLines.Add(FString::Printf(TEXT("최고 콤보: %d"), ProgressData.BestCombo));
+	}
+	if (ProgressData.TotalDamage > 0)
+	{
+		RecordLines.Add(FString::Printf(TEXT("누적 피해: %d"), ProgressData.TotalDamage));
+	}
 
-	return FText::FromString(Record);
+	return RecordLines.IsEmpty()
+		? NSLOCTEXT("PBCollection", "NoProgressRecord", "아직 기록이 없습니다.")
+		: FText::FromString(FString::Join(RecordLines, TEXT("\n")));
 }
 
-FString UPBCollectionSubsystem::MakeNowText()
+bool UPBCollectionSubsystem::HasTimestamp(const FDateTime& Timestamp)
 {
-	return FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M"));
+	return Timestamp.GetTicks() > 0;
+}
+
+FDateTime UPBCollectionSubsystem::MakeNow()
+{
+	return FDateTime::Now();
+}
+
+FString UPBCollectionSubsystem::FormatTimestamp(const FDateTime& Timestamp)
+{
+	return Timestamp.ToString(TEXT("%Y-%m-%d %H:%M"));
 }

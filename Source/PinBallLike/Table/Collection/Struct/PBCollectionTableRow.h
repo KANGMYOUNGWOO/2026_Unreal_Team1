@@ -83,6 +83,9 @@ struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 		FPBCollectionEntryData EntryData;
 		EntryData.CollectionId = CollectionId;
 		EntryData.Category = Category;
+		EntryData.SourceId = SourceId;
+		EntryData.SourceTableName = SourceTableName;
+		EntryData.SourceRowName = SourceRowName;
 		EntryData.DisplayName = DisplayName;
 		EntryData.LockedName = LockedName.IsEmpty() ? FText::FromString(TEXT("???")) : LockedName;
 		EntryData.ShortDescription = ShortDescription;
@@ -93,6 +96,10 @@ struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 		EntryData.AttributeId = AttributeId;
 		EntryData.StarGrade = StarGrade;
 		EntryData.SortOrder = SortOrder;
+		EntryData.IconAssetKey = IconAssetKey;
+		EntryData.PreviewAssetKey = PreviewAssetKey;
+		EntryData.AssetBundleName = AssetBundleName;
+		EntryData.bHiddenUntilDiscovered = bHiddenUntilDiscovered;
 		EntryData.AccentColor = AccentColor;
 
 		TArray<FString> TagTokens;
