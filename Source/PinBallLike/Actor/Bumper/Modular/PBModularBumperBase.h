@@ -6,8 +6,9 @@
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Struct/Bumper/PBBumperRuntimeState.h"
 #include "PinBallLike/Struct/Bumper/PBBumperState.h"
-#include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PBModularBumperBase.generated.h"
 
 class APBBallBase;
@@ -73,6 +74,7 @@ public:
 	void InitializeBumper(
 		const FPBBumperTableRow& InBumperData,
 		const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
+		const FPBBumperEffectRow& InEffectData,
 		TSubclassOf<UPBBumperEffectBase> InEffectClass,
 		const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms);
 
@@ -127,6 +129,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
 	TSubclassOf<UPBBumperEffectBase> EffectClass;
+
+	/** 시트의 Effect 행에서 읽은 실행 수치와 설명. 스폰 시 주입되며 BP 기본값에 의존하지 않는다. */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
+	FPBBumperEffectRow EffectData;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
 	TObjectPtr<UPBBumperEffectBase> BumperEffect;

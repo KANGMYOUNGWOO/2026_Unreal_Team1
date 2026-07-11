@@ -202,7 +202,9 @@ namespace PBBumperEquipUIBuilder
 			FPBBumperTriggerRow TriggerRow;
 			if (TableDataSubsystem->FindBumperTriggerRow(Row.TriggerID, TriggerRow))
 			{
-				TriggerDescription = TriggerRow.TriggerDescription;
+				TriggerDescription = FText::Format(
+					TriggerRow.TriggerDescription,
+					FText::AsNumber(Row.RequiredTriggerCount));
 			}
 		}
 
@@ -212,7 +214,9 @@ namespace PBBumperEquipUIBuilder
 			FPBBumperEffectRow EffectRow;
 			if (TableDataSubsystem->FindBumperEffectRow(Row.EffectID, EffectRow))
 			{
-				EffectDescription = EffectRow.Description;
+				EffectDescription = FText::Format(
+					EffectRow.Description,
+					FText::AsNumber(EffectRow.Power));
 			}
 		}
 

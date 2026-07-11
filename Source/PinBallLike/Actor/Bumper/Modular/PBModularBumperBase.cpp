@@ -11,8 +11,6 @@
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBBumperPositionAnchor.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
-#include "PinBallLike/Interface/Comboable.h"
-#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBModularBumperBase::APBModularBumperBase()
 {
@@ -153,24 +151,39 @@ void APBModularBumperBase::CreateBumperEffect()
 {
 	if (!EffectClass)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Cannot create effect. Bumper=%s EffectId=%s"),
+			*GetNameSafe(this),
+			*BumperData.EffectID.ToString());
 		return;
 	}
 
 	BumperEffect = NewObject<UPBBumperEffectBase>(this, EffectClass);
-	if (IsValid(BumperEffect))
+	if (!IsValid(BumperEffect))
 	{
-		BumperEffect->Initialize(this);
+		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Failed to instantiate effect. Bumper=%s EffectClass=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(EffectClass));
+		return;
 	}
+
+	BumperEffect->InitializeEffect(this, EffectData);
+	UE_LOG(LogTemp, Log, TEXT("[Bumper] Effect ready. Bumper=%s EffectId=%s EffectClass=%s Power=%.2f"),
+		*GetNameSafe(this),
+		*BumperData.EffectID.ToString(),
+		*GetNameSafe(EffectClass),
+		EffectData.Power);
 }
 
 void APBModularBumperBase::InitializeBumper(
 	const FPBBumperTableRow& InBumperData,
 	const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
+	const FPBBumperEffectRow& InEffectData,
 	TSubclassOf<UPBBumperEffectBase> InEffectClass,
 	const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms)
 {
 	BumperData = InBumperData;
 	TriggerSpawnInfos = InTriggerSpawnInfos;
+	EffectData = InEffectData;
 	EffectClass = InEffectClass;
 	AnchorTransforms = InAnchorTransforms;
 }
@@ -190,13 +203,6 @@ void APBModularBumperBase::AddTriggerCount(APBBallBase* Ball, const int32 Amount
 		RequiredTriggerCount);
 
 	NotifyTriggerCountChanged();
-
-	//콤보 증가
-	if (IComboable* Comboable = PBInterfaceUtils::FindInterface<IComboable>(Ball))
-	{
-		Comboable->AddCombo(Amount);
-		//UE_LOG(LogTemp, Warning, TEXT("combo = %d"), Comboable->GetCombo());
-	}
 
 	// 이번 증가로 처음 조건을 만족했을 때만 Ready 이벤트를 보낸다.
 	// TODO 준비는 따로 필요없을듯 하다. 즉시 시전되면 될듯.
