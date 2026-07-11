@@ -40,7 +40,13 @@ void APBCollectionDemoActor::BeginPlay()
 
 void APBCollectionDemoActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	CloseCollection();
+	// 레벨 종료 중에는 닫기 애니메이션을 기다리지 않고 스택에서 즉시 정리합니다.
+	if (CollectionWidget && CollectionWidget->IsInViewport())
+	{
+		CollectionWidget->CompletePop();
+	}
+	CollectionWidget = nullptr;
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -69,11 +75,30 @@ void APBCollectionDemoActor::OpenCollection()
 
 void APBCollectionDemoActor::CloseCollection()
 {
-	if (CollectionWidget && CollectionWidget->IsInViewport())
+	if (!CollectionWidget || !CollectionWidget->IsInViewport())
 	{
-		CollectionWidget->CompletePop();
+		CollectionWidget = nullptr;
+		return;
 	}
-	CollectionWidget = nullptr;
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+		: nullptr;
+	if (IsValid(UIManagerSubsystem) && UIManagerSubsystem->GetTopWidget() == CollectionWidget)
+	{
+		if (!CollectionWidget->IsPopRequested())
+		{
+			UIManagerSubsystem->RequestPopWidget();
+		}
+		return;
+	}
+
+	// 스택 상태가 예상과 다를 때도 UIManager가 제거 가능 여부를 최종 판단하도록 요청합니다.
+	if (CollectionWidget->CompletePop())
+	{
+		CollectionWidget = nullptr;
+	}
 }
 
 void APBCollectionDemoActor::ToggleCollection()

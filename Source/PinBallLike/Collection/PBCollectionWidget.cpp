@@ -2,6 +2,7 @@
 
 #include "PBCollectionEntryWidget.h"
 #include "PinBallLike/Collection/PBCollectionSubsystem.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -24,7 +25,7 @@
 namespace
 {
 constexpr float TabLabelWidth = 96.0f;
-constexpr float DemoButtonLabelWidth = 82.0f;
+constexpr float DefaultButtonLabelWidth = 82.0f;
 constexpr float DetailPanelWidth = 440.0f;
 
 FSlateBrush MakeCollectionColorBrush(const FLinearColor& Color, const FVector2D& ImageSize)
@@ -101,7 +102,12 @@ void UPBCollectionWidget::NativeOnInitialized()
 	Super::NativeOnInitialized();
 
 	BuildDefaultWidgetTree();
+	BindWidgetEvents();
+	ValidateRequiredWidgetBindings();
+}
 
+void UPBCollectionWidget::BindWidgetEvents()
+{
 	if (AllTabButton)
 	{
 		AllTabButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleAllTabClicked);
@@ -126,46 +132,74 @@ void UPBCollectionWidget::NativeOnInitialized()
 	{
 		AchievementTabButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleAchievementTabClicked);
 	}
-	if (DiscoverButton)
+	if (CloseButton)
 	{
-		DiscoverButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleDiscoverClicked);
-	}
-	if (UnlockButton)
-	{
-		UnlockButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleUnlockClicked);
-	}
-	if (CompleteButton)
-	{
-		CompleteButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleCompleteClicked);
-	}
-	if (ResetButton)
-	{
-		ResetButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleResetClicked);
+		CloseButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleCloseClicked);
 	}
 	if (SearchTextBox)
 	{
-		SearchTextBox->OnTextChanged.AddDynamic(this, &UPBCollectionWidget::HandleSearchTextChanged);
+		SearchTextBox->OnTextChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleSearchTextChanged);
 	}
 	if (AttackTypeComboBox)
 	{
-		AttackTypeComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleAttackTypeFilterChanged);
+		AttackTypeComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleAttackTypeFilterChanged);
 	}
 	if (RoleComboBox)
 	{
-		RoleComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleRoleFilterChanged);
+		RoleComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleRoleFilterChanged);
 	}
 	if (AttributeComboBox)
 	{
-		AttributeComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleAttributeFilterChanged);
+		AttributeComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleAttributeFilterChanged);
 	}
 	if (StarGradeComboBox)
 	{
-		StarGradeComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleStarGradeFilterChanged);
+		StarGradeComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleStarGradeFilterChanged);
 	}
 	if (SortModeComboBox)
 	{
-		SortModeComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleSortModeChanged);
+		SortModeComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleSortModeChanged);
 	}
+}
+
+bool UPBCollectionWidget::ValidateRequiredWidgetBindings() const
+{
+	bool bAllWidgetsBound = true;
+	const auto CheckBinding = [this, &bAllWidgetsBound](const UObject* Widget, const TCHAR* WidgetName)
+	{
+		if (!IsValid(Widget))
+		{
+			UE_LOG(
+				LogTemp,
+				Error,
+				TEXT("%s: Widget Blueprint에 필수 위젯 '%s'가 없거나 이름/타입이 일치하지 않습니다."),
+				*GetName(),
+				WidgetName);
+			bAllWidgetsBound = false;
+		}
+	};
+
+	CheckBinding(EntryGridPanel, TEXT("EntryGridPanel"));
+	CheckBinding(SearchTextBox, TEXT("SearchTextBox"));
+	CheckBinding(AttackTypeComboBox, TEXT("AttackTypeComboBox"));
+	CheckBinding(RoleComboBox, TEXT("RoleComboBox"));
+	CheckBinding(AttributeComboBox, TEXT("AttributeComboBox"));
+	CheckBinding(StarGradeComboBox, TEXT("StarGradeComboBox"));
+	CheckBinding(SortModeComboBox, TEXT("SortModeComboBox"));
+	CheckBinding(DetailNameText, TEXT("DetailNameText"));
+	CheckBinding(DetailMetaText, TEXT("DetailMetaText"));
+	CheckBinding(DetailDescriptionText, TEXT("DetailDescriptionText"));
+	CheckBinding(DetailUnlockText, TEXT("DetailUnlockText"));
+	CheckBinding(DetailRecordText, TEXT("DetailRecordText"));
+	CheckBinding(DetailAccentBorder, TEXT("DetailAccentBorder"));
+	CheckBinding(AllTabButton, TEXT("AllTabButton"));
+	CheckBinding(BallTabButton, TEXT("BallTabButton"));
+	CheckBinding(BumperTabButton, TEXT("BumperTabButton"));
+	CheckBinding(BossTabButton, TEXT("BossTabButton"));
+	CheckBinding(AchievementTabButton, TEXT("AchievementTabButton"));
+	CheckBinding(CloseButton, TEXT("CloseButton"));
+
+	return bAllWidgetsBound;
 }
 
 void UPBCollectionWidget::NativeConstruct()
@@ -186,10 +220,13 @@ void UPBCollectionWidget::NativeConstruct()
 		CollectionSubsystem->OnCollectionEntryChanged.AddUniqueDynamic(
 			this,
 			&UPBCollectionWidget::HandleCollectionEntryChanged);
+		CollectionSubsystem->OnCollectionDataReady.AddUniqueDynamic(
+			this,
+			&UPBCollectionWidget::HandleCollectionDataReady);
 	}
 
 	PopulateFilterOptions();
-	RefreshCollection();
+	SetCategory(CurrentCategory);
 }
 
 void UPBCollectionWidget::NativeDestruct()
@@ -199,6 +236,9 @@ void UPBCollectionWidget::NativeDestruct()
 		CollectionSubsystem->OnCollectionEntryChanged.RemoveDynamic(
 			this,
 			&UPBCollectionWidget::HandleCollectionEntryChanged);
+		CollectionSubsystem->OnCollectionDataReady.RemoveDynamic(
+			this,
+			&UPBCollectionWidget::HandleCollectionDataReady);
 	}
 
 	Super::NativeDestruct();
@@ -230,6 +270,8 @@ void UPBCollectionWidget::BuildDefaultWidgetTree()
 	{
 		return;
 	}
+
+	bUsesRuntimeFallbackTree = true;
 
 	UBorder* RootBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("RootBorder"));
 	RootBorder->SetBrush(MakeCollectionColorBrush(FLinearColor(0.015f, 0.018f, 0.024f, 1.0f), FVector2D(1920.0f, 1080.0f)));
@@ -295,9 +337,8 @@ void UPBCollectionWidget::BuildHeader(UVerticalBox* RootBox)
 		SpacerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 	}
 
-	UButton* CloseButton = CreateTextButton(WidgetTree, TEXT("CloseButton"), NSLOCTEXT("PBCollection", "CloseButton", "닫기"));
+	CloseButton = CreateTextButton(WidgetTree, TEXT("CloseButton"), NSLOCTEXT("PBCollection", "CloseButton", "닫기"));
 	HeaderBox->AddChildToHorizontalBox(CloseButton);
-	CloseButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleCloseClicked);
 }
 
 void UPBCollectionWidget::BuildBody(UVerticalBox* RootBox)
@@ -464,42 +505,6 @@ void UPBCollectionWidget::BuildDetailPanel(UHorizontalBox* BodyBox)
 		RecordSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
 	}
 
-	UUniformGridPanel* ButtonGrid = WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), TEXT("DemoButtonGrid"));
-	ButtonGrid->SetMinDesiredSlotWidth(146.0f);
-	ButtonGrid->SetMinDesiredSlotHeight(42.0f);
-	ButtonGrid->SetSlotPadding(FMargin(4.0f));
-	DetailBox->AddChildToVerticalBox(ButtonGrid);
-	if (UVerticalBoxSlot* ButtonGridSlot = Cast<UVerticalBoxSlot>(ButtonGrid->Slot))
-	{
-		ButtonGridSlot->SetPadding(FMargin(0.0f));
-		ButtonGridSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
-	}
-
-	DiscoverButton = CreateTextButton(WidgetTree, TEXT("DiscoverButton"), NSLOCTEXT("PBCollection", "DiscoverButton", "발견"));
-	UnlockButton = CreateTextButton(WidgetTree, TEXT("UnlockButton"), NSLOCTEXT("PBCollection", "UnlockButton", "해금"));
-	CompleteButton = CreateTextButton(WidgetTree, TEXT("CompleteButton"), NSLOCTEXT("PBCollection", "CompleteButton", "완료"));
-	ResetButton = CreateTextButton(WidgetTree, TEXT("ResetButton"), NSLOCTEXT("PBCollection", "ResetButton", "초기화"));
-
-	const TArray<UButton*> DemoButtons = {
-		DiscoverButton,
-		UnlockButton,
-		CompleteButton,
-		ResetButton
-	};
-
-	for (int32 ButtonIndex = 0; ButtonIndex < DemoButtons.Num(); ++ButtonIndex)
-	{
-		UButton* DemoButton = DemoButtons[ButtonIndex];
-		UUniformGridSlot* ButtonSlot = ButtonGrid->AddChildToUniformGrid(
-			DemoButton,
-			ButtonIndex / 2,
-			ButtonIndex % 2);
-		if (ButtonSlot)
-		{
-			ButtonSlot->SetHorizontalAlignment(HAlign_Fill);
-			ButtonSlot->SetVerticalAlignment(VAlign_Fill);
-		}
-	}
 }
 
 UButton* UPBCollectionWidget::CreateTextButton(UWidgetTree* InWidgetTree, FName WidgetName, const FText& Label)
@@ -513,7 +518,7 @@ UButton* UPBCollectionWidget::CreateTextButton(UWidgetTree* InWidgetTree, FName 
 		14,
 		FLinearColor(0.92f, 0.94f, 0.96f, 1.0f));
 	LabelText->SetText(Label);
-	LabelText->SetMinDesiredWidth(WidgetName.ToString().Contains(TEXT("Tab")) ? TabLabelWidth : DemoButtonLabelWidth);
+	LabelText->SetMinDesiredWidth(WidgetName.ToString().Contains(TEXT("Tab")) ? TabLabelWidth : DefaultButtonLabelWidth);
 	LabelText->SetJustification(ETextJustify::Center);
 	Button->AddChild(LabelText);
 	if (UButtonSlot* ButtonSlot = Cast<UButtonSlot>(LabelText->Slot))
@@ -552,6 +557,10 @@ void UPBCollectionWidget::PopulateFilterOptions()
 	}
 
 	bIsPopulatingFilterOptions = true;
+	if (SearchTextBox)
+	{
+		SearchTextBox->SetText(FText::GetEmpty());
+	}
 
 	AttackTypeFilterIds = CollectionSubsystem->GetAvailableMetadataIds(EPBCollectionFilterField::AttackType);
 	RoleFilterIds = CollectionSubsystem->GetAvailableMetadataIds(EPBCollectionFilterField::Role);
@@ -728,13 +737,18 @@ void UPBCollectionWidget::RefreshDetail()
 
 	if (!bHasSelection)
 	{
+		const bool bIsLoading = CollectionSubsystem && !CollectionSubsystem->IsDataReady();
 		if (DetailNameText)
 		{
-			DetailNameText->SetText(NSLOCTEXT("PBCollection", "NoSelectionName", "도감"));
+			DetailNameText->SetText(bIsLoading
+				? NSLOCTEXT("PBCollection", "LoadingName", "도감 불러오는 중")
+				: NSLOCTEXT("PBCollection", "NoSelectionName", "도감"));
 		}
 		if (DetailMetaText)
 		{
-			DetailMetaText->SetText(NSLOCTEXT("PBCollection", "NoSelectionMeta", "항목 없음"));
+			DetailMetaText->SetText(bIsLoading
+				? NSLOCTEXT("PBCollection", "LoadingMeta", "잠시만 기다려 주세요.")
+				: NSLOCTEXT("PBCollection", "NoSelectionMeta", "항목 없음"));
 		}
 		if (DetailDescriptionText)
 		{
@@ -793,30 +807,32 @@ void UPBCollectionWidget::RefreshDetail()
 void UPBCollectionWidget::SetCategory(EPBCollectionCategory NewCategory)
 {
 	CurrentCategory = NewCategory;
-	if (AllTabButton)
+	if (bUsesRuntimeFallbackTree && AllTabButton)
 	{
 		AllTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::All));
 	}
-	if (BallTabButton)
+	if (bUsesRuntimeFallbackTree && BallTabButton)
 	{
 		BallTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Ball));
 	}
-	if (BumperTabButton)
+	if (bUsesRuntimeFallbackTree && BumperTabButton)
 	{
 		BumperTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Bumper));
 	}
-	if (BossTabButton)
+	if (bUsesRuntimeFallbackTree && BossTabButton)
 	{
 		BossTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Boss));
 	}
-	if (RelicTabButton)
+	if (bUsesRuntimeFallbackTree && RelicTabButton)
 	{
 		RelicTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Relic));
 	}
-	if (AchievementTabButton)
+	if (bUsesRuntimeFallbackTree && AchievementTabButton)
 	{
 		AchievementTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Achievement));
 	}
+
+	BP_OnCollectionCategoryChanged(NewCategory);
 	RefreshCollection();
 }
 
@@ -824,6 +840,10 @@ void UPBCollectionWidget::SelectEntry(FName CollectionId)
 {
 	SelectedCollectionId = CollectionId;
 	RefreshDetail();
+	if (CollectionSubsystem)
+	{
+		CollectionSubsystem->MarkEntryAsSeen(CollectionId);
+	}
 }
 
 APlayerController* UPBCollectionWidget::ResolvePlayerController() const
@@ -843,6 +863,19 @@ APlayerController* UPBCollectionWidget::ResolvePlayerController() const
 
 void UPBCollectionWidget::ApplyCollectionInputMode(const bool bEnableUI) const
 {
+	if (!bEnableUI)
+	{
+		if (const UGameInstance* GameInstance = GetGameInstance())
+		{
+			const UPBUIManagerSubsystem* UIManagerSubsystem =
+				GameInstance->GetSubsystem<UPBUIManagerSubsystem>();
+			if (IsValid(UIManagerSubsystem) && IsValid(UIManagerSubsystem->GetTopWidget()))
+			{
+				return;
+			}
+		}
+	}
+
 	APlayerController* PlayerController = ResolvePlayerController();
 	if (!PlayerController)
 	{
@@ -895,6 +928,21 @@ void UPBCollectionWidget::HandleAchievementTabClicked()
 
 void UPBCollectionWidget::HandleCloseClicked()
 {
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UPBUIManagerSubsystem>())
+		{
+			if (UIManagerSubsystem->GetTopWidget() == this)
+			{
+				if (IsPopRequested() || UIManagerSubsystem->RequestPopWidget())
+				{
+					return;
+				}
+			}
+		}
+	}
+
+	// 스택 상태가 예상과 다를 때도 UIManager가 제거 가능 여부를 최종 판단하도록 요청합니다.
 	CompletePop();
 }
 
@@ -950,38 +998,6 @@ void UPBCollectionWidget::HandleSortModeChanged(FString SelectedItem, ESelectInf
 	RefreshCollectionByFilterChange();
 }
 
-void UPBCollectionWidget::HandleDiscoverClicked()
-{
-	if (CollectionSubsystem && SelectedCollectionId != NAME_None)
-	{
-		CollectionSubsystem->DiscoverEntry(SelectedCollectionId);
-	}
-}
-
-void UPBCollectionWidget::HandleUnlockClicked()
-{
-	if (CollectionSubsystem && SelectedCollectionId != NAME_None)
-	{
-		CollectionSubsystem->UnlockEntry(SelectedCollectionId);
-	}
-}
-
-void UPBCollectionWidget::HandleCompleteClicked()
-{
-	if (CollectionSubsystem && SelectedCollectionId != NAME_None)
-	{
-		CollectionSubsystem->CompleteEntry(SelectedCollectionId, TEXT("검사 볼"));
-	}
-}
-
-void UPBCollectionWidget::HandleResetClicked()
-{
-	if (CollectionSubsystem)
-	{
-		CollectionSubsystem->ResetAllProgress();
-	}
-}
-
 void UPBCollectionWidget::HandleEntryClicked(FName CollectionId)
 {
 	SelectEntry(CollectionId);
@@ -990,4 +1006,15 @@ void UPBCollectionWidget::HandleEntryClicked(FName CollectionId)
 void UPBCollectionWidget::HandleCollectionEntryChanged(FName CollectionId)
 {
 	RefreshCollection();
+}
+
+void UPBCollectionWidget::HandleCollectionDataReady(bool bIsReady)
+{
+	if (!bIsReady)
+	{
+		return;
+	}
+
+	PopulateFilterOptions();
+	SetCategory(CurrentCategory);
 }

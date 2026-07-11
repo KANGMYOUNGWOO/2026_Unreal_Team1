@@ -9,8 +9,8 @@ class UPBCollectionWidget;
 class UPBUserWidget;
 
 /**
- * 도감 프로토타입을 테스트 레벨에서 열기 위한 임시 진입점입니다.
- * 레벨에 배치한 뒤 BeginPlay 자동 열기 또는 ToggleKey 입력으로 UIManager Push / Pop 흐름을 검증합니다.
+ * 도감 전용 테스트 레벨에서만 사용하는 개발 보조 액터입니다.
+ * IsEditorOnly()가 true이므로 패키징된 실제 게임에는 포함되지 않습니다.
  */
 UCLASS()
 class PINBALLLIKE_API APBCollectionDemoActor : public AActor
@@ -19,6 +19,7 @@ class PINBALLLIKE_API APBCollectionDemoActor : public AActor
 
 public:
 	APBCollectionDemoActor();
+	virtual bool IsEditorOnly() const override { return true; }
 
 	UFUNCTION(BlueprintCallable, Category = "Collection|Demo")
 	void OpenCollection();
