@@ -11,24 +11,6 @@
 
 using namespace PBSheetParserUtils;
 
-static TArray<FName> ParseNameArray(const FString& Value)
-{
-	TArray<FName> Names;
-	TArray<FString> Tokens;
-	Value.ParseIntoArray(Tokens, TEXT(","), true);
-
-	for (const FString& Token : Tokens)
-	{
-		const FString TrimmedToken = TrimCell(Token);
-		if (!IsUnsetValue(TrimmedToken))
-		{
-			Names.Add(FName(*TrimmedToken));
-		}
-	}
-
-	return Names;
-}
-
 UPBBallTableParser::UPBBallTableParser()
 {
 	DataAssetPreset.FolderPath.Path = TEXT("/Game/Blueprints/Ball/DataAsset");

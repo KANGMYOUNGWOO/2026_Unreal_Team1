@@ -89,7 +89,35 @@ void UPBCollectionEntryWidget::NativeOnInitialized()
 		EntryButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionEntryWidget::HandleClicked);
 	}
 
+	ValidateRequiredWidgetBindings();
 	Refresh();
+}
+
+bool UPBCollectionEntryWidget::ValidateRequiredWidgetBindings() const
+{
+	bool bAllWidgetsBound = true;
+	const auto CheckBinding = [this, &bAllWidgetsBound](const UObject* Widget, const TCHAR* WidgetName)
+	{
+		if (!IsValid(Widget))
+		{
+			UE_LOG(
+				LogTemp,
+				Error,
+				TEXT("%s: Widget Blueprint에 필수 위젯 '%s'가 없거나 이름/타입이 일치하지 않습니다."),
+				*GetName(),
+				WidgetName);
+			bAllWidgetsBound = false;
+		}
+	};
+
+	CheckBinding(EntryButton, TEXT("EntryButton"));
+	CheckBinding(CardBorder, TEXT("CardBorder"));
+	CheckBinding(AccentBorder, TEXT("AccentBorder"));
+	CheckBinding(CategoryColorBorder, TEXT("CategoryColorBorder"));
+	CheckBinding(NameText, TEXT("NameText"));
+	CheckBinding(MetaText, TEXT("MetaText"));
+
+	return bAllWidgetsBound;
 }
 
 void UPBCollectionEntryWidget::SetDisplayData(const FPBCollectionDisplayData& InDisplayData)
@@ -209,22 +237,20 @@ void UPBCollectionEntryWidget::Refresh()
 
 	if (CategoryColorBorder)
 	{
-		CategoryColorBorder->SetBrush(MakeColorBrush(
-			GetIconColor(DisplayData.Category, DisplayData.State),
-			FVector2D(82.0f, 82.0f)));
+		CategoryColorBorder->SetBrushColor(GetIconColor(DisplayData.Category, DisplayData.State));
 	}
 
 	if (AccentBorder)
 	{
-		AccentBorder->SetBrush(MakeColorBrush(
-			GetAccentColor(DisplayData.Category, DisplayData.State),
-			FVector2D(CardWidth - (CardInnerPadding * 2.0f), 14.0f)));
+		AccentBorder->SetBrushColor(GetAccentColor(DisplayData.Category, DisplayData.State));
 	}
 
 	if (CardBorder)
 	{
-		CardBorder->SetBrush(MakeColorBrush(GetCardColor(DisplayData.State), FVector2D(CardWidth, CardHeight)));
+		CardBorder->SetBrushColor(GetCardColor(DisplayData.State));
 	}
+
+	BP_OnCollectionDisplayDataChanged(DisplayData);
 }
 
 void UPBCollectionEntryWidget::HandleClicked()

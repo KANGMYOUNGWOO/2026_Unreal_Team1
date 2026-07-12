@@ -42,4 +42,7 @@ protected:
 		bool IsEnabled);
 	TSoftClassPtr<UPBBossPatternBase> FindPatternClass(FName PatternClassId) const;
 	void ClearBossPatternData(FName BossRowName);
+	
+private:
+	TSoftClassPtr<UPBBossPatternBase> FindPatternClassRecursive(const FName PatternClassId) const;
 };

@@ -38,7 +38,22 @@ void UPBBaseResourceComponent::TakeDamage(int32 Damage)
 		return;
 	}
 
-	ApplyResourceDelta(PBResourceNames::Health, -static_cast<float>(Damage));
+	float RemainingDamage = static_cast<float>(Damage);
+	if (HasResource(PBResourceNames::Shield))
+	{
+		const float CurrentShield = GetCurrent(PBResourceNames::Shield);
+		const float AbsorbedDamage = FMath::Min(CurrentShield, RemainingDamage);
+		if (AbsorbedDamage > 0.0f)
+		{
+			ApplyResourceDelta(PBResourceNames::Shield, -AbsorbedDamage);
+			RemainingDamage -= AbsorbedDamage;
+		}
+	}
+
+	if (RemainingDamage > 0.0f)
+	{
+		ApplyResourceDelta(PBResourceNames::Health, -RemainingDamage);
+	}
 }
 
 bool UPBBaseResourceComponent::IsDead() const
