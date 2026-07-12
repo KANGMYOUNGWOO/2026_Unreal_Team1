@@ -35,6 +35,9 @@ bool UPBBumperEffectTableParser::ParseRow(const FName RowName, const TMap<FStrin
 {
 	FPBBumperEffectRow NewRow;
 	NewRow.EffectType = ParseEnumValue(RowData.FindRef(TEXT("EffectType")), EPBBumperEffectType::Instant);
+	NewRow.ExecutionPolicy = ParseEnumValue(
+		RowData.FindRef(TEXT("ExecutionPolicy")),
+		EPBBumperEffectExecutionPolicy::Immediate);
 	NewRow.Power = ParseFloatValue(RowData.FindRef(TEXT("Power")), 0.0f);
 	NewRow.Description = FText::FromString(RowData.FindRef(TEXT("Description")));
 

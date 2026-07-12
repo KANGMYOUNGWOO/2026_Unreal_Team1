@@ -27,6 +27,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	EPBBumperState, PreviousState,
 	EPBBumperState, NewState);
 
+/**
+ * Trigger 배치와 효과 실행을 조정하는 범퍼 모듈이다.
+ * 개별 충전값은 Trigger가 소유하고, 이 클래스는 발동 순서와 효과 실행 레인만 관리한다.
+ */
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API APBModularBumperBase : public AActor
 {
@@ -47,6 +51,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
 	void FinishActivation();
 
+	/** 실행 중인 효과는 취소하지 않고, 대기 요청과 나머지 Trigger의 진행도만 초기화한다. */
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
 	void ResetTriggerCount();
 
@@ -68,6 +73,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper")
 	EPBBumperState GetBumperState() const;
 
+	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
+	APBBumperTriggerActorBase* GetActiveTriggerActor() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
+	int32 GetPendingActivationCount() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Effect")
 	void CreateBumperEffect();
 
@@ -88,7 +99,10 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	void AddTriggerCount(APBBallBase* Ball, int32 Amount = 1);
+	void AddTriggerCount(
+		APBBumperTriggerActorBase* TriggerActor,
+		APBBallBase* Ball,
+		int32 Amount = 1);
 	APBBumperTriggerActorBase* SpawnTriggerActor(
 		TSubclassOf<APBBumperTriggerActorBase> TriggerClass,
 		EPBBumperPositionId PositionId);
@@ -147,6 +161,24 @@ protected:
 	FPBBumperRuntimeState RuntimeState;
 
 private:
+	struct FPendingBumperActivation
+	{
+		TWeakObjectPtr<APBBumperTriggerActorBase> TriggerActor;
+		TWeakObjectPtr<APBBallBase> Ball;
+	};
+
 	bool FindBumperPositionTransform(EPBBumperPositionId PositionId, FTransform& OutTransform) const;
+	APBBumperTriggerActorBase* FindReadyTrigger() const;
+	void RequestActivation(APBBumperTriggerActorBase* TriggerActor, APBBallBase* Ball);
+	void QueueActivation(APBBumperTriggerActorBase* TriggerActor, APBBallBase* Ball);
+	void StartActivation(APBBumperTriggerActorBase* TriggerActor, APBBallBase* Ball);
+	void ExecuteActivation(APBBallBase* Ball);
+	void ScheduleNextPendingActivation();
+	void ProcessNextPendingActivation();
+	bool HasPendingActivationFor(const APBBumperTriggerActorBase* TriggerActor) const;
 	void NotifyTriggerCountChanged();
+
+	TWeakObjectPtr<APBBumperTriggerActorBase> ActiveTriggerActor;
+	TArray<FPendingBumperActivation> PendingActivations;
+	bool bPendingActivationScheduled = false;
 };
