@@ -50,7 +50,7 @@ private:
 	
 	void SetBattleLevelPhase(EPBBattleLevelPhase NewPhase);
 	void HandleCurrentPhase();
-	void InitializeBattleLaunchCount();
+	void InitializeBattleCounts();
 	void EnterBattleDataLoad();
 	void TryStartLevelPreparing();
 	void EnterLevelPreparing();

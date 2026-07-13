@@ -69,18 +69,47 @@ bool APBBattleGameState::ConsumeBattleLaunchCount()
 	return true;
 }
 
+void APBBattleGameState::SetRemainingBattleShiftCount(const int32 NewRemainingBattleShiftCount)
+{
+	const int32 PreviousBattleShiftCount = RemainingBattleShiftCount;
+	RemainingBattleShiftCount = FMath::Max(0, NewRemainingBattleShiftCount);
+
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Set remaining battle shift count. Remaining=%d"),
+		RemainingBattleShiftCount);
+
+	if (PreviousBattleShiftCount != RemainingBattleShiftCount)
+	{
+		OnBattleShiftCountChanged.Broadcast(PreviousBattleShiftCount, RemainingBattleShiftCount);
+	}
+}
+
+bool APBBattleGameState::ConsumeBattleShiftCount()
+{
+	if (RemainingBattleShiftCount <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Cannot consume battle shift count. Remaining=%d"),
+			RemainingBattleShiftCount);
+		return false;
+	}
+
+	SetRemainingBattleShiftCount(RemainingBattleShiftCount - 1);
+	return true;
+}
+
 #pragma region MessageHandler
 
 void APBBattleGameState::RegisterMessageListeners()
 {
 	OnBattleLevelPhaseChanged.AddDynamic(this, &APBBattleGameState::HandleBattleLevelPhaseChanged);
 	OnBattleLaunchCountChanged.AddDynamic(this, &APBBattleGameState::HandleBattleLaunchCountChanged);
+	OnBattleShiftCountChanged.AddDynamic(this, &APBBattleGameState::HandleBattleShiftCountChanged);
 }
 
 void APBBattleGameState::UnregisterMessageListeners()
 {
 	OnBattleLevelPhaseChanged.RemoveDynamic(this, &APBBattleGameState::HandleBattleLevelPhaseChanged);
 	OnBattleLaunchCountChanged.RemoveDynamic(this, &APBBattleGameState::HandleBattleLaunchCountChanged);
+	OnBattleShiftCountChanged.RemoveDynamic(this, &APBBattleGameState::HandleBattleShiftCountChanged);
 }
 
 void APBBattleGameState::HandleBattleLevelPhaseChanged(
@@ -114,6 +143,23 @@ void APBBattleGameState::HandleBattleLaunchCountChanged(
 	Message.NewCount = NewCount;
 	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
 		GameplayTags::Event_Battle_LaunchCount_Changed,
+		Message);
+}
+
+void APBBattleGameState::HandleBattleShiftCountChanged(
+	const int32 PreviousCount,
+	const int32 NewCount)
+{
+	if (!UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	FPBBattleShiftCountChangedMessage Message;
+	Message.PreviousCount = PreviousCount;
+	Message.NewCount = NewCount;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_Battle_ShiftCount_Changed,
 		Message);
 }
 
