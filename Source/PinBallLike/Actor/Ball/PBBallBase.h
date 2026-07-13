@@ -31,6 +31,12 @@ public:
 
 	void InitializeFromBallInstanceData(const FPBBallInstanceData& InBallInstanceData);
 
+	UFUNCTION(BlueprintPure, Category = "Ball|Data")
+	FName GetBallId() const { return BallInstanceData.BallId; }
+
+	UFUNCTION(BlueprintPure, Category = "Ball|Data")
+	int32 GetBallInstanceId() const { return BallInstanceData.InstanceId; }
+
 	UFUNCTION(BlueprintCallable, Category = "Ball|Combat")
 	void SetCombatRole(EPBBallPartyRole NewCombatRole);
 
