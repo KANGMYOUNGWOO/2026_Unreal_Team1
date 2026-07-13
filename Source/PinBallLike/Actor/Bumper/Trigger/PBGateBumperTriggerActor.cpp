@@ -3,8 +3,14 @@
 
 #include "PBGateBumperTriggerActor.h"
 
+#include "Components/MeshComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "PhysicsEngine/ConstraintInstance.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBGateBumperTriggerActor::APBGateBumperTriggerActor()
 {
@@ -16,10 +22,20 @@ void APBGateBumperTriggerActor::BeginPlay()
 	Super::BeginPlay();
 
 	RegisterGateAreas();
+	InitializeFlagSpinReaction();
+	InitializeGaugeVisual();
+	OnTriggerProgressChanged.AddUniqueDynamic(
+		this,
+		&APBGateBumperTriggerActor::HandleTriggerProgressChanged);
+	HandleTriggerProgressChanged(GetCurrentTriggerCount(), GetRequiredTriggerCount());
 }
 
 void APBGateBumperTriggerActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	OnTriggerProgressChanged.RemoveDynamic(
+		this,
+		&APBGateBumperTriggerActor::HandleTriggerProgressChanged);
+
 	for (UPrimitiveComponent* GateArea : GateAreas)
 	{
 		if (!IsValid(GateArea))
@@ -37,7 +53,11 @@ void APBGateBumperTriggerActor::EndPlay(const EEndPlayReason::Type EndPlayReason
 
 	GateAreas.Reset();
 	PassingBallOverlapCounts.Reset();
-	PassingBallEntrySides.Reset();
+	FlagSpinBallOverlapCounts.Reset();
+	GaugeMaterial = nullptr;
+	FlagVisualMesh = nullptr;
+	LastFlagSpinAngularVelocity = FVector::ZeroVector;
+	bIsFlagSpinReactionReady = false;
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -73,17 +93,392 @@ void APBGateBumperTriggerActor::SetupGateArea(UPrimitiveComponent* GateArea)
 	GateAreas.Add(GateArea);
 }
 
-float APBGateBumperTriggerActor::CalculateGateSide(
-	const UPrimitiveComponent* GateArea,
-	const APBBallBase* Ball) const
+void APBGateBumperTriggerActor::InitializeGaugeVisual()
 {
-	if (!IsValid(GateArea) || !IsValid(Ball))
+	auto TryCreateGaugeMaterial = [this](UMeshComponent* VisualMesh) -> bool
 	{
-		return 0.0f;
+		if (!IsValid(VisualMesh) || !VisualMesh->GetMaterial(GaugeMaterialIndex))
+		{
+			return false;
+		}
+
+		GaugeMaterial = VisualMesh->CreateDynamicMaterialInstance(GaugeMaterialIndex);
+		return IsValid(GaugeMaterial);
+	};
+
+	const TArray<UActorComponent*> TaggedComponents = GetComponentsByTag(
+		UMeshComponent::StaticClass(),
+		GaugeVisualTag);
+
+	for (UActorComponent* TaggedComponent : TaggedComponents)
+	{
+		if (TryCreateGaugeMaterial(Cast<UMeshComponent>(TaggedComponent)))
+		{
+			return;
+		}
 	}
 
-	const FVector DirectionToBall = Ball->GetActorLocation() - GateArea->GetComponentLocation();
-	return FVector::DotProduct(DirectionToBall, GateArea->GetForwardVector());
+	// Skeletal Mesh 전환 과정에서 기존 BumperVisual 태그가 빠져도 Flag Mesh의 게이지를 복구한다.
+	if (TryCreateGaugeMaterial(FlagVisualMesh))
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("[Bumper] Gate gauge visual is missing. Trigger=%s Tag=%s MaterialIndex=%d"),
+		*GetNameSafe(this),
+		*GaugeVisualTag.ToString(),
+		GaugeMaterialIndex);
+}
+
+void APBGateBumperTriggerActor::InitializeFlagSpinReaction()
+{
+	bIsFlagSpinReactionReady = false;
+	LastFlagSpinAngularVelocity = FVector::ZeroVector;
+	if (!bEnableFlagSpinReaction)
+	{
+		return;
+	}
+
+	FlagVisualMesh = FindFlagVisualMesh();
+	if (!IsValid(FlagVisualMesh))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Gate Flag visual mesh is missing. Trigger=%s Tag=%s Bone=%s"),
+			*GetNameSafe(this),
+			*FlagVisualTag.ToString(),
+			*FlagBoneName.ToString());
+		return;
+	}
+
+	if (!FlagVisualMesh->GetPhysicsAsset())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Gate Flag physics asset is missing. Trigger=%s Mesh=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(FlagVisualMesh));
+		FlagVisualMesh = nullptr;
+		return;
+	}
+
+	// 시각 관절만 시뮬레이션하며 게임의 Ball 충돌 판정은 기존 Box가 계속 담당한다.
+	const ECollisionEnabled::Type PreviousCollisionEnabled =
+		FlagVisualMesh->GetCollisionEnabled();
+	const FCollisionResponseContainer PreviousCollisionResponses =
+		FlagVisualMesh->GetCollisionResponseToChannels();
+	FlagVisualMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	FlagVisualMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	FlagVisualMesh->SetEnablePhysicsBlending(true);
+	FlagVisualMesh->SetBodySimulatePhysics(FlagBoneName, true);
+	FlagVisualMesh->SetAllBodiesBelowPhysicsBlendWeight(FlagBoneName, 1.0f, false, true);
+	if (!FlagVisualMesh->IsSimulatingPhysics(FlagBoneName))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Gate Flag body could not start simulation. Trigger=%s Bone=%s"),
+			*GetNameSafe(this),
+			*FlagBoneName.ToString());
+		FlagVisualMesh->SetCollisionEnabled(PreviousCollisionEnabled);
+		FlagVisualMesh->SetCollisionResponseToChannels(PreviousCollisionResponses);
+		FlagVisualMesh = nullptr;
+		return;
+	}
+
+	const FName ConstraintName = FlagConstraintName.IsNone()
+		? FlagBoneName
+		: FlagConstraintName;
+	FConstraintInstance* FlagConstraint = FlagVisualMesh->FindConstraintInstance(ConstraintName);
+	if (!FlagConstraint)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Gate Flag constraint is missing. Trigger=%s Constraint=%s"),
+			*GetNameSafe(this),
+			*ConstraintName.ToString());
+		FlagVisualMesh->SetBodySimulatePhysics(FlagBoneName, false);
+		FlagVisualMesh->SetCollisionEnabled(PreviousCollisionEnabled);
+		FlagVisualMesh->SetCollisionResponseToChannels(PreviousCollisionResponses);
+		FlagVisualMesh = nullptr;
+		return;
+	}
+
+	const FVector VisualSpinAxis = CalculateFlagSpinAxis();
+	const int32 FlagBoneIndex = FlagVisualMesh->GetBoneIndex(FlagBoneName);
+	if (VisualSpinAxis.IsNearlyZero() || FlagBoneIndex == INDEX_NONE)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Gate Flag spin axis could not be resolved. Trigger=%s Flag=%s End=%s"),
+			*GetNameSafe(this),
+			*FlagBoneName.ToString(),
+			*FlagEndBoneName.ToString());
+		FlagVisualMesh->SetBodySimulatePhysics(FlagBoneName, false);
+		FlagVisualMesh->SetCollisionEnabled(PreviousCollisionEnabled);
+		FlagVisualMesh->SetCollisionResponseToChannels(PreviousCollisionResponses);
+		FlagVisualMesh = nullptr;
+		return;
+	}
+
+	const FVector ConstraintTwistAxis = FlagVisualMesh->GetBoneTransform(FlagBoneIndex)
+		.TransformVectorNoScale(FlagConstraint->PriAxis1)
+		.GetSafeNormal();
+	const float TwistAxisAlignment = FMath::Abs(FVector::DotProduct(
+		VisualSpinAxis,
+		ConstraintTwistAxis));
+	if (TwistAxisAlignment < 0.95f)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Gate Flag visual axis and constraint Twist axis are misaligned. Trigger=%s Alignment=%.3f Visual=%s Constraint=%s"),
+			*GetNameSafe(this),
+			TwistAxisAlignment,
+			*VisualSpinAxis.ToCompactString(),
+			*ConstraintTwistAxis.ToCompactString());
+	}
+
+	// 눕는 두 Swing 축은 잠그고 Flag 세로축인 Twist만 자유 회전시킨다.
+	FlagConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0.0f);
+	FlagConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0.0f);
+	FlagConstraint->SetAngularTwistLimit(
+		EAngularConstraintMotion::ACM_Free,
+		0.0f);
+
+	// 위치 복귀 모터는 사용하지 않고 Twist 각속도에만 약한 감쇠를 건다.
+	FlagConstraint->SetDriveParams(
+		FVector::ZeroVector,
+		FVector::ZeroVector,
+		FVector::ZeroVector,
+		FVector::ZeroVector,
+		FVector(0.0f, FMath::Max(FlagSpinDamping, 0.0f), 0.0f),
+		FVector::ZeroVector,
+		EAngularDriveMode::TwistAndSwing);
+	FlagConstraint->SetAngularVelocityTarget(FVector::ZeroVector);
+	FlagConstraint->SetAngularDriveAccelerationMode(true);
+	FlagVisualMesh->SetPhysicsMaxAngularVelocityInRadians(
+		FMath::Max3(MaximumFlagSpinAngularSpeed, MinimumFlagSpinAngularSpeed, 0.0f),
+		false,
+		FlagBoneName);
+
+	FlagVisualMesh->WakeAllRigidBodies();
+	bIsFlagSpinReactionReady = true;
+	UE_LOG(LogTemp, Log,
+		TEXT("[Bumper] Gate Flag spin is ready. Trigger=%s Mesh=%s Bone=%s SpinAxis=%s TwistAlignment=%.3f"),
+		*GetNameSafe(this),
+		*GetNameSafe(FlagVisualMesh),
+		*FlagBoneName.ToString(),
+		*VisualSpinAxis.ToCompactString(),
+		TwistAxisAlignment);
+}
+
+USkeletalMeshComponent* APBGateBumperTriggerActor::FindFlagVisualMesh() const
+{
+	TInlineComponentArray<USkeletalMeshComponent*> SkeletalMeshes;
+	GetComponents(SkeletalMeshes);
+
+	// 명시적 태그를 먼저 존중하고, 이전 BP 호환을 위해 Flag 본이 있는 Mesh를 예비 경로로 찾는다.
+	for (const bool bRequireTag : {true, false})
+	{
+		for (USkeletalMeshComponent* SkeletalMesh : SkeletalMeshes)
+		{
+			if (!IsValid(SkeletalMesh)
+				|| SkeletalMesh->GetBoneIndex(FlagBoneName) == INDEX_NONE
+				|| (bRequireTag && !FlagVisualTag.IsNone()
+					&& !SkeletalMesh->ComponentHasTag(FlagVisualTag)))
+			{
+				continue;
+			}
+
+			return SkeletalMesh;
+		}
+
+		if (FlagVisualTag.IsNone())
+		{
+			break;
+		}
+	}
+
+	return nullptr;
+}
+
+FVector APBGateBumperTriggerActor::CalculateFlagSpinAxis() const
+{
+	if (!IsValid(FlagVisualMesh)
+		|| FlagVisualMesh->GetBoneIndex(FlagBoneName) == INDEX_NONE
+		|| FlagVisualMesh->GetBoneIndex(FlagEndBoneName) == INDEX_NONE)
+	{
+		return FVector::ZeroVector;
+	}
+
+	const FVector FlagPivot = FlagVisualMesh->GetBoneLocation(
+		FlagBoneName,
+		EBoneSpaces::WorldSpace);
+	const FVector FlagEnd = FlagVisualMesh->GetBoneLocation(
+		FlagEndBoneName,
+		EBoneSpaces::WorldSpace);
+	return (FlagEnd - FlagPivot).GetSafeNormal();
+}
+
+bool APBGateBumperTriggerActor::RegisterFlagSpinBallOverlap(APBBallBase* Ball)
+{
+	if (!IsValid(Ball))
+	{
+		return false;
+	}
+
+	int32& OverlapCount = FlagSpinBallOverlapCounts.FindOrAdd(Ball);
+	++OverlapCount;
+	return OverlapCount == 1;
+}
+
+void APBGateBumperTriggerActor::UnregisterFlagSpinBallOverlap(APBBallBase* Ball)
+{
+	if (!IsValid(Ball))
+	{
+		return;
+	}
+
+	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
+	int32* OverlapCount = FlagSpinBallOverlapCounts.Find(BallKey);
+	if (!OverlapCount)
+	{
+		return;
+	}
+
+	--(*OverlapCount);
+	if (*OverlapCount <= 0)
+	{
+		FlagSpinBallOverlapCounts.Remove(BallKey);
+	}
+}
+
+void APBGateBumperTriggerActor::ApplyFlagSpinReaction(
+	APBBallBase* Ball,
+	const UPrimitiveComponent* GateArea)
+{
+	if (!bIsFlagSpinReactionReady || !IsValid(FlagVisualMesh) || !IsValid(Ball))
+	{
+		return;
+	}
+
+	const IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
+	if (!Movable)
+	{
+		return;
+	}
+
+	const FVector BallVelocity = Movable->GetVelocity();
+	const FVector SpinAxis = CalculateFlagSpinAxis();
+	if (BallVelocity.ContainsNaN() || SpinAxis.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FVector FlagPivot = FlagVisualMesh->GetBoneLocation(
+		FlagBoneName,
+		EBoneSpaces::WorldSpace);
+	const FVector PlanarVelocity = FVector::VectorPlaneProject(BallVelocity, SpinAxis);
+	const float BallSpeed = PlanarVelocity.Size();
+	if (!FMath::IsFinite(BallSpeed)
+		|| BallSpeed < FMath::Max(MinimumFlagSpinBallSpeed, 0.0f))
+	{
+		return;
+	}
+
+	const FVector BallDirection = PlanarVelocity / BallSpeed;
+	const FVector PlanarLever = FVector::VectorPlaneProject(
+		Ball->GetActorLocation() - FlagPivot,
+		SpinAxis);
+	const FVector SpinSideAxis = FVector::CrossProduct(BallDirection, SpinAxis).GetSafeNormal();
+	if (SpinSideAxis.IsNearlyZero())
+	{
+		return;
+	}
+
+	// 볼 궤적의 좌우 오프셋만 Twist에 사용해 Swing 축이 섞이는 현상을 막는다.
+	const float SignedSpinOffset = FVector::DotProduct(PlanarLever, SpinSideAxis);
+	float GateHalfWidth = PlanarLever.Size();
+	if (IsValid(GateArea))
+	{
+		const FVector BoundsExtent = GateArea->Bounds.BoxExtent;
+		const FVector AbsoluteSideAxis = SpinSideAxis.GetAbs();
+		GateHalfWidth = FVector::DotProduct(BoundsExtent, AbsoluteSideAxis);
+	}
+	const float FullSpinDistance = FMath::Max(
+		GateHalfWidth * FMath::Max(FlagFullSpinOffsetRatio, 0.01f),
+		1.0f);
+	const float RawSpinWeight = FMath::Clamp(
+		FMath::Abs(SignedSpinOffset) / FullSpinDistance,
+		0.0f,
+		1.0f);
+	const float SpinWeight = FMath::SmoothStep(0.0f, 1.0f, RawSpinWeight);
+	if (SpinWeight <= KINDA_SMALL_NUMBER)
+	{
+		return;
+	}
+
+	const float SafeMinimumSpeed = FMath::Max(MinimumFlagSpinBallSpeed, 0.0f);
+	const float SafeFullSpeed = FMath::Max(FullFlagSpinBallSpeed, SafeMinimumSpeed + 1.0f);
+	const float SpeedAlpha = FMath::Clamp(
+		(BallSpeed - SafeMinimumSpeed) / (SafeFullSpeed - SafeMinimumSpeed),
+		0.0f,
+		1.0f);
+	const float SafeMinimumAngularSpeed = FMath::Max(MinimumFlagSpinAngularSpeed, 0.0f);
+	const float SafeMaximumAngularSpeed = FMath::Max(
+		MaximumFlagSpinAngularSpeed,
+		SafeMinimumAngularSpeed);
+	const float ReactionAngularSpeed = FMath::Lerp(
+		SafeMinimumAngularSpeed,
+		SafeMaximumAngularSpeed,
+		SpeedAlpha);
+	const FVector CurrentAngularVelocity =
+		FlagVisualMesh->GetPhysicsAngularVelocityInRadians(FlagBoneName);
+	const float CurrentSpinSpeed = FVector::DotProduct(CurrentAngularVelocity, SpinAxis);
+	const float DirectionMultiplier = bReverseFlagSpinDirection ? -1.0f : 1.0f;
+	const float ReactionSpinSpeed = FMath::Sign(SignedSpinOffset)
+		* DirectionMultiplier
+		* ReactionAngularSpeed
+		* SpinWeight;
+	const float NewSpinSpeed = FMath::Clamp(
+		CurrentSpinSpeed + ReactionSpinSpeed,
+		-SafeMaximumAngularSpeed,
+		SafeMaximumAngularSpeed);
+	LastFlagSpinAngularVelocity = SpinAxis * NewSpinSpeed;
+	FlagVisualMesh->SetPhysicsAngularVelocityInRadians(
+		LastFlagSpinAngularVelocity,
+		false,
+		FlagBoneName);
+	FlagVisualMesh->WakeAllRigidBodies();
+}
+
+bool APBGateBumperTriggerActor::MeetsMinimumPassSpeed(APBBallBase* Ball) const
+{
+	if (MinimumPassSpeed <= 0.0f)
+	{
+		return true;
+	}
+
+	const IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
+	if (!Movable)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Gate pass speed could not be checked. Trigger=%s Ball=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(Ball));
+		return false;
+	}
+
+	const float BallSpeed = Movable->GetVelocity().Size2D();
+	return FMath::IsFinite(BallSpeed) && BallSpeed >= MinimumPassSpeed;
+}
+
+void APBGateBumperTriggerActor::HandleTriggerProgressChanged(
+	const int32 CurrentCount,
+	const int32 RequiredCount)
+{
+	CurrentGaugeAmount = RequiredCount > 0
+		? FMath::Clamp(static_cast<float>(CurrentCount) / RequiredCount, 0.0f, 1.0f)
+		: 0.0f;
+
+	if (IsValid(GaugeMaterial))
+	{
+		GaugeMaterial->SetScalarParameterValue(GaugeParameterName, CurrentGaugeAmount);
+	}
 }
 
 void APBGateBumperTriggerActor::HandleGateBeginOverlap(
@@ -94,13 +489,18 @@ void APBGateBumperTriggerActor::HandleGateBeginOverlap(
 	bool IsFromSweep,
 	const FHitResult& SweepResult)
 {
-	if (!CanIncreaseTrigger())
+	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
+	if (!IsValid(Ball))
 	{
 		return;
 	}
 
-	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
-	if (!IsValid(Ball))
+	if (CanReactToBall() && RegisterFlagSpinBallOverlap(Ball))
+	{
+		ApplyFlagSpinReaction(Ball, OverlappedComponent);
+	}
+
+	if (!CanIncreaseTrigger())
 	{
 		return;
 	}
@@ -108,12 +508,6 @@ void APBGateBumperTriggerActor::HandleGateBeginOverlap(
 	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
 	int32& OverlapCount = PassingBallOverlapCounts.FindOrAdd(BallKey);
 	++OverlapCount;
-
-	if (OverlapCount == 1)
-	{
-		// 첫 진입 시점의 면만 저장한다.
-		PassingBallEntrySides.Add(BallKey, CalculateGateSide(OverlappedComponent, Ball));
-	}
 }
 
 void APBGateBumperTriggerActor::HandleGateEndOverlap(
@@ -127,6 +521,8 @@ void APBGateBumperTriggerActor::HandleGateEndOverlap(
 	{
 		return;
 	}
+
+	UnregisterFlagSpinBallOverlap(Ball);
 
 	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
 	int32* OverlapCount = PassingBallOverlapCounts.Find(BallKey);
@@ -142,16 +538,7 @@ void APBGateBumperTriggerActor::HandleGateEndOverlap(
 	}
 
 	PassingBallOverlapCounts.Remove(BallKey);
-
-	float EntrySide = 0.0f;
-	const bool IsEntrySideFound = PassingBallEntrySides.RemoveAndCopyValue(BallKey, EntrySide);
-	if (!CanIncreaseTrigger() || !IsEntrySideFound)
-	{
-		return;
-	}
-
-	const float ExitSide = CalculateGateSide(OverlappedComponent, Ball);
-	if (EntrySide * ExitSide >= 0.0f)
+	if (!CanIncreaseTrigger() || !MeetsMinimumPassSpeed(Ball))
 	{
 		return;
 	}

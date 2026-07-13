@@ -58,6 +58,11 @@ TArray<FName> UPBPlayerDataSubsystem::GetEquippedBumperRowIds() const
 		BumperRowIds.Add(BumperRowId);
 	}
 
+	if (GetEquippedBumper(EPBBumperSlotType::Top, BumperRowId))
+	{
+		BumperRowIds.Add(BumperRowId);
+	}
+
 	if (GetEquippedBumper(EPBBumperSlotType::Special, BumperRowId))
 	{
 		BumperRowIds.Add(BumperRowId);
@@ -70,5 +75,6 @@ void UPBPlayerDataSubsystem::InitializeDefaultBumpersForTest()
 {
 	EquipBumper(EPBBumperSlotType::Rebound, PBBumperAssetIds::Bumper::Test01);
 	EquipBumper(EPBBumperSlotType::Side, PBBumperAssetIds::Bumper::Test02);
-	EquipBumper(EPBBumperSlotType::Special, PBBumperAssetIds::Bumper::Test03);
+	EquipBumper(EPBBumperSlotType::Top, PBBumperAssetIds::Bumper::Test03);
+	EquipBumper(EPBBumperSlotType::Special, PBBumperAssetIds::Bumper::Gate01);
 }

@@ -20,6 +20,7 @@ namespace PBBumperAssetIds
 		inline const FName Test01(TEXT("Test01"));
 		inline const FName Test02(TEXT("Test02"));
 		inline const FName Test03(TEXT("Test03"));
+		inline const FName Gate01(TEXT("Gate01"));
 	}
 
 	// RowNames forTriggerTable
@@ -29,6 +30,8 @@ namespace PBBumperAssetIds
 		inline const FName Trigger_Test01(TEXT("Trigger_Test01"));
 		inline const FName Trigger_Test02(TEXT("Trigger_Test02"));
 		inline const FName Trigger_Test03(TEXT("Trigger_Test03"));
+		inline const FName Rebound_Trigger(TEXT("Rebound_Trigger"));
+		inline const FName GateBumper(TEXT("GateBumper"));
 	}
 
 	// RowNames for EffectTable
