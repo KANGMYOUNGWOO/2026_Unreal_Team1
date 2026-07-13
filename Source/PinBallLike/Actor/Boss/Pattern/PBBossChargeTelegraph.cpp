@@ -22,15 +22,17 @@ void APBBossChargeTelegraph::InitTelegraph(float InDurationSeconds, const FVecto
 	Super::InitTelegraph(InDurationSeconds, InScale);
 
 	ChargeStartLocation = GetActorLocation();
-	CurrentDirection = GetActorForwardVector();
-	CurrentDirection.Z = 0.0f;
-	CurrentDirection = CurrentDirection.GetSafeNormal();
-	if (CurrentDirection.IsNearlyZero())
-	{
-		CurrentDirection = FVector::ForwardVector;
-	}
+	CurrentDirection = NormalizeDirection2D(GetActorForwardVector());
 
 	UpdateTrackedPinballTransform();
+
+	UE_LOG(LogTemp, Log, TEXT("[ChargeTelegraph] InitTelegraph. Telegraph=%s StartLocation=%s TargetLocation=%s Direction=%s Length=%.2f StartActor=%s"),
+		*GetNameSafe(this),
+		*ChargeStartLocation.ToString(),
+		*CurrentTargetLocation.ToString(),
+		*CurrentDirection.ToString(),
+		CurrentLength,
+		*GetNameSafe(ChargeStartActor));
 
 	if (UWorld* World = GetWorld())
 	{
@@ -66,6 +68,13 @@ void APBBossChargeTelegraph::InitChargeTelegraph(
 	CurrentLength = FMath::Max(0.0f, Length);
 	UpdateChargeTelegraphTransform(StartLocation, Direction, Length);
 	InitTelegraph(InDurationSeconds, AppliedScale);
+
+	UE_LOG(LogTemp, Log, TEXT("[ChargeTelegraph] InitChargeTelegraph. Telegraph=%s StartLocation=%s Direction=%s Length=%.2f Scale=%s"),
+		*GetNameSafe(this),
+		*StartLocation.ToString(),
+		*Direction.ToString(),
+		Length,
+		*InScale.ToString());
 }
 
 void APBBossChargeTelegraph::UpdateChargeTelegraphTransform(
@@ -73,25 +82,50 @@ void APBBossChargeTelegraph::UpdateChargeTelegraphTransform(
 	const FVector& Direction,
 	float Length)
 {
-	FVector SafeDirection = Direction;
-	SafeDirection.Z = 0.0f;
-	SafeDirection = SafeDirection.GetSafeNormal();
-
-	if (SafeDirection.IsNearlyZero())
-	{
-		SafeDirection = FVector::ForwardVector;
-	}
-
+	const FVector SafeDirection = NormalizeDirection2D(Direction);
 	const float SafeLength = FMath::Max(0.0f, Length);
 
 	SetActorLocation(StartLocation);
 	SetActorRotation(SafeDirection.Rotation());
-	UpdateVisualComponentOffsets(SafeLength);
+	UpdateVisualComponentRotations();
 
 	ChargeStartLocation = StartLocation;
 	CurrentDirection = SafeDirection;
 	CurrentLength = SafeLength;
 	CurrentTargetLocation = StartLocation + SafeDirection * SafeLength;
+}
+
+void APBBossChargeTelegraph::SetChargeStartActor(AActor* NewChargeStartActor)
+{
+	ChargeStartActor = NewChargeStartActor;
+	ChargeStartComponent = nullptr;
+	UpdateTrackedPinballTransform();
+
+	UE_LOG(LogTemp, Log, TEXT("[ChargeTelegraph] SetChargeStartActor. Telegraph=%s StartActor=%s ActorLocation=%s StartLocation=%s TargetLocation=%s Direction=%s Length=%.2f"),
+		*GetNameSafe(this),
+		*GetNameSafe(ChargeStartActor),
+		ChargeStartActor ? *ChargeStartActor->GetActorLocation().ToString() : TEXT("None"),
+		*ChargeStartLocation.ToString(),
+		*CurrentTargetLocation.ToString(),
+		*CurrentDirection.ToString(),
+		CurrentLength);
+}
+
+void APBBossChargeTelegraph::SetChargeStartComponent(USceneComponent* NewChargeStartComponent)
+{
+	ChargeStartComponent = NewChargeStartComponent;
+	ChargeStartActor = NewChargeStartComponent ? NewChargeStartComponent->GetOwner() : nullptr;
+	UpdateTrackedPinballTransform();
+
+	UE_LOG(LogTemp, Log, TEXT("[ChargeTelegraph] SetChargeStartComponent. Telegraph=%s StartComponent=%s ComponentLocation=%s Owner=%s StartLocation=%s TargetLocation=%s Direction=%s Length=%.2f"),
+		*GetNameSafe(this),
+		*GetNameSafe(ChargeStartComponent),
+		ChargeStartComponent ? *ChargeStartComponent->GetComponentLocation().ToString() : TEXT("None"),
+		*GetNameSafe(ChargeStartActor),
+		*ChargeStartLocation.ToString(),
+		*CurrentTargetLocation.ToString(),
+		*CurrentDirection.ToString(),
+		CurrentLength);
 }
 
 FVector APBBossChargeTelegraph::GetCurrentTargetLocation() const
@@ -107,12 +141,21 @@ FVector APBBossChargeTelegraph::GetCurrentDirection() const
 void APBBossChargeTelegraph::HandleTelegraphDurationFinished()
 {
 	UpdateTrackedPinballTransform();
+	UE_LOG(LogTemp, Log, TEXT("[ChargeTelegraph] Finished. Telegraph=%s StartActor=%s StartLocation=%s TargetLocation=%s Direction=%s Length=%.2f"),
+		*GetNameSafe(this),
+		*GetNameSafe(ChargeStartActor),
+		*ChargeStartLocation.ToString(),
+		*CurrentTargetLocation.ToString(),
+		*CurrentDirection.ToString(),
+		CurrentLength);
 	OnChargeTelegraphFinished.Broadcast(CurrentTargetLocation, CurrentDirection);
 	DestroyTelegraph();
 }
 
 void APBBossChargeTelegraph::UpdateTrackedPinballTransform()
 {
+	UpdateChargeStartLocation();
+
 	AActor* PinballActor = FindPinballActor();
 	if (!PinballActor)
 	{
@@ -127,13 +170,22 @@ void APBBossChargeTelegraph::UpdateTrackedPinballTransform()
 	CurrentTargetLocation = TargetLocation;
 }
 
-void APBBossChargeTelegraph::UpdateVisualComponentOffsets(float Length)
+void APBBossChargeTelegraph::UpdateChargeStartLocation()
 {
-	if (!IsVisualOffsetToPathCenter)
+	if (IsValid(ChargeStartComponent))
 	{
+		ChargeStartLocation = ChargeStartComponent->GetComponentLocation();
 		return;
 	}
 
+	if (IsValid(ChargeStartActor))
+	{
+		ChargeStartLocation = ChargeStartActor->GetActorLocation();
+	}
+}
+
+void APBBossChargeTelegraph::UpdateVisualComponentRotations()
+{
 	TArray<USceneComponent*> SceneComponents;
 	GetComponents<USceneComponent>(SceneComponents);
 
@@ -145,11 +197,11 @@ void APBBossChargeTelegraph::UpdateVisualComponentOffsets(float Length)
 		}
 
 		const TObjectKey<USceneComponent> SceneComponentKey(SceneComponent);
-		const FVector InitialRelativeLocation = InitialRelativeLocationMap.FindOrAdd(
+		const FRotator InitialRelativeRotation = InitialRelativeRotationMap.FindOrAdd(
 			SceneComponentKey,
-			SceneComponent->GetRelativeLocation());
+			SceneComponent->GetRelativeRotation());
 
-		SceneComponent->SetRelativeLocation(InitialRelativeLocation + FVector(Length * 0.5f, 0.0f, 0.0f));
+		SceneComponent->SetRelativeRotation(InitialRelativeRotation + VisualRotationOffset);
 	}
 }
 
@@ -161,8 +213,13 @@ AActor* APBBossChargeTelegraph::FindPinballActor() const
 
 FVector APBBossChargeTelegraph::CalculateDirectionToTarget(const FVector& TargetLocation) const
 {
-	FVector Direction = TargetLocation - ChargeStartLocation;
-	Direction.Z = 0.0f;
-	Direction = Direction.GetSafeNormal();
-	return Direction.IsNearlyZero() ? FVector::ForwardVector : Direction;
+	return NormalizeDirection2D(TargetLocation - ChargeStartLocation);
+}
+
+FVector APBBossChargeTelegraph::NormalizeDirection2D(const FVector& Direction) const
+{
+	FVector NormalizedDirection = Direction;
+	NormalizedDirection.Z = 0.0f;
+	NormalizedDirection = NormalizedDirection.GetSafeNormal();
+	return NormalizedDirection.IsNearlyZero() ? FVector::ForwardVector : NormalizedDirection;
 }

@@ -270,12 +270,24 @@ void UPBBossPatternComponent::InitializePatternDatas(
 		TSubclassOf<UPBBossPatternBase> PatternClass = PatternData.PatternClass.Get();
 		if (!PatternClass)
 		{
+			PatternClass = PatternData.PatternClass.LoadSynchronous();
+		}
+
+		if (!PatternClass)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[BossPatternComponent] InitializePatternDatas failed. Pattern class load failed. Boss=%s PatternName=%s Path=%s"),
+				*GetNameSafe(OwnerBoss),
+				*PatternData.PatternName.ToString(),
+				*PatternData.PatternClass.ToSoftObjectPath().ToString());
 			continue;
 		}
 
 		UPBBossPatternBase* Pattern = NewObject<UPBBossPatternBase>(this, PatternClass);
 		if (!Pattern)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[BossPatternComponent] InitializePatternDatas failed. PatternName=%s PatternClass=%s"),
+				*PatternData.PatternName.ToString(),
+				*GetNameSafe(PatternClass));
 			continue;
 		}
 
@@ -411,7 +423,15 @@ UPBBossPatternBase* UPBBossPatternComponent::SelectExecutablePatternFromList(con
 
 	for (UPBBossPatternBase* Pattern : PatternInstanceList)
 	{
-		if (!Pattern || !IsPatternCooldownReady(Pattern) || !Pattern->CanExecute(OwnerBoss))
+		if (!Pattern)
+		{
+			continue;
+		}
+
+		const bool IsCooldownReady = IsPatternCooldownReady(Pattern);
+		const bool IsCanExecute = IsCooldownReady && Pattern->CanExecute(OwnerBoss);
+
+		if (!IsCanExecute)
 		{
 			continue;
 		}

@@ -111,7 +111,7 @@ public:
 	void StartIdleState();
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
-	void StartPatternState();
+	virtual void StartPatternState();
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void StopPatternState();

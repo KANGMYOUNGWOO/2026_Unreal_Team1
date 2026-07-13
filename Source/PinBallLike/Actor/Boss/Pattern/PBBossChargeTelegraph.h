@@ -31,6 +31,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
 	void UpdateChargeTelegraphTransform(const FVector& StartLocation, const FVector& Direction, float Length);
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
+	void SetChargeStartActor(AActor* NewChargeStartActor);
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
+	void SetChargeStartComponent(USceneComponent* NewChargeStartComponent);
+
 	UFUNCTION(BlueprintPure, Category = "Boss|Pattern|Telegraph")
 	FVector GetCurrentTargetLocation() const;
 
@@ -45,17 +51,25 @@ private:
 	void HandleTelegraphDurationFinished();
 
 	void UpdateTrackedPinballTransform();
-	void UpdateVisualComponentOffsets(float Length);
+	void UpdateChargeStartLocation();
+	void UpdateVisualComponentRotations();
 	AActor* FindPinballActor() const;
 	FVector CalculateDirectionToTarget(const FVector& TargetLocation) const;
+	FVector NormalizeDirection2D(const FVector& Direction) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern|Telegraph", meta = (AllowPrivateAccess = "true"))
-	bool IsVisualOffsetToPathCenter = true;
+	FRotator VisualRotationOffset = FRotator::ZeroRotator;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> ChargeStartActor;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USceneComponent> ChargeStartComponent;
 
 	FVector ChargeStartLocation = FVector::ZeroVector;
 	FVector CurrentTargetLocation = FVector::ZeroVector;
 	FVector CurrentDirection = FVector::ForwardVector;
 	float CurrentLength = 0.0f;
 	FTimerHandle TelegraphDurationTimerHandle;
-	TMap<TObjectKey<USceneComponent>, FVector> InitialRelativeLocationMap;
+	TMap<TObjectKey<USceneComponent>, FRotator> InitialRelativeRotationMap;
 };

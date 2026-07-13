@@ -33,6 +33,11 @@ UPBBossTableParser::UPBBossTableParser()
 	SnakeBossClassPreset.NameFormat = TEXT("BP_{0}");
 	BossClassPresets.Add(SnakeBossClassPreset);
 
+	FPBSheetAssetPathPreset GolemBossClassPreset;
+	GolemBossClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/Golem");
+	GolemBossClassPreset.NameFormat = TEXT("BP_{0}");
+	BossClassPresets.Add(GolemBossClassPreset);
+
 	BossStatusWidgetClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/UI");
 	BossStatusWidgetClassPreset.NameFormat = TEXT("WBP_{0}");
 	EnrageCameraShakeClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/UI");

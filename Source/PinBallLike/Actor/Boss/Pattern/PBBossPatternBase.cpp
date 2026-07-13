@@ -103,7 +103,11 @@ void UPBBossPatternBase::SetOwnerBoss(APBBossBase* Boss)
 
 AActor* UPBBossPatternBase::FindPinballActor() const
 {
-	const APBBossBase* Boss = GetOwnerBoss();
+	return FindPinballActor(GetOwnerBoss());
+}
+
+AActor* UPBBossPatternBase::FindPinballActor(APBBossBase* Boss) const
+{
 	if (!Boss)
 	{
 		return nullptr;

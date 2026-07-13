@@ -85,6 +85,7 @@ protected:
 	// 패턴 실행 중 참조할 소유 보스 액터를 저장합니다.
 	void SetOwnerBoss(APBBossBase* Boss);
 	AActor* FindPinballActor() const;
+	AActor* FindPinballActor(APBBossBase* Boss) const;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Pattern|Telegraph")
 	TArray<FPBBossPatternTelegraphData> TelegraphDataList;
