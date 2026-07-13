@@ -72,6 +72,15 @@ struct PINBALLLIKE_API FPBBattleBossDeadMessage
 };
 
 USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleBossIntroCompletedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> BossActor = nullptr;
+};
+
+USTRUCT(BlueprintType)
 struct PINBALLLIKE_API FPBBattlePartyDeploymentStartedMessage
 {
 	GENERATED_BODY()

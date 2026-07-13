@@ -186,7 +186,6 @@ void APBBattleGameMode::TryStartBossInfo()
 void APBBattleGameMode::EnterBossIntro()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BossIntro."));
-	SetBattleLevelPhase(EPBBattleLevelPhase::BallDeployment);
 }
 
 void APBBattleGameMode::EnterBallDeployment()
@@ -447,6 +446,11 @@ void APBBattleGameMode::RegisterBattleMessageListeners()
 		this,
 		&APBBattleGameMode::HandlePreparationCompletedMessage);
 
+	BossIntroCompletedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattleBossIntroCompletedMessage>(
+		GameplayTags::Event_Battle_Boss_Intro_Completed,
+		this,
+		&APBBattleGameMode::HandleBossIntroCompletedMessage);
+
 	BossDeadListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattleBossDeadMessage>(
 		GameplayTags::Event_Battle_Boss_Dead,
 		this,
@@ -483,6 +487,11 @@ void APBBattleGameMode::UnregisterBattleMessageListeners()
 	if (BossDeadListenerHandle.IsValid())
 	{
 		BossDeadListenerHandle.Unregister();
+	}
+
+	if (BossIntroCompletedListenerHandle.IsValid())
+	{
+		BossIntroCompletedListenerHandle.Unregister();
 	}
 
 	if (PartyLaunchRequestedListenerHandle.IsValid())
@@ -556,6 +565,27 @@ void APBBattleGameMode::HandleBossDeadMessage(
 	}
 
 	SetBattleLevelPhase(EPBBattleLevelPhase::BossDead);
+}
+
+void APBBattleGameMode::HandleBossIntroCompletedMessage(
+	FGameplayTag Channel,
+	const FPBBattleBossIntroCompletedMessage& Message)
+{
+	const APBBattleGameState* BattleGameState = GetBattleGameState();
+	const APBBossBase* SpawnedBoss = BossSpawner ? BossSpawner->GetSpawnedBoss() : nullptr;
+	if (!BattleGameState
+		|| BattleGameState->GetBattleLevelPhase() != EPBBattleLevelPhase::BossIntro
+		|| !SpawnedBoss
+		|| Message.BossActor != SpawnedBoss)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Boss intro completed. Channel=%s Boss=%s"),
+		*Channel.ToString(),
+		*GetNameSafe(Message.BossActor));
+
+	SetBattleLevelPhase(EPBBattleLevelPhase::BallDeployment);
 }
 
 void APBBattleGameMode::HandlePartyLaunchRequestedMessage(

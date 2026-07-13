@@ -295,6 +295,11 @@ FText APBBossBase::GetBossName() const
 	return BossName;
 }
 
+UTexture2D* APBBossBase::GetBossIntroImage() const
+{
+	return BossIntroImage;
+}
+
 void APBBossBase::InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAsset)
 {
 	if (!IsValid(BossDataAsset))

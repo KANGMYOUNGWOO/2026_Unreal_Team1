@@ -18,6 +18,7 @@ class UPBBossWeaknessComponent;
 class UPBBossDataAsset;
 class UCameraShakeBase;
 class UStateTreeComponent;
+class UTexture2D;
 class USphereComponent;
 struct FPBBossStateTreeTask;
 
@@ -136,6 +137,9 @@ public:
 	// UI 등에 표시할 보스 이름을 반환합니다.
 	FText GetBossName() const;
 
+	UFUNCTION(BlueprintPure, Category = "Boss|Base Profile")
+	UTexture2D* GetBossIntroImage() const;
+
 	void InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAsset);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Base Damage")
@@ -216,6 +220,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Profile")
 	FText BossName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Profile")
+	TObjectPtr<UTexture2D> BossIntroImage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Groggy", meta = (ClampMin = "0.1"))
 	float GroggyDurationSeconds = 3.0f;

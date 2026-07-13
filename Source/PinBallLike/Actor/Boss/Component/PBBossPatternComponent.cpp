@@ -307,6 +307,7 @@ void UPBBossPatternComponent::HandleBattlePhaseChangedMessage(
 	}
 
 	ResetPatternStartTime();
+	StartPatternSystem();
 }
 
 void UPBBossPatternComponent::InitializePatternDatas(
