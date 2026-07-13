@@ -161,6 +161,11 @@ bool APBBossSpawner::IsLoadedBossDataReady() const
 	return IsBossDataLoaded;
 }
 
+void APBBossSpawner::SetBossRowName(const FName NewBossRowName)
+{
+	BossRowName = NewBossRowName;
+}
+
 bool APBBossSpawner::RequestBossDataAsync(FStreamableDelegate OnLoaded)
 {
 	if (BossRowName.IsNone())

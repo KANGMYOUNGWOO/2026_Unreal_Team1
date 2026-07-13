@@ -11,6 +11,7 @@
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 
 #pragma region Lifecycle
 
@@ -261,6 +262,25 @@ void APBBattleGameMode::LoadBoss()
 		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Boss data load failed. Missing BossSpawner."));
 		MarkDataLoaded(EPBBattlePreparationType::Boss, false);
 		return;
+	}
+
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (const UPBPlayerDataSubsystem* PlayerDataSubsystem =
+			GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
+		{
+			if (const UPBTableDataSubsystem* TableDataSubsystem =
+				GameInstance->GetSubsystem<UPBTableDataSubsystem>())
+			{
+				TArray<FName> BossRowNames;
+				if (TableDataSubsystem->GetBossRowNames(BossRowNames)
+					&& BossRowNames.IsValidIndex(PlayerDataSubsystem->GetCurrentBossIndex()))
+				{
+					FoundBossSpawner->SetBossRowName(
+						BossRowNames[PlayerDataSubsystem->GetCurrentBossIndex()]);
+				}
+			}
+		}
 	}
 
 	const FGuid RequestId = FoundBossSpawner->LoadBossDataAssetAsync(
@@ -517,6 +537,23 @@ void APBBattleGameMode::HandleBossDeadMessage(
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Boss dead message. Channel=%s Boss=%s"),
 		*Channel.ToString(),
 		*GetNameSafe(Message.BossActor));
+
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBPlayerDataSubsystem* PlayerDataSubsystem =
+			GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
+		{
+			if (const UPBTableDataSubsystem* TableDataSubsystem =
+				GameInstance->GetSubsystem<UPBTableDataSubsystem>())
+			{
+				TArray<FName> BossRowNames;
+				if (TableDataSubsystem->GetBossRowNames(BossRowNames))
+				{
+					PlayerDataSubsystem->AdvanceBossProgress(BossRowNames.Num());
+				}
+			}
+		}
+	}
 
 	SetBattleLevelPhase(EPBBattleLevelPhase::BossDead);
 }

@@ -39,6 +39,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|Spawn")
 	void ClearSpawnedBoss();
 
+	void SetBossRowName(FName NewBossRowName);
+
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 

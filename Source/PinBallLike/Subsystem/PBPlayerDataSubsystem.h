@@ -26,6 +26,10 @@ public:
 #pragma region Battle
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
 	int32 GetInitialBattleLaunchCount() const { return InitialBattleLaunchCount; }
+
+	int32 GetCurrentBossIndex() const { return CurrentBossIndex; }
+
+	void AdvanceBossProgress(int32 BossCount);
 #pragma endregion
 
 #pragma region Bumper
@@ -51,5 +55,8 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 InitialBattleLaunchCount = 5;
+
+	UPROPERTY(Transient)
+	int32 CurrentBossIndex = 0;
 
 };

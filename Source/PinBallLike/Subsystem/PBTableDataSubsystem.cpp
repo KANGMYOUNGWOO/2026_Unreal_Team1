@@ -407,6 +407,19 @@ bool UPBTableDataSubsystem::FindShopRow(FName RowName, FPBShopTableRow& OutRow) 
 
 #pragma region Boss
 
+bool UPBTableDataSubsystem::GetBossRowNames(TArray<FName>& OutRowNames) const
+{
+	OutRowNames.Reset();
+
+	if (!IsValid(BossTable))
+	{
+		return false;
+	}
+
+	OutRowNames = BossTable->GetRowNames();
+	return !OutRowNames.IsEmpty();
+}
+
 bool UPBTableDataSubsystem::FindBossRow(FName RowName, FPBBossTableRow& OutRow) const
 {
 	return FindTableRow(BossTable, RowName, OutRow, TEXT("FindBossRow"));
