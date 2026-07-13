@@ -11,18 +11,14 @@ class UBorder;
 class UButton;
 class UComboBoxString;
 class UEditableTextBox;
-class UHorizontalBox;
 class UPBCollectionEntryWidget;
 class UPBCollectionSubsystem;
-class UScrollBox;
 class UTextBlock;
 class UUniformGridPanel;
-class UVerticalBox;
-class UWidgetTree;
 
 /**
  * 도감 전체 화면의 데이터 처리와 사용자 입력을 담당합니다.
- * 외형은 이 클래스를 부모로 삼은 Widget Blueprint에서 구성하며, C++ UI는 기존 클래스 직접 참조를 위한 호환 폴백입니다.
+ * 외형은 이 클래스를 부모로 삼은 Widget Blueprint에서 구성합니다.
  */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionWidget : public UPBUserWidget
@@ -51,14 +47,8 @@ protected:
 	void BP_OnCollectionCategoryChanged(EPBCollectionCategory NewCategory);
 
 private:
-	void BuildDefaultWidgetTree();
-	void BuildHeader(UVerticalBox* RootBox);
-	void BuildBody(UVerticalBox* RootBox);
-	void BuildFilterPanel(UVerticalBox* ListBox);
-	void BuildDetailPanel(UHorizontalBox* BodyBox);
-
-	UButton* CreateTextButton(UWidgetTree* InWidgetTree, FName WidgetName, const FText& Label);
-	UTextBlock* CreateText(UWidgetTree* InWidgetTree, FName WidgetName, int32 FontSize, const FLinearColor& Color);
+	/** 메인 메뉴에 남은 C++ 원본 클래스 참조를 실제 도감 WBP로 교체하는 임시 호환 경로입니다. */
+	bool RedirectLegacyNativeWidget();
 	void BindWidgetEvents();
 	bool ValidateRequiredWidgetBindings() const;
 
@@ -110,6 +100,7 @@ private:
 	UFUNCTION()
 	void HandleCollectionDataReady(bool bIsReady);
 
+	/** 목록 항목용 Widget Blueprint입니다. C++ 원본 클래스가 아니라 실제 BP 클래스를 지정해야 합니다. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collection|UI", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UPBCollectionEntryWidget> EntryWidgetClass;
 
@@ -184,6 +175,5 @@ private:
 	TMap<FString, int32> StarGradeFilterMap;
 	TMap<FString, EPBCollectionSortMode> SortModeMap;
 	bool bIsPopulatingFilterOptions = false;
-	bool bUsesRuntimeFallbackTree = false;
 	FName SelectedCollectionId = NAME_None;
 };
