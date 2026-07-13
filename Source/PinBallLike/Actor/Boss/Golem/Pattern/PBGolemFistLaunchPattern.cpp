@@ -6,12 +6,19 @@
 #include "PinBallLike/Actor/Boss/Pattern/PBBossChargeTelegraph.h"
 #include "PinBallLike/Actor/Boss/Pattern/PBBossPatternTelegraph.h"
 
+bool UPBGolemFistLaunchPattern::UsesHand(EPBGolemBossHandType TargetHandType) const
+{
+	return HandType == TargetHandType;
+}
+
 bool UPBGolemFistLaunchPattern::CanExecute_Implementation(APBBossBase* Boss) const
 {
 	const APBGolemBoss* GolemBoss = Cast<APBGolemBoss>(Boss);
+	const APBGolemBossHand* GolemHand = GolemBoss ? GolemBoss->GetGolemHand(HandType) : nullptr;
 	const bool IsCanExecute = Super::CanExecute_Implementation(Boss)
 		&& GolemBoss
-		&& GolemBoss->GetGolemHand(HandType);
+		&& GolemHand
+		&& GolemHand->IsHandAvailable();
 
 	UE_LOG(LogTemp, Log, TEXT("[GolemFistLaunchPattern] CanExecute. Pattern=%s Boss=%s HandType=%d Success=%s"),
 		*GetNameSafe(this),

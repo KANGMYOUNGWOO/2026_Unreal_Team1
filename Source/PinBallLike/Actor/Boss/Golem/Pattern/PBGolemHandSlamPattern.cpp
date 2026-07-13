@@ -6,6 +6,11 @@
 #include "PinBallLike/Actor/Boss/Golem/PBGolemHandMovementComponent.h"
 #include "TimerManager.h"
 
+bool UPBGolemHandSlamPattern::UsesHand(EPBGolemBossHandType TargetHandType) const
+{
+	return HandType == TargetHandType;
+}
+
 bool UPBGolemHandSlamPattern::CanExecute_Implementation(APBBossBase* Boss) const
 {
 	const APBGolemBoss* GolemBoss = Cast<APBGolemBoss>(Boss);
@@ -14,6 +19,7 @@ bool UPBGolemHandSlamPattern::CanExecute_Implementation(APBBossBase* Boss) const
 	const bool IsCanExecute = Super::CanExecute_Implementation(Boss)
 		&& GolemBoss
 		&& GolemHand
+		&& GolemHand->IsHandAvailable()
 		&& PinballActor;
 
 	UE_LOG(LogTemp, Log, TEXT("[GolemHandSlamPattern] CanExecute. Pattern=%s Boss=%s HandType=%d Hand=%s Pinball=%s Success=%s"),

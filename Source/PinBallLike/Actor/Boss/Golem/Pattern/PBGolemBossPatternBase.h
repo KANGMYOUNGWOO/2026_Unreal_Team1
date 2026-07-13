@@ -13,6 +13,9 @@ class PINBALLLIKE_API UPBGolemBossPatternBase : public UPBBossPatternBase
 {
 	GENERATED_BODY()
 
+public:
+	virtual bool UsesHand(EPBGolemBossHandType HandType) const;
+
 protected:
 	APBGolemBoss* GetGolemBoss() const;
 	APBGolemBoss* GetGolemBoss(APBBossBase* Boss) const;

@@ -1,6 +1,9 @@
 #include "PBGolemBoss.h"
 
 #include "PBGolemBossHand.h"
+#include "PinBallLike/Actor/Boss/Component/PBBossGroggyComponent.h"
+#include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
+#include "PinBallLike/Actor/Boss/Golem/Pattern/PBGolemBossPatternBase.h"
 
 APBGolemBoss::APBGolemBoss()
 {
@@ -86,6 +89,28 @@ void APBGolemBoss::StartPatternState()
 APBGolemBossHand* APBGolemBoss::GetGolemHand(EPBGolemBossHandType HandType) const
 {
 	return HandType == EPBGolemBossHandType::Left ? LeftHand : RightHand;
+}
+
+void APBGolemBoss::HandleGolemHandDestroyed(APBGolemBossHand* DestroyedHand, int32 GroggyAmount)
+{
+	if (!IsValid(DestroyedHand) || GetGolemHand(DestroyedHand->GetHandType()) != DestroyedHand)
+	{
+		return;
+	}
+
+	if (BossPatternComponent)
+	{
+		UPBGolemBossPatternBase* GolemPattern = Cast<UPBGolemBossPatternBase>(BossPatternComponent->GetCurrentPattern());
+		if (GolemPattern && GolemPattern->UsesHand(DestroyedHand->GetHandType()))
+		{
+			BossPatternComponent->CancelCurrentPattern();
+		}
+	}
+
+	if (BossGroggyComponent && GroggyAmount > 0)
+	{
+		BossGroggyComponent->ApplyGroggyDamage(GroggyAmount);
+	}
 }
 
 void APBGolemBoss::ResetGolemIdleAnimationSyncTime()

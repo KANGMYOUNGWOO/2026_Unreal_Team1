@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Interface/BossInterface.h"
 #include "PBGolemBossTypes.h"
 #include "PBGolemBossHand.generated.h"
 
@@ -10,8 +11,14 @@ class UPBGolemHandMovementComponent;
 class USceneComponent;
 class USkeletalMeshComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FPBGolemHandHPChangedSignature,
+	int32, CurrentHandHP,
+	int32, MaxHandHP);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBGolemHandStateChangedSignature);
+
 UCLASS()
-class PINBALLLIKE_API APBGolemBossHand : public AActor
+class PINBALLLIKE_API APBGolemBossHand : public AActor, public IBossInterface
 {
 	GENERATED_BODY()
 
@@ -19,6 +26,8 @@ public:
 	APBGolemBossHand();
 
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void DamageToBoss_Implementation(int32 DamageAmount) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Golem Hand")
 	void InitializeGolemHand(APBGolemBoss* NewOwnerBoss, EPBGolemBossHandType NewHandType, FVector NewDefaultOffset);
@@ -81,6 +90,27 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Golem Hand")
 	USceneComponent* GetTelegraphStartComponent() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Golem Hand|HP")
+	void ApplyHandDamage(int32 DamageAmount);
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Golem Hand|HP")
+	bool IsHandAvailable() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Golem Hand|HP")
+	int32 GetCurrentHandHP() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Golem Hand|HP")
+	int32 GetMaxHandHP() const;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Golem Hand|HP")
+	FPBGolemHandHPChangedSignature OnHandHPChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Golem Hand|HP")
+	FPBGolemHandStateChangedSignature OnHandDestroyed;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Golem Hand|HP")
+	FPBGolemHandStateChangedSignature OnHandRegenerated;
+
 protected:
 	void MoveToWorldLocationInternal(FVector TargetWorldLocation, float Duration, bool IsIgnorePatternMovementLock);
 	FVector CalculateActorTargetLocationForTelegraphStart(FVector TargetWorldLocation) const;
@@ -91,6 +121,12 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Boss|Golem Hand Animation")
 	void BP_OnIdleAnimationSyncRequested(float SyncedPosition);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Boss|Golem Hand|HP")
+	void BP_OnHandDestroyed();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Boss|Golem Hand|HP")
+	void BP_OnHandRegenerated();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem Hand")
 	TObjectPtr<USceneComponent> SceneRoot;
@@ -110,12 +146,32 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Hand Animation", meta = (ClampMin = "0.1"))
 	float IdleAnimationLength = 1.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Hand|HP", meta = (ClampMin = "1"))
+	int32 MaxHandHP = 100;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem Hand|HP")
+	int32 CurrentHandHP = 100;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Hand|HP", meta = (ClampMin = "0.0"))
+	float RegenerationDelay = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Hand|HP", meta = (ClampMin = "0"))
+	int32 DestroyedGroggyAmount = 25;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem Hand|HP")
+	bool IsHandDestroyedValue = false;
+
 	UPROPERTY(Transient)
 	TObjectPtr<APBGolemBoss> OwnerBoss;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> FistAimTargetActor;
 
+	void DestroyHand();
+	void RegenerateHand();
+	void SetHandActive(bool IsActive);
+
+	FTimerHandle RegenerationTimerHandle;
 	bool IsFistAiming = false;
 	bool IsPatternMovementLocked = false;
 };

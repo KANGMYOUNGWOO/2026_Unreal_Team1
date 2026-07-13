@@ -3,6 +3,12 @@
 #include "PinBallLike/Actor/Boss/Golem/PBGolemBoss.h"
 #include "PinBallLike/Actor/Boss/Golem/PBGolemBossHand.h"
 
+bool UPBGolemBossPatternBase::UsesHand(EPBGolemBossHandType HandType) const
+{
+	static_cast<void>(HandType);
+	return false;
+}
+
 APBGolemBoss* UPBGolemBossPatternBase::GetGolemBoss() const
 {
 	APBGolemBoss* GolemBoss = Cast<APBGolemBoss>(GetOwnerBoss());

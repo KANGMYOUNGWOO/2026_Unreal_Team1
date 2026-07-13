@@ -4,6 +4,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "PBGolemBoss.h"
 #include "PBGolemHandMovementComponent.h"
+#include "TimerManager.h"
 
 APBGolemBossHand::APBGolemBossHand()
 {
@@ -34,6 +35,17 @@ void APBGolemBossHand::Tick(float DeltaSeconds)
 	UpdateFistAimRotation();
 }
 
+void APBGolemBossHand::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearTimer(RegenerationTimerHandle);
+	Super::EndPlay(EndPlayReason);
+}
+
+void APBGolemBossHand::DamageToBoss_Implementation(int32 DamageAmount)
+{
+	ApplyHandDamage(DamageAmount);
+}
+
 void APBGolemBossHand::InitializeGolemHand(
 	APBGolemBoss* NewOwnerBoss,
 	EPBGolemBossHandType NewHandType,
@@ -41,11 +53,16 @@ void APBGolemBossHand::InitializeGolemHand(
 {
 	OwnerBoss = NewOwnerBoss;
 	HandType = NewHandType;
+	MaxHandHP = FMath::Max(1, MaxHandHP);
+	CurrentHandHP = MaxHandHP;
+	IsHandDestroyedValue = false;
 
 	if (HandMovementComponent)
 	{
 		HandMovementComponent->InitializeHandMovement(OwnerBoss, NewDefaultOffset);
 	}
+
+	OnHandHPChanged.Broadcast(CurrentHandHP, MaxHandHP);
 }
 
 void APBGolemBossHand::MoveToOffset(FVector TargetOffset, float Duration)
@@ -230,7 +247,7 @@ void APBGolemBossHand::StopFistAim()
 
 void APBGolemBossHand::StartAutonomousMove()
 {
-	if (IsPatternMovementLocked)
+	if (IsPatternMovementLocked || !IsHandAvailable())
 	{
 		return;
 	}
@@ -277,6 +294,116 @@ USkeletalMeshComponent* APBGolemBossHand::GetHandMeshComponent() const
 USceneComponent* APBGolemBossHand::GetTelegraphStartComponent() const
 {
 	return IsValid(TelegraphStartPoint) ? TelegraphStartPoint.Get() : HandMesh.Get();
+}
+
+void APBGolemBossHand::ApplyHandDamage(int32 DamageAmount)
+{
+	if (!IsHandAvailable() || DamageAmount <= 0)
+	{
+		return;
+	}
+
+	CurrentHandHP = FMath::Max(0, CurrentHandHP - DamageAmount);
+	OnHandHPChanged.Broadcast(CurrentHandHP, MaxHandHP);
+
+	if (CurrentHandHP <= 0)
+	{
+		DestroyHand();
+	}
+}
+
+bool APBGolemBossHand::IsHandAvailable() const
+{
+	return !IsHandDestroyedValue;
+}
+
+int32 APBGolemBossHand::GetCurrentHandHP() const
+{
+	return CurrentHandHP;
+}
+
+int32 APBGolemBossHand::GetMaxHandHP() const
+{
+	return MaxHandHP;
+}
+
+void APBGolemBossHand::DestroyHand()
+{
+	if (IsHandDestroyedValue)
+	{
+		return;
+	}
+
+	IsHandDestroyedValue = true;
+	StopFistAim();
+	IsPatternMovementLocked = false;
+	if (HandMovementComponent)
+	{
+		HandMovementComponent->StopMove();
+	}
+
+	SetHandActive(false);
+	BP_OnHandDestroyed();
+	OnHandDestroyed.Broadcast();
+
+	if (OwnerBoss)
+	{
+		OwnerBoss->HandleGolemHandDestroyed(this, DestroyedGroggyAmount);
+	}
+
+	if (HandMovementComponent)
+	{
+		HandMovementComponent->StopMove();
+	}
+
+	if (RegenerationDelay <= 0.0f)
+	{
+		RegenerateHand();
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(
+		RegenerationTimerHandle,
+		this,
+		&APBGolemBossHand::RegenerateHand,
+		RegenerationDelay,
+		false);
+}
+
+void APBGolemBossHand::RegenerateHand()
+{
+	GetWorldTimerManager().ClearTimer(RegenerationTimerHandle);
+	CurrentHandHP = MaxHandHP;
+	IsHandDestroyedValue = false;
+	IsPatternMovementLocked = false;
+
+	if (HandMovementComponent)
+	{
+		HandMovementComponent->InitializeHandMovement(
+			OwnerBoss,
+			HandMovementComponent->GetDefaultOffset());
+	}
+
+	SetHandActive(true);
+	OnHandHPChanged.Broadcast(CurrentHandHP, MaxHandHP);
+	BP_OnHandRegenerated();
+	OnHandRegenerated.Broadcast();
+
+	if (OwnerBoss && OwnerBoss->IsIdleState())
+	{
+		StartAutonomousMove();
+	}
+}
+
+void APBGolemBossHand::SetHandActive(bool IsActive)
+{
+	if (!HandMesh)
+	{
+		return;
+	}
+
+	HandMesh->SetVisibility(IsActive, true);
+	HandMesh->SetCollisionEnabled(IsActive ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 }
 
 FVector APBGolemBossHand::CalculateActorTargetLocationForTelegraphStart(FVector TargetWorldLocation) const

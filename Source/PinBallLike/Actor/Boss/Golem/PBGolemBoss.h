@@ -33,6 +33,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Golem")
 	APBGolemBossHand* GetGolemHand(EPBGolemBossHandType HandType) const;
 
+	void HandleGolemHandDestroyed(APBGolemBossHand* DestroyedHand, int32 GroggyAmount);
+
 	UFUNCTION(BlueprintCallable, Category = "Boss|Golem Animation")
 	void ResetGolemIdleAnimationSyncTime();
 

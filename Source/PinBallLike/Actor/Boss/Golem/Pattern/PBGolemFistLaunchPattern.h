@@ -14,6 +14,7 @@ class PINBALLLIKE_API UPBGolemFistLaunchPattern : public UPBGolemBossPatternBase
 	GENERATED_BODY()
 
 protected:
+	virtual bool UsesHand(EPBGolemBossHandType TargetHandType) const override;
 	virtual bool CanExecute_Implementation(APBBossBase* Boss) const override;
 	virtual void StartPattern_Implementation(APBBossBase* Boss) override;
 	virtual void ExecutePattern_Implementation(APBBossBase* Boss) override;
