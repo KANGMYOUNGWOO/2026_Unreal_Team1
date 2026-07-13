@@ -14,6 +14,7 @@ UPBBumperTableParser::UPBBumperTableParser()
 {
 	DataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Bumper");
 	DataAssetPreset.NameFormat = TEXT("DA_Bumper_{0}");
+	IconPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon");
 	IconPreset.NameFormat = TEXT("T_{0}");
 }
 
@@ -34,6 +35,8 @@ bool UPBBumperTableParser::ParseRow(const FName RowName, const TMap<FString, FSt
 	NewRow.Description = FText::FromString(RowData.FindRef(TEXT("Description")));
 	NewRow.BumperType = ParseEnumValue(RowData.FindRef(TEXT("BumperType")), EPBBumperType::Rebound);
 	NewRow.TriggerID = FName(*TrimCell(RowData.FindRef(TEXT("TriggerID"))));
+	NewRow.RoleType = ParseEnumValue(RowData.FindRef(TEXT("RoleType")), EPBBumperRoleType::Attack);
+	NewRow.EffectType = ParseEnumValue(RowData.FindRef(TEXT("EffectType")), EPBBumperEffectType::Instant);
 	NewRow.RequiredTriggerCount = FMath::Max(
 		ParseIntValue(RowData.FindRef(TEXT("RequireTriggerCount")), 1),
 		1);
@@ -61,6 +64,7 @@ UPBBumperDataAsset* UPBBumperTableParser::SetupBumperDataAsset(const FName RowNa
 		BumperDataAsset->Icon = FindObject<UTexture2D>(IconPreset, RowName);
 	}
 
+	(void)BumperDataAsset->SetRowNameForImport(RowName);
 	(void)BumperDataAsset->MarkPackageDirty();
 	return BumperDataAsset;
 }

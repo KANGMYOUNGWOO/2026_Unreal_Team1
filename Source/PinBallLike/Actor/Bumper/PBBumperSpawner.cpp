@@ -16,6 +16,7 @@
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
 #include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PinBallLike/Table/PBAssetBundleNames.h"
 #include "PinBallLike/Utils/PBSubsystemUtils.h"
@@ -192,8 +193,39 @@ bool APBBumperSpawner::TryBuildBumperSpawnData(
 	const FPrimaryAssetId BumperAssetId(PBBumperAssetIds::Type::BumperData, BumperRowId);
 	const UPBBumperDataAsset* BumperDataAsset =
 		Cast<UPBBumperDataAsset>(CachedGameDataLoadSubsystem->GetLoadedPrimaryAsset(BumperAssetId));
+	if (!IsValid(BumperDataAsset))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Missing loaded data asset. RowName=%s"), *BumperRowId.ToString());
+		return false;
+	}
 
-	return TryBuildTriggerSpawnInfos(BumperRowId, BumperDataAsset, OutSpawnData.TriggerSpawnInfos);
+	if (!TryBuildTriggerSpawnInfos(BumperRowId, BumperDataAsset, OutSpawnData.TriggerSpawnInfos))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Failed to prepare trigger data. RowName=%s TriggerId=%s"),
+			*BumperRowId.ToString(),
+			*OutSpawnData.BumperRow.TriggerID.ToString());
+		return false;
+	}
+
+	if (!CachedTableDataSubsystem->FindLinkedBumperEffectRow(BumperRowId, OutSpawnData.EffectRow))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Missing linked effect row. RowName=%s EffectId=%s"),
+			*BumperRowId.ToString(),
+			*OutSpawnData.BumperRow.EffectID.ToString());
+		return false;
+	}
+
+	UClass* LoadedEffectClass = BumperDataAsset->EffectClass.Get();
+	if (!IsValid(LoadedEffectClass))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Missing loaded effect class. RowName=%s EffectId=%s"),
+			*BumperRowId.ToString(),
+			*OutSpawnData.BumperRow.EffectID.ToString());
+		return false;
+	}
+
+	OutSpawnData.EffectClass = TSubclassOf<UPBBumperEffectBase>(LoadedEffectClass);
+	return true;
 }
 
 bool APBBumperSpawner::TryBuildTriggerSpawnInfos(
@@ -259,7 +291,12 @@ APBModularBumperBase* APBBumperSpawner::PlaceBumperActor(const FPBPreparedBumper
 		return nullptr;
 	}
 
-	Bumper->InitializeBumper(SpawnData.BumperRow, SpawnData.TriggerSpawnInfos, nullptr, AnchorTransforms);
+	Bumper->InitializeBumper(
+		SpawnData.BumperRow,
+		SpawnData.TriggerSpawnInfos,
+		SpawnData.EffectRow,
+		SpawnData.EffectClass,
+		AnchorTransforms);
 	UGameplayStatics::FinishSpawningActor(Bumper, FTransform::Identity);
 
 	return Bumper;

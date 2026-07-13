@@ -11,3 +11,16 @@ FPrimaryAssetId UPBBumperDataAsset::GetPrimaryAssetId() const
 	const FName AssetName = RowName.IsNone() ? GetFName() : RowName;
 	return FPrimaryAssetId(PBBumperAssetIds::Type::BumperData, AssetName);
 }
+
+#if WITH_EDITOR
+bool UPBBumperDataAsset::SetRowNameForImport(const FName InRowName)
+{
+	if (InRowName.IsNone())
+	{
+		return false;
+	}
+
+	RowName = InRowName;
+	return MarkPackageDirty();
+}
+#endif

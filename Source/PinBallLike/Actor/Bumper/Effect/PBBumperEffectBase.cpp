@@ -6,6 +6,14 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 
+void UPBBumperEffectBase::InitializeEffect(
+	APBModularBumperBase* InOwnerBumper,
+	const FPBBumperEffectRow& InEffectData)
+{
+	EffectData = InEffectData;
+	Initialize(InOwnerBumper);
+}
+
 void UPBBumperEffectBase::Initialize(APBModularBumperBase* InOwnerBumper)
 {
 	OwnerBumper = InOwnerBumper;
@@ -22,4 +30,9 @@ void UPBBumperEffectBase::FinishEffect()
 	{
 		OwnerBumper->FinishActivation();
 	}
+}
+
+FPBBumperEffectRow UPBBumperEffectBase::GetEffectData() const
+{
+	return EffectData;
 }

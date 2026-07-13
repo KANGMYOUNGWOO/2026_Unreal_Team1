@@ -15,6 +15,10 @@ struct PINBALLLIKE_API FPBBumperEffectRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
 	EPBBumperEffectType EffectType = EPBBumperEffectType::Instant;
 
+	/** 효과의 완료 계약. Immediate도 잘못 장기 실행되면 공유 Effect 재진입을 막기 위해 안전하게 대기한다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
+	EPBBumperEffectExecutionPolicy ExecutionPolicy = EPBBumperEffectExecutionPolicy::Immediate;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
 	float Power = 0.0f;
 
