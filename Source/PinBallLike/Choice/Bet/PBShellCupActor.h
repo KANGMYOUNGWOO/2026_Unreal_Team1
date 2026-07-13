@@ -49,10 +49,11 @@ private:
 	UPROPERTY()
 	int32 CupIndex = INDEX_NONE;
 
-	FVector InitialLocation;
+	FVector InitialCupMeshRelativeLocation = FVector::ZeroVector;
 	
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> PrizeMesh;
+	
 	
 	
 };

@@ -4,6 +4,10 @@
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include "PinBallLike/Struct/Choice/PBChoiceType.h"
+
 
 APBShellGameActor::APBShellGameActor()
 {
@@ -133,6 +137,8 @@ void APBShellGameActor::ResetShellGame()
 
     CupSlotIndices = { 0, 1, 2 };
 
+    UpdateCupSlotLocations();
+
     for (int32 CupIndex = 0; CupIndex < Cups.Num(); ++CupIndex)
     {
         if (!Cups.IsValidIndex(CupIndex) ||
@@ -147,19 +153,50 @@ void APBShellGameActor::ResetShellGame()
             CupSlots[CupIndex]->GetComponentLocation(),
             CupSlots[CupIndex]->GetComponentRotation());
 
-        // 컵 안의 공도 숨김
+        Cups[CupIndex]->LowerCup();
         Cups[CupIndex]->HidePrize();
+    }
+}
+
+
+void APBShellGameActor::UpdateCupSlotLocations()
+{
+    const int32 SlotCount = CupSlots.Num();
+
+    if (SlotCount <= 0)
+    {
+        return;
+    }
+
+    const float CenterIndex =
+        static_cast<float>(SlotCount - 1) * 0.5f;
+
+    for (int32 SlotIndex = 0; SlotIndex < SlotCount; ++SlotIndex)
+    {
+        if (!IsValid(CupSlots[SlotIndex]))
+        {
+            continue;
+        }
+
+        const float Offset =
+            (static_cast<float>(SlotIndex) - CenterIndex)
+            * CupSpacing;
+
+        CupSlots[SlotIndex]->SetRelativeLocation(
+            FVector(0.f, Offset, 0.f));
     }
 }
 
 void APBShellGameActor::StartShellGame()
 {
-    if (CurrentState == EPBShellGameState::Shuffling)
+    if (CurrentState != EPBShellGameState::Idle &&
+        CurrentState != EPBShellGameState::Finished)
     {
         UE_LOG(
             LogTemp,
             Warning,
-            TEXT("[ShellGame] Shuffle is already running."));
+            TEXT("[ShellGame] Cannot start game. CurrentState=%d"),
+            static_cast<int32>(CurrentState));
 
         return;
     }
@@ -176,13 +213,9 @@ void APBShellGameActor::StartShellGame()
 
     ResetShellGame();
 
-    WinningCupIndex = FMath::RandRange(0, Cups.Num() - 1);
+    WinningCupIndex =
+        FMath::RandRange(0, Cups.Num() - 1);
 
-    /*
-     * 지금은 공을 잠시 보여주는 연출 없이 바로 섞는다.
-     * 나중에는 ShowingBall 상태와 Timer를 추가해서
-     * 정답 컵 밑의 공을 보여준 후 셔플을 시작할 수 있다.
-     */
     BuildShuffleCommands();
 
     if (ShuffleCommands.IsEmpty())
@@ -192,21 +225,17 @@ void APBShellGameActor::StartShellGame()
             Warning,
             TEXT("[ShellGame] No shuffle commands were generated."));
 
-        CurrentState = EPBShellGameState::WaitingForChoice;
+        CurrentState = EPBShellGameState::Finished;
         return;
     }
-
-    CurrentShuffleCommandIndex = 0;
-    CurrentState = EPBShellGameState::Shuffling;
 
     UE_LOG(
         LogTemp,
         Log,
-        TEXT("[ShellGame] Started. WinningCupIndex=%d ShuffleCount=%d"),
-        WinningCupIndex,
-        ShuffleCommands.Num());
+        TEXT("[ShellGame] Started. WinningCupIndex=%d"),
+        WinningCupIndex);
 
-    StartNextShuffle();
+    StartShowingBall();
 }
 
 void APBShellGameActor::HandleCupSelected(int32 CupIndex)
@@ -249,14 +278,14 @@ void APBShellGameActor::HandleCupSelected(int32 CupIndex)
 
     // 플레이어가 선택한 컵을 올린다.
     Cups[CupIndex]->RaiseCup(RevealHeight);
-
+    
     // 오답이면 정답 컵도 함께 보여준다.
     if (!bCorrect)
     {
         Cups[WinningCupIndex]->RaiseCup(RevealHeight);
     }
 
- 
+    Cups[WinningCupIndex]->ShowPrize();
 
     if (bCorrect)
     {
@@ -352,6 +381,11 @@ bool APBShellGameActor::IsSameCupPair(
 
 void APBShellGameActor::StartNextShuffle()
 {
+    UE_LOG(
+         LogTemp,
+         Warning,
+         TEXT("[ShellGame] "));
+    
     if (CurrentState != EPBShellGameState::Shuffling)
     {
         return;
@@ -529,6 +563,134 @@ void APBShellGameActor::FinishAllShuffles()
         TEXT("[ShellGame] Shuffle finished. Waiting for player choice."));
 }
 
+void APBShellGameActor::OpenAbility()
+{
+    StartShellGame();
+    UE_LOG(
+       LogTemp,
+       Warning,
+       TEXT("[ShellGame open] "));
+}
+
+void APBShellGameActor::StartShowingBall()
+{
+    if (!Cups.IsValidIndex(WinningCupIndex))
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[ShellGame] StartShowingBall failed. WinningCupIndex=%d"),
+            WinningCupIndex);
+
+        CurrentState = EPBShellGameState::Finished;
+        return;
+    }
+
+    CurrentState = EPBShellGameState::ShowingBall;
+
+    APBShellCupActor* WinningCup =
+        Cups[WinningCupIndex];
+
+    WinningCup->ShowPrize();
+    WinningCup->RaiseCup(RevealHeight);
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[ShellGame] Showing ball. WinningCupIndex=%d"),
+        WinningCupIndex);
+
+    GetWorldTimerManager().SetTimer(
+        ShowBallTimerHandle,
+        this,
+        &APBShellGameActor::FinishShowingBall,
+        ShowBallDuration,
+        false);
+    
+}
+
+void APBShellGameActor::FinishShowingBall()
+{
+    if (CurrentState != EPBShellGameState::ShowingBall)
+    {
+        return;
+    }
+
+    StartCoveringBall();
+}
+
+void APBShellGameActor::StartCoveringBall()
+{
+    if (!Cups.IsValidIndex(WinningCupIndex))
+    {
+        CurrentState = EPBShellGameState::Finished;
+        return;
+    }
+
+    CurrentState = EPBShellGameState::CoveringBall;
+
+    APBShellCupActor* WinningCup =
+        Cups[WinningCupIndex];
+
+    WinningCup->LowerCup();
+    WinningCup->HidePrize();
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[ShellGame] Covering ball."));
+
+    GetWorldTimerManager().SetTimer(
+        CoverBallTimerHandle,
+        this,
+        &APBShellGameActor::FinishCoveringBall,
+        CoverBallDuration,
+        false);
+}
+
+void APBShellGameActor::FinishCoveringBall()
+{
+    if (CurrentState != EPBShellGameState::CoveringBall)
+    {
+        return;
+    }
+
+    if (!Cups.IsValidIndex(WinningCupIndex))
+    {
+        CurrentState = EPBShellGameState::Finished;
+        return;
+    }
+
+    APBShellCupActor* WinningCup =
+        Cups[WinningCupIndex];
+
+    // 컵으로 완전히 덮은 뒤 공을 숨긴다.
+    WinningCup->HidePrize();
+
+    StartShuffling();
+}
+
+void APBShellGameActor::StartShuffling()
+{
+    CurrentShuffleCommandIndex = 0;
+
+    FirstMovingCupIndex = INDEX_NONE;
+    SecondMovingCupIndex = INDEX_NONE;
+
+    CurrentShuffleElapsed = 0.f;
+    CurrentShuffleDuration = 0.f;
+
+    CurrentState = EPBShellGameState::Shuffling;
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[ShellGame] Shuffle started. CommandCount=%d"),
+        ShuffleCommands.Num());
+
+    StartNextShuffle();
+}
+
 
 void APBShellGameActor::HandleSuccess()
 {
@@ -559,14 +721,15 @@ void APBShellGameActor::HandleFailure()
 void APBShellGameActor::FinishReveal()
 {
     CurrentState = EPBShellGameState::Finished;
-
+    FPBChoiceType Message;
+    Message.Exit = 1;
     UE_LOG(
         LogTemp,
         Log,
         TEXT("[ShellGame] Reveal finished."));
 
-    /*
-     * 여기서 선택지 종료 메시지를 발행하거나
-     * PBChoiceRouteActor로 돌아가는 처리를 하면 된다.
-     */
+    UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+        GameplayTags::Event_UI_Choice_Exit,Message);
+    
+  
 }

@@ -2,13 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Interface/PBChoiceNodeAction.h"
 #include "PBShellGameActor.generated.h"
 
 class APBShellCupActor;
 class USceneComponent;
 
 UENUM()
-enum class EPBShellGameState : uint8
+enum class EPBShellGameState : uint8 
 {
     Idle,
     ShowingBall,
@@ -30,7 +31,7 @@ struct FPBShellShuffleCommand
 };
 
 UCLASS()
-class PINBALLLIKE_API APBShellGameActor : public AActor
+class PINBALLLIKE_API APBShellGameActor : public AActor , public IPBChoiceNodeAction
 {
     GENERATED_BODY()
 
@@ -49,6 +50,17 @@ private:
     void UpdateCurrentShuffle(float DeltaTime);
     void FinishCurrentShuffle();
     void FinishAllShuffles();
+    void OpenAbility() override;
+    
+    void StartShowingBall();
+    void FinishShowingBall();
+
+    void StartCoveringBall();
+    void FinishCoveringBall();
+
+    void StartShuffling();
+    void UpdateCupSlotLocations();
+    
 protected:
     virtual void BeginPlay() override;
 private:
@@ -94,6 +106,15 @@ private:
     UPROPERTY(EditAnywhere, Category = "Shell Game")
     bool bAutoStartOnBeginPlay = false;
     
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Intro")
+    float ShowBallDuration = 2.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Intro")
+    float CoverBallDuration = 0.5f;
+
+    FTimerHandle ShowBallTimerHandle;
+    FTimerHandle CoverBallTimerHandle;
+    
     FTimerHandle RevealTimerHandle;
     
     TArray<TObjectPtr<USceneComponent>> CupSlots;
@@ -114,9 +135,12 @@ private:
 
     EPBShellGameState CurrentState = EPBShellGameState::Idle;
 
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Layout")
+    float CupSpacing = 250.f;
+    
     // 공이 들어 있는 컵의 Actor 인덱스
     int32 WinningCupIndex = INDEX_NONE;
-    
+   
 private:
     bool InitializeCups();
     void ResetShellGame();

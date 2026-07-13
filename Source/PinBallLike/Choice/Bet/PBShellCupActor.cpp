@@ -11,10 +11,14 @@ APBShellCupActor::APBShellCupActor()
 
 	CupMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CupMesh"));
 	CupMesh->SetupAttachment(Root);
-
+	
 	CupMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	CupMesh->SetGenerateOverlapEvents(false);
 
+	PrizeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PrizeMesh"));
+	PrizeMesh->SetupAttachment(Root);
+	
+	
 	CupMesh->OnClicked.AddDynamic(
 		this,
 		&APBShellCupActor::HandleClicked);
@@ -24,7 +28,13 @@ void APBShellCupActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitialLocation = GetActorLocation();
+	if (CupMesh)
+	{
+		InitialCupMeshRelativeLocation =
+			CupMesh->GetRelativeLocation();
+	}
+
+	HidePrize();
 }
 
 void APBShellCupActor::SetCupIndex(int32 InIndex)
@@ -39,13 +49,25 @@ void APBShellCupActor::SetOwnerGame(APBShellGameActor* InGame)
 
 void APBShellCupActor::RaiseCup(float Height)
 {
-	SetActorLocation(
-		InitialLocation + FVector(0.f,0.f,Height));
+	if (!CupMesh)
+	{
+		return;
+	}
+
+	CupMesh->SetRelativeLocation(
+		InitialCupMeshRelativeLocation +
+		FVector(0.f, 0.f, Height));
 }
 
 void APBShellCupActor::LowerCup()
 {
-	SetActorLocation(InitialLocation);
+	if (!CupMesh)
+	{
+		return;
+	}
+
+	CupMesh->SetRelativeLocation(
+		InitialCupMeshRelativeLocation);
 }
 
 void APBShellCupActor::HandleClicked(
