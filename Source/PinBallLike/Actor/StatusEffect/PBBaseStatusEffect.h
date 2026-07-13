@@ -30,6 +30,7 @@ public:
 
 	FName GetStatusEffectId() const { return StatusEffectRow.StatusEffectId; }
 	int32 GetStackCount() const { return StackCount; }
+	const FPBStatusEffectRow& GetStatusEffectRow() const { return StatusEffectRow; }
 	UPBStatusEffectComponent* GetOwnerComponent() const { return OwnerComponent.Get(); }
 	AActor* GetOwnerActor() const;
 
