@@ -12,6 +12,9 @@
 #include "Component/PBPartyLauncherComponent.h"
 #include "Component/PBSnakeFormationComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
+#include "PinBallLike/Struct/Common/PBResourceTypes.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 
 APBCombatPartyController::APBCombatPartyController()
 {
@@ -335,6 +338,18 @@ void APBCombatPartyController::RemovePartyBall(APBBallBase* Ball)
 		LeaderBall = nullptr;
 	}
 
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBBallDeckSubsystem* DeckSubsystem = GameInstance->GetSubsystem<UPBBallDeckSubsystem>())
+		{
+			const UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
+			const float CurrentMana = ResourceComponent
+				? ResourceComponent->GetResourceCurrent(PBResourceNames::Mana)
+				: 0.0f;
+			DeckSubsystem->SetOwnedBallSavedMana(Ball->GetBallInstanceId(), CurrentMana);
+		}
+	}
+
 	Ball->SetCombatRole(EPBBallPartyRole::None);
 	Ball->Destroy();
 	RebuildPartyRoles();
@@ -342,6 +357,24 @@ void APBCombatPartyController::RemovePartyBall(APBBallBase* Ball)
 
 void APBCombatPartyController::DestroyPartyBalls()
 {
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBBallDeckSubsystem* DeckSubsystem = GameInstance->GetSubsystem<UPBBallDeckSubsystem>())
+		{
+			for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
+			{
+				if (IsValid(Ball.Get()))
+				{
+					const UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
+					const float CurrentMana = ResourceComponent
+						? ResourceComponent->GetResourceCurrent(PBResourceNames::Mana)
+						: 0.0f;
+					DeckSubsystem->SetOwnedBallSavedMana(Ball->GetBallInstanceId(), CurrentMana);
+				}
+			}
+		}
+	}
+
 	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
 	{
 		if (IsValid(Ball.Get()))

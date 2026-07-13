@@ -7,6 +7,8 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Ball/UI/PBBallStatusWidget.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "TimerManager.h"
@@ -19,11 +21,13 @@ void UPBBattleHUDWidget::NativeConstruct()
 	CacheDeckSubsystem();
 	CachePartyController();
 	BindDeckEvents();
+	RegisterBattleMessageListeners();
 	ScheduleRefreshBallPanels();
 }
 
 void UPBBattleHUDWidget::NativeDestruct()
 {
+	UnregisterBattleMessageListeners();
 	UnbindDeckEvents();
 
 	for (UPBBallStatusWidget* BallPanel : BallPanels)
@@ -141,6 +145,29 @@ void UPBBattleHUDWidget::UnbindDeckEvents()
 	bDeckEventsBound = false;
 }
 
+void UPBBattleHUDWidget::RegisterBattleMessageListeners()
+{
+	if (!UGameplayMessageSubsystem::HasInstance(this) || BattlePhaseChangedListenerHandle.IsValid())
+	{
+		return;
+	}
+
+	BattlePhaseChangedListenerHandle =
+		UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePhaseChangedMessage>(
+			GameplayTags::Event_Battle_Phase_Changed,
+			this,
+			&UPBBattleHUDWidget::HandleBattlePhaseChangedMessage);
+}
+
+void UPBBattleHUDWidget::UnregisterBattleMessageListeners()
+{
+	if (BattlePhaseChangedListenerHandle.IsValid())
+	{
+		BattlePhaseChangedListenerHandle.Unregister();
+		BattlePhaseChangedListenerHandle = FGameplayMessageListenerHandle();
+	}
+}
+
 void UPBBattleHUDWidget::ScheduleRefreshBallPanels()
 {
 	if (UWorld* World = GetWorld())
@@ -193,4 +220,15 @@ void UPBBattleHUDWidget::HandleDeploymentSlotChanged(const int32 SlotIndex, cons
 void UPBBattleHUDWidget::HandleDeploymentChanged()
 {
 	ScheduleRefreshBallPanels();
+}
+
+void UPBBattleHUDWidget::HandleBattlePhaseChangedMessage(
+	FGameplayTag Channel,
+	const FPBBattlePhaseChangedMessage& Message)
+{
+	(void)Channel;
+	if (Message.NewPhase == EPBBattleLevelPhase::BallDeployment)
+	{
+		ScheduleRefreshBallPanels();
+	}
 }

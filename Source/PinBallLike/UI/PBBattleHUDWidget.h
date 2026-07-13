@@ -2,10 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "PBBattleHUDWidget.generated.h"
 
 class APBCombatPartyController;
 class APBBallBase;
+struct FPBBattlePhaseChangedMessage;
 class UPBBallDeckSubsystem;
 class UPBBallStatusWidget;
 class UPanelWidget;
@@ -32,6 +34,8 @@ private:
 	void CachePartyController();
 	void BindDeckEvents();
 	void UnbindDeckEvents();
+	void RegisterBattleMessageListeners();
+	void UnregisterBattleMessageListeners();
 	void ScheduleRefreshBallPanels();
 	void SetBallPanel(int32 PanelIndex, APBBallBase* Ball);
 	UPBBallStatusWidget* GetBallPanel(int32 PanelIndex) const;
@@ -42,6 +46,8 @@ private:
 
 	UFUNCTION()
 	void HandleDeploymentChanged();
+
+	void HandleBattlePhaseChangedMessage(FGameplayTag Channel, const FPBBattlePhaseChangedMessage& Message);
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UPanelWidget> BallPanelContainer;
@@ -54,6 +60,8 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<APBCombatPartyController> PartyController;
+
+	FGameplayMessageListenerHandle BattlePhaseChangedListenerHandle;
 
 	bool bDeckEventsBound = false;
 };

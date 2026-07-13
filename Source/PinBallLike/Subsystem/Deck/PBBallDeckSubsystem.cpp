@@ -87,6 +87,24 @@ bool UPBBallDeckSubsystem::HasOwnedBall(int32 BallInstanceId) const
 	return OwnedBallDataMap.Contains(BallInstanceId);
 }
 
+bool UPBBallDeckSubsystem::SetOwnedBallSavedMana(const int32 BallInstanceId, const float SavedMana)
+{
+	FPBDeckOwnedBallData* BallInstanceData = OwnedBallDataMap.Find(BallInstanceId);
+	if (!BallInstanceData || !BallInstanceData->IsValid())
+	{
+		return false;
+	}
+
+	BallInstanceData->SavedMana = FMath::Max(SavedMana, 0.0f);
+	return true;
+}
+
+float UPBBallDeckSubsystem::GetOwnedBallSavedMana(const int32 BallInstanceId) const
+{
+	const FPBDeckOwnedBallData* BallInstanceData = GetOwnedBallData(BallInstanceId);
+	return BallInstanceData && BallInstanceData->IsValid() ? BallInstanceData->SavedMana : 0.0f;
+}
+
 bool UPBBallDeckSubsystem::FindBallLocation(int32 BallInstanceId, FPBBallDeckSlot& OutLocation) const
 {
 	OutLocation = FPBBallDeckSlot();
@@ -363,6 +381,9 @@ bool UPBBallDeckSubsystem::MoveBallBetweenSlots(EPBBallDeckSlotType SourceSlotTy
 		? CaptureDeploymentSlotBallInstanceIds()
 		: TArray<int32>();
 
+	ResetSavedManaIfEnteringDeployment(SourceBallInstanceId, SourceSlotType, TargetSlotType);
+	ResetSavedManaIfEnteringDeployment(TargetBallInstanceId, TargetSlotType, SourceSlotType);
+
 	SourceSlot->BallInstanceId = TargetBallInstanceId;
 	TargetSlot->BallInstanceId = SourceBallInstanceId;
 
@@ -469,6 +490,11 @@ void UPBBallDeckSubsystem::HandleBallFusionStarted(const FPBBallDeckFusionBatch&
 
 void UPBBallDeckSubsystem::HandleBallFusionCompleted(const FPBBallDeckFusionBatch& FusionBatch)
 {
+	for (const FPBBallDeckFusionRequest& FusionRequest : FusionBatch.FusionRequests)
+	{
+		SetOwnedBallSavedMana(FusionRequest.SurvivorBallInstanceId, 0.0f);
+	}
+
 	OnBallFusionCompleted.Broadcast(FusionBatch);
 }
 
@@ -501,8 +527,13 @@ bool UPBBallDeckSubsystem::SetDeploymentSlot(int32 SlotIndex, int32 BallInstance
 	}
 
 	const TArray<int32> PreviousBallInstanceIds = CaptureDeploymentSlotBallInstanceIds();
+	FPBBallDeckSlot PreviousLocation;
+	const EPBBallDeckSlotType PreviousSlotType = FindBallLocation(BallInstanceId, PreviousLocation)
+		? PreviousLocation.SlotType
+		: EPBBallDeckSlotType::Bench;
 
 	ClearBallInstanceFromSlots(BallInstanceId);
+	ResetSavedManaIfEnteringDeployment(BallInstanceId, PreviousSlotType, EPBBallDeckSlotType::Deployment);
 	GetMutableDeckSlot(EPBBallDeckSlotType::Deployment, SlotIndex)->BallInstanceId = BallInstanceId;
 	CompactDeploymentSlotsInternal();
 	BroadcastDeploymentSlotChange(PreviousBallInstanceIds);
@@ -704,6 +735,22 @@ void UPBBallDeckSubsystem::ClearBallInstanceFromSlots(int32 BallInstanceId)
 		{
 			DeckSlot.BallInstanceId = INDEX_NONE;
 		}
+	}
+}
+
+void UPBBallDeckSubsystem::ResetSavedManaIfEnteringDeployment(
+	const int32 BallInstanceId,
+	const EPBBallDeckSlotType SourceSlotType,
+	const EPBBallDeckSlotType TargetSlotType)
+{
+	if (BallInstanceId == INDEX_NONE)
+	{
+		return;
+	}
+
+	if (SourceSlotType != EPBBallDeckSlotType::Deployment && TargetSlotType == EPBBallDeckSlotType::Deployment)
+	{
+		SetOwnedBallSavedMana(BallInstanceId, 0.0f);
 	}
 }
 

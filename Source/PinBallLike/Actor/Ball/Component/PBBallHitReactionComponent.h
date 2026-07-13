@@ -8,6 +8,7 @@
 #include "PBBallHitReactionComponent.generated.h"
 
 class UPrimitiveComponent;
+class APBCombatPartyController;
 class UPBBallPhysicsComponent;
 class IStatProvider;
 class IDamageable;
@@ -33,6 +34,10 @@ private:
 	void HandleMovementHit(const FHitResult& Hit);
 	
 	void ProcessBallContact(AActor* OtherActor);
+	void ApplyManaGainOnDamage();
+	void ApplyManaGainToBall(class APBBallBase* Ball) const;
+	APBCombatPartyController* FindOwningPartyController() const;
+	float GetManaGainMultiplier(const class APBBallBase* Ball) const;
 	bool WasContactProcessedThisFrame(AActor* OtherActor) const;
 	void MarkContactProcessed(AActor* OtherActor);
 

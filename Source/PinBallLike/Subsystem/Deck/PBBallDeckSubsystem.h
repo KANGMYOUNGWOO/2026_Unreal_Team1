@@ -59,6 +59,8 @@ public:
 
 	const FPBDeckOwnedBallData* GetOwnedBallData(int32 BallInstanceId) const;
 	bool HasOwnedBall(int32 BallInstanceId) const;
+	bool SetOwnedBallSavedMana(int32 BallInstanceId, float SavedMana);
+	float GetOwnedBallSavedMana(int32 BallInstanceId) const;
 	bool BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const;
 
 
@@ -143,6 +145,10 @@ private:
 	bool CompactDeploymentSlotsInternal();
 	void BroadcastDeploymentSlotChange(const TArray<int32>& PreviousBallInstanceIds);
 	void ClearBallInstanceFromSlots(int32 BallInstanceId);
+	void ResetSavedManaIfEnteringDeployment(
+		int32 BallInstanceId,
+		EPBBallDeckSlotType SourceSlotType,
+		EPBBallDeckSlotType TargetSlotType);
 
 	static constexpr int32 MaxDeploymentSlotCount = 3;
 

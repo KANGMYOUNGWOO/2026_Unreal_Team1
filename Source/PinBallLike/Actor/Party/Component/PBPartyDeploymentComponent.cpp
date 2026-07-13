@@ -11,6 +11,7 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Struct/Ball/PBBallInstanceData.h"
 #include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
+#include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
@@ -305,10 +306,14 @@ bool UPBPartyDeploymentComponent::BuildBallInstanceData(
 	{
 		if (!ResourceValue.Key.IsNone())
 		{
+			const float MaxValue = static_cast<float>(ResourceValue.Value);
+			const float CurrentValue = ResourceValue.Key == PBResourceNames::Mana
+				? FMath::Clamp(DeckSubsystem->GetOwnedBallSavedMana(BallInstanceId), 0.0f, MaxValue)
+				: MaxValue;
 			OutBallInstanceData.BaseResources.Add(FPBResourceData(
 				ResourceValue.Key,
-				static_cast<float>(ResourceValue.Value),
-				static_cast<float>(ResourceValue.Value),
+				CurrentValue,
+				MaxValue,
 				0.0f));
 		}
 	}
