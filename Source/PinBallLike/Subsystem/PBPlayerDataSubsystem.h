@@ -10,9 +10,11 @@
 UENUM(BlueprintType)
 enum class EPBBumperSlotType : uint8
 {
-	Rebound UMETA(DisplayName = "Rebound"),
-	Side UMETA(DisplayName = "Side"),
-	Special UMETA(DisplayName = "Special")
+	Rebound = 0 UMETA(DisplayName = "Rebound"),
+	Side = 1 UMETA(DisplayName = "Side"),
+	Special = 2 UMETA(DisplayName = "Special"),
+	// 기존 열거형 값을 유지하기 위해 새 Top 슬롯은 마지막에 추가한다.
+	Top = 3 UMETA(DisplayName = "Top")
 };
 
 UCLASS()

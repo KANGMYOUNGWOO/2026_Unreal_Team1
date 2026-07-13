@@ -7,12 +7,11 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBBumperPositionAnchor.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
-#include "PinBallLike/Interface/Comboable.h"
-#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBModularBumperBase::APBModularBumperBase()
 {
@@ -27,12 +26,13 @@ void APBModularBumperBase::BeginPlay()
 	Super::BeginPlay();
 
 	CreateBumperEffect();
-	NotifyTriggerCountChanged();
 
-	for (auto spawnInfo : TriggerSpawnInfos)
+	for (const FPBBumperTriggerSpawnInfo& SpawnInfo : TriggerSpawnInfos)
 	{
-		SpawnTriggerActorsFromInfo(spawnInfo);
+		SpawnTriggerActorsFromInfo(SpawnInfo);
 	}
+
+	NotifyTriggerCountChanged();
 }
 
 void APBModularBumperBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -52,7 +52,7 @@ void APBModularBumperBase::HandleTriggerActorActivated(
 		return;
 	}
 
-	AddTriggerCount(Ball);
+	AddTriggerCount(TriggerActor, Ball);
 }
 
 void APBModularBumperBase::ActivateBumper(APBBallBase* Ball)
@@ -62,48 +62,62 @@ void APBModularBumperBase::ActivateBumper(APBBallBase* Ball)
 		return;
 	}
 
-	SetBumperState(EPBBumperState::Activated);
-
-	OnBumperActivated(Ball);
-
-	if (IsValid(BumperEffect))
+	if (APBBumperTriggerActorBase* ReadyTrigger = FindReadyTrigger())
 	{
-		BumperEffect->ActivateEffect(this, Ball);
-		return;
+		StartActivation(ReadyTrigger, Ball);
 	}
-
-	ApplyBumperEffect(Ball);
 }
 
 void APBModularBumperBase::FinishActivation()
 {
-	if (RuntimeState.CurrentState != EPBBumperState::Activated)
+	APBBumperTriggerActorBase* FinishedTrigger = ActiveTriggerActor.Get();
+	if (!IsValid(FinishedTrigger) && RuntimeState.CurrentState != EPBBumperState::Activated)
 	{
 		return;
 	}
 
-	SetBumperState(EPBBumperState::Idle);
-
-	for (APBBumperTriggerActorBase* TriggerActor : SpawnedTriggerActors)
+	ActiveTriggerActor.Reset();
+	if (IsValid(FinishedTrigger))
 	{
-		if (IsValid(TriggerActor))
-		{
-			TriggerActor->FinishTrigger();
-		}
+		FinishedTrigger->FinishTrigger();
 	}
 
-	ResetTriggerCount();
+	// 전투 흐름이 범퍼를 Disabled로 바꾼 경우, 효과 종료가 그 상태를 임의로 해제하지 않는다.
+	if (RuntimeState.CurrentState != EPBBumperState::Disabled)
+	{
+		SetBumperState(EPBBumperState::Idle);
+	}
+
+	NotifyTriggerCountChanged();
 	OnBumperFinished();
+	ScheduleNextPendingActivation();
 }
 
 void APBModularBumperBase::ResetTriggerCount()
 {
-	RuntimeState.CurrentTriggerCount = 0;
+	PendingActivations.Reset();
+
+	for (APBBumperTriggerActorBase* TriggerActor : SpawnedTriggerActors)
+	{
+		if (IsValid(TriggerActor) && TriggerActor != ActiveTriggerActor.Get())
+		{
+			TriggerActor->ResetTriggerProgress();
+		}
+	}
+
 	NotifyTriggerCountChanged();
 }
 
 void APBModularBumperBase::SetBumperState(const EPBBumperState NewState)
 {
+	if (NewState == EPBBumperState::Activated && !ActiveTriggerActor.IsValid())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Ignored Activated state without an active Trigger. Bumper=%s"),
+			*GetNameSafe(this));
+		return;
+	}
+
 	if (RuntimeState.CurrentState == NewState)
 	{
 		return;
@@ -112,31 +126,63 @@ void APBModularBumperBase::SetBumperState(const EPBBumperState NewState)
 	const EPBBumperState PreviousState = RuntimeState.CurrentState;
 	RuntimeState.CurrentState = NewState;
 
-	for (APBBumperTriggerActorBase* TriggerActor : SpawnedTriggerActors)
+	if (NewState == EPBBumperState::Disabled || PreviousState == EPBBumperState::Disabled)
 	{
-		if (IsValid(TriggerActor))
+		for (APBBumperTriggerActorBase* TriggerActor : SpawnedTriggerActors)
 		{
-			TriggerActor->SetTriggerState(RuntimeState.CurrentState);
+			if (!IsValid(TriggerActor))
+			{
+				continue;
+			}
+
+			if (NewState == EPBBumperState::Disabled)
+			{
+				TriggerActor->SetTriggerState(EPBBumperState::Disabled);
+			}
+			else
+			{
+				TriggerActor->SetTriggerState(
+					TriggerActor == ActiveTriggerActor.Get()
+						? EPBBumperState::Activated
+						: EPBBumperState::Idle);
+			}
 		}
 	}
 
 	OnBumperStateChanged.Broadcast(PreviousState, RuntimeState.CurrentState);
+
+	if (NewState == EPBBumperState::Idle && !ActiveTriggerActor.IsValid())
+	{
+		ScheduleNextPendingActivation();
+	}
 }
 
 bool APBModularBumperBase::CanAccumulateTrigger() const
 {
-	return RuntimeState.CurrentState == EPBBumperState::Idle;
+	return RuntimeState.CurrentState != EPBBumperState::Disabled;
 }
 
 bool APBModularBumperBase::CanActivate() const
 {
 	return RuntimeState.CurrentState == EPBBumperState::Idle
-		&& RuntimeState.CurrentTriggerCount >= GetRequiredTriggerCount();
+		&& !ActiveTriggerActor.IsValid()
+		&& IsValid(FindReadyTrigger());
 }
 
 int32 APBModularBumperBase::GetCurrentTriggerCount() const
 {
-	return RuntimeState.CurrentTriggerCount;
+	int32 HighestTriggerCount = 0;
+	for (const APBBumperTriggerActorBase* TriggerActor : SpawnedTriggerActors)
+	{
+		if (IsValid(TriggerActor))
+		{
+			HighestTriggerCount = FMath::Max(
+				HighestTriggerCount,
+				TriggerActor->GetCurrentTriggerCount());
+		}
+	}
+
+	return HighestTriggerCount;
 }
 
 int32 APBModularBumperBase::GetRequiredTriggerCount() const
@@ -149,65 +195,86 @@ EPBBumperState APBModularBumperBase::GetBumperState() const
 	return RuntimeState.CurrentState;
 }
 
+APBBumperTriggerActorBase* APBModularBumperBase::GetActiveTriggerActor() const
+{
+	return ActiveTriggerActor.Get();
+}
+
+int32 APBModularBumperBase::GetPendingActivationCount() const
+{
+	return PendingActivations.Num();
+}
+
 void APBModularBumperBase::CreateBumperEffect()
 {
 	if (!EffectClass)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Cannot create effect. Bumper=%s EffectId=%s"),
+			*GetNameSafe(this),
+			*BumperData.EffectID.ToString());
 		return;
 	}
 
 	BumperEffect = NewObject<UPBBumperEffectBase>(this, EffectClass);
-	if (IsValid(BumperEffect))
+	if (!IsValid(BumperEffect))
 	{
-		BumperEffect->Initialize(this);
+		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Failed to instantiate effect. Bumper=%s EffectClass=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(EffectClass));
+		return;
 	}
+
+	BumperEffect->InitializeEffect(this, EffectData);
+	UE_LOG(LogTemp, Log, TEXT("[Bumper] Effect ready. Bumper=%s EffectId=%s EffectClass=%s Power=%.2f"),
+		*GetNameSafe(this),
+		*BumperData.EffectID.ToString(),
+		*GetNameSafe(EffectClass),
+		EffectData.Power);
 }
 
 void APBModularBumperBase::InitializeBumper(
 	const FPBBumperTableRow& InBumperData,
 	const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
+	const FPBBumperEffectRow& InEffectData,
 	TSubclassOf<UPBBumperEffectBase> InEffectClass,
 	const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms)
 {
 	BumperData = InBumperData;
 	TriggerSpawnInfos = InTriggerSpawnInfos;
+	EffectData = InEffectData;
 	EffectClass = InEffectClass;
 	AnchorTransforms = InAnchorTransforms;
 }
 
-void APBModularBumperBase::AddTriggerCount(APBBallBase* Ball, const int32 Amount)
+void APBModularBumperBase::AddTriggerCount(
+	APBBumperTriggerActorBase* TriggerActor,
+	APBBallBase* Ball,
+	const int32 Amount)
 {
-	if (!IsValid(Ball) || !CanAccumulateTrigger() || Amount <= 0)
+	if (!IsValid(TriggerActor)
+		|| TriggerActor->GetOwnerBumper() != this
+		|| !IsValid(Ball)
+		|| !CanAccumulateTrigger()
+		|| Amount <= 0)
 	{
 		return;
 	}
 
-	const int32 RequiredTriggerCount = GetRequiredTriggerCount();
-	const int32 PreviousTriggerCount = RuntimeState.CurrentTriggerCount;
-	RuntimeState.CurrentTriggerCount = FMath::Clamp(
-		RuntimeState.CurrentTriggerCount + Amount,
-		0,
-		RequiredTriggerCount);
-
+	const bool bBecameReady = TriggerActor->AddTriggerProgress(Amount);
 	NotifyTriggerCountChanged();
 
-	//콤보 증가
-	if (IComboable* Comboable = PBInterfaceUtils::FindInterface<IComboable>(Ball))
-	{
-		Comboable->AddCombo(Amount);
-		//UE_LOG(LogTemp, Warning, TEXT("combo = %d"), Comboable->GetCombo());
-	}
+	UE_LOG(LogTemp, Verbose,
+		TEXT("[Bumper] Trigger progress. Bumper=%s Trigger=%s Position=%d Count=%d/%d"),
+		*GetNameSafe(this),
+		*GetNameSafe(TriggerActor),
+		static_cast<int32>(TriggerActor->GetPositionId()),
+		TriggerActor->GetCurrentTriggerCount(),
+		TriggerActor->GetRequiredTriggerCount());
 
-	// 이번 증가로 처음 조건을 만족했을 때만 Ready 이벤트를 보낸다.
-	// TODO 준비는 따로 필요없을듯 하다. 즉시 시전되면 될듯.
-	if (PreviousTriggerCount < RequiredTriggerCount && RuntimeState.CurrentTriggerCount >= RequiredTriggerCount)
+	if (bBecameReady)
 	{
 		OnBumperReady();
-	}
-
-	if (CanActivate())
-	{
-		ActivateBumper(Ball);
+		RequestActivation(TriggerActor, Ball);
 	}
 }
 
@@ -237,10 +304,13 @@ APBBumperTriggerActorBase* APBModularBumperBase::SpawnTriggerActor(
 		return nullptr;
 	}
 
-	TriggerActor->InitializeTrigger(this);
+	TriggerActor->InitializeTrigger(this, PositionId, GetRequiredTriggerCount());
 	UGameplayStatics::FinishSpawningActor(TriggerActor, SpawnTransform);
 	TriggerActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-	TriggerActor->SetTriggerState(RuntimeState.CurrentState);
+	TriggerActor->SetTriggerState(
+		RuntimeState.CurrentState == EPBBumperState::Disabled
+			? EPBBumperState::Disabled
+			: EPBBumperState::Idle);
 	SpawnedTriggerActors.Add(TriggerActor);
 
 	return TriggerActor;
@@ -263,6 +333,10 @@ void APBModularBumperBase::SpawnTriggerActorsFromInfo(const FPBBumperTriggerSpaw
 
 void APBModularBumperBase::ClearTriggerActors()
 {
+	PendingActivations.Reset();
+	ActiveTriggerActor.Reset();
+	bPendingActivationScheduled = false;
+
 	for (APBBumperTriggerActorBase* TriggerActor : SpawnedTriggerActors)
 	{
 		if (IsValid(TriggerActor))
@@ -272,6 +346,195 @@ void APBModularBumperBase::ClearTriggerActors()
 	}
 
 	SpawnedTriggerActors.Reset();
+	RuntimeState.CurrentTriggerCount = 0;
+}
+
+APBBumperTriggerActorBase* APBModularBumperBase::FindReadyTrigger() const
+{
+	for (APBBumperTriggerActorBase* TriggerActor : SpawnedTriggerActors)
+	{
+		if (IsValid(TriggerActor)
+			&& TriggerActor->GetTriggerProgressState() == EPBBumperTriggerProgressState::Ready)
+		{
+			return TriggerActor;
+		}
+	}
+
+	return nullptr;
+}
+
+void APBModularBumperBase::RequestActivation(
+	APBBumperTriggerActorBase* TriggerActor,
+	APBBallBase* Ball)
+{
+	if (!IsValid(TriggerActor) || !IsValid(Ball) || !TriggerActor->IsTriggerReady())
+	{
+		return;
+	}
+
+	if (RuntimeState.CurrentState == EPBBumperState::Idle && !ActiveTriggerActor.IsValid())
+	{
+		StartActivation(TriggerActor, Ball);
+		return;
+	}
+
+	QueueActivation(TriggerActor, Ball);
+}
+
+void APBModularBumperBase::QueueActivation(
+	APBBumperTriggerActorBase* TriggerActor,
+	APBBallBase* Ball)
+{
+	if (!IsValid(TriggerActor)
+		|| !IsValid(Ball)
+		|| !TriggerActor->IsTriggerReady()
+		|| HasPendingActivationFor(TriggerActor))
+	{
+		return;
+	}
+
+	TriggerActor->SetTriggerProgressState(EPBBumperTriggerProgressState::Queued);
+	PendingActivations.Add({TriggerActor, Ball});
+
+	if (EffectData.ExecutionPolicy == EPBBumperEffectExecutionPolicy::Immediate)
+	{
+		// Immediate 효과가 이 경로에 들어오면 이전 효과가 FinishEffect를 아직 호출하지 않은 것이다.
+		// 같은 Effect UObject 재진입을 막기 위해 안전하게 직렬화하고 설정 오류를 로그로 드러낸다.
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Immediate effect request was serialized because the execution lane is busy. Bumper=%s Trigger=%s Pending=%d"),
+			*GetNameSafe(this),
+			*GetNameSafe(TriggerActor),
+			PendingActivations.Num());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log,
+			TEXT("[Bumper] Effect request queued. Bumper=%s Trigger=%s Pending=%d"),
+			*GetNameSafe(this),
+			*GetNameSafe(TriggerActor),
+			PendingActivations.Num());
+	}
+}
+
+void APBModularBumperBase::StartActivation(
+	APBBumperTriggerActorBase* TriggerActor,
+	APBBallBase* Ball)
+{
+	if (!IsValid(TriggerActor) || !IsValid(Ball) || !TriggerActor->IsTriggerReady())
+	{
+		return;
+	}
+
+	if (RuntimeState.CurrentState != EPBBumperState::Idle || ActiveTriggerActor.IsValid())
+	{
+		QueueActivation(TriggerActor, Ball);
+		return;
+	}
+
+	ActiveTriggerActor = TriggerActor;
+	TriggerActor->SetTriggerProgressState(EPBBumperTriggerProgressState::Executing);
+	TriggerActor->SetTriggerState(EPBBumperState::Activated);
+	ExecuteActivation(Ball);
+}
+
+void APBModularBumperBase::ExecuteActivation(APBBallBase* Ball)
+{
+	if (!IsValid(Ball) || !ActiveTriggerActor.IsValid())
+	{
+		if (ActiveTriggerActor.IsValid())
+		{
+			FinishActivation();
+		}
+		return;
+	}
+
+	SetBumperState(EPBBumperState::Activated);
+	OnBumperActivated(Ball);
+	if (!ActiveTriggerActor.IsValid())
+	{
+		return;
+	}
+
+	if (IsValid(BumperEffect))
+	{
+		BumperEffect->ActivateEffect(this, Ball);
+		return;
+	}
+
+	ApplyBumperEffect(Ball);
+}
+
+void APBModularBumperBase::ScheduleNextPendingActivation()
+{
+	if (PendingActivations.IsEmpty()
+		|| ActiveTriggerActor.IsValid()
+		|| RuntimeState.CurrentState == EPBBumperState::Disabled
+		|| bPendingActivationScheduled)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return;
+	}
+
+	bPendingActivationScheduled = true;
+	World->GetTimerManager().SetTimerForNextTick(
+		FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			ProcessNextPendingActivation();
+		}));
+}
+
+void APBModularBumperBase::ProcessNextPendingActivation()
+{
+	bPendingActivationScheduled = false;
+	if (ActiveTriggerActor.IsValid()
+		|| RuntimeState.CurrentState != EPBBumperState::Idle)
+	{
+		return;
+	}
+
+	while (!PendingActivations.IsEmpty())
+	{
+		const FPendingBumperActivation PendingActivation = PendingActivations[0];
+		PendingActivations.RemoveAt(0);
+
+		APBBumperTriggerActorBase* TriggerActor = PendingActivation.TriggerActor.Get();
+		if (!IsValid(TriggerActor) || !TriggerActor->IsTriggerReady())
+		{
+			// 대기 중 Trigger가 파괴되거나 외부 초기화된 경우 모듈 호환 UI 값도 다시 계산한다.
+			NotifyTriggerCountChanged();
+			continue;
+		}
+
+		APBBallBase* Ball = PendingActivation.Ball.Get();
+		if (!IsValid(Ball))
+		{
+			UE_LOG(LogTemp, Warning,
+				TEXT("[Bumper] Queued effect request discarded because Ball is invalid. Bumper=%s Trigger=%s"),
+				*GetNameSafe(this),
+				*GetNameSafe(TriggerActor));
+			TriggerActor->FinishTrigger();
+			NotifyTriggerCountChanged();
+			continue;
+		}
+
+		StartActivation(TriggerActor, Ball);
+		return;
+	}
+}
+
+bool APBModularBumperBase::HasPendingActivationFor(
+	const APBBumperTriggerActorBase* TriggerActor) const
+{
+	return PendingActivations.ContainsByPredicate(
+		[TriggerActor](const FPendingBumperActivation& PendingActivation)
+		{
+			return PendingActivation.TriggerActor.Get() == TriggerActor;
+		});
 }
 
 bool APBModularBumperBase::FindBumperPositionTransform(
@@ -313,6 +576,8 @@ bool APBModularBumperBase::FindBumperPositionTransform(
 void APBModularBumperBase::NotifyTriggerCountChanged()
 {
 	const int32 RequiredTriggerCount = GetRequiredTriggerCount();
+	// 기존 모듈 단위 UI가 즉시 깨지지 않도록 자식 Trigger 중 가장 높은 진행도를 호환값으로 제공한다.
+	RuntimeState.CurrentTriggerCount = GetCurrentTriggerCount();
 	OnBumperTriggerCountChanged.Broadcast(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
 	OnTriggerCountChanged(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
 }

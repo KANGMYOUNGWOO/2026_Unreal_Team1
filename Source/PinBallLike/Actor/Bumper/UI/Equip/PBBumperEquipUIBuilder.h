@@ -27,14 +27,16 @@ namespace PBBumperEquipUIBuilder
 		const TArray<FPBBumperTableRow>& Rows,
 		const TSet<FName>& EquippedRowIds,
 		const UPBGameDataLoadSubsystem* GameDataLoadSubsystem,
-		TArray<TObjectPtr<UPBBumperListItemObject>>& OutReboundItems,
+		TArray<TObjectPtr<UPBBumperListItemObject>>& OutTopItems,
 		TArray<TObjectPtr<UPBBumperListItemObject>>& OutSideItems,
-		TArray<TObjectPtr<UPBBumperListItemObject>>& OutTopTargetItems);
+		TArray<TObjectPtr<UPBBumperListItemObject>>& OutReboundItems,
+		TArray<TObjectPtr<UPBBumperListItemObject>>& OutSpecialItems);
 	void UpdateBumperListEquipStates(
 		const TSet<FName>& EquippedRowIds,
-		const TArray<TObjectPtr<UPBBumperListItemObject>>& ReboundItems,
+		const TArray<TObjectPtr<UPBBumperListItemObject>>& TopItems,
 		const TArray<TObjectPtr<UPBBumperListItemObject>>& SideItems,
-		const TArray<TObjectPtr<UPBBumperListItemObject>>& TopTargetItems);
+		const TArray<TObjectPtr<UPBBumperListItemObject>>& ReboundItems,
+		const TArray<TObjectPtr<UPBBumperListItemObject>>& SpecialItems);
 	TSet<FName> MakeEquippedBumperRowIdSet(const UPBPlayerDataSubsystem* PlayerDataSubsystem);
 	bool IsBumperEquipped(FName RowName, const TSet<FName>& EquippedRowIds);
 	bool TryGetBumperSlotType(const FPBBumperTableRow& Row, EPBBumperSlotType& OutSlotType);

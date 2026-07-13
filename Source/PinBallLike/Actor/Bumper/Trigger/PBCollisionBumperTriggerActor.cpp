@@ -3,6 +3,7 @@
 
 #include "PBCollisionBumperTriggerActor.h"
 
+#include "Components/BoxComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
@@ -124,6 +125,53 @@ bool APBCollisionBumperTriggerActor::IsBallInTriggerArea(APBBallBase* Ball) cons
 	return OverlapCount != nullptr && *OverlapCount > 0;
 }
 
+bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& HitPoint) const
+{
+	if (HitPoint.ContainsNaN())
+	{
+		return false;
+	}
+
+	for (const UPrimitiveComponent* TriggerArea : TriggerAreas)
+	{
+		if (!IsValid(TriggerArea))
+		{
+			continue;
+		}
+
+		if (const UBoxComponent* BoxArea = Cast<UBoxComponent>(TriggerArea))
+		{
+			// 회전과 음수 Scale을 포함한 월드 Transform으로 충돌 지점을 Box 로컬 공간에 옮긴다.
+			const FTransform& AreaTransform = BoxArea->GetComponentTransform();
+			const FVector LocalHitPoint = AreaTransform.InverseTransformPosition(HitPoint);
+			const FVector BoxExtent = BoxArea->GetUnscaledBoxExtent();
+			const FVector AreaScale = AreaTransform.GetScale3D().GetAbs();
+			const FVector LocalTolerance(
+				FMath::IsNearlyZero(AreaScale.X) ? 0.0f : TriggerAreaHitPointTolerance / AreaScale.X,
+				FMath::IsNearlyZero(AreaScale.Y) ? 0.0f : TriggerAreaHitPointTolerance / AreaScale.Y,
+				FMath::IsNearlyZero(AreaScale.Z) ? 0.0f : TriggerAreaHitPointTolerance / AreaScale.Z);
+
+			if (FMath::Abs(LocalHitPoint.X) <= BoxExtent.X + LocalTolerance.X
+				&& FMath::Abs(LocalHitPoint.Y) <= BoxExtent.Y + LocalTolerance.Y
+				&& FMath::Abs(LocalHitPoint.Z) <= BoxExtent.Z + LocalTolerance.Z)
+			{
+				return true;
+			}
+			continue;
+		}
+
+		// Box 외 Primitive를 쓰는 파생 BP도 Trigger Area를 교체할 수 있도록 일반 경로를 남긴다.
+		FVector ClosestPoint;
+		const float Distance = TriggerArea->GetClosestPointOnCollision(HitPoint, ClosestPoint);
+		if (Distance >= 0.0f && Distance <= TriggerAreaHitPointTolerance)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void APBCollisionBumperTriggerActor::AddBounceVelocityToBall(APBBallBase* Ball, const FHitResult& Hit) const
 {
 	if (!IsValid(Ball))
@@ -168,7 +216,15 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 	}
 
 	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
-	if (!IsValid(Ball) || !IsBallInTriggerArea(Ball))
+	if (!IsValid(Ball))
+	{
+		return;
+	}
+
+	const bool bIsInValidTriggerArea = bUseHitPointTriggerAreaValidation
+		? IsHitPointInsideTriggerArea(Hit.ImpactPoint)
+		: IsBallInTriggerArea(Ball);
+	if (!bIsInValidTriggerArea)
 	{
 		return;
 	}

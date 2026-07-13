@@ -6,12 +6,14 @@
 #include "Engine/StreamableManager.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "UObject/PrimaryAssetId.h"
 #include "PBBumperSpawner.generated.h"
 
 class APBModularBumperBase;
 class UPBBumperDataAsset;
+class UPBBumperEffectBase;
 class UPBGameDataLoadSubsystem;
 class UPBPlayerDataSubsystem;
 class UPBTableDataSubsystem;
@@ -19,9 +21,11 @@ class USceneComponent;
 
 struct FPBPreparedBumperSpawnData
 {
-	// Modular Bumper 생성 직전에 필요한 값만 모아둔다.
+	// 비동기 로드가 끝난 뒤 Modular Bumper 생성에 필요한 값만 모아둔다.
 	FPBBumperTableRow BumperRow;
 	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
+	FPBBumperEffectRow EffectRow;
+	TSubclassOf<UPBBumperEffectBase> EffectClass;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
