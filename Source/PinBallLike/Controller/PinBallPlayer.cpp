@@ -6,6 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
+#include "InputActionValue.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Flipper/Flipper.h"
@@ -34,11 +35,7 @@ void APinBallPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		return;
 	}
 
-	if (!FlipperAction)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("FlipperAction is not assigned on %s."), *GetName());
-	}
-	else
+	if (FlipperAction)
 	{
 		EnhancedInputComponent->BindAction(
 			FlipperAction, ETriggerEvent::Started, this, &APinBallPlayer::UpFlippers);
@@ -46,6 +43,10 @@ void APinBallPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 			FlipperAction, ETriggerEvent::Completed, this, &APinBallPlayer::DownFlippers);
 		EnhancedInputComponent->BindAction(
 			FlipperAction, ETriggerEvent::Canceled, this, &APinBallPlayer::DownFlippers);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("FlipperAction is not assigned on %s."), *GetName());
 	}
 
 	if (LaunchAction)
@@ -72,6 +73,20 @@ void APinBallPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("ShiftAction is not assigned on %s."), *GetName());
+	}
+
+	if (SkillAction)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PinBallPlayer bound SkillAction %s on %s."),
+			*GetNameSafe(SkillAction.Get()),
+			*GetNameSafe(this));
+		EnhancedInputComponent->BindAction(
+			SkillAction, ETriggerEvent::Started, this, &APinBallPlayer::RequestUseSkill);
+	}
+
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SkillAction is not assigned on %s."), *GetName());
 	}
 }
 
@@ -169,4 +184,24 @@ void APinBallPlayer::SetFlippersRaised(const bool bRaised) const
 			Flipper->SetIsMove(bRaised);
 		}
 	}
+}
+
+void APinBallPlayer::RequestUseSkill(const FInputActionValue& Value)
+{
+	const int32 SkillInputValue = FMath::RoundToInt(Value.Get<float>());
+	// TODO: Remove after Blueprint skill input logging is verified.
+	Debug_OnSkillInputReceived(SkillInputValue);
+
+	if (!UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	FPBBattleSkillUseRequestedMessage Message;
+	Message.Requester = this;
+	Message.SkillInputValue = SkillInputValue;
+
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_Battle_Skill_Use_Requested,
+		Message);
 }

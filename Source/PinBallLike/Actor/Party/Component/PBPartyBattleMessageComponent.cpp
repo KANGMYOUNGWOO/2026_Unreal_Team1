@@ -45,6 +45,11 @@ void UPBPartyBattleMessageComponent::RegisterMessageListeners()
 		GameplayTags::Event_Battle_Party_Launch_Approved,
 		this,
 		&UPBPartyBattleMessageComponent::HandlePartyLaunchApprovedMessage);
+
+	SkillUseRequestedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattleSkillUseRequestedMessage>(
+		GameplayTags::Event_Battle_Skill_Use_Requested,
+		this,
+		&UPBPartyBattleMessageComponent::HandleSkillUseRequestedMessage);
 }
 
 void UPBPartyBattleMessageComponent::UnregisterMessageListeners()
@@ -59,6 +64,12 @@ void UPBPartyBattleMessageComponent::UnregisterMessageListeners()
 	{
 		PartyLaunchApprovedListenerHandle.Unregister();
 		PartyLaunchApprovedListenerHandle = FGameplayMessageListenerHandle();
+	}
+
+	if (SkillUseRequestedListenerHandle.IsValid())
+	{
+		SkillUseRequestedListenerHandle.Unregister();
+		SkillUseRequestedListenerHandle = FGameplayMessageListenerHandle();
 	}
 }
 
@@ -89,6 +100,18 @@ void UPBPartyBattleMessageComponent::HandlePartyLaunchApprovedMessage(
 	}
 
 	BroadcastPartyLaunched(Dependencies.GetPartyActor ? Dependencies.GetPartyActor() : GetOwner());
+}
+
+void UPBPartyBattleMessageComponent::HandleSkillUseRequestedMessage(
+	FGameplayTag Channel,
+	const FPBBattleSkillUseRequestedMessage& Message)
+{
+	(void)Channel;
+
+	if (Dependencies.RequestUseSkill)
+	{
+		Dependencies.RequestUseSkill(Message.SkillInputValue);
+	}
 }
 
 void UPBPartyBattleMessageComponent::BroadcastPartyLaunched(AActor* PartyActor) const

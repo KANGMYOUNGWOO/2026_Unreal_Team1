@@ -11,7 +11,10 @@
 #include "Component/PBPartyDeploymentComponent.h"
 #include "Component/PBPartyLauncherComponent.h"
 #include "Component/PBSnakeFormationComponent.h"
+#include "Engine/GameInstance.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 
 APBCombatPartyController::APBCombatPartyController()
 {
@@ -231,6 +234,10 @@ APBCombatPartyController::APBCombatPartyController()
 	{
 		return PartyLauncherComponent && PartyLauncherComponent->LaunchPartyFromReadyPosition();
 	};
+	BattleMessageDependencies.RequestUseSkill = [this](const int32 SkillInputValue)
+	{
+		RequestUseSkill(SkillInputValue);
+	};
 	BattleMessageDependencies.GetPartyActor = [this]() -> AActor*
 	{
 		return this;
@@ -415,4 +422,61 @@ TArray<APBBallBase*> APBCombatPartyController::GetValidPartyBalls() const
 		}
 	}
 	return ValidPartyBalls;
+}
+
+void APBCombatPartyController::RequestUseSkill(const int32 SkillInputValue)
+{
+	const int32 SlotIndex = SkillInputValue - 1;
+	if (SlotIndex < 0)
+	{
+		// TODO: Remove after Blueprint skill input logging is verified.
+		Debug_OnPartySkillUseRequested(SkillInputValue, SlotIndex, INDEX_NONE, nullptr);
+		return;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	const UPBBallDeckSubsystem* DeckSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBBallDeckSubsystem>() : nullptr;
+	if (!DeckSubsystem)
+	{
+		// TODO: Remove after Blueprint skill input logging is verified.
+		Debug_OnPartySkillUseRequested(SkillInputValue, SlotIndex, INDEX_NONE, nullptr);
+		return;
+	}
+
+	const int32 BallInstanceId = DeckSubsystem->GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, SlotIndex);
+	if (BallInstanceId == INDEX_NONE)
+	{
+		// TODO: Remove after Blueprint skill input logging is verified.
+		Debug_OnPartySkillUseRequested(SkillInputValue, SlotIndex, BallInstanceId, nullptr);
+		return;
+	}
+
+	APBBallBase* Ball = FindPartyBallByInstanceId(BallInstanceId);
+	// TODO: Remove after Blueprint skill input logging is verified.
+	Debug_OnPartySkillUseRequested(SkillInputValue, SlotIndex, BallInstanceId, Ball);
+	if (!IsValid(Ball))
+	{
+		return;
+	}
+
+	Ball->TryActivateSkill();
+}
+
+APBBallBase* APBCombatPartyController::FindPartyBallByInstanceId(const int32 BallInstanceId) const
+{
+	if (BallInstanceId == INDEX_NONE)
+	{
+		return nullptr;
+	}
+
+	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
+	{
+		if (IsValid(Ball.Get()) && Ball->GetBallInstanceId() == BallInstanceId)
+		{
+			return Ball.Get();
+		}
+	}
+
+	return nullptr;
 }

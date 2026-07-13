@@ -6,6 +6,7 @@
 #include "Component/PBBallHitReactionComponent.h"
 #include "Component/PBBallComboComponent.h"
 #include "Component/PBBallPhysicsComponent.h"
+#include "Component/PBBallSkillComponent.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "Components/SphereComponent.h"
@@ -33,6 +34,9 @@ APBBallBase::APBBallBase()
 	
 	// Combo
 	ComboComponent = CreateDefaultSubobject<UPBBallComboComponent>(TEXT("ComboComponent"));
+
+	// Skill
+	SkillComponent = CreateDefaultSubobject<UPBBallSkillComponent>(TEXT("SkillComponent"));
 	
 	// Physics
 	PhysicsComponent = CreateDefaultSubobject<UPBBallPhysicsComponent>(TEXT("PhysicsComponent"));
@@ -100,6 +104,21 @@ void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
 		CollisionSphere->SetGenerateOverlapEvents(bLeader);
 		CollisionSphere->SetNotifyRigidBodyCollision(bLeader);
 	}
+}
+
+bool APBBallBase::TryActivateSkill()
+{
+	if (IsHidden() || CombatRole == EPBBallPartyRole::None)
+	{
+		// TODO: Remove after Blueprint skill input logging is verified.
+		Debug_OnSkillActivationFinished(false);
+		return false;
+	}
+
+	const bool bSuccess = SkillComponent && SkillComponent->TryActivateSkill();
+	// TODO: Remove after Blueprint skill input logging is verified.
+	Debug_OnSkillActivationFinished(bSuccess);
+	return bSuccess;
 }
 
 void APBBallBase::BeginPlay()

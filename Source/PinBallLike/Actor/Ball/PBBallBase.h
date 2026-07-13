@@ -13,6 +13,7 @@ class UPBBaseResourceComponent;
 class UPBBallComboComponent;
 class UPBBallHitReactionComponent;
 class UPBBallPhysicsComponent;
+class UPBBallSkillComponent;
 class USphereComponent;
 
 UCLASS()
@@ -37,10 +38,19 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball|Combat")
 	EPBBallPartyRole GetCombatRole() const { return CombatRole; }
 
+	UFUNCTION(BlueprintPure, Category = "Ball|Data")
+	int32 GetBallInstanceId() const { return BallInstanceData.InstanceId; }
+
 	UFUNCTION(BlueprintPure, Category = "Ball|Resource")
 	UPBBaseResourceComponent* GetResourceComponent() const { return ResourceComponent; }
+
+	UFUNCTION(BlueprintCallable, Category = "Ball|Skill")
+	bool TryActivateSkill();
 	
 protected:
+	UFUNCTION(BlueprintImplementableEvent, Category = "Debug")
+	void Debug_OnSkillActivationFinished(bool bSuccess);
+
 	virtual void BeginPlay() override;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
@@ -57,6 +67,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Combo")
 	TObjectPtr<UPBBallComboComponent> ComboComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Ball|Skill")
+	TObjectPtr<UPBBallSkillComponent> SkillComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
 	TObjectPtr<UPBBallHitReactionComponent> HitReactionComponent;
