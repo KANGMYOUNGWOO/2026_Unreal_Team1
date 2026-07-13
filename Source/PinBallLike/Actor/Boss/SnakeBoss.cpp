@@ -173,34 +173,30 @@ void ASnakeBoss::MoveHead(float DeltaTime)
 
 	const FVector CurrentLocation = GetActorLocation();
 	const float MoveDistance = MoveSpeed * DeltaTime;
-	const float CurveDistance = FMath::Max(PatrolCurveDistance, PatrolAcceptanceRadius);
-	PatrolCurveAlpha = FMath::Clamp(PatrolCurveAlpha + MoveDistance / CurveDistance, 0.0f, 1.0f);
-
-	if (PatrolCurveAlpha >= 1.0f || FVector::Dist2D(CurrentLocation, PatrolTargetLocation) <= PatrolAcceptanceRadius)
-	{
-		SetActorLocation(PatrolTargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
-		UpdateSnakeAnimationData(DeltaTime, PatrolTargetLocation, CurrentLocation);
-		RecordSnakePathLocation(PatrolTargetLocation);
-		UpdateSnakeSplinePoints();
-		SelectNextPatrolTarget();
-		return;
-	}
-
+	PatrolCurveAlpha = CalculateNextPatrolCurveAlpha(MoveDistance);
 	const FVector NextLocation = ClampLocationToPatrolArea(GetPatrolCurveLocation(PatrolCurveAlpha));
 	FVector MoveDirection = NextLocation - CurrentLocation;
 	MoveDirection.Z = 0.0f;
 	if (!MoveDirection.Normalize())
 	{
-		SelectNextPatrolTarget();
+		if (PatrolCurveAlpha >= 1.0f)
+		{
+			SelectNextPatrolTarget();
+		}
 		return;
 	}
 
 	CurrentMoveDirection = FMath::VInterpNormalRotationTo(CurrentMoveDirection, MoveDirection, DeltaTime, TurnSpeed);
-	SetActorLocation(NextLocation, false, nullptr, ETeleportType::TeleportPhysics);
+	SetActorLocation(NextLocation, false, nullptr, ETeleportType::None);
+	FaceMovementDirection(CurrentMoveDirection);
 	UpdateSnakeAnimationData(DeltaTime, NextLocation, CurrentLocation);
 	RecordSnakePathLocation(NextLocation);
 	UpdateSnakeSplinePoints();
-	FaceMovementDirection(CurrentMoveDirection);
+
+	if (PatrolCurveAlpha >= 1.0f)
+	{
+		SelectNextPatrolTarget();
+	}
 }
 
 void ASnakeBoss::UpdateSnakeAnimationData(float DeltaTime, const FVector& NextLocation, const FVector& PreviousLocation)
@@ -406,6 +402,11 @@ void ASnakeBoss::SelectNextPatrolTarget()
 
 		FVector CandidateDirection = PatrolTargetLocation - PatrolStartLocation;
 		CandidateDirection.Z = 0.0f;
+		if (CandidateDirection.SizeSquared2D() <= FMath::Square(PatrolAcceptanceRadius))
+		{
+			continue;
+		}
+
 		if (!CandidateDirection.Normalize())
 		{
 			continue;
@@ -524,6 +525,43 @@ float ASnakeBoss::CalculatePatrolCurveDistance() const
 	}
 
 	return CurveDistance;
+}
+
+float ASnakeBoss::CalculateNextPatrolCurveAlpha(float MoveDistance) const
+{
+	if (MoveDistance <= 0.0f || PatrolCurveAlpha >= 1.0f || PatrolCurveDistance <= KINDA_SMALL_NUMBER)
+	{
+		return PatrolCurveAlpha;
+	}
+
+	const FVector CurrentCurveLocation = GetPatrolCurveLocation(PatrolCurveAlpha);
+	if (FVector::Dist2D(CurrentCurveLocation, PatrolTargetLocation) <= MoveDistance)
+	{
+		return 1.0f;
+	}
+
+	float MinimumAlpha = PatrolCurveAlpha;
+	float MaximumAlpha = 1.0f;
+	constexpr int32 SearchIterationCount = 10;
+
+	for (int32 SearchIndex = 0; SearchIndex < SearchIterationCount; ++SearchIndex)
+	{
+		const float CandidateAlpha = (MinimumAlpha + MaximumAlpha) * 0.5f;
+		const float CandidateDistance = FVector::Dist2D(
+			CurrentCurveLocation,
+			GetPatrolCurveLocation(CandidateAlpha));
+
+		if (CandidateDistance < MoveDistance)
+		{
+			MinimumAlpha = CandidateAlpha;
+		}
+		else
+		{
+			MaximumAlpha = CandidateAlpha;
+		}
+	}
+
+	return MaximumAlpha;
 }
 
 void ASnakeBoss::FaceMovementDirection(const FVector& Direction)

@@ -67,6 +67,7 @@ protected:
 	bool IsInsideHeadExcludedArea(const FVector& SourceLocation) const;
 	FVector GetPatrolCurveLocation(float Alpha) const;
 	float CalculatePatrolCurveDistance() const;
+	float CalculateNextPatrolCurveAlpha(float MoveDistance) const;
 	void FaceMovementDirection(const FVector& Direction);
 	void DrawDebugSnake() const;
 
