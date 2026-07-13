@@ -20,9 +20,10 @@ namespace PBBumperEquipUIBuilder
 			const FPBBumperTableRow& Row,
 			const TSet<FName>& EquippedRowIds,
 			const UPBGameDataLoadSubsystem* GameDataLoadSubsystem,
-			TArray<TObjectPtr<UPBBumperListItemObject>>& OutReboundItems,
+			TArray<TObjectPtr<UPBBumperListItemObject>>& OutTopItems,
 			TArray<TObjectPtr<UPBBumperListItemObject>>& OutSideItems,
-			TArray<TObjectPtr<UPBBumperListItemObject>>& OutTopTargetItems)
+			TArray<TObjectPtr<UPBBumperListItemObject>>& OutReboundItems,
+			TArray<TObjectPtr<UPBBumperListItemObject>>& OutSpecialItems)
 		{
 			UPBBumperListItemObject* ItemObject = NewObject<UPBBumperListItemObject>(Outer);
 			if (!IsValid(ItemObject))
@@ -42,6 +43,9 @@ namespace PBBumperEquipUIBuilder
 
 			switch (Row.BumperType)
 			{
+			case EPBBumperType::TopTarget:
+				OutTopItems.Add(ItemObject);
+				break;
 			case EPBBumperType::Rebound:
 				OutReboundItems.Add(ItemObject);
 				break;
@@ -49,8 +53,7 @@ namespace PBBumperEquipUIBuilder
 				OutSideItems.Add(ItemObject);
 				break;
 			case EPBBumperType::Gate:
-			case EPBBumperType::TopTarget:
-				OutTopTargetItems.Add(ItemObject);
+				OutSpecialItems.Add(ItemObject);
 				break;
 			default:
 				break;
@@ -89,9 +92,10 @@ namespace PBBumperEquipUIBuilder
 		const TArray<FPBBumperTableRow>& Rows,
 		const TSet<FName>& EquippedRowIds,
 		const UPBGameDataLoadSubsystem* GameDataLoadSubsystem,
-		TArray<TObjectPtr<UPBBumperListItemObject>>& OutReboundItems,
+		TArray<TObjectPtr<UPBBumperListItemObject>>& OutTopItems,
 		TArray<TObjectPtr<UPBBumperListItemObject>>& OutSideItems,
-		TArray<TObjectPtr<UPBBumperListItemObject>>& OutTopTargetItems)
+		TArray<TObjectPtr<UPBBumperListItemObject>>& OutReboundItems,
+		TArray<TObjectPtr<UPBBumperListItemObject>>& OutSpecialItems)
 	{
 		for (int32 RowIndex = 0; RowIndex < Rows.Num(); ++RowIndex)
 		{
@@ -102,17 +106,19 @@ namespace PBBumperEquipUIBuilder
 				Rows[RowIndex],
 				EquippedRowIds,
 				GameDataLoadSubsystem,
-				OutReboundItems,
+				OutTopItems,
 				OutSideItems,
-				OutTopTargetItems);
+				OutReboundItems,
+				OutSpecialItems);
 		}
 	}
 
 	void UpdateBumperListEquipStates(
 		const TSet<FName>& EquippedRowIds,
-		const TArray<TObjectPtr<UPBBumperListItemObject>>& ReboundItems,
+		const TArray<TObjectPtr<UPBBumperListItemObject>>& TopItems,
 		const TArray<TObjectPtr<UPBBumperListItemObject>>& SideItems,
-		const TArray<TObjectPtr<UPBBumperListItemObject>>& TopTargetItems)
+		const TArray<TObjectPtr<UPBBumperListItemObject>>& ReboundItems,
+		const TArray<TObjectPtr<UPBBumperListItemObject>>& SpecialItems)
 	{
 		auto UpdateItems = [&EquippedRowIds](const TArray<TObjectPtr<UPBBumperListItemObject>>& Items)
 		{
@@ -125,9 +131,10 @@ namespace PBBumperEquipUIBuilder
 			}
 		};
 
-		UpdateItems(ReboundItems);
+		UpdateItems(TopItems);
 		UpdateItems(SideItems);
-		UpdateItems(TopTargetItems);
+		UpdateItems(ReboundItems);
+		UpdateItems(SpecialItems);
 	}
 
 	TSet<FName> MakeEquippedBumperRowIdSet(const UPBPlayerDataSubsystem* PlayerDataSubsystem)
@@ -155,6 +162,9 @@ namespace PBBumperEquipUIBuilder
 	{
 		switch (Row.BumperType)
 		{
+		case EPBBumperType::TopTarget:
+			OutSlotType = EPBBumperSlotType::Top;
+			return true;
 		case EPBBumperType::Rebound:
 			OutSlotType = EPBBumperSlotType::Rebound;
 			return true;
@@ -162,7 +172,6 @@ namespace PBBumperEquipUIBuilder
 			OutSlotType = EPBBumperSlotType::Side;
 			return true;
 		case EPBBumperType::Gate:
-		case EPBBumperType::TopTarget:
 			OutSlotType = EPBBumperSlotType::Special;
 			return true;
 		default:
