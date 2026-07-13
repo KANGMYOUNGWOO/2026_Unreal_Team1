@@ -49,6 +49,27 @@ namespace
 	{
 		return MakeBundleKey({ PBAssetBundleNames::Gameplay, BossGameplayBundleKey, PBAssetBundleNames::UI, BossUIBundleKey });
 	}
+
+	bool ArePatternClassesLoaded(const TArray<FPBBossPatternData>& PatternDatas)
+	{
+		for (const FPBBossPatternData& PatternData : PatternDatas)
+		{
+			if (PatternData.IsEnabled && !PatternData.PatternClass.IsNull() && !PatternData.PatternClass.Get())
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool AreBossPatternClassesLoaded(const UPBBossDataAsset* BossDataAsset)
+	{
+		return BossDataAsset
+			&& ArePatternClassesLoaded(BossDataAsset->PatternDatas)
+			&& ArePatternClassesLoaded(BossDataAsset->EnragedPatternDatas)
+			&& ArePatternClassesLoaded(BossDataAsset->EnragedEntryPatternDatas);
+	}
 }
 
 APBBossSpawner::APBBossSpawner()
@@ -161,6 +182,11 @@ bool APBBossSpawner::IsLoadedBossDataReady() const
 	return IsBossDataLoaded;
 }
 
+APBBossBase* APBBossSpawner::GetSpawnedBoss() const
+{
+	return SpawnedBoss;
+}
+
 void APBBossSpawner::SetBossRowName(const FName NewBossRowName)
 {
 	BossRowName = NewBossRowName;
@@ -240,12 +266,15 @@ void APBBossSpawner::HandleBossDataLoadCompleted()
 		? Cast<UPBBossDataAsset>(CachedGameDataLoadSubsystem->GetLoadedPrimaryAsset(BossAssetId))
 		: nullptr;
 
-	if (!IsValid(BossDataAsset) || !IsValid(BossDataAsset->BossClass.Get()))
+	if (!IsValid(BossDataAsset)
+		|| !IsValid(BossDataAsset->BossClass.Get())
+		|| !AreBossPatternClassesLoaded(BossDataAsset))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[BossSpawn] Boss async load completed with failure. BossRowName=%s Asset=%s BossClass=%s HasSubsystem=%s"),
+		UE_LOG(LogTemp, Warning, TEXT("[BossSpawn] Boss async load completed with failure. BossRowName=%s Asset=%s BossClass=%s HasPatterns=%s HasSubsystem=%s"),
 			*BossRowName.ToString(),
 			*GetNameSafe(BossDataAsset),
 			IsValid(BossDataAsset) ? *GetNameSafe(BossDataAsset->BossClass.Get()) : TEXT("None"),
+			AreBossPatternClassesLoaded(BossDataAsset) ? TEXT("true") : TEXT("false"),
 			IsValid(CachedGameDataLoadSubsystem) ? TEXT("true") : TEXT("false"));
 		IsBossDataLoaded = false;
 		PendingBossDataLoadedDelegate.ExecuteIfBound();

@@ -107,5 +107,6 @@ private:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<APBBossPatternTelegraph>> SpawnedTelegraphs;
 
+	mutable TWeakObjectPtr<AActor> CachedPinballActor;
 	FTimerHandle TelegraphTimerHandle;
 };

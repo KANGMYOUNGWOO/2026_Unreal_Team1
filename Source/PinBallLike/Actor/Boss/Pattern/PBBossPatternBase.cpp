@@ -108,6 +108,11 @@ AActor* UPBBossPatternBase::FindPinballActor() const
 
 AActor* UPBBossPatternBase::FindPinballActor(APBBossBase* Boss) const
 {
+	if (CachedPinballActor.IsValid())
+	{
+		return CachedPinballActor.Get();
+	}
+
 	if (!Boss)
 	{
 		return nullptr;
@@ -119,7 +124,8 @@ AActor* UPBBossPatternBase::FindPinballActor(APBBossBase* Boss) const
 		return nullptr;
 	}
 
-	return UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
+	CachedPinballActor = UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
+	return CachedPinballActor.Get();
 }
 
 void UPBBossPatternBase::StartExecutePattern()

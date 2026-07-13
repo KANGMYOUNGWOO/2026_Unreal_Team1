@@ -2,6 +2,7 @@
 
 #include "Component/PBBossDamageComponent.h"
 #include "Component/PBBossGroggyComponent.h"
+#include "Component/PBBossIntroComponent.h"
 #include "Component/PBBossPatternComponent.h"
 #include "Component/PBBossPinballReactionComponent.h"
 #include "Component/PBBossStatComponent.h"
@@ -57,6 +58,7 @@ APBBossBase::APBBossBase()
 	BossGroggyComponent = CreateDefaultSubobject<UPBBossGroggyComponent>(TEXT("BossGroggyComponent"));
 	BossDamageComponent = CreateDefaultSubobject<UPBBossDamageComponent>(TEXT("BossDamageComponent"));
 	BossPatternComponent = CreateDefaultSubobject<UPBBossPatternComponent>(TEXT("BossPatternComponent"));
+	BossIntroComponent = CreateDefaultSubobject<UPBBossIntroComponent>(TEXT("BossIntroComponent"));
 	BossPinballReactionComponent = CreateDefaultSubobject<UPBBossPinballReactionComponent>(TEXT("BossPinballReactionComponent"));
 	BossWeaknessComponent = CreateDefaultSubobject<UPBBossWeaknessComponent>(TEXT("BossWeaknessComponent"));
 	BossStateTreeComponent = CreateDefaultSubobject<UStateTreeComponent>(TEXT("BossStateTreeComponent"));
@@ -97,6 +99,11 @@ UStateTreeComponent* APBBossBase::GetBossStateTreeComponent() const
 UPBBossUIComponent* APBBossBase::GetBossUIComponent() const
 {
 	return BossUIComponent;
+}
+
+UPBBossIntroComponent* APBBossBase::GetBossIntroComponent() const
+{
+	return BossIntroComponent;
 }
 
 void APBBossBase::SetBossState(EPBBossState NewBossState)
@@ -181,12 +188,11 @@ void APBBossBase::StopPatternState()
 
 void APBBossBase::StartGroggyState()
 {
-	if (IsGroggyStateActive || IsDead())
+	if (IsGroggyState() || IsDead())
 	{
 		return;
 	}
 
-	IsGroggyStateActive = true;
 	SetBossState(EPBBossState::Groggy);
 
 	if (BossPatternComponent)
@@ -206,12 +212,11 @@ void APBBossBase::StartGroggyState()
 
 void APBBossBase::FinishGroggyState()
 {
-	if (!IsGroggyStateActive || !BossGroggyComponent || IsDead())
+	if (!IsGroggyState() || !BossGroggyComponent || IsDead())
 	{
 		return;
 	}
 
-	IsGroggyStateActive = false;
 	SetWeaknessState(false);
 	ClearGroggyResetTimer();
 
@@ -257,13 +262,11 @@ void APBBossBase::StartEnragedState()
 
 void APBBossBase::StartDeadState()
 {
-	if (IsDeadStateActive)
+	if (IsDeadState())
 	{
 		return;
 	}
 
-	IsDeadStateActive = true;
-	IsGroggyStateActive = false;
 	SetBossState(EPBBossState::Dead);
 
 	if (BossPatternComponent)

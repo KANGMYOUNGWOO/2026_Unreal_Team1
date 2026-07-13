@@ -302,6 +302,7 @@ void UPBBossPatternComponent::HandleBattlePhaseChangedMessage(
 	IsCombatPhaseActive = Message.NewPhase == EPBBattleLevelPhase::Combat;
 	if (!IsCombatPhaseActive)
 	{
+		StopPatternSystem();
 		return;
 	}
 
@@ -320,11 +321,6 @@ void UPBBossPatternComponent::InitializePatternDatas(
 		}
 
 		TSubclassOf<UPBBossPatternBase> PatternClass = PatternData.PatternClass.Get();
-		if (!PatternClass)
-		{
-			PatternClass = PatternData.PatternClass.LoadSynchronous();
-		}
-
 		if (!PatternClass)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[BossPatternComponent] InitializePatternDatas failed. Pattern class load failed. Boss=%s PatternName=%s Path=%s"),
