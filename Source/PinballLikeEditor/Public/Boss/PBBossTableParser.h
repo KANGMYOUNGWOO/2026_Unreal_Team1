@@ -36,4 +36,8 @@ protected:
 
 	UPBBossDataAsset* SetupBossDataAsset(FName RowName, const TMap<FString, FString>& RowData) const;
 	TSoftClassPtr<class APBBossBase> FindBossClass(FName BossClassId) const;
+	
+private:
+	FName GetClassIdOrRowName(const TMap<FString, FString>& RowData, const FString& ColumnName, const FName RowName) const;
+	
 };

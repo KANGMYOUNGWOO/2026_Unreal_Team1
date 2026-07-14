@@ -2,105 +2,41 @@
 
 #include "PBCollectionEntryWidget.h"
 #include "PinBallLike/Collection/PBCollectionSubsystem.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 
-#include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
-#include "Components/ButtonSlot.h"
 #include "Components/ComboBoxString.h"
 #include "Components/EditableTextBox.h"
-#include "Components/HorizontalBox.h"
-#include "Components/HorizontalBoxSlot.h"
-#include "Components/ScrollBox.h"
-#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
-#include "Components/VerticalBox.h"
-#include "Components/VerticalBoxSlot.h"
+#include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "UObject/SoftObjectPath.h"
 
 namespace
 {
-constexpr float TabLabelWidth = 96.0f;
-constexpr float DemoButtonLabelWidth = 82.0f;
-constexpr float DetailPanelWidth = 440.0f;
-
-FSlateBrush MakeCollectionColorBrush(const FLinearColor& Color, const FVector2D& ImageSize)
-{
-	FSlateBrush Brush;
-	Brush.ImageSize = ImageSize;
-	Brush.DrawAs = ESlateBrushDrawType::Box;
-	Brush.TintColor = FSlateColor(Color);
-	return Brush;
-}
-
-FButtonStyle MakeCollectionButtonStyle(
-	const FLinearColor& NormalColor,
-	const FLinearColor& HoveredColor,
-	const FLinearColor& PressedColor,
-	const FVector2D& ImageSize)
-{
-	FButtonStyle Style;
-	Style.SetNormal(MakeCollectionColorBrush(NormalColor, ImageSize));
-	Style.SetHovered(MakeCollectionColorBrush(HoveredColor, ImageSize));
-	Style.SetPressed(MakeCollectionColorBrush(PressedColor, ImageSize));
-	Style.SetNormalPadding(FMargin(12.0f, 8.0f));
-	Style.SetPressedPadding(FMargin(12.0f, 10.0f, 12.0f, 6.0f));
-	return Style;
-}
-
-FButtonStyle MakeDefaultButtonStyle()
-{
-	return MakeCollectionButtonStyle(
-		FLinearColor(0.08f, 0.16f, 0.20f, 1.0f),
-		FLinearColor(0.12f, 0.28f, 0.34f, 1.0f),
-		FLinearColor(0.05f, 0.11f, 0.14f, 1.0f),
-		FVector2D(128.0f, 36.0f));
-}
-
-FButtonStyle MakeTabButtonStyle(bool bActive)
-{
-	return MakeCollectionButtonStyle(
-		bActive
-			? FLinearColor(0.10f, 0.36f, 0.42f, 1.0f)
-			: FLinearColor(0.07f, 0.14f, 0.18f, 1.0f),
-		FLinearColor(0.14f, 0.30f, 0.36f, 1.0f),
-		FLinearColor(0.05f, 0.11f, 0.14f, 1.0f),
-		FVector2D(128.0f, 36.0f));
-}
-
-FLinearColor GetCollectionAccentColor(EPBCollectionCategory Category, EPBCollectionState State)
-{
-	if (State == EPBCollectionState::Locked)
-	{
-		return FLinearColor(0.28f, 0.28f, 0.32f, 1.0f);
-	}
-
-	switch (Category)
-	{
-	case EPBCollectionCategory::Ball:
-		return FLinearColor(0.88f, 0.22f, 0.18f, 1.0f);
-	case EPBCollectionCategory::Bumper:
-		return FLinearColor(0.12f, 0.72f, 0.86f, 1.0f);
-	case EPBCollectionCategory::Boss:
-		return FLinearColor(0.72f, 0.24f, 0.86f, 1.0f);
-	case EPBCollectionCategory::Relic:
-		return FLinearColor(0.92f, 0.66f, 0.22f, 1.0f);
-	case EPBCollectionCategory::Achievement:
-		return FLinearColor(0.34f, 0.72f, 0.42f, 1.0f);
-	default:
-		return FLinearColor(0.12f, 0.72f, 0.86f, 1.0f);
-	}
-}
+const FSoftClassPath LegacyCollectionWidgetBlueprintPath(
+	TEXT("/Game/Blueprints/UI/Collection/WBP_CollectionWidget.WBP_CollectionWidget_C"));
 }
 
 void UPBCollectionWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	BuildDefaultWidgetTree();
+	// WBP_MainMenu의 기존 C++ 클래스 참조는 OnPushed에서 실제 WBP로 교체합니다.
+	if (GetClass() == StaticClass())
+	{
+		return;
+	}
 
+	BindWidgetEvents();
+	ValidateRequiredWidgetBindings();
+}
+
+void UPBCollectionWidget::BindWidgetEvents()
+{
 	if (AllTabButton)
 	{
 		AllTabButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleAllTabClicked);
@@ -125,55 +61,92 @@ void UPBCollectionWidget::NativeOnInitialized()
 	{
 		AchievementTabButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleAchievementTabClicked);
 	}
-	if (DiscoverButton)
+	if (CloseButton)
 	{
-		DiscoverButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleDiscoverClicked);
-	}
-	if (UnlockButton)
-	{
-		UnlockButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleUnlockClicked);
-	}
-	if (CompleteButton)
-	{
-		CompleteButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleCompleteClicked);
-	}
-	if (ResetButton)
-	{
-		ResetButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleResetClicked);
+		CloseButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleCloseClicked);
 	}
 	if (SearchTextBox)
 	{
-		SearchTextBox->OnTextChanged.AddDynamic(this, &UPBCollectionWidget::HandleSearchTextChanged);
+		SearchTextBox->OnTextChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleSearchTextChanged);
 	}
 	if (AttackTypeComboBox)
 	{
-		AttackTypeComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleAttackTypeFilterChanged);
+		AttackTypeComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleAttackTypeFilterChanged);
 	}
 	if (RoleComboBox)
 	{
-		RoleComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleRoleFilterChanged);
+		RoleComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleRoleFilterChanged);
 	}
 	if (AttributeComboBox)
 	{
-		AttributeComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleAttributeFilterChanged);
+		AttributeComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleAttributeFilterChanged);
 	}
 	if (StarGradeComboBox)
 	{
-		StarGradeComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleStarGradeFilterChanged);
+		StarGradeComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleStarGradeFilterChanged);
 	}
 	if (SortModeComboBox)
 	{
-		SortModeComboBox->OnSelectionChanged.AddDynamic(this, &UPBCollectionWidget::HandleSortModeChanged);
+		SortModeComboBox->OnSelectionChanged.AddUniqueDynamic(this, &UPBCollectionWidget::HandleSortModeChanged);
 	}
+}
+
+bool UPBCollectionWidget::ValidateRequiredWidgetBindings() const
+{
+	bool bAllWidgetsBound = true;
+	const auto CheckBinding = [this, &bAllWidgetsBound](const UObject* Widget, const TCHAR* WidgetName)
+	{
+		if (!IsValid(Widget))
+		{
+			UE_LOG(
+				LogTemp,
+				Error,
+				TEXT("%s: Widget Blueprint에 필수 위젯 '%s'가 없거나 이름/타입이 일치하지 않습니다."),
+				*GetName(),
+				WidgetName);
+			bAllWidgetsBound = false;
+		}
+	};
+
+	CheckBinding(EntryGridPanel, TEXT("EntryGridPanel"));
+	CheckBinding(SearchTextBox, TEXT("SearchTextBox"));
+	CheckBinding(AttackTypeComboBox, TEXT("AttackTypeComboBox"));
+	CheckBinding(RoleComboBox, TEXT("RoleComboBox"));
+	CheckBinding(AttributeComboBox, TEXT("AttributeComboBox"));
+	CheckBinding(StarGradeComboBox, TEXT("StarGradeComboBox"));
+	CheckBinding(SortModeComboBox, TEXT("SortModeComboBox"));
+	CheckBinding(DetailNameText, TEXT("DetailNameText"));
+	CheckBinding(DetailMetaText, TEXT("DetailMetaText"));
+	CheckBinding(DetailDescriptionText, TEXT("DetailDescriptionText"));
+	CheckBinding(DetailUnlockText, TEXT("DetailUnlockText"));
+	CheckBinding(DetailRecordText, TEXT("DetailRecordText"));
+	CheckBinding(DetailAccentBorder, TEXT("DetailAccentBorder"));
+	CheckBinding(AllTabButton, TEXT("AllTabButton"));
+	CheckBinding(BallTabButton, TEXT("BallTabButton"));
+	CheckBinding(BumperTabButton, TEXT("BumperTabButton"));
+	CheckBinding(BossTabButton, TEXT("BossTabButton"));
+	CheckBinding(AchievementTabButton, TEXT("AchievementTabButton"));
+	CheckBinding(CloseButton, TEXT("CloseButton"));
+
+	return bAllWidgetsBound;
 }
 
 void UPBCollectionWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	if (GetClass() == StaticClass())
+	{
+		return;
+	}
+
 	if (!EntryWidgetClass)
 	{
-		EntryWidgetClass = UPBCollectionEntryWidget::StaticClass();
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("%s: EntryWidgetClass가 비어 있습니다. 도감 항목 Widget Blueprint를 지정해야 합니다."),
+			*GetName());
 	}
 
 	CollectionSubsystem = GetGameInstance()
@@ -185,10 +158,13 @@ void UPBCollectionWidget::NativeConstruct()
 		CollectionSubsystem->OnCollectionEntryChanged.AddUniqueDynamic(
 			this,
 			&UPBCollectionWidget::HandleCollectionEntryChanged);
+		CollectionSubsystem->OnCollectionDataReady.AddUniqueDynamic(
+			this,
+			&UPBCollectionWidget::HandleCollectionDataReady);
 	}
 
 	PopulateFilterOptions();
-	RefreshCollection();
+	SetCategory(CurrentCategory);
 }
 
 void UPBCollectionWidget::NativeDestruct()
@@ -198,9 +174,31 @@ void UPBCollectionWidget::NativeDestruct()
 		CollectionSubsystem->OnCollectionEntryChanged.RemoveDynamic(
 			this,
 			&UPBCollectionWidget::HandleCollectionEntryChanged);
+		CollectionSubsystem->OnCollectionDataReady.RemoveDynamic(
+			this,
+			&UPBCollectionWidget::HandleCollectionDataReady);
 	}
 
 	Super::NativeDestruct();
+}
+
+void UPBCollectionWidget::OnPushed_Implementation()
+{
+	Super::OnPushed_Implementation();
+
+	if (RedirectLegacyNativeWidget())
+	{
+		return;
+	}
+
+	ApplyCollectionInputMode(true);
+}
+
+void UPBCollectionWidget::OnPopped_Implementation()
+{
+	ApplyCollectionInputMode(false);
+
+	Super::OnPopped_Implementation();
 }
 
 void UPBCollectionWidget::RefreshCollection()
@@ -209,324 +207,62 @@ void UPBCollectionWidget::RefreshCollection()
 	RefreshDetail();
 }
 
-void UPBCollectionWidget::BuildDefaultWidgetTree()
+bool UPBCollectionWidget::RedirectLegacyNativeWidget()
 {
-	if (!WidgetTree || WidgetTree->RootWidget)
+	if (GetClass() != StaticClass())
 	{
-		return;
+		return false;
 	}
 
-	UBorder* RootBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("RootBorder"));
-	RootBorder->SetBrush(MakeCollectionColorBrush(FLinearColor(0.015f, 0.018f, 0.024f, 1.0f), FVector2D(1920.0f, 1080.0f)));
-	RootBorder->SetPadding(FMargin(26.0f, 24.0f));
-	WidgetTree->RootWidget = RootBorder;
-
-	UBorder* WindowFrameBorder = WidgetTree->ConstructWidget<UBorder>(
-		UBorder::StaticClass(),
-		TEXT("WindowFrameBorder"));
-	WindowFrameBorder->SetBrush(MakeCollectionColorBrush(FLinearColor(0.025f, 0.045f, 0.055f, 0.96f), FVector2D(1606.0f, 979.0f)));
-	WindowFrameBorder->SetPadding(FMargin(34.0f, 34.0f, 34.0f, 34.0f));
-	RootBorder->SetContent(WindowFrameBorder);
-
-	UVerticalBox* RootBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("RootBox"));
-	WindowFrameBorder->SetContent(RootBox);
-
-	BuildHeader(RootBox);
-	BuildBody(RootBox);
-}
-
-void UPBCollectionWidget::BuildHeader(UVerticalBox* RootBox)
-{
-	UHorizontalBox* HeaderBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("HeaderBox"));
-	RootBox->AddChildToVerticalBox(HeaderBox);
-	if (UVerticalBoxSlot* HeaderSlot = Cast<UVerticalBoxSlot>(HeaderBox->Slot))
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+		: nullptr;
+	if (!IsValid(UIManagerSubsystem))
 	{
-		HeaderSlot->SetPadding(FMargin(36.0f, 10.0f, 36.0f, 12.0f));
-		HeaderSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
+		UE_LOG(LogTemp, Error, TEXT("%s: 도감 WBP 전환에 필요한 UIManager를 찾지 못했습니다."), *GetName());
+		return true;
 	}
 
-	AllTabButton = CreateTextButton(WidgetTree, TEXT("AllTabButton"), NSLOCTEXT("PBCollection", "AllTab", "전체"));
-	BallTabButton = CreateTextButton(WidgetTree, TEXT("BallTabButton"), NSLOCTEXT("PBCollection", "BallTab", "Ball"));
-	BumperTabButton = CreateTextButton(WidgetTree, TEXT("BumperTabButton"), NSLOCTEXT("PBCollection", "BumperTab", "Bumper"));
-	BossTabButton = CreateTextButton(WidgetTree, TEXT("BossTabButton"), NSLOCTEXT("PBCollection", "BossTab", "Boss"));
-	RelicTabButton = CreateTextButton(WidgetTree, TEXT("RelicTabButton"), NSLOCTEXT("PBCollection", "RelicTab", "Relic"));
-	RelicTabButton->SetVisibility(ESlateVisibility::Collapsed);
-	AchievementTabButton = CreateTextButton(WidgetTree, TEXT("AchievementTabButton"), NSLOCTEXT("PBCollection", "AchievementTab", "업적"));
-
-	const TArray<UButton*> TabButtons = {
-		AllTabButton,
-		BallTabButton,
-		BumperTabButton,
-		BossTabButton,
-		RelicTabButton,
-		AchievementTabButton
-	};
-
-	for (UButton* TabButton : TabButtons)
+	const TSubclassOf<UPBCollectionWidget> BlueprintWidgetClass =
+		LegacyCollectionWidgetBlueprintPath.TryLoadClass<UPBCollectionWidget>();
+	if (!BlueprintWidgetClass)
 	{
-		TabButton->SetStyle(MakeTabButtonStyle(TabButton == AllTabButton));
-		HeaderBox->AddChildToHorizontalBox(TabButton);
-		if (UHorizontalBoxSlot* TabSlot = Cast<UHorizontalBoxSlot>(TabButton->Slot))
-		{
-			TabSlot->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
-			TabSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
-		}
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("%s: 도감 Widget Blueprint를 불러오지 못했습니다. Path=%s"),
+			*GetName(),
+			*LegacyCollectionWidgetBlueprintPath.ToString());
+		UIManagerSubsystem->CompletePopWidget(this);
+		return true;
 	}
 
-	UTextBlock* SpacerText = CreateText(WidgetTree, TEXT("HeaderSpacerText"), 1, FLinearColor::Transparent);
-	HeaderBox->AddChildToHorizontalBox(SpacerText);
-	if (UHorizontalBoxSlot* SpacerSlot = Cast<UHorizontalBoxSlot>(SpacerText->Slot))
+	if (!UIManagerSubsystem->CompletePopWidget(this))
 	{
-		SpacerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		UE_LOG(LogTemp, Error, TEXT("%s: 기존 C++ 도감 위젯을 UI 스택에서 제거하지 못했습니다."), *GetName());
+		return true;
 	}
 
-	UButton* CloseButton = CreateTextButton(WidgetTree, TEXT("CloseButton"), NSLOCTEXT("PBCollection", "CloseButton", "닫기"));
-	HeaderBox->AddChildToHorizontalBox(CloseButton);
-	CloseButton->OnClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleCloseClicked);
-}
-
-void UPBCollectionWidget::BuildBody(UVerticalBox* RootBox)
-{
-	UHorizontalBox* BodyBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("BodyBox"));
-	RootBox->AddChildToVerticalBox(BodyBox);
-	if (UVerticalBoxSlot* BodySlot = Cast<UVerticalBoxSlot>(BodyBox->Slot))
+	UPBUserWidget* BlueprintWidget = UIManagerSubsystem->PushWidget(BlueprintWidgetClass, 0);
+	if (!IsValid(BlueprintWidget))
 	{
-		BodySlot->SetPadding(FMargin(36.0f, 0.0f, 36.0f, 28.0f));
-		BodySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("%s: 도감 Widget Blueprint를 UI 스택에 추가하지 못했습니다."),
+			*GetName());
+	}
+	else
+	{
+		UE_LOG(
+			LogTemp,
+			Log,
+			TEXT("[Collection] 기존 C++ 도감 참조를 Widget Blueprint로 전환했습니다. Widget=%s"),
+			*GetNameSafe(BlueprintWidget));
 	}
 
-	UBorder* ListBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ListBorder"));
-	ListBorder->SetBrush(MakeCollectionColorBrush(FLinearColor(0.045f, 0.065f, 0.078f, 0.94f), FVector2D(520.0f, 720.0f)));
-	ListBorder->SetPadding(FMargin(18.0f, 18.0f, 18.0f, 18.0f));
-	BodyBox->AddChildToHorizontalBox(ListBorder);
-	if (UHorizontalBoxSlot* ListSlot = Cast<UHorizontalBoxSlot>(ListBorder->Slot))
-	{
-		ListSlot->SetPadding(FMargin(0.0f, 0.0f, 16.0f, 0.0f));
-		ListSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	}
-
-	UVerticalBox* ListBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ListBox"));
-	ListBorder->SetContent(ListBox);
-
-	BuildFilterPanel(ListBox);
-
-	UScrollBox* EntryScrollBox = WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), TEXT("EntryScrollBox"));
-	ListBox->AddChildToVerticalBox(EntryScrollBox);
-	if (UVerticalBoxSlot* EntryScrollSlot = Cast<UVerticalBoxSlot>(EntryScrollBox->Slot))
-	{
-		EntryScrollSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-		EntryScrollSlot->SetPadding(FMargin(0.0f, 8.0f, 0.0f, 0.0f));
-	}
-
-	EntryGridPanel = WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), TEXT("EntryGridPanel"));
-	EntryGridPanel->SetMinDesiredSlotWidth(264.0f);
-	EntryGridPanel->SetMinDesiredSlotHeight(264.0f);
-	EntryGridPanel->SetSlotPadding(FMargin(8.0f));
-	EntryScrollBox->AddChild(EntryGridPanel);
-
-	BuildDetailPanel(BodyBox);
-}
-
-void UPBCollectionWidget::BuildFilterPanel(UVerticalBox* ListBox)
-{
-	UVerticalBox* FilterBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("FilterBox"));
-	ListBox->AddChildToVerticalBox(FilterBox);
-	if (UVerticalBoxSlot* FilterSlot = Cast<UVerticalBoxSlot>(FilterBox->Slot))
-	{
-		FilterSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
-		FilterSlot->SetPadding(FMargin(0.0f));
-	}
-
-	auto AddSizedControl = [this](UHorizontalBox* RowBox, UWidget* Control, float Width)
-	{
-		USizeBox* ControlSizeBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-		ControlSizeBox->SetWidthOverride(Width);
-		ControlSizeBox->SetHeightOverride(34.0f);
-		ControlSizeBox->AddChild(Control);
-		RowBox->AddChildToHorizontalBox(ControlSizeBox);
-		if (UHorizontalBoxSlot* ControlSlot = Cast<UHorizontalBoxSlot>(ControlSizeBox->Slot))
-		{
-			ControlSlot->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 6.0f));
-			ControlSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
-		}
-	};
-
-	UHorizontalBox* SearchRowBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("SearchRowBox"));
-	FilterBox->AddChildToVerticalBox(SearchRowBox);
-
-	SearchTextBox = WidgetTree->ConstructWidget<UEditableTextBox>(UEditableTextBox::StaticClass(), TEXT("SearchTextBox"));
-	SearchTextBox->SetHintText(NSLOCTEXT("PBCollection", "SearchHint", "검색"));
-	AddSizedControl(SearchRowBox, SearchTextBox, 280.0f);
-
-	SortModeComboBox = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("SortModeComboBox"));
-	AddSizedControl(SearchRowBox, SortModeComboBox, 156.0f);
-
-	UHorizontalBox* FilterRowBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("FilterRowBox"));
-	FilterBox->AddChildToVerticalBox(FilterRowBox);
-
-	AttackTypeComboBox = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AttackTypeComboBox"));
-	AddSizedControl(FilterRowBox, AttackTypeComboBox, 136.0f);
-
-	RoleComboBox = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("RoleComboBox"));
-	AddSizedControl(FilterRowBox, RoleComboBox, 136.0f);
-
-	AttributeComboBox = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AttributeComboBox"));
-	AddSizedControl(FilterRowBox, AttributeComboBox, 136.0f);
-
-	StarGradeComboBox = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("StarGradeComboBox"));
-	AddSizedControl(FilterRowBox, StarGradeComboBox, 136.0f);
-}
-
-void UPBCollectionWidget::BuildDetailPanel(UHorizontalBox* BodyBox)
-{
-	USizeBox* DetailSizeBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("DetailSizeBox"));
-	DetailSizeBox->SetWidthOverride(DetailPanelWidth);
-	BodyBox->AddChildToHorizontalBox(DetailSizeBox);
-	if (UHorizontalBoxSlot* DetailSlot = Cast<UHorizontalBoxSlot>(DetailSizeBox->Slot))
-	{
-		DetailSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
-	}
-
-	UBorder* DetailBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DetailBorder"));
-	DetailBorder->SetBrush(MakeCollectionColorBrush(FLinearColor(0.04f, 0.055f, 0.065f, 0.96f), FVector2D(DetailPanelWidth, 720.0f)));
-	DetailBorder->SetPadding(FMargin(24.0f, 24.0f, 24.0f, 20.0f));
-	DetailSizeBox->AddChild(DetailBorder);
-
-	UScrollBox* DetailScrollBox = WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), TEXT("DetailScrollBox"));
-	DetailBorder->SetContent(DetailScrollBox);
-
-	UVerticalBox* DetailBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("DetailBox"));
-	DetailScrollBox->AddChild(DetailBox);
-
-	DetailAccentBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DetailAccentBorder"));
-	DetailAccentBorder->SetBrush(MakeCollectionColorBrush(
-		GetCollectionAccentColor(EPBCollectionCategory::Bumper, EPBCollectionState::Unlocked),
-		FVector2D(DetailPanelWidth - 128.0f, 16.0f)));
-	DetailBox->AddChildToVerticalBox(DetailAccentBorder);
-	if (UVerticalBoxSlot* AccentSlot = Cast<UVerticalBoxSlot>(DetailAccentBorder->Slot))
-	{
-		AccentSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 14.0f));
-		AccentSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
-	}
-
-	DetailNameText = CreateText(WidgetTree, TEXT("DetailNameText"), 22, FLinearColor(0.96f, 0.97f, 0.98f, 1.0f));
-	DetailNameText->SetAutoWrapText(true);
-	DetailBox->AddChildToVerticalBox(DetailNameText);
-	if (UVerticalBoxSlot* NameSlot = Cast<UVerticalBoxSlot>(DetailNameText->Slot))
-	{
-		NameSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
-	}
-
-	DetailMetaText = CreateText(WidgetTree, TEXT("DetailMetaText"), 14, FLinearColor(0.70f, 0.75f, 0.80f, 1.0f));
-	DetailBox->AddChildToVerticalBox(DetailMetaText);
-	if (UVerticalBoxSlot* MetaSlot = Cast<UVerticalBoxSlot>(DetailMetaText->Slot))
-	{
-		MetaSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
-	}
-
-	DetailDescriptionText = CreateText(WidgetTree, TEXT("DetailDescriptionText"), 15, FLinearColor(0.88f, 0.90f, 0.92f, 1.0f));
-	DetailDescriptionText->SetAutoWrapText(true);
-	DetailBox->AddChildToVerticalBox(DetailDescriptionText);
-	if (UVerticalBoxSlot* DescriptionSlot = Cast<UVerticalBoxSlot>(DetailDescriptionText->Slot))
-	{
-		DescriptionSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 18.0f));
-	}
-
-	DetailUnlockText = CreateText(WidgetTree, TEXT("DetailUnlockText"), 13, FLinearColor(0.72f, 0.78f, 0.82f, 1.0f));
-	DetailUnlockText->SetAutoWrapText(true);
-	DetailBox->AddChildToVerticalBox(DetailUnlockText);
-	if (UVerticalBoxSlot* UnlockSlot = Cast<UVerticalBoxSlot>(DetailUnlockText->Slot))
-	{
-		UnlockSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 18.0f));
-	}
-
-	DetailRecordText = CreateText(WidgetTree, TEXT("DetailRecordText"), 13, FLinearColor(0.76f, 0.80f, 0.84f, 1.0f));
-	DetailRecordText->SetAutoWrapText(true);
-	DetailBox->AddChildToVerticalBox(DetailRecordText);
-	if (UVerticalBoxSlot* RecordSlot = Cast<UVerticalBoxSlot>(DetailRecordText->Slot))
-	{
-		RecordSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 18.0f));
-		RecordSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
-	}
-
-	UUniformGridPanel* ButtonGrid = WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), TEXT("DemoButtonGrid"));
-	ButtonGrid->SetMinDesiredSlotWidth(146.0f);
-	ButtonGrid->SetMinDesiredSlotHeight(42.0f);
-	ButtonGrid->SetSlotPadding(FMargin(4.0f));
-	DetailBox->AddChildToVerticalBox(ButtonGrid);
-	if (UVerticalBoxSlot* ButtonGridSlot = Cast<UVerticalBoxSlot>(ButtonGrid->Slot))
-	{
-		ButtonGridSlot->SetPadding(FMargin(0.0f));
-		ButtonGridSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
-	}
-
-	DiscoverButton = CreateTextButton(WidgetTree, TEXT("DiscoverButton"), NSLOCTEXT("PBCollection", "DiscoverButton", "발견"));
-	UnlockButton = CreateTextButton(WidgetTree, TEXT("UnlockButton"), NSLOCTEXT("PBCollection", "UnlockButton", "해금"));
-	CompleteButton = CreateTextButton(WidgetTree, TEXT("CompleteButton"), NSLOCTEXT("PBCollection", "CompleteButton", "완료"));
-	ResetButton = CreateTextButton(WidgetTree, TEXT("ResetButton"), NSLOCTEXT("PBCollection", "ResetButton", "초기화"));
-
-	const TArray<UButton*> DemoButtons = {
-		DiscoverButton,
-		UnlockButton,
-		CompleteButton,
-		ResetButton
-	};
-
-	for (int32 ButtonIndex = 0; ButtonIndex < DemoButtons.Num(); ++ButtonIndex)
-	{
-		UButton* DemoButton = DemoButtons[ButtonIndex];
-		UUniformGridSlot* ButtonSlot = ButtonGrid->AddChildToUniformGrid(
-			DemoButton,
-			ButtonIndex / 2,
-			ButtonIndex % 2);
-		if (ButtonSlot)
-		{
-			ButtonSlot->SetHorizontalAlignment(HAlign_Fill);
-			ButtonSlot->SetVerticalAlignment(VAlign_Fill);
-		}
-	}
-}
-
-UButton* UPBCollectionWidget::CreateTextButton(UWidgetTree* InWidgetTree, FName WidgetName, const FText& Label)
-{
-	UButton* Button = InWidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), WidgetName);
-	Button->SetStyle(MakeDefaultButtonStyle());
-
-	UTextBlock* LabelText = CreateText(
-		InWidgetTree,
-		FName(*(WidgetName.ToString() + TEXT("_Label"))),
-		14,
-		FLinearColor(0.92f, 0.94f, 0.96f, 1.0f));
-	LabelText->SetText(Label);
-	LabelText->SetMinDesiredWidth(WidgetName.ToString().Contains(TEXT("Tab")) ? TabLabelWidth : DemoButtonLabelWidth);
-	LabelText->SetJustification(ETextJustify::Center);
-	Button->AddChild(LabelText);
-	if (UButtonSlot* ButtonSlot = Cast<UButtonSlot>(LabelText->Slot))
-	{
-		ButtonSlot->SetPadding(FMargin(0.0f));
-		ButtonSlot->SetHorizontalAlignment(HAlign_Center);
-		ButtonSlot->SetVerticalAlignment(VAlign_Center);
-	}
-	return Button;
-}
-
-UTextBlock* UPBCollectionWidget::CreateText(
-	UWidgetTree* InWidgetTree,
-	FName WidgetName,
-	int32 FontSize,
-	const FLinearColor& Color)
-{
-	UTextBlock* TextBlock = InWidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), WidgetName);
-	TextBlock->SetColorAndOpacity(FSlateColor(Color));
-	TextBlock->SetAutoWrapText(false);
-	TextBlock->SetShadowOffset(FVector2D(1.0f, 1.0f));
-	TextBlock->SetShadowColorAndOpacity(FLinearColor(0.0f, 0.0f, 0.0f, 0.85f));
-
-	FSlateFontInfo FontInfo = TextBlock->GetFont();
-	FontInfo.Size = FontSize;
-	TextBlock->SetFont(FontInfo);
-
-	return TextBlock;
+	return true;
 }
 
 void UPBCollectionWidget::PopulateFilterOptions()
@@ -537,6 +273,10 @@ void UPBCollectionWidget::PopulateFilterOptions()
 	}
 
 	bIsPopulatingFilterOptions = true;
+	if (SearchTextBox)
+	{
+		SearchTextBox->SetText(FText::GetEmpty());
+	}
 
 	AttackTypeFilterIds = CollectionSubsystem->GetAvailableMetadataIds(EPBCollectionFilterField::AttackType);
 	RoleFilterIds = CollectionSubsystem->GetAvailableMetadataIds(EPBCollectionFilterField::Role);
@@ -655,7 +395,7 @@ void UPBCollectionWidget::RefreshCollectionByFilterChange()
 
 void UPBCollectionWidget::RefreshEntryList()
 {
-	if (!CollectionSubsystem || !EntryGridPanel)
+	if (!CollectionSubsystem || !EntryGridPanel || !EntryWidgetClass)
 	{
 		return;
 	}
@@ -669,15 +409,9 @@ void UPBCollectionWidget::RefreshEntryList()
 	for (int32 EntryIndex = 0; EntryIndex < Entries.Num(); ++EntryIndex)
 	{
 		const FPBCollectionDisplayData& EntryData = Entries[EntryIndex];
-		TSubclassOf<UPBCollectionEntryWidget> ActualEntryWidgetClass = EntryWidgetClass;
-		if (!ActualEntryWidgetClass)
-		{
-			ActualEntryWidgetClass = UPBCollectionEntryWidget::StaticClass();
-		}
-
 		UPBCollectionEntryWidget* EntryWidget = CreateWidget<UPBCollectionEntryWidget>(
-			GetOwningPlayer(),
-			ActualEntryWidgetClass);
+			ResolvePlayerController(),
+			EntryWidgetClass);
 		if (!EntryWidget)
 		{
 			continue;
@@ -713,13 +447,18 @@ void UPBCollectionWidget::RefreshDetail()
 
 	if (!bHasSelection)
 	{
+		const bool bIsLoading = CollectionSubsystem && !CollectionSubsystem->IsDataReady();
 		if (DetailNameText)
 		{
-			DetailNameText->SetText(NSLOCTEXT("PBCollection", "NoSelectionName", "도감"));
+			DetailNameText->SetText(bIsLoading
+				? NSLOCTEXT("PBCollection", "LoadingName", "도감 불러오는 중")
+				: NSLOCTEXT("PBCollection", "NoSelectionName", "도감"));
 		}
 		if (DetailMetaText)
 		{
-			DetailMetaText->SetText(NSLOCTEXT("PBCollection", "NoSelectionMeta", "항목 없음"));
+			DetailMetaText->SetText(bIsLoading
+				? NSLOCTEXT("PBCollection", "LoadingMeta", "잠시만 기다려 주세요.")
+				: NSLOCTEXT("PBCollection", "NoSelectionMeta", "항목 없음"));
 		}
 		if (DetailDescriptionText)
 		{
@@ -778,30 +517,8 @@ void UPBCollectionWidget::RefreshDetail()
 void UPBCollectionWidget::SetCategory(EPBCollectionCategory NewCategory)
 {
 	CurrentCategory = NewCategory;
-	if (AllTabButton)
-	{
-		AllTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::All));
-	}
-	if (BallTabButton)
-	{
-		BallTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Ball));
-	}
-	if (BumperTabButton)
-	{
-		BumperTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Bumper));
-	}
-	if (BossTabButton)
-	{
-		BossTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Boss));
-	}
-	if (RelicTabButton)
-	{
-		RelicTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Relic));
-	}
-	if (AchievementTabButton)
-	{
-		AchievementTabButton->SetStyle(MakeTabButtonStyle(NewCategory == EPBCollectionCategory::Achievement));
-	}
+
+	BP_OnCollectionCategoryChanged(NewCategory);
 	RefreshCollection();
 }
 
@@ -809,6 +526,60 @@ void UPBCollectionWidget::SelectEntry(FName CollectionId)
 {
 	SelectedCollectionId = CollectionId;
 	RefreshDetail();
+	if (CollectionSubsystem)
+	{
+		CollectionSubsystem->MarkEntryAsSeen(CollectionId);
+	}
+}
+
+APlayerController* UPBCollectionWidget::ResolvePlayerController() const
+{
+	if (APlayerController* OwningPlayer = GetOwningPlayer())
+	{
+		return OwningPlayer;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		return World->GetFirstPlayerController();
+	}
+
+	return nullptr;
+}
+
+void UPBCollectionWidget::ApplyCollectionInputMode(const bool bEnableUI) const
+{
+	if (!bEnableUI)
+	{
+		if (const UGameInstance* GameInstance = GetGameInstance())
+		{
+			const UPBUIManagerSubsystem* UIManagerSubsystem =
+				GameInstance->GetSubsystem<UPBUIManagerSubsystem>();
+			if (IsValid(UIManagerSubsystem) && IsValid(UIManagerSubsystem->GetTopWidget()))
+			{
+				return;
+			}
+		}
+	}
+
+	APlayerController* PlayerController = ResolvePlayerController();
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	PlayerController->bShowMouseCursor = bEnableUI;
+
+	if (bEnableUI)
+	{
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		PlayerController->SetInputMode(InputMode);
+	}
+	else
+	{
+		PlayerController->SetInputMode(FInputModeGameOnly());
+	}
 }
 
 void UPBCollectionWidget::HandleAllTabClicked()
@@ -843,13 +614,22 @@ void UPBCollectionWidget::HandleAchievementTabClicked()
 
 void UPBCollectionWidget::HandleCloseClicked()
 {
-	if (APlayerController* PlayerController = GetOwningPlayer())
+	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		PlayerController->bShowMouseCursor = false;
-		PlayerController->SetInputMode(FInputModeGameOnly());
+		if (UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UPBUIManagerSubsystem>())
+		{
+			if (UIManagerSubsystem->GetTopWidget() == this)
+			{
+				if (IsPopRequested() || UIManagerSubsystem->RequestPopWidget())
+				{
+					return;
+				}
+			}
+		}
 	}
 
-	RemoveFromParent();
+	// 스택 상태가 예상과 다를 때도 UIManager가 제거 가능 여부를 최종 판단하도록 요청합니다.
+	CompletePop();
 }
 
 void UPBCollectionWidget::HandleSearchTextChanged(const FText& Text)
@@ -904,38 +684,6 @@ void UPBCollectionWidget::HandleSortModeChanged(FString SelectedItem, ESelectInf
 	RefreshCollectionByFilterChange();
 }
 
-void UPBCollectionWidget::HandleDiscoverClicked()
-{
-	if (CollectionSubsystem && SelectedCollectionId != NAME_None)
-	{
-		CollectionSubsystem->DiscoverEntry(SelectedCollectionId);
-	}
-}
-
-void UPBCollectionWidget::HandleUnlockClicked()
-{
-	if (CollectionSubsystem && SelectedCollectionId != NAME_None)
-	{
-		CollectionSubsystem->UnlockEntry(SelectedCollectionId);
-	}
-}
-
-void UPBCollectionWidget::HandleCompleteClicked()
-{
-	if (CollectionSubsystem && SelectedCollectionId != NAME_None)
-	{
-		CollectionSubsystem->CompleteEntry(SelectedCollectionId, TEXT("검사 볼"));
-	}
-}
-
-void UPBCollectionWidget::HandleResetClicked()
-{
-	if (CollectionSubsystem)
-	{
-		CollectionSubsystem->ResetAllProgress();
-	}
-}
-
 void UPBCollectionWidget::HandleEntryClicked(FName CollectionId)
 {
 	SelectEntry(CollectionId);
@@ -944,4 +692,15 @@ void UPBCollectionWidget::HandleEntryClicked(FName CollectionId)
 void UPBCollectionWidget::HandleCollectionEntryChanged(FName CollectionId)
 {
 	RefreshCollection();
+}
+
+void UPBCollectionWidget::HandleCollectionDataReady(bool bIsReady)
+{
+	if (!bIsReady)
+	{
+		return;
+	}
+
+	PopulateFilterOptions();
+	SetCategory(CurrentCategory);
 }

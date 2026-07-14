@@ -18,4 +18,7 @@ protected:
 	virtual const TCHAR* GetParserName() const override;
 	virtual UScriptStruct* GetRowStruct() const override;
 	virtual bool ParseRow(FName RowName, const TMap<FString, FString>& RowData) override;
+	
+private:
+	void AddParsedValue(TMap<FName, int32>& Values, const FName ValueName, const TMap<FString, FString>& RowData);
 };

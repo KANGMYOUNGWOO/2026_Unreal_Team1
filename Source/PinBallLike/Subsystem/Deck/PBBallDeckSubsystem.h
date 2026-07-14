@@ -32,7 +32,6 @@ public:
 #pragma region Common
 
 	int32 AddOwnedBall(FName BallId, int32 StarLevel = 1);
-	// 외부에서 덱에 볼을 추가할때 사용하는 함수
 	bool AddNewBallToDeck(FName BallId, int32 StarLevel = 1);
 	bool RemoveOwnedBall(int32 BallInstanceId);
 	bool SetOwnedBallStarLevel(int32 BallInstanceId, int32 StarLevel);
@@ -60,6 +59,8 @@ public:
 
 	const FPBDeckOwnedBallData* GetOwnedBallData(int32 BallInstanceId) const;
 	bool HasOwnedBall(int32 BallInstanceId) const;
+	bool SetOwnedBallSavedMana(int32 BallInstanceId, float SavedMana);
+	float GetOwnedBallSavedMana(int32 BallInstanceId) const;
 	bool BuildBallItemViewData(int32 BallInstanceId, EPBBallDeckSlotType SourceSlotType, int32 SourceSlotIndex, FPBBallItemViewData& OutViewData) const;
 
 
@@ -144,6 +145,10 @@ private:
 	bool CompactDeploymentSlotsInternal();
 	void BroadcastDeploymentSlotChange(const TArray<int32>& PreviousBallInstanceIds);
 	void ClearBallInstanceFromSlots(int32 BallInstanceId);
+	void ResetSavedManaIfEnteringDeployment(
+		int32 BallInstanceId,
+		EPBBallDeckSlotType SourceSlotType,
+		EPBBallDeckSlotType TargetSlotType);
 
 	static constexpr int32 MaxDeploymentSlotCount = 3;
 
@@ -175,6 +180,7 @@ private:
 	int32 ToGlobalSlotIndex(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;
 	const FPBBallDeckSlot* GetDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex) const;
 	FPBBallDeckSlot* GetMutableDeckSlot(EPBBallDeckSlotType SlotType, int32 SlotIndex);
+	bool HasOwnedBallWithBallId(FName BallId) const;
 
 	UPROPERTY()
 	TArray<FPBBallDeckSlot> DeckSlots;

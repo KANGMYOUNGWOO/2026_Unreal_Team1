@@ -4,11 +4,16 @@
 #include "PBBallHitReactionComponent.h"
 
 #include "PBBallPhysicsComponent.h"
+#include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
+#include "PinBallLike/Actor/Party/PBCombatPartyController.h"
+#include "PinBallLike/Interface/StatProvider.h"
 #include "PinBallLike/Interface/BossInterface.h"
 #include "PinBallLike/Interface/Damageable.h"
-#include "PinBallLike/Interface/StatProvider.h"
+#include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
 
 
@@ -66,6 +71,10 @@ void UPBBallHitReactionComponent::ProcessBallContact(AActor* OtherActor)
 
 	const int32 Damage = StatProvider ? StatProvider->GetStat(PBStatNames::Attack) : 0;
 	IBossInterface::Execute_DamageToBoss(OtherActor, Damage);
+	if (Damage > 0)
+	{
+		ApplyManaGainOnDamage();
+	}
 
 	MarkContactProcessed(OtherActor);
 
@@ -73,6 +82,86 @@ void UPBBallHitReactionComponent::ProcessBallContact(AActor* OtherActor)
 	{
 		OwnerDamageable->TakeDamage(1);
 	}
+}
+
+void UPBBallHitReactionComponent::ApplyManaGainOnDamage()
+{
+	if (APBCombatPartyController* PartyController = FindOwningPartyController())
+	{
+		for (APBBallBase* PartyBall : PartyController->GetValidPartyBalls())
+		{
+			ApplyManaGainToBall(PartyBall);
+		}
+		return;
+	}
+
+	ApplyManaGainToBall(Cast<APBBallBase>(GetOwner()));
+}
+
+void UPBBallHitReactionComponent::ApplyManaGainToBall(APBBallBase* Ball) const
+{
+	if (!IsValid(Ball))
+	{
+		return;
+	}
+
+	const IStatProvider* BallStatProvider = Cast<IStatProvider>(Ball->FindComponentByInterface(UStatProvider::StaticClass()));
+	UPBBaseResourceComponent* BallResourceComponent = Ball->GetResourceComponent();
+	if (!BallStatProvider || !BallResourceComponent)
+	{
+		return;
+	}
+
+	const int32 ManaRegen = BallStatProvider->GetStat(PBStatNames::ManaRegen);
+	if (ManaRegen <= 0)
+	{
+		return;
+	}
+
+	BallResourceComponent->ApplyResourceDelta(
+		PBResourceNames::Mana,
+		static_cast<float>(ManaRegen) * GetManaGainMultiplier(Ball));
+}
+
+APBCombatPartyController* UPBBallHitReactionComponent::FindOwningPartyController() const
+{
+	APBBallBase* OwnerBall = Cast<APBBallBase>(GetOwner());
+	if (!OwnerBall)
+	{
+		return nullptr;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	if (APBCombatPartyController* OwnerPartyController = Cast<APBCombatPartyController>(OwnerBall->GetOwner()))
+	{
+		return OwnerPartyController->ContainsPartyBall(OwnerBall) ? OwnerPartyController : nullptr;
+	}
+
+	for (TActorIterator<APBCombatPartyController> It(World); It; ++It)
+	{
+		APBCombatPartyController* PartyController = *It;
+		if (IsValid(PartyController) && PartyController->ContainsPartyBall(OwnerBall))
+		{
+			return PartyController;
+		}
+	}
+
+	return nullptr;
+}
+
+float UPBBallHitReactionComponent::GetManaGainMultiplier(const APBBallBase* Ball) const
+{
+	if (!Ball)
+	{
+		return 1.0f;
+	}
+
+	return Ball->GetCombatRole() == EPBBallPartyRole::Follower ? 0.5f : 1.0f;
 }
 
 bool UPBBallHitReactionComponent::WasContactProcessedThisFrame(AActor* OtherActor) const

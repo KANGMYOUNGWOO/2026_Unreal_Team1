@@ -10,9 +10,11 @@
 UENUM(BlueprintType)
 enum class EPBBumperSlotType : uint8
 {
-	Rebound UMETA(DisplayName = "Rebound"),
-	Side UMETA(DisplayName = "Side"),
-	Special UMETA(DisplayName = "Special")
+	Rebound = 0 UMETA(DisplayName = "Rebound"),
+	Side = 1 UMETA(DisplayName = "Side"),
+	Special = 2 UMETA(DisplayName = "Special"),
+	// 기존 열거형 값을 유지하기 위해 새 Top 슬롯은 마지막에 추가한다.
+	Top = 3 UMETA(DisplayName = "Top")
 };
 
 UCLASS()
@@ -26,6 +28,9 @@ public:
 #pragma region Battle
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
 	int32 GetInitialBattleLaunchCount() const { return InitialBattleLaunchCount; }
+
+	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
+	int32 GetInitialBattleShiftCount() const { return InitialBattleShiftCount; }
 #pragma endregion
 
 #pragma region Bumper
@@ -51,5 +56,8 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 InitialBattleLaunchCount = 5;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
+	int32 InitialBattleShiftCount = 3;
 
 };

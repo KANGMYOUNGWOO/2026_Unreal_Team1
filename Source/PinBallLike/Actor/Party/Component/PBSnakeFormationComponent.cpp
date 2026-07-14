@@ -11,6 +11,35 @@ UPBSnakeFormationComponent::UPBSnakeFormationComponent()
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 }
 
+void UPBSnakeFormationComponent::InitializeDependencies(FPBSnakeFormationDependencies InDependencies)
+{
+	Dependencies = MoveTemp(InDependencies);
+}
+
+void UPBSnakeFormationComponent::RefreshPartyOrder()
+{
+	if (!Dependencies.GetValidPartyBalls || !Dependencies.IsLauncherActive)
+	{
+		return;
+	}
+
+	SetPartyBalls(Dependencies.GetValidPartyBalls());
+
+	const bool bLauncherActive = Dependencies.IsLauncherActive();
+	SetComponentTickEnabled(!bLauncherActive);
+	if (bLauncherActive)
+	{
+		if (Dependencies.HidePartyBallsForLaunchReady)
+		{
+			Dependencies.HidePartyBallsForLaunchReady();
+		}
+	}
+	else if (Dependencies.ApplyPartyRoles)
+	{
+		Dependencies.ApplyPartyRoles();
+	}
+}
+
 void UPBSnakeFormationComponent::SetPartyBalls(const TArray<APBBallBase*>& OrderedBalls)
 {
 	PartyBalls.Reset();

@@ -1,8 +1,9 @@
 #include "PBCollectionDemoActor.h"
 
 #include "PinBallLike/Collection/PBCollectionWidget.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
+#include "PinBallLike/UI/PBUserWidget.h"
 
-#include "Blueprint/UserWidget.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -15,11 +16,6 @@ APBCollectionDemoActor::APBCollectionDemoActor()
 void APBCollectionDemoActor::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (!CollectionWidgetClass)
-	{
-		CollectionWidgetClass = UPBCollectionWidget::StaticClass();
-	}
 
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
 	if (bBindToggleKey && PlayerController)
@@ -39,7 +35,13 @@ void APBCollectionDemoActor::BeginPlay()
 
 void APBCollectionDemoActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	CloseCollection();
+	// 레벨 종료 중에는 닫기 애니메이션을 기다리지 않고 스택에서 즉시 정리합니다.
+	if (CollectionWidget && CollectionWidget->IsInViewport())
+	{
+		CollectionWidget->CompletePop();
+	}
+	CollectionWidget = nullptr;
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -51,31 +53,56 @@ void APBCollectionDemoActor::OpenCollection()
 	}
 	CollectionWidget = nullptr;
 
-	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-	if (!PlayerController || !CollectionWidgetClass)
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+	if (!CollectionWidgetClass)
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("%s: CollectionWidgetClass에 WBP_CollectionWidget 계열 클래스를 지정해야 합니다."),
+			*GetName());
+		return;
+	}
+
+	UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UPBUIManagerSubsystem>();
+	if (!IsValid(UIManagerSubsystem))
 	{
 		return;
 	}
 
-	CollectionWidget = CreateWidget<UPBCollectionWidget>(PlayerController, CollectionWidgetClass);
-	if (!CollectionWidget)
-	{
-		return;
-	}
-
-	CollectionWidget->AddToViewport(ViewportZOrder);
-	ApplyUIInputMode(true);
+	CollectionWidget = UIManagerSubsystem->PushWidget(CollectionWidgetClass, ViewportZOrder);
 }
 
 void APBCollectionDemoActor::CloseCollection()
 {
-	if (CollectionWidget && CollectionWidget->IsInViewport())
+	if (!CollectionWidget || !CollectionWidget->IsInViewport())
 	{
-		CollectionWidget->RemoveFromParent();
+		CollectionWidget = nullptr;
+		return;
 	}
-	CollectionWidget = nullptr;
 
-	ApplyUIInputMode(false);
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+		: nullptr;
+	if (IsValid(UIManagerSubsystem) && UIManagerSubsystem->GetTopWidget() == CollectionWidget)
+	{
+		if (!CollectionWidget->IsPopRequested())
+		{
+			UIManagerSubsystem->RequestPopWidget();
+		}
+		return;
+	}
+
+	// 스택 상태가 예상과 다를 때도 UIManager가 제거 가능 여부를 최종 판단하도록 요청합니다.
+	if (CollectionWidget->CompletePop())
+	{
+		CollectionWidget = nullptr;
+	}
 }
 
 void APBCollectionDemoActor::ToggleCollection()
@@ -87,26 +114,4 @@ void APBCollectionDemoActor::ToggleCollection()
 	}
 
 	OpenCollection();
-}
-
-void APBCollectionDemoActor::ApplyUIInputMode(bool bEnableUI)
-{
-	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	PlayerController->bShowMouseCursor = bEnableUI;
-
-	if (bEnableUI)
-	{
-		FInputModeGameAndUI InputMode;
-		InputMode.SetHideCursorDuringCapture(false);
-		PlayerController->SetInputMode(InputMode);
-	}
-	else
-	{
-		PlayerController->SetInputMode(FInputModeGameOnly());
-	}
 }

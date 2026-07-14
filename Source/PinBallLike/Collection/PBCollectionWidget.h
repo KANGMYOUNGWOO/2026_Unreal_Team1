@@ -1,28 +1,24 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "PinBallLike/UI/PBUserWidget.h"
 #include "Types/SlateEnums.h"
 #include "PBCollectionWidget.generated.h"
 
+class APlayerController;
 class UBorder;
 class UButton;
 class UComboBoxString;
 class UEditableTextBox;
-class UHorizontalBox;
 class UPBCollectionEntryWidget;
 class UPBCollectionSubsystem;
-class UScrollBox;
 class UTextBlock;
 class UUniformGridPanel;
-class UVerticalBox;
-class UWidgetTree;
 
 /**
- * 도감 프로토타입의 전체 화면 위젯입니다.
- * 카테고리 탭, 검색 / 필터 / 정렬, 카드 목록, 상세 패널, 시연용 상태 변경 버튼을 제공합니다.
+ * 도감 전체 화면의 데이터 처리와 사용자 입력을 담당합니다.
+ * 외형은 이 클래스를 부모로 삼은 Widget Blueprint에서 구성합니다.
  */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionWidget : public UPBUserWidget
@@ -33,20 +29,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Collection|UI")
 	void RefreshCollection();
 
+	UFUNCTION(BlueprintPure, Category = "Collection|UI")
+	EPBCollectionCategory GetCurrentCategory() const { return CurrentCategory; }
+
+	UFUNCTION(BlueprintPure, Category = "Collection|UI")
+	FName GetSelectedCollectionId() const { return SelectedCollectionId; }
+
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual void OnPushed_Implementation() override;
+	virtual void OnPopped_Implementation() override;
+
+	/** Widget Blueprint가 탭 선택 색상이나 전환 애니메이션을 갱신할 때 사용합니다. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Collection|UI", meta = (DisplayName = "On Collection Category Changed"))
+	void BP_OnCollectionCategoryChanged(EPBCollectionCategory NewCategory);
 
 private:
-	void BuildDefaultWidgetTree();
-	void BuildHeader(UVerticalBox* RootBox);
-	void BuildBody(UVerticalBox* RootBox);
-	void BuildFilterPanel(UVerticalBox* ListBox);
-	void BuildDetailPanel(UHorizontalBox* BodyBox);
-
-	UButton* CreateTextButton(UWidgetTree* InWidgetTree, FName WidgetName, const FText& Label);
-	UTextBlock* CreateText(UWidgetTree* InWidgetTree, FName WidgetName, int32 FontSize, const FLinearColor& Color);
+	/** 메인 메뉴에 남은 C++ 원본 클래스 참조를 실제 도감 WBP로 교체하는 임시 호환 경로입니다. */
+	bool RedirectLegacyNativeWidget();
+	void BindWidgetEvents();
+	bool ValidateRequiredWidgetBindings() const;
 
 	void PopulateFilterOptions();
 	void PopulateMetadataComboBox(
@@ -60,6 +64,8 @@ private:
 	void RefreshDetail();
 	void SetCategory(EPBCollectionCategory NewCategory);
 	void SelectEntry(FName CollectionId);
+	APlayerController* ResolvePlayerController() const;
+	void ApplyCollectionInputMode(bool bEnableUI) const;
 
 	UFUNCTION()
 	void HandleAllTabClicked();
@@ -88,92 +94,78 @@ private:
 	UFUNCTION()
 	void HandleSortModeChanged(FString SelectedItem, ESelectInfo::Type SelectionType);
 	UFUNCTION()
-	void HandleDiscoverClicked();
-	UFUNCTION()
-	void HandleUnlockClicked();
-	UFUNCTION()
-	void HandleCompleteClicked();
-	UFUNCTION()
-	void HandleResetClicked();
-	UFUNCTION()
 	void HandleEntryClicked(FName CollectionId);
 	UFUNCTION()
 	void HandleCollectionEntryChanged(FName CollectionId);
+	UFUNCTION()
+	void HandleCollectionDataReady(bool bIsReady);
 
-	UPROPERTY(EditDefaultsOnly, Category = "Collection|UI")
+	/** 목록 항목용 Widget Blueprint입니다. C++ 원본 클래스가 아니라 실제 BP 클래스를 지정해야 합니다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collection|UI", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UPBCollectionEntryWidget> EntryWidgetClass;
 
-	UPROPERTY()
+	UPROPERTY(Transient)
 	TObjectPtr<UPBCollectionSubsystem> CollectionSubsystem;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UUniformGridPanel> EntryGridPanel;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UEditableTextBox> SearchTextBox;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UComboBoxString> AttackTypeComboBox;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UComboBoxString> RoleComboBox;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UComboBoxString> AttributeComboBox;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UComboBoxString> StarGradeComboBox;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UComboBoxString> SortModeComboBox;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> DetailNameText;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> DetailMetaText;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> DetailDescriptionText;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> DetailUnlockText;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> DetailRecordText;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UBorder> DetailAccentBorder;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> AllTabButton;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> BallTabButton;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> BumperTabButton;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> BossTabButton;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> RelicTabButton;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> AchievementTabButton;
 
-	UPROPERTY()
-	TObjectPtr<UButton> DiscoverButton;
-
-	UPROPERTY()
-	TObjectPtr<UButton> UnlockButton;
-
-	UPROPERTY()
-	TObjectPtr<UButton> CompleteButton;
-
-	UPROPERTY()
-	TObjectPtr<UButton> ResetButton;
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> CloseButton;
 
 	EPBCollectionCategory CurrentCategory = EPBCollectionCategory::All;
 	FPBCollectionQuery CurrentQuery;

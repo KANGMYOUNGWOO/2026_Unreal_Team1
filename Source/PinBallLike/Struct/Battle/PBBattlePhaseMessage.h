@@ -6,12 +6,60 @@
 #include "PBBattlePhaseMessage.generated.h"
 
 UENUM(BlueprintType)
+enum class EPBBattleLevelPhase : uint8
+{
+	DataLoading UMETA(DisplayName = "Data Loading"),
+	LevelPreparing UMETA(DisplayName = "Level Preparing"),
+	BossIntro UMETA(DisplayName = "Boss Intro"),
+	BallDeployment UMETA(DisplayName = "Ball Deployment"),
+	Combat UMETA(DisplayName = "Combat"),
+	BossDead UMETA(DisplayName = "Boss Dead"),
+	Reward UMETA(DisplayName = "Reward")
+};
+
+UENUM(BlueprintType)
 enum class EPBBattlePreparationType : uint8
 {
 	None UMETA(DisplayName = "None"),
 	Bumper UMETA(DisplayName = "Bumper"),
 	Ball UMETA(DisplayName = "Ball"),
 	Boss UMETA(DisplayName = "Boss")
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattlePhaseChangedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	EPBBattleLevelPhase PreviousPhase = EPBBattleLevelPhase::DataLoading;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	EPBBattleLevelPhase NewPhase = EPBBattleLevelPhase::DataLoading;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleLaunchCountChangedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 PreviousCount = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 NewCount = 0;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleShiftCountChangedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 PreviousCount = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 NewCount = 0;
 };
 
 USTRUCT(BlueprintType)
@@ -87,4 +135,16 @@ struct PINBALLLIKE_API FPBBattlePartyShiftRequestedMessage
 
 	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
 	TObjectPtr<AActor> Requester = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleSkillUseRequestedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> Requester = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 SkillInputValue = 0;
 };

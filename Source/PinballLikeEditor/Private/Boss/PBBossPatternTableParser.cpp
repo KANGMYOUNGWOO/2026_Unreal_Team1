@@ -12,22 +12,7 @@
 
 using namespace PBSheetParserUtils;
 
-namespace
-{
-bool ParseBoolCell(const FString& Value, const bool IsDefaultValue)
-{
-	const FString TrimmedValue = TrimCell(Value);
-	if (IsUnsetValue(TrimmedValue))
-	{
-		return IsDefaultValue;
-	}
-
-	return TrimmedValue.Equals(TEXT("true"), ESearchCase::IgnoreCase)
-		|| TrimmedValue.Equals(TEXT("1"), ESearchCase::IgnoreCase)
-		|| TrimmedValue.Equals(TEXT("yes"), ESearchCase::IgnoreCase);
-}
-
-TSoftClassPtr<UPBBossPatternBase> FindPatternClassRecursive(const FName PatternClassId)
+TSoftClassPtr<UPBBossPatternBase> UPBBossPatternTableParser::FindPatternClassRecursive(const FName PatternClassId) const
 {
 	if (PatternClassId.IsNone())
 	{
@@ -72,7 +57,6 @@ TSoftClassPtr<UPBBossPatternBase> FindPatternClassRecursive(const FName PatternC
 
 	return nullptr;
 }
-}
 
 UPBBossPatternTableParser::UPBBossPatternTableParser()
 {
@@ -116,7 +100,7 @@ bool UPBBossPatternTableParser::ParseRow(const FName RowName, const TMap<FString
 		EPBBossPatternPhaseType::Normal);
 	NewRow.PatternName = FName(*TrimCell(RowData.FindRef(TEXT("PatternName"))));
 	NewRow.CooldownSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("CooldownSeconds")), 3.0f), 0.0f);
-	NewRow.IsEnabled = ParseBoolCell(RowData.FindRef(TEXT("IsEnabled")), true);
+	NewRow.IsEnabled = ParseBoolValue(RowData.FindRef(TEXT("IsEnabled")), true);
 
 	TargetTable->AddRow(RowName, NewRow);
 

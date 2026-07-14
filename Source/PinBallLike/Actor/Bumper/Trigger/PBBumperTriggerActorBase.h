@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Struct/Bumper/PBBumperState.h"
+#include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTypes.h"
 #include "PBBumperTriggerActorBase.generated.h"
 
@@ -12,6 +13,20 @@ class APBBallBase;
 class APBModularBumperBase;
 class USceneComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FPBBumperTriggerProgressChangedSignature,
+	int32, CurrentCount,
+	int32, RequiredCount);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FPBBumperTriggerProgressStateChangedSignature,
+	EPBBumperTriggerProgressState, PreviousState,
+	EPBBumperTriggerProgressState, NewState);
+
+/**
+ * 물리 범퍼 한 개의 판정과 독립 진행도를 담당한다.
+ * 효과 실행 순서와 보상 적용은 OwnerBumper에 남겨 Trigger가 게임 보상 규칙을 소유하지 않게 한다.
+ */
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API APBBumperTriggerActorBase : public AActor
 {
@@ -21,7 +36,10 @@ public:
 	APBBumperTriggerActorBase();
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger")
-	void InitializeTrigger(APBModularBumperBase* InOwnerBumper);
+	void InitializeTrigger(
+		APBModularBumperBase* InOwnerBumper,
+		EPBBumperPositionId InPositionId,
+		int32 InRequiredTriggerCount);
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
 	APBModularBumperBase* GetOwnerBumper() const;
@@ -31,6 +49,21 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
 	EPBBumperState GetTriggerState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
+	EPBBumperPositionId GetPositionId() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
+	int32 GetCurrentTriggerCount() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
+	int32 GetRequiredTriggerCount() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
+	EPBBumperTriggerProgressState GetTriggerProgressState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
+	bool IsTriggerReady() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger")
 	void SetTriggerState(EPBBumperState NewState);
@@ -43,6 +76,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger")
 	void FinishTrigger();
+
+	/** 이 Trigger 인스턴스의 Count만 전달하므로 다른 위치의 게이지와 값이 섞이지 않는다. */
+	UPROPERTY(BlueprintAssignable, Category = "Bumper|Trigger|Event")
+	FPBBumperTriggerProgressChangedSignature OnTriggerProgressChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Bumper|Trigger|Event")
+	FPBBumperTriggerProgressStateChangedSignature OnTriggerProgressStateChanged;
 
 protected:
 	virtual void BeginPlay() override;
@@ -64,6 +104,26 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	EPBBumperState CurrentState = EPBBumperState::Idle;
 
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
+	EPBBumperPositionId PositionId = EPBBumperPositionId::None;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
+	int32 CurrentTriggerCount = 0;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
+	int32 RequiredTriggerCount = 1;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
+	EPBBumperTriggerProgressState ProgressState = EPBBumperTriggerProgressState::Charging;
+
 	UPROPERTY()
 	TWeakObjectPtr<APBModularBumperBase> OwnerBumper;
+
+private:
+	friend class APBModularBumperBase;
+
+	bool AddTriggerProgress(int32 Amount);
+	void ResetTriggerProgress();
+	void SetTriggerProgressState(EPBBumperTriggerProgressState NewState);
+	void NotifyTriggerProgressChanged();
 };

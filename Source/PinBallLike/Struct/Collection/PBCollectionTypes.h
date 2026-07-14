@@ -42,8 +42,8 @@ enum class EPBCollectionSortMode : uint8
 };
 
 /**
- * 도감 항목의 고정 표시 데이터입니다.
- * 프로토타입에서는 C++ 더미 데이터로 채우고, 이후 DataAsset/DataTable로 옮길 수 있게 값 타입으로 둡니다.
+ * DT_Collection에서 읽은 도감 고정 데이터입니다.
+ * 플레이어마다 달라지는 진행도는 FPBCollectionProgressData에서 별도로 관리합니다.
  */
 USTRUCT(BlueprintType)
 struct FPBCollectionEntryData
@@ -55,6 +55,18 @@ struct FPBCollectionEntryData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
 	EPBCollectionCategory Category = EPBCollectionCategory::Ball;
+
+	/** 원본 DataAsset 또는 외부 시스템에서 사용하는 식별자입니다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Source")
+	FName SourceId = NAME_None;
+
+	/** 원본 데이터가 속한 테이블 또는 데이터 종류입니다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Source")
+	FName SourceTableName = NAME_None;
+
+	/** 원본 DataTable의 RowName 또는 원본 시스템 식별자입니다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Source")
+	FName SourceRowName = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
 	FText DisplayName;
@@ -88,6 +100,19 @@ struct FPBCollectionEntryData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
 	int32 SortOrder = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Asset")
+	FName IconAssetKey = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Asset")
+	FName PreviewAssetKey = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Asset")
+	FName AssetBundleName = NAME_None;
+
+	/** true이면 발견 전에는 목록과 필터 후보에도 노출하지 않습니다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Visibility")
+	bool bHiddenUntilDiscovered = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
 	FLinearColor AccentColor = FLinearColor::White;
@@ -125,8 +150,8 @@ struct FPBCollectionQuery
 };
 
 /**
- * 유저별 도감 진행 데이터입니다.
- * 실제 저장은 SaveGame으로 옮기기 전까지 메모리 상태로만 사용합니다.
+ * 저장 대상이 되는 플레이어별 도감 진행 데이터입니다.
+ * Subsystem은 런타임 사본을 관리하고, 실제 영구 저장 계층은 이 구조체 배열을 가져가거나 복원합니다.
  */
 USTRUCT(BlueprintType)
 struct FPBCollectionProgressData
@@ -146,13 +171,13 @@ struct FPBCollectionProgressData
 	bool bIsEnabledInRunPool = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
-	FString FirstDiscoveredAtText;
+	FDateTime FirstDiscoveredAt;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
-	FString FirstUnlockedAtText;
+	FDateTime FirstUnlockedAt;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
-	FString CompletedAtText;
+	FDateTime CompletedAt;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
 	FString CompletedByCharacterName;
@@ -186,6 +211,15 @@ struct FPBCollectionDisplayData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
 	EPBCollectionCategory Category = EPBCollectionCategory::Ball;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Source")
+	FName SourceId = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Source")
+	FName SourceTableName = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Source")
+	FName SourceRowName = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
 	EPBCollectionState State = EPBCollectionState::Locked;
@@ -240,6 +274,15 @@ struct FPBCollectionDisplayData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
 	bool bCanShowFullData = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Asset")
+	FName IconAssetKey = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Asset")
+	FName PreviewAssetKey = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Asset")
+	FName AssetBundleName = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection")
 	FLinearColor AccentColor = FLinearColor::White;

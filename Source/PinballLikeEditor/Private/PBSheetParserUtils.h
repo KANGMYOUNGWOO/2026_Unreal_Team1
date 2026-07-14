@@ -113,6 +113,74 @@ namespace PBSheetParserUtils
 		return FCString::Atof(*Value);
 	}
 
+	// bool 셀 파싱
+	inline bool ParseBoolValue(const FString& Value, const bool DefaultValue)
+	{
+		const FString TrimmedValue = TrimCell(Value);
+		if (IsUnsetValue(TrimmedValue))
+		{
+			return DefaultValue;
+		}
+
+		return TrimmedValue.Equals(TEXT("true"), ESearchCase::IgnoreCase)
+			|| TrimmedValue.Equals(TEXT("1"), ESearchCase::IgnoreCase)
+			|| TrimmedValue.Equals(TEXT("yes"), ESearchCase::IgnoreCase);
+	}
+
+	inline FLinearColor ParseLinearColorValue(const FString& Value, const FLinearColor& DefaultValue)
+	{
+		if (IsUnsetValue(Value))
+		{
+			return DefaultValue;
+		}
+
+		const FString TrimmedValue = TrimCell(Value);
+		FLinearColor ParsedColor;
+		if (ParsedColor.InitFromString(TrimmedValue))
+		{
+			return ParsedColor;
+		}
+
+		TArray<FString> Tokens;
+		TrimmedValue.ParseIntoArray(Tokens, TEXT(","), true);
+		if (Tokens.Num() < 3)
+		{
+			return DefaultValue;
+		}
+
+		const float R = ParseFloatValue(Tokens[0], DefaultValue.R);
+		const float G = ParseFloatValue(Tokens[1], DefaultValue.G);
+		const float B = ParseFloatValue(Tokens[2], DefaultValue.B);
+		const float A = Tokens.IsValidIndex(3)
+			? ParseFloatValue(Tokens[3], DefaultValue.A)
+			: DefaultValue.A;
+
+		return FLinearColor(R, G, B, A);
+	}
+	
+	inline FName ParseNameValue(const FString& Value)
+	{
+		return IsUnsetValue(Value) ? NAME_None : FName(*TrimCell(Value));
+	}
+	
+	// 쉼표로 구분된 Name 목록 파싱.
+	inline TArray<FName> ParseNameArray(const FString& Value)
+	{
+		TArray<FName> Names;
+		TArray<FString> Tokens;
+		Value.ParseIntoArray(Tokens, TEXT(","), true);
+
+		for (const FString& Token : Tokens)
+		{
+			const FString TrimmedToken = TrimCell(Token);
+			if (!IsUnsetValue(TrimmedToken))
+			{
+				Names.Add(FName(*TrimmedToken));
+			}
+		}
+		return Names;
+	}
+	
 	// 쉼표로 구분된 PositionId 목록 파싱.
 	inline TArray<EPBBumperPositionId> ParsePositionIds(const FString& Value)
 	{

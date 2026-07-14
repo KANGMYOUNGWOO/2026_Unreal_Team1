@@ -67,4 +67,17 @@ public:
 	TSoftObjectPtr<UDataTable> BossPattern;
 	
 #pragma endregion 
+
+#pragma region StatusEffect
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "StatusEffect|Table")
+	TSoftObjectPtr<UDataTable> StatusEffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "StatusEffect|Table")
+	TSoftObjectPtr<UDataTable> StatusEffectModifierTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "StatusEffect|Table")
+	TSoftObjectPtr<UDataTable> StatusEffectTriggerTable;
+
+#pragma endregion
 };

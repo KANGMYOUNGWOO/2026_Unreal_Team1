@@ -4,94 +4,18 @@
 #include "PBGameDataLoadSubsystem.h"
 
 #include "Engine/AssetManager.h"
-#include "Engine/DataTable.h"
-#include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
-#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Table/PBAssetBundleNames.h"
 
 void UPBGameDataLoadSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-
-	Collection.InitializeDependency(UPBTableDataSubsystem::StaticClass());
-
-	LoadStartupGameDataAsync();
 }
 
 void UPBGameDataLoadSubsystem::Deinitialize()
 {
 	UnloadPrimaryAssets();
-	UnloadStartupGameData();
 
 	Super::Deinitialize();
-}
-
-void UPBGameDataLoadSubsystem::LoadStartupGameDataAsync()
-{
-	UnloadStartupGameData();
-
-	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
-	if (!IsValid(Settings))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[GameDataLoad] Missing PBGameDataSettings."));
-		return;
-	}
-
-	TArray<FSoftObjectPath> TablePaths;
-	TablePaths.Reserve(6);
-
-	// 테이블 경로는 DeveloperSettings에서만 관리한다.
-	const FSoftObjectPath CollectionTablePath = Settings->CollectionTable.ToSoftObjectPath();
-	const FSoftObjectPath BumperTablePath = Settings->BumperTable.ToSoftObjectPath();
-	const FSoftObjectPath BumperTriggerTablePath = Settings->BumperTriggerTable.ToSoftObjectPath();
-	const FSoftObjectPath BumperEffectTablePath = Settings->BumperEffectTable.ToSoftObjectPath();
-	const FSoftObjectPath BallTablePath = Settings->BallTable.ToSoftObjectPath();
-	const FSoftObjectPath BallStarLevelTablePath = Settings->BallStarLevelTable.ToSoftObjectPath();
-    //const FSoftObjectPath ShopTablePath = Settings->ShopTable.ToSoftObjectPath();
-	
-	if (CollectionTablePath.IsValid())
-	{
-		TablePaths.Add(CollectionTablePath);
-	}
-
-	if (BumperTablePath.IsValid())
-	{
-		TablePaths.Add(BumperTablePath);
-	}
-
-	if (BumperTriggerTablePath.IsValid())
-	{
-		TablePaths.Add(BumperTriggerTablePath);
-	}
-
-	if (BumperEffectTablePath.IsValid())
-	{
-		TablePaths.Add(BumperEffectTablePath);
-	}
-
-	if (BallTablePath.IsValid())
-	{
-		TablePaths.Add(BallTablePath);
-	}
-
-	if (BallStarLevelTablePath.IsValid())
-	{
-		TablePaths.Add(BallStarLevelTablePath);
-	}
-
-	if (TablePaths.IsEmpty())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[GameDataLoad] No startup table paths are configured."));
-		return;
-	}
-
-	FStreamableManager& StreamableManager = UAssetManager::GetStreamableManager();
-	StartupGameDataLoadHandle = StreamableManager.RequestAsyncLoad(
-		TablePaths,
-		FStreamableDelegate::CreateUObject(
-			this,
-			&UPBGameDataLoadSubsystem::OnStartupGameDataLoadedInternal,
-			TablePaths));
 }
 
 FGuid UPBGameDataLoadSubsystem::LoadPrimaryAssetsAsync(
@@ -196,28 +120,6 @@ FGuid UPBGameDataLoadSubsystem::LoadPrimaryAssetsByNamesAsync(
 		FStreamableDelegate());
 }
 
-void UPBGameDataLoadSubsystem::UnloadStartupGameData()
-{
-	LoadedStartupTables.Empty();
-	bIsStartupGameDataReady = false;
-
-	if (UGameInstance* GameInstance = GetGameInstance())
-	{
-		if (UPBTableDataSubsystem* TableDataSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>())
-		{
-			TableDataSubsystem->SetCollectionTable(nullptr);
-			TableDataSubsystem->SetBumperTables(nullptr, nullptr, nullptr);
-			TableDataSubsystem->SetBallTables(nullptr, nullptr);
-		}
-	}
-
-	if (StartupGameDataLoadHandle.IsValid())
-	{
-		StartupGameDataLoadHandle->ReleaseHandle();
-		StartupGameDataLoadHandle.Reset();
-	}
-}
-
 void UPBGameDataLoadSubsystem::UnloadPrimaryAssets()
 {
 	LoadedPrimaryAssets.Empty();
@@ -292,58 +194,6 @@ bool UPBGameDataLoadSubsystem::IsPrimaryAssetBundleLoaded(const FName BundleName
 	return LoadedPrimaryAssetIdsByBundle.Contains(BundleName);
 }
 
-void UPBGameDataLoadSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPath> LoadedPaths)
-{
-	LoadedStartupTables.Empty();
-
-	UDataTable* CollectionTable = nullptr;
-	UDataTable* BumperTable = nullptr;
-	UDataTable* BumperTriggerTable = nullptr;
-	UDataTable* BumperEffectTable = nullptr;
-	UDataTable* BallTable = nullptr;
-	UDataTable* BallStarLevelTable = nullptr;
-
-	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
-	if (IsValid(Settings))
-	{
-		// RequestAsyncLoad 완료 후 실제 테이블을 조회 Subsystem에 전달한다.
-		CollectionTable = Cast<UDataTable>(Settings->CollectionTable.Get());
-		BumperTable = Cast<UDataTable>(Settings->BumperTable.Get());
-		BumperTriggerTable = Cast<UDataTable>(Settings->BumperTriggerTable.Get());
-		BumperEffectTable = Cast<UDataTable>(Settings->BumperEffectTable.Get());
-		BallTable = Cast<UDataTable>(Settings->BallTable.Get());
-		BallStarLevelTable = Cast<UDataTable>(Settings->BallStarLevelTable.Get());
-	}
-
-	for (const FSoftObjectPath& LoadedPath : LoadedPaths)
-	{
-		if (UDataTable* LoadedTable = Cast<UDataTable>(LoadedPath.ResolveObject()))
-		{
-			LoadedStartupTables.Add(LoadedTable);
-		}
-	}
-
-	if (UPBTableDataSubsystem* TableDataSubsystem = GetGameInstance()->GetSubsystem<UPBTableDataSubsystem>())
-	{
-		TableDataSubsystem->SetCollectionTable(CollectionTable);
-		TableDataSubsystem->SetBumperTables(BumperTable, BumperTriggerTable, BumperEffectTable);
-		TableDataSubsystem->SetBallTables(BallTable, BallStarLevelTable);
-	}
-
-	bIsStartupGameDataReady = IsValid(BumperTable)
-		&& IsValid(BumperTriggerTable)
-		&& IsValid(BumperEffectTable)
-		&& IsValid(BallTable)
-		&& IsValid(BallStarLevelTable)
-		&& IsValid(CollectionTable);
-
-	UE_LOG(LogTemp, Log, TEXT("[GameDataLoad] Startup game data loaded. Ready=%s TableCount=%d"),
-		bIsStartupGameDataReady ? TEXT("true") : TEXT("false"),
-		LoadedStartupTables.Num());
-
-	OnStartupGameDataLoaded.Broadcast();
-}
-
 void UPBGameDataLoadSubsystem::AppendPrimaryAssetIds(
 	const FPrimaryAssetType AssetType,
 	TArray<FPrimaryAssetId>& OutAssetIds) const
@@ -374,6 +224,7 @@ void UPBGameDataLoadSubsystem::StartPrimaryAssetLoadRequest(const FPBPrimaryAsse
 	bIsPrimaryAssetsReady = false;
 
 	ActivePrimaryAssetLoadRequests.Add(Request.RequestId, Request);
+
 	TSharedPtr<FStreamableHandle> LoadHandle = UAssetManager::Get().LoadPrimaryAssets(
 		Request.AssetIds,
 		Request.BundleNames,

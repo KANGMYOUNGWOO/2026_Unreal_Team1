@@ -17,6 +17,9 @@ struct PINBALLLIKE_API FPBDeckOwnedBallData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck", meta = (ClampMin = "1", UIMin = "1"))
 	int32 StarLevel = 1;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BallDeck", meta = (ClampMin = "0"))
+	float SavedMana = 0.0f;
+
 	bool IsValid() const
 	{
 		return InstanceId != INDEX_NONE && !BallId.IsNone();

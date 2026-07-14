@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/StreamableManager.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallStarLevelRow.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossHitPointTableRow.h"
@@ -13,9 +14,15 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
+#include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
 #include "PBTableDataSubsystem.generated.h"
 
+struct FPBStatusEffectTriggerRow;
+struct FPBStatusEffectModifierRow;
+struct FPBStatusEffectRow;
 class UDataTable;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBTableDataLoadEvent);
 
 UCLASS()
 class PINBALLLIKE_API UPBTableDataSubsystem : public UGameInstanceSubsystem
@@ -24,7 +31,11 @@ class PINBALLLIKE_API UPBTableDataSubsystem : public UGameInstanceSubsystem
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 
+	// DeveloperSettings에 등록된 테이블을 비동기로 준비한다.
+	void LoadStartupGameDataAsync();
+	void UnloadStartupGameData();
 	bool IsTableDataReady() const;
 
 	// 로딩 Subsystem이 준비한 테이블을 주입한다. 이 Subsystem은 조회 책임만 가진다.
@@ -36,27 +47,40 @@ public:
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
 	void SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable);
 	void SetBossTables(UDataTable* InBossTable, UDataTable* InBossHitPointTable, UDataTable* InBossPatternTable);
+	void SetStatusEffectTables(
+		UDataTable* InStatusEffectTable,
+		UDataTable* InStatusEffectModifierTable,
+		UDataTable* InStatusEffectTriggerTable);
+
+	UPROPERTY(BlueprintAssignable, Category = "TableData")
+	FPBTableDataLoadEvent OnStartupGameDataLoaded;
 
 private:
+	void OnStartupGameDataLoadedInternal(TArray<FSoftObjectPath> LoadedPaths);
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> CollectionTable;
-	
+
+	TSharedPtr<FStreamableHandle> StartupGameDataLoadHandle;
+
+	UPROPERTY()
+	TArray<TObjectPtr<UDataTable>> LoadedStartupTables;
+
 	template <typename RowType>
 	bool FindTableRow(const UDataTable* Table, FName RowName, RowType& OutRow, const TCHAR* Context) const;
-	
+
 	template <typename RowType>
 	bool GetAllTableRows(
 		const UDataTable* Table,
 		TArray<FName>& OutRowNames,
 		TArray<RowType>& OutRows,
 		const TCHAR* Context) const;
-	
+
 #pragma region Bumper
-	
+
 public:
 	bool GetAllBumperRows(TArray<FName>& OutRowNames, TArray<FPBBumperTableRow>& OutRows) const;
-	
+
 	bool FindBumperRow(FName RowName, FPBBumperTableRow& OutRow) const;
 	bool FindBumperTriggerRow(FName RowName, FPBBumperTriggerRow& OutRow) const;
 	bool FindBumperEffectRow(FName RowName, FPBBumperEffectRow& OutRow) const;
@@ -74,21 +98,32 @@ private:
 	TObjectPtr<UDataTable> BumperEffectTable;
 
 #pragma endregion
-	
+
 #pragma region Ball
-	
+
 public:
 	bool FindBallRow(FName RowName, FPBBallTableRow& OutRow) const;
 	bool FindBallStarLevelRow(FName RowName, FPBBallStarLevelRow& OutRow) const;
 	bool FindBallStarLevelRow(FName BallId, int32 StarLevel, FName& OutRowName, FPBBallStarLevelRow& OutRow) const;
-	
+
 private:
 	UPROPERTY()
 	TObjectPtr<UDataTable> BallTable;
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> BallStarLevelTable;
-	
+
+#pragma endregion
+
+#pragma region Shop
+
+public:
+	bool FindShopRow(FName RowName, FPBShopTableRow& OutRow) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> ShopTable;
+
 #pragma endregion
 
 #pragma region Boss
@@ -107,6 +142,25 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> BossPatternTable;
+
+#pragma endregion
+
+#pragma region StatusEffect
+
+public:
+	bool FindStatusEffectRow(FName RowName, FPBStatusEffectRow& OutRow) const;
+	bool GetStatusEffectModifierRows(FName StatusEffectId, TArray<FPBStatusEffectModifierRow>& OutRows) const;
+	bool GetStatusEffectTriggerRows(FName StatusEffectId, TArray<FPBStatusEffectTriggerRow>& OutRows) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> StatusEffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> StatusEffectModifierTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> StatusEffectTriggerTable;
 
 #pragma endregion
 };
