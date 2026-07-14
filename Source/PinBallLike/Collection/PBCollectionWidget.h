@@ -104,6 +104,14 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collection|UI", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UPBCollectionEntryWidget> EntryWidgetClass;
 
+	/** 한 줄에 배치할 도감 카드 수입니다. 카드 자체 크기는 Entry Widget Blueprint에서 정합니다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collection|UI|Layout", meta = (AllowPrivateAccess = "true", ClampMin = "1"))
+	int32 EntryColumnCount = 3;
+
+	/** 도감 카드 사이의 전체 여백입니다. 각 Grid Slot에는 절반씩 적용됩니다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collection|UI|Layout", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float EntrySpacing = 16.0f;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UPBCollectionSubsystem> CollectionSubsystem;
 

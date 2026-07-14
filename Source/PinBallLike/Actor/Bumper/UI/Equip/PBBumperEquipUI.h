@@ -26,6 +26,7 @@ class PINBALLLIKE_API UPBBumperEquipUI : public UPBUserWidget
 
 public:
 	virtual void NativeOnInitialized() override;
+	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
@@ -127,6 +128,23 @@ private:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> SpecialCenterMarker;
 
+	/** 보드 미리보기의 슬롯 계열별 기본색입니다. Widget Blueprint 기본값에서 조정할 수 있습니다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
+	FLinearColor TopSlotColor = FLinearColor(0.72f, 0.20f, 0.24f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
+	FLinearColor SideSlotColor = FLinearColor(0.22f, 0.42f, 0.66f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
+	FLinearColor ReboundSlotColor = FLinearColor(0.78f, 0.48f, 0.18f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
+	FLinearColor SpecialSlotColor = FLinearColor(0.16f, 0.56f, 0.48f, 1.0f);
+
+	/** 선택되지 않은 슬롯을 흐리게 표시할 때 사용할 투명도입니다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+	float UnselectedSlotOpacity = 0.34f;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBumperInfoPanelViewModel> InfoPanelViewModel;
 
@@ -166,4 +184,5 @@ private:
 	bool bBumperRowsLoaded = false;
 	bool bBumperUIAssetLoadPending = false;
 	bool bBumperListItemObjectsBuilt = false;
+	bool bWidgetConstructed = false;
 };

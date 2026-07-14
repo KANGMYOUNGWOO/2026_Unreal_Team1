@@ -400,6 +400,7 @@ void UPBCollectionWidget::RefreshEntryList()
 		return;
 	}
 
+	EntryGridPanel->SetSlotPadding(FMargin(EntrySpacing * 0.5f));
 	EntryGridPanel->ClearChildren();
 
 	CurrentQuery.Category = CurrentCategory;
@@ -420,11 +421,12 @@ void UPBCollectionWidget::RefreshEntryList()
 		EntryWidget->SetDisplayData(EntryData);
 		EntryWidget->OnEntryClicked.AddUniqueDynamic(this, &UPBCollectionWidget::HandleEntryClicked);
 
-		const int32 Row = EntryIndex / 3;
-		const int32 Column = EntryIndex % 3;
+		const int32 SafeColumnCount = FMath::Max(1, EntryColumnCount);
+		const int32 Row = EntryIndex / SafeColumnCount;
+		const int32 Column = EntryIndex % SafeColumnCount;
 		UUniformGridSlot* GridSlot = EntryGridPanel->AddChildToUniformGrid(EntryWidget, Row, Column);
-		GridSlot->SetHorizontalAlignment(HAlign_Fill);
-		GridSlot->SetVerticalAlignment(VAlign_Fill);
+		GridSlot->SetHorizontalAlignment(HAlign_Center);
+		GridSlot->SetVerticalAlignment(VAlign_Top);
 
 		if (EntryData.CollectionId == SelectedCollectionId)
 		{
