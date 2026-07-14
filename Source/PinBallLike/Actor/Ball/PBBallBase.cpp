@@ -85,14 +85,9 @@ void APBBallBase::InitializeFromBallInstanceData(const FPBBallInstanceData& InBa
 	BallInstanceData = InBallInstanceData;
 	ApplyStatData(BallInstanceData.BaseStats);
 	ApplyResourceData(BallInstanceData.BaseResources);
-}
-
-void APBBallBase::InitializeSkillActorClass(
-	const TSubclassOf<APBBallSkillActorBase> InSkillActorClass)
-{
 	if (SkillComponent)
 	{
-		SkillComponent->InitializeSkillActorClass(InSkillActorClass);
+		SkillComponent->InitializeSkill(BallInstanceData);
 	}
 }
 

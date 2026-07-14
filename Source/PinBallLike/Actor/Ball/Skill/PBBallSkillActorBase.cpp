@@ -3,22 +3,30 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Ball/Skill/Component/PBTimedAreaDamageComponent.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Common/PBStatTypes.h"
 #include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 #include "EngineUtils.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 
 void APBBallSkillActorBase::InitializeSkill(
 	APBBallBase* InOwnerBall,
-	const int32 InDamageAmount,
-	const float InDuration,
-	const int32 InDamageCount)
+	const FPBBallSkillTableRow& InSkillData)
 {
-	static_cast<void>(InDamageAmount);
-	static_cast<void>(InDuration);
-	static_cast<void>(InDamageCount);
-
 	OwnerBall = InOwnerBall;
+	SkillData = InSkillData;
+
+	const UPBBaseStatComponent* StatComponent = OwnerBall
+		? OwnerBall->FindComponentByClass<UPBBaseStatComponent>()
+		: nullptr;
+	const int32 BallAttackPower = StatComponent
+		? StatComponent->GetStat(PBStatNames::Attack)
+		: 0;
+	SkillDamageAmount = FMath::Max(
+		0,
+		FMath::RoundToInt(static_cast<float>(BallAttackPower) * SkillData.DamageMultiplier));
+
 	if (OwnerBall)
 	{
 		AttachToActor(OwnerBall, FAttachmentTransformRules::SnapToTargetNotIncludingScale);

@@ -8,6 +8,7 @@
 class APBBallBase;
 class APBBallSkillActorBase;
 class AActor;
+struct FPBBallInstanceData;
 
 UCLASS(ClassGroup=(PinBall), meta=(BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBallSkillComponent : public UActorComponent
@@ -16,7 +17,7 @@ class PINBALLLIKE_API UPBBallSkillComponent : public UActorComponent
 
 public:
 	UPBBallSkillComponent();
-	void InitializeSkillActorClass(TSubclassOf<APBBallSkillActorBase> InSkillActorClass);
+	bool InitializeSkill(const FPBBallInstanceData& BallInstanceData);
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill")
 	bool TryActivateSkill();
@@ -27,15 +28,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball|Skill")
 	APBBallSkillActorBase* GetActiveSkillActor() const { return ActiveSkillActor; }
 
-protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ball|Skill")
-	FPBBallSkillTableRow SkillData;
-
 private:
-	int32 CalculateFinalDamage(const APBBallBase* OwnerBall) const;
-
 	UFUNCTION()
 	void HandleActiveSkillActorDestroyed(AActor* DestroyedActor);
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Ball|Skill", meta = (AllowPrivateAccess = "true"))
+	FPBBallSkillTableRow SkillData;
 
 	UPROPERTY(Transient)
 	TObjectPtr<APBBallSkillActorBase> ActiveSkillActor;

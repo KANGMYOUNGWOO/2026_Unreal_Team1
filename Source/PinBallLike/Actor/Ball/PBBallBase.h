@@ -15,7 +15,6 @@ class UPBBallComboComponent;
 class UPBBallHitReactionComponent;
 class UPBBallPhysicsComponent;
 class UPBBallSkillComponent;
-class APBBallSkillActorBase;
 class USphereComponent;
 
 UCLASS()
@@ -33,7 +32,6 @@ public:
 	void ApplyResourceData(const TArray<FPBResourceData>& ResourceData);
 
 	void InitializeFromBallInstanceData(const FPBBallInstanceData& InBallInstanceData);
-	void InitializeSkillActorClass(TSubclassOf<APBBallSkillActorBase> InSkillActorClass);
 
 	UFUNCTION(BlueprintPure, Category = "Ball|Data")
 	FName GetBallId() const { return BallInstanceData.BallId; }

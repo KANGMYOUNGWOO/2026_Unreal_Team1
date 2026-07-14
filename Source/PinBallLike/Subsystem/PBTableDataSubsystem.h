@@ -130,6 +130,7 @@ private:
 public:
 	bool GetAllSkillRows(TArray<FName>& OutRowNames, TArray<FPBBallSkillTableRow>& OutRows) const;
 	bool FindSkillRow(FName RowName, FPBBallSkillTableRow& OutRow) const;
+	bool FindDefaultSkillRowForBall(FName BallId, FPBBallSkillTableRow& OutRow) const;
 
 private:
 	UPROPERTY()

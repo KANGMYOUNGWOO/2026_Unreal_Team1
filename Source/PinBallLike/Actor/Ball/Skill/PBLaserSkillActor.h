@@ -19,9 +19,7 @@ public:
 
 	virtual void InitializeSkill(
 		APBBallBase* InOwnerBall,
-		int32 InDamageAmount,
-		float InDuration,
-		int32 InDamageCount) override;
+		const FPBBallSkillTableRow& InSkillData) override;
 
 protected:
 	virtual void Tick(float DeltaTime) override;

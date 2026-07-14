@@ -9,14 +9,12 @@
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
-#include "PinBallLike/Actor/Ball/Skill/PBBallSkillActorBase.h"
 #include "PinBallLike/Struct/Ball/PBBallInstanceData.h"
 #include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
-#include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
 
 UPBPartyDeploymentComponent::UPBPartyDeploymentComponent()
 {
@@ -241,10 +239,6 @@ APBBallBase* UPBPartyDeploymentComponent::SpawnBallFromDeckInstance(
 	}
 
 	SpawnedBall->InitializeFromBallInstanceData(NewBallInstanceData);
-	const UPBBallDataAsset* BallDataAsset =
-		AssetLoadService ? AssetLoadService->GetLoadedBallDataAsset(BallInstanceId) : nullptr;
-	SpawnedBall->InitializeSkillActorClass(
-		BallDataAsset ? BallDataAsset->SkillActorClass.Get() : nullptr);
 	SpawnedBall->FinishSpawning(SpawnTransform);
 	SpawnedBall->SetActorHiddenInGame(true);
 

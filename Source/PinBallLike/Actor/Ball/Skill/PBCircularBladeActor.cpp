@@ -24,11 +24,9 @@ APBCircularBladeActor::APBCircularBladeActor()
 }
 void APBCircularBladeActor::InitializeSkill(
 	APBBallBase* InOwnerBall,
-	int32 InDamageAmount,
-	float InDuration,
-	int32 InDamageCount)
+	const FPBBallSkillTableRow& InSkillData)
 {
-	Super::InitializeSkill(InOwnerBall, InDamageAmount, InDuration, InDamageCount);
+	Super::InitializeSkill(InOwnerBall, InSkillData);
 
 	if (TimedAreaDamageComponent)
 	{
@@ -37,9 +35,9 @@ void APBCircularBladeActor::InitializeSkill(
 			AttackSphere,
 			OwnerBall);
 		TimedAreaDamageComponent->ConfigureDamage(
-			InDamageAmount,
-			InDuration,
-			InDamageCount);
+			GetSkillDamageAmount(),
+			InSkillData.Duration,
+			InSkillData.Value);
 	}
 }
 

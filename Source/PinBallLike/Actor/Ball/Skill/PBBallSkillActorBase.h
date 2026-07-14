@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Table/Ball/Struct/PBBallSkillTableRow.h"
 #include "PBBallSkillActorBase.generated.h"
 
 class APBBallBase;
@@ -26,9 +27,7 @@ class PINBALLLIKE_API APBBallSkillActorBase : public AActor
 public:
 	virtual void InitializeSkill(
 		APBBallBase* InOwnerBall,
-		int32 InDamageAmount,
-		float InDuration,
-		int32 InDamageCount);
+		const FPBBallSkillTableRow& InSkillData);
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill|Effect")
 	void ActivateSkill();
@@ -62,6 +61,8 @@ protected:
 	virtual AActor* FindTarget() const;
 	virtual bool IsTargetValid(const AActor* Target) const;
 	virtual bool ShouldWaitForVisualCompletion() const;
+	const FPBBallSkillTableRow& GetSkillData() const { return SkillData; }
+	int32 GetSkillDamageAmount() const { return SkillDamageAmount; }
 
 	void BindDamageEvents(UPBTimedAreaDamageComponent* DamageComponent);
 
@@ -98,4 +99,10 @@ private:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Ball|Skill|Effect", meta = (AllowPrivateAccess = "true"))
 	EPBBallSkillActorState State = EPBBallSkillActorState::None;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Ball|Skill|Data", meta = (AllowPrivateAccess = "true"))
+	FPBBallSkillTableRow SkillData;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Ball|Skill|Data", meta = (AllowPrivateAccess = "true"))
+	int32 SkillDamageAmount = 0;
 };

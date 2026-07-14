@@ -512,6 +512,21 @@ bool UPBTableDataSubsystem::FindSkillRow(
 	return FindTableRow(SkillTable, RowName, OutRow, TEXT("FindSkillRow"));
 }
 
+bool UPBTableDataSubsystem::FindDefaultSkillRowForBall(
+	const FName BallId,
+	FPBBallSkillTableRow& OutRow) const
+{
+	OutRow = FPBBallSkillTableRow();
+
+	FPBBallTableRow BallRow;
+	if (!FindBallRow(BallId, BallRow) || BallRow.DefaultSkillIds.IsEmpty())
+	{
+		return false;
+	}
+
+	return FindSkillRow(BallRow.DefaultSkillIds[0], OutRow);
+}
+
 #pragma endregion
 
 #pragma region Shop

@@ -25,18 +25,16 @@ APBLaserSkillActor::APBLaserSkillActor()
 
 void APBLaserSkillActor::InitializeSkill(
 	APBBallBase* InOwnerBall,
-	const int32 InDamageAmount,
-	const float InDuration,
-	const int32 InDamageCount)
+	const FPBBallSkillTableRow& InSkillData)
 {
-	Super::InitializeSkill(InOwnerBall, InDamageAmount, InDuration, InDamageCount);
+	Super::InitializeSkill(InOwnerBall, InSkillData);
 
 	BindDamageEvents(TimedAreaDamageComponent);
 	TimedAreaDamageComponent->InitializeDamageArea(LaserCollision, OwnerBall);
 	TimedAreaDamageComponent->ConfigureDamage(
-		InDamageAmount,
-		InDuration,
-		InDamageCount);
+		GetSkillDamageAmount(),
+		InSkillData.Duration,
+		InSkillData.Value);
 }
 
 void APBLaserSkillActor::Tick(const float DeltaTime)
