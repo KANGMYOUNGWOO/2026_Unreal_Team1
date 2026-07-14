@@ -2,6 +2,7 @@
 
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Pattern/PBBossProjectile.h"
+#include "PinBallLike/Actor/Boss/SnakeBoss.h"
 
 UPBBossSnakeProjectilePattern::UPBBossSnakeProjectilePattern()
 {
@@ -22,6 +23,8 @@ void UPBBossSnakeProjectilePattern::ExecutePattern_Implementation(APBBossBase* B
 		FinishPattern();
 		return;
 	}
+
+	ApplySnakeProjectilePose(Boss, 1.0f);
 
 	if (FireIntervalSeconds <= 0.0f)
 	{
@@ -59,7 +62,25 @@ void UPBBossSnakeProjectilePattern::ExecutePattern_Implementation(APBBossBase* B
 void UPBBossSnakeProjectilePattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
 {
 	ClearPatternTimers();
+	ApplySnakeProjectilePose(Boss, 0.0f);
 	FiredProjectileCount = 0;
+}
+
+void UPBBossSnakeProjectilePattern::ApplySnakeProjectilePose(APBBossBase* Boss, float Alpha) const
+{
+	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
+	{
+		const float ClampedAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+		SnakeBoss->SetSnakeProjectilePose(ClampedAlpha > 0.0f, ClampedAlpha);
+	}
+}
+
+void UPBBossSnakeProjectilePattern::FinishProjectilePattern()
+{
+	APBBossBase* Boss = GetOwnerBoss();
+	ClearPatternTimers();
+	ApplySnakeProjectilePose(Boss, 0.0f);
+	FinishPattern();
 }
 
 void UPBBossSnakeProjectilePattern::FireProjectile()
@@ -68,6 +89,7 @@ void UPBBossSnakeProjectilePattern::FireProjectile()
 	if (!Boss || !ProjectileClass || FiredProjectileCount >= ProjectileCount)
 	{
 		ClearPatternTimers();
+		ApplySnakeProjectilePose(Boss, 0.0f);
 		FinishPattern();
 		return;
 	}
@@ -76,6 +98,7 @@ void UPBBossSnakeProjectilePattern::FireProjectile()
 	if (!World)
 	{
 		ClearPatternTimers();
+		ApplySnakeProjectilePose(Boss, 0.0f);
 		FinishPattern();
 		return;
 	}
@@ -110,7 +133,19 @@ void UPBBossSnakeProjectilePattern::FireProjectile()
 	if (FiredProjectileCount >= ProjectileCount)
 	{
 		ClearPatternTimers();
-		FinishPattern();
+
+		if (FireIntervalSeconds > 0.0f)
+		{
+			Boss->GetWorldTimerManager().SetTimer(
+				FireTimerHandle,
+				this,
+				&UPBBossSnakeProjectilePattern::FinishProjectilePattern,
+				FireIntervalSeconds,
+				false);
+			return;
+		}
+
+		FinishProjectilePattern();
 	}
 }
 

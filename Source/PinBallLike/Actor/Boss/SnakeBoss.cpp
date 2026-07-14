@@ -96,6 +96,12 @@ void ASnakeBoss::SetSnakeChargePose(bool IsActive, const FVector& Direction, flo
 	SnakeChargeHeadSplinePoints.Reset();
 }
 
+void ASnakeBoss::SetSnakeProjectilePose(bool IsActive, float BlendAlpha)
+{
+	IsSnakeProjectilePoseActiveValue = IsActive;
+	SnakeProjectilePoseAlpha = IsActive ? FMath::Clamp(BlendAlpha, 0.0f, 1.0f) : 0.0f;
+}
+
 float ASnakeBoss::GetSnakeAnimationSpeed() const
 {
 	return SnakeAnimationSpeed;
@@ -134,6 +140,16 @@ bool ASnakeBoss::IsSnakeChargePoseActive() const
 float ASnakeBoss::GetSnakeChargePoseAlpha() const
 {
 	return SnakeChargePoseAlpha;
+}
+
+bool ASnakeBoss::IsSnakeProjectilePoseActive() const
+{
+	return IsSnakeProjectilePoseActiveValue;
+}
+
+float ASnakeBoss::GetSnakeProjectilePoseAlpha() const
+{
+	return SnakeProjectilePoseAlpha;
 }
 
 void ASnakeBoss::InitializeMoveArea()

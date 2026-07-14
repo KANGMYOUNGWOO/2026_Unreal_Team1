@@ -28,6 +28,7 @@ public:
 	ASnakeBoss();
 
 	void SetSnakeChargePose(bool IsActive, const FVector& Direction, float BlendAlpha);
+	void SetSnakeProjectilePose(bool IsActive, float BlendAlpha);
 
 	UFUNCTION(BlueprintPure, Category = "Boss|Snake Animation")
 	float GetSnakeAnimationSpeed() const;
@@ -45,6 +46,8 @@ public:
 	const TArray<FVector>& GetSnakeChargeHeadSplinePoints() const;
 	bool IsSnakeChargePoseActive() const;
 	float GetSnakeChargePoseAlpha() const;
+	bool IsSnakeProjectilePoseActive() const;
+	float GetSnakeProjectilePoseAlpha() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -130,10 +133,12 @@ private:
 	float SnakeAnimationMovePhase = 0.0f;
 	float SnakePathTotalDistance = 0.0f;
 	float SnakeChargePoseAlpha = 0.0f;
+	float SnakeProjectilePoseAlpha = 0.0f;
 	TArray<FPBSnakePathSample> SnakePathSamples;
 	TArray<FVector> SnakeSplinePoints;
 	TArray<FVector> SnakeChargeHeadSplinePoints;
 	bool IsPatrolTargetValid = false;
 	bool IsSnakeAnimationMoveActive = false;
 	bool IsSnakeChargePoseActiveValue = false;
+	bool IsSnakeProjectilePoseActiveValue = false;
 };
