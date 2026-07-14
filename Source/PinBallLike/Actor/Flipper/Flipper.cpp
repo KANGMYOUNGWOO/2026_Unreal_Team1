@@ -9,7 +9,6 @@
 #include "DrawDebugHelpers.h"
 #endif
 #include "Math/UnrealMathUtility.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
@@ -165,19 +164,18 @@ void AFlipper::ApplyForceToBalls(const float DeltaTime, const float MotionAlpha)
 
 	// 플리퍼가 움직일때만 ball이 충돌하는지 연산함.
 	TArray<AActor*> OverlappingActors;
-	BallDetectTrigger->GetOverlappingActors(OverlappingActors, APBBallBase::StaticClass());
+	BallDetectTrigger->GetOverlappingActors(OverlappingActors);
 
 	for (AActor* OverlappingActor : OverlappingActors)
 	{
-		APBBallBase* Ball = Cast<APBBallBase>(OverlappingActor);
-		IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
-		if (!IsValid(Ball) || !Movable)
+		IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(OverlappingActor);
+		if (!IsValid(OverlappingActor) || !Movable)
 		{
 			continue;
 		}
 
 		// 위치에 따른 방향과 끝부분 힘 배율을 계산한다.
-		const float DistanceAlpha = CalculateDistanceAlpha(Ball->GetActorLocation());
+		const float DistanceAlpha = CalculateDistanceAlpha(OverlappingActor->GetActorLocation());
 		const FVector ForceDirection = CalculateForceDirection(DistanceAlpha);
 		if (ForceDirection.IsNearlyZero())
 		{

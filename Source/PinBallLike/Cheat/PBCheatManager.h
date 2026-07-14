@@ -41,6 +41,9 @@ public:
 	UFUNCTION(exec)
 	void DamageBoss(int32 DamageAmount);
 
+	UFUNCTION(exec)
+	void BallDamage();
+
 private:
 	UGameInstance* GetCheatGameInstance() const;
 	UPBBallDeckSubsystem* GetBallDeckSubsystem() const;

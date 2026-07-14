@@ -5,7 +5,10 @@
 
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossStatComponent.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
@@ -169,6 +172,37 @@ void UPBCheatManager::DamageBoss(const int32 DamageAmount)
 
 	BossStatComponent->ApplyBossDamage(NAME_None, DamageAmount);
 	UE_LOG(LogTemp, Log, TEXT("[Cheat] DamageBoss succeeded. Damage=%d"), DamageAmount);
+}
+
+void UPBCheatManager::BallDamage()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] BallDamage failed. World is invalid."));
+		return;
+	}
+
+	constexpr int32 DamageAmount = 10;
+	int32 DamagedBallCount = 0;
+	for (TActorIterator<APBBallBase> It(World); It; ++It)
+	{
+		APBBallBase* Ball = *It;
+		UPBBaseResourceComponent* ResourceComponent =
+			IsValid(Ball) ? Ball->GetResourceComponent() : nullptr;
+		if (!ResourceComponent || ResourceComponent->IsDead())
+		{
+			continue;
+		}
+
+		ResourceComponent->TakeDamage(DamageAmount);
+		++DamagedBallCount;
+	}
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[Cheat] BallDamage finished. Damage=%d DamagedBalls=%d"),
+		DamageAmount,
+		DamagedBallCount);
 }
 
 UGameInstance* UPBCheatManager::GetCheatGameInstance() const

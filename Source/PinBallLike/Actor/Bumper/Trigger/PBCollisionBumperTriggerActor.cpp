@@ -118,9 +118,9 @@ void APBCollisionBumperTriggerActor::SetupTriggerArea(UPrimitiveComponent* Trigg
 	TriggerAreas.Add(TriggerArea);
 }
 
-bool APBCollisionBumperTriggerActor::IsBallInTriggerArea(APBBallBase* Ball) const
+bool APBCollisionBumperTriggerActor::IsBallInTriggerArea(AActor* BallActor) const
 {
-	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
+	const TWeakObjectPtr<AActor> BallKey = BallActor;
 	const int32* OverlapCount = TriggeringBallOverlapCounts.Find(BallKey);
 	return OverlapCount != nullptr && *OverlapCount > 0;
 }
@@ -172,15 +172,15 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 	return false;
 }
 
-void APBCollisionBumperTriggerActor::AddBounceVelocityToBall(APBBallBase* Ball, const FHitResult& Hit) const
+void APBCollisionBumperTriggerActor::AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const
 {
-	if (!IsValid(Ball))
+	if (!IsValid(BallActor))
 	{
 		return;
 	}
 
-	const IStatProvider* StatProvider = PBInterfaceUtils::FindInterface<IStatProvider>(Ball);
-	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
+	const IStatProvider* StatProvider = PBInterfaceUtils::FindInterface<IStatProvider>(BallActor);
+	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(BallActor);
 	if (!StatProvider || !Movable)
 	{
 		return;
@@ -215,15 +215,14 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 		return;
 	}
 
-	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
-	if (!IsValid(Ball))
+	if (!PBInterfaceUtils::FindInterface<IMovable>(OtherActor))
 	{
 		return;
 	}
 
 	const bool bIsInValidTriggerArea = bUseHitPointTriggerAreaValidation
 		? IsHitPointInsideTriggerArea(Hit.ImpactPoint)
-		: IsBallInTriggerArea(Ball);
+		: IsBallInTriggerArea(OtherActor);
 	if (!bIsInValidTriggerArea)
 	{
 		return;
@@ -234,8 +233,11 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 		ReactionComponent->PlayImpactReaction(Hit);
 	}
 
-	AddBounceVelocityToBall(Ball, Hit);
-	IncreaseTrigger(Ball, Hit);
+	AddBounceVelocityToBall(OtherActor, Hit);
+	if (APBBallBase* Ball = Cast<APBBallBase>(OtherActor))
+	{
+		IncreaseTrigger(Ball, Hit);
+	}
 }
 
 void APBCollisionBumperTriggerActor::HandleTriggerBeginOverlap(
@@ -251,13 +253,12 @@ void APBCollisionBumperTriggerActor::HandleTriggerBeginOverlap(
 		return;
 	}
 
-	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
-	if (!IsValid(Ball))
+	if (!PBInterfaceUtils::FindInterface<IMovable>(OtherActor))
 	{
 		return;
 	}
 
-	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
+	const TWeakObjectPtr<AActor> BallKey = OtherActor;
 	int32& OverlapCount = TriggeringBallOverlapCounts.FindOrAdd(BallKey);
 	++OverlapCount;
 }
@@ -268,13 +269,12 @@ void APBCollisionBumperTriggerActor::HandleTriggerEndOverlap(
 	UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex)
 {
-	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
-	if (!IsValid(Ball))
+	if (!IsValid(OtherActor))
 	{
 		return;
 	}
 
-	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
+	const TWeakObjectPtr<AActor> BallKey = OtherActor;
 	int32* OverlapCount = TriggeringBallOverlapCounts.Find(BallKey);
 	if (OverlapCount == nullptr)
 	{
