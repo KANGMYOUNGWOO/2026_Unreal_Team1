@@ -23,14 +23,15 @@ void PBStatusEffectFactory::RegisterStatusEffectClass(
 UPBBaseStatusEffect* PBStatusEffectFactory::CreateStatusEffect(
 	UObject* Outer,
 	UPBStatusEffectComponent* OwnerComponent,
+	const FName StatusEffectId,
 	const FPBStatusEffectRow& StatusEffectRow,
 	const TArray<FPBStatusEffectModifierRow>& ModifierRows,
 	const TArray<FPBStatusEffectTriggerRow>& TriggerRows)
 {
 	const TSubclassOf<UPBBaseStatusEffect> StatusEffectClass =
-		ResolveStatusEffectClass(StatusEffectRow.StatusEffectId);
+		ResolveStatusEffectClass(StatusEffectId);
 	UClass* StatusEffectClassPtr = StatusEffectClass.Get();
-	const FString StatusEffectIdName = StatusEffectRow.StatusEffectId.ToString();
+	const FString StatusEffectIdName = StatusEffectId.ToString();
 	const FString OuterName = Outer ? Outer->GetName() : TEXT("None");
 	const FString OwnerComponentName = OwnerComponent ? OwnerComponent->GetName() : TEXT("None");
 	const FString StatusEffectClassName = StatusEffectClassPtr ? StatusEffectClassPtr->GetName() : TEXT("None");
@@ -54,7 +55,7 @@ UPBBaseStatusEffect* PBStatusEffectFactory::CreateStatusEffect(
 		return nullptr;
 	}
 
-	StatusEffect->InitializeStatusEffect(OwnerComponent, StatusEffectRow, ModifierRows, TriggerRows);
+	StatusEffect->InitializeStatusEffect(OwnerComponent, StatusEffectId, StatusEffectRow, ModifierRows, TriggerRows);
 	return StatusEffect;
 }
 

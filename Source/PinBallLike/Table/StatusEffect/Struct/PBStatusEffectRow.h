@@ -11,16 +11,10 @@ struct PINBALLLIKE_API FPBStatusEffectRow : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StatusEffect")
-	FName StatusEffectId = NAME_None;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StatusEffect")
 	FName DisplayNameKey = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StatusEffect")
 	FName DescriptionKey = NAME_None;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StatusEffect")
-	EPBStatusEffectKind StatusEffectKind = EPBStatusEffectKind::Marker;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StatusEffect")
 	FString Tags;

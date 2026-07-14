@@ -24,11 +24,12 @@ class PINBALLLIKE_API UPBBaseStatusEffect : public UObject
 public:
 	void InitializeStatusEffect(
 		UPBStatusEffectComponent* InOwnerComponent,
+		FName InStatusEffectId,
 		const FPBStatusEffectRow& InStatusEffectRow,
 		const TArray<FPBStatusEffectModifierRow>& InModifierRows,
 		const TArray<FPBStatusEffectTriggerRow>& InTriggerRows);
 
-	FName GetStatusEffectId() const { return StatusEffectRow.StatusEffectId; }
+	FName GetStatusEffectId() const { return StatusEffectId; }
 	int32 GetStackCount() const { return StackCount; }
 	const FPBStatusEffectRow& GetStatusEffectRow() const { return StatusEffectRow; }
 	UPBStatusEffectComponent* GetOwnerComponent() const { return OwnerComponent.Get(); }
@@ -46,6 +47,9 @@ public:
 protected:
 	UPROPERTY()
 	TWeakObjectPtr<UPBStatusEffectComponent> OwnerComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StatusEffect")
+	FName StatusEffectId = NAME_None;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StatusEffect")
 	FPBStatusEffectRow StatusEffectRow;

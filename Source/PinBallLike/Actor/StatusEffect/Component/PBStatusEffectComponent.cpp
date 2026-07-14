@@ -190,6 +190,7 @@ UPBBaseStatusEffect* UPBStatusEffectComponent::CreateStatusEffect(const FName St
 	return PBStatusEffectFactory::CreateStatusEffect(
 		this,
 		this,
+		StatusEffectId,
 		StatusEffectRow,
 		ModifierRows,
 		TriggerRows);

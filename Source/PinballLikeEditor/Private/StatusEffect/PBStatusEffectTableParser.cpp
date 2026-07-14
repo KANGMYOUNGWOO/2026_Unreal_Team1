@@ -31,11 +31,8 @@ UScriptStruct* UPBStatusEffectTableParser::GetRowStruct() const
 bool UPBStatusEffectTableParser::ParseRow(FName RowName, const TMap<FString, FString>& RowData)
 {
 	FPBStatusEffectRow NewRow;
-	const FString StatusEffectIdString = TrimCell(RowData.FindRef(TEXT("StatusEffectId")));
-	NewRow.StatusEffectId = IsUnsetValue(StatusEffectIdString) ? RowName : FName(*StatusEffectIdString);
 	NewRow.DisplayNameKey = FName(*TrimCell(RowData.FindRef(TEXT("DisplayNameKey"))));
 	NewRow.DescriptionKey = FName(*TrimCell(RowData.FindRef(TEXT("DescriptionKey"))));
-	NewRow.StatusEffectKind = ParseEnumValue(RowData.FindRef(TEXT("StatusEffectKind")), EPBStatusEffectKind::Marker);
 	NewRow.Tags = TrimCell(RowData.FindRef(TEXT("Tags")));
 	NewRow.StackType = ParseEnumValue(RowData.FindRef(TEXT("StackType")), EPBStatusEffectStackType::Replace);
 	NewRow.DurationPolicy = ParseEnumValue(RowData.FindRef(TEXT("DurationPolicy")), EPBStatusEffectDurationPolicy::Permanent);
