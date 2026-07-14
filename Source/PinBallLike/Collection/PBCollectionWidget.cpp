@@ -1,6 +1,7 @@
 #include "PBCollectionWidget.h"
 
 #include "PBCollectionEntryWidget.h"
+#include "PinBallLike/Collection/ViewModel/PBCollectionDetailViewModel.h"
 #include "PinBallLike/Collection/PBCollectionSubsystem.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 
@@ -14,6 +15,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "UObject/SoftObjectPath.h"
+#include "View/MVVMView.h"
 
 namespace
 {
@@ -31,6 +33,7 @@ void UPBCollectionWidget::NativeOnInitialized()
 		return;
 	}
 
+	EnsureDetailViewModel();
 	BindWidgetEvents();
 	ValidateRequiredWidgetBindings();
 }
@@ -442,6 +445,12 @@ void UPBCollectionWidget::RefreshEntryList()
 
 void UPBCollectionWidget::RefreshDetail()
 {
+	EnsureDetailViewModel();
+	if (!DetailViewModel)
+	{
+		return;
+	}
+
 	FPBCollectionDisplayData DisplayData;
 	const bool bHasSelection = CollectionSubsystem
 		&& SelectedCollectionId != NAME_None
@@ -450,72 +459,51 @@ void UPBCollectionWidget::RefreshDetail()
 	if (!bHasSelection)
 	{
 		const bool bIsLoading = CollectionSubsystem && !CollectionSubsystem->IsDataReady();
-		if (DetailNameText)
-		{
-			DetailNameText->SetText(bIsLoading
-				? NSLOCTEXT("PBCollection", "LoadingName", "도감 불러오는 중")
-				: NSLOCTEXT("PBCollection", "NoSelectionName", "도감"));
-		}
-		if (DetailMetaText)
-		{
-			DetailMetaText->SetText(bIsLoading
-				? NSLOCTEXT("PBCollection", "LoadingMeta", "잠시만 기다려 주세요.")
-				: NSLOCTEXT("PBCollection", "NoSelectionMeta", "항목 없음"));
-		}
-		if (DetailDescriptionText)
-		{
-			DetailDescriptionText->SetText(FText::GetEmpty());
-		}
-		if (DetailUnlockText)
-		{
-			DetailUnlockText->SetText(FText::GetEmpty());
-		}
-		if (DetailRecordText)
-		{
-			DetailRecordText->SetText(FText::GetEmpty());
-		}
+		DetailViewModel->SetEmpty(bIsLoading);
 		return;
 	}
 
-	if (DetailNameText)
+	DetailViewModel->SetDisplayData(DisplayData);
+}
+
+void UPBCollectionWidget::EnsureDetailViewModel()
+{
+	if (!DetailViewModel)
 	{
-		DetailNameText->SetText(DisplayData.DisplayName);
+		DetailViewModel = NewObject<UPBCollectionDetailViewModel>(this);
 	}
-	if (DetailMetaText)
+
+	if (DetailViewModel && !bIsDetailViewModelApplied)
 	{
-		DetailMetaText->SetText(FText::Format(
-			NSLOCTEXT("PBCollection", "DetailMetaFormat", "{0} · {1} · {2} · {3} · {4} · {5}성"),
-			DisplayData.CategoryText,
-			DisplayData.StateText,
-			DisplayData.AttackTypeText,
-			DisplayData.RoleText,
-			DisplayData.AttributeText,
-			FText::AsNumber(DisplayData.StarGrade)));
-	}
-	if (DetailDescriptionText)
-	{
-		DetailDescriptionText->SetText(DisplayData.DetailDescription);
-	}
-	if (DetailUnlockText)
-	{
-		DetailUnlockText->SetText(FText::Format(
-			NSLOCTEXT("PBCollection", "UnlockFormat", "해금 조건: {0}"),
-			DisplayData.UnlockConditionText));
-	}
-	if (DetailRecordText)
-	{
-		DetailRecordText->SetText(DisplayData.bCanShowFullData
-			? DisplayData.RecordText
-			: NSLOCTEXT("PBCollection", "LockedRecordText", "기록은 해금 이후 표시됩니다."));
-	}
-	if (DetailAccentBorder)
-	{
-		DetailAccentBorder->SetBrushColor(DisplayData.State == EPBCollectionState::Locked
-			? FLinearColor(0.22f, 0.22f, 0.22f, 1.0f)
-			: DisplayData.AccentColor);
+		bIsDetailViewModelApplied = ApplyDetailViewModelToWidget();
 	}
 }
 
+bool UPBCollectionWidget::ApplyDetailViewModelToWidget()
+{
+	if (!DetailViewModel)
+	{
+		return false;
+	}
+
+	UMVVMView* View = GetExtension<UMVVMView>();
+	if (!View)
+	{
+		return false;
+	}
+
+	TScriptInterface<INotifyFieldValueChanged> ViewModelInterface(DetailViewModel);
+	const bool bApplied = View->SetViewModelByClass(ViewModelInterface);
+	if (!bApplied)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("%s: PBCollectionDetailViewModel을 WBP MVVM 컨텍스트에 주입하지 못했습니다."),
+			*GetName());
+	}
+	return bApplied;
+}
 void UPBCollectionWidget::SetCategory(EPBCollectionCategory NewCategory)
 {
 	CurrentCategory = NewCategory;

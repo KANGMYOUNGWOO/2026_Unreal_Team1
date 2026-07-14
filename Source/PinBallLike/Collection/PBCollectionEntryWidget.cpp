@@ -1,53 +1,16 @@
 #include "PBCollectionEntryWidget.h"
 
+#include "PinBallLike/Collection/ViewModel/PBCollectionEntryViewModel.h"
+
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
-
-namespace
-{
-FLinearColor GetCardColor(EPBCollectionState State)
-{
-	return State == EPBCollectionState::Locked
-		? FLinearColor(0.05f, 0.055f, 0.07f, 0.92f)
-		: FLinearColor(0.07f, 0.105f, 0.13f, 0.96f);
-}
-
-FLinearColor GetAccentColor(EPBCollectionCategory Category, EPBCollectionState State)
-{
-	if (State == EPBCollectionState::Locked)
-	{
-		return FLinearColor(0.28f, 0.28f, 0.32f, 1.0f);
-	}
-
-	switch (Category)
-	{
-	case EPBCollectionCategory::Ball:
-		return FLinearColor(0.88f, 0.22f, 0.18f, 1.0f);
-	case EPBCollectionCategory::Bumper:
-		return FLinearColor(0.12f, 0.72f, 0.86f, 1.0f);
-	case EPBCollectionCategory::Boss:
-		return FLinearColor(0.72f, 0.24f, 0.86f, 1.0f);
-	case EPBCollectionCategory::Relic:
-		return FLinearColor(0.92f, 0.66f, 0.22f, 1.0f);
-	case EPBCollectionCategory::Achievement:
-		return FLinearColor(0.34f, 0.72f, 0.42f, 1.0f);
-	default:
-		return FLinearColor(0.12f, 0.72f, 0.86f, 1.0f);
-	}
-}
-
-FLinearColor GetIconColor(EPBCollectionCategory Category, EPBCollectionState State)
-{
-	FLinearColor Color = GetAccentColor(Category, State);
-	Color.A = State == EPBCollectionState::Locked ? 0.48f : 0.94f;
-	return Color;
-}
-}
+#include "View/MVVMView.h"
 
 void UPBCollectionEntryWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
+	EnsureEntryViewModel();
 
 	if (EntryButton)
 	{
@@ -91,41 +54,54 @@ void UPBCollectionEntryWidget::SetDisplayData(const FPBCollectionDisplayData& In
 	Refresh();
 }
 
+void UPBCollectionEntryWidget::EnsureEntryViewModel()
+{
+	if (!EntryViewModel)
+	{
+		EntryViewModel = NewObject<UPBCollectionEntryViewModel>(this);
+	}
+
+	if (EntryViewModel && !bIsEntryViewModelApplied)
+	{
+		bIsEntryViewModelApplied = ApplyViewModelToWidget();
+	}
+}
+
+bool UPBCollectionEntryWidget::ApplyViewModelToWidget()
+{
+	if (!EntryViewModel)
+	{
+		return false;
+	}
+
+	UMVVMView* View = GetExtension<UMVVMView>();
+	if (!View)
+	{
+		return false;
+	}
+
+	TScriptInterface<INotifyFieldValueChanged> ViewModelInterface(EntryViewModel);
+	const bool bApplied = View->SetViewModelByClass(ViewModelInterface);
+	if (!bApplied)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("%s: PBCollectionEntryViewModel을 WBP MVVM 컨텍스트에 주입하지 못했습니다."),
+			*GetName());
+	}
+	return bApplied;
+}
+
 void UPBCollectionEntryWidget::Refresh()
 {
-	if (NameText)
+	EnsureEntryViewModel();
+	if (!EntryViewModel)
 	{
-		NameText->SetText(DisplayData.DisplayName);
+		return;
 	}
 
-	if (MetaText)
-	{
-		MetaText->SetText(FText::Format(
-			NSLOCTEXT("PBCollection", "EntryMetaFormat", "{0} · {1} · {2}성"),
-			DisplayData.CategoryText,
-			DisplayData.StateText,
-			FText::AsNumber(DisplayData.StarGrade)));
-	}
-
-	if (DescriptionText)
-	{
-		DescriptionText->SetText(DisplayData.ShortDescription);
-	}
-
-	if (CategoryColorBorder)
-	{
-		CategoryColorBorder->SetBrushColor(GetIconColor(DisplayData.Category, DisplayData.State));
-	}
-
-	if (AccentBorder)
-	{
-		AccentBorder->SetBrushColor(GetAccentColor(DisplayData.Category, DisplayData.State));
-	}
-
-	if (CardBorder)
-	{
-		CardBorder->SetBrushColor(GetCardColor(DisplayData.State));
-	}
+	EntryViewModel->SetDisplayData(DisplayData);
 
 	BP_OnCollectionDisplayDataChanged(DisplayData);
 }
