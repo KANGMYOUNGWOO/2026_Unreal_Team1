@@ -7,31 +7,58 @@
 class APBBallBase;
 class UPBTimedAreaDamageComponent;
 
+UENUM(BlueprintType)
+enum class EPBBallSkillActorState : uint8
+{
+	None,
+	Preparing,
+	Active,
+	Finishing,
+	Stopping,
+	Completed
+};
+
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API APBBallSkillActorBase : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "Ball|Skill|Effect")
-	void ActivateEffect();
+	virtual void InitializeSkill(
+		APBBallBase* InOwnerBall,
+		int32 InDamageAmount,
+		float InDuration,
+		int32 InDamageCount);
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill|Effect")
-	void DeactivateEffect();
+	void ActivateSkill();
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill|Effect")
-	void FinishEffect();
+	void FinishSkill();
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill|Effect")
-	void StopEffect();
+	void StopSkill();
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill|Effect")
-	void CompleteEffect();
+	void CompleteSkill();
+
+	UFUNCTION(BlueprintPure, Category = "Ball|Skill|Effect")
+	EPBBallSkillActorState GetSkillState() const { return State; }
 
 protected:
+	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual bool ActivateEffectInternal();
-	virtual void DeactivateEffectInternal();
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Ball|Skill|Effect")
+	void PrepareSkill();
+	virtual void PrepareSkill_Implementation();
+
+	virtual void EnterPreparingState();
+	virtual void EnterActiveState();
+	virtual void EnterFinishingState();
+	virtual void EnterStoppingState();
+	virtual void EnterCompletedState();
+
 	virtual AActor* FindTarget() const;
 	virtual bool IsTargetValid(const AActor* Target) const;
 	virtual bool ShouldWaitForVisualCompletion() const;
@@ -42,16 +69,16 @@ protected:
 	TObjectPtr<APBBallBase> OwnerBall;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ball|Skill|Effect")
-	void BP_OnActivated();
+	void OnActivated();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ball|Skill|Effect")
-	void BP_OnHit(AActor* Target, int32 AppliedDamage, FVector HitLocation);
+	void OnHit(AActor* Target, int32 AppliedDamage, FVector HitLocation);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ball|Skill|Effect")
-	void BP_OnFinished();
+	void OnFinished();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ball|Skill|Effect")
-	void BP_OnStopped();
+	void OnStopped();
 
 	UFUNCTION()
 	void HandleDamageApplied(AActor* Target, int32 AppliedDamage, FVector HitLocation);
@@ -63,11 +90,12 @@ protected:
 	void HandleOwnerBallDestroyed(AActor* DestroyedActor);
 
 private:
+	bool ChangeState(EPBBallSkillActorState NewState);
 	void UnbindDamageEvents();
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBTimedAreaDamageComponent> BoundDamageComponent;
 
-	bool bIsCompleted = false;
-	bool bIsEnding = false;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Ball|Skill|Effect", meta = (AllowPrivateAccess = "true"))
+	EPBBallSkillActorState State = EPBBallSkillActorState::None;
 };

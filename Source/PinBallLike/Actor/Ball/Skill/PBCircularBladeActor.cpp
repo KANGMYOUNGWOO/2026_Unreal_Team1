@@ -22,20 +22,13 @@ APBCircularBladeActor::APBCircularBladeActor()
 
 	TimedAreaDamageComponent = CreateDefaultSubobject<UPBTimedAreaDamageComponent>(TEXT("TimedAreaDamageComponent"));
 }
-void APBCircularBladeActor::InitializeBlade(
+void APBCircularBladeActor::InitializeSkill(
 	APBBallBase* InOwnerBall,
 	int32 InDamageAmount,
 	float InDuration,
 	int32 InDamageCount)
 {
-	OwnerBall = InOwnerBall;
-
-	if (OwnerBall)
-	{
-		AttachToActor(OwnerBall, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-		SetActorRelativeScale3D(FVector::OneVector);
-		SetActorLocation(OwnerBall->GetActorLocation());
-	}
+	Super::InitializeSkill(InOwnerBall, InDamageAmount, InDuration, InDamageCount);
 
 	if (TimedAreaDamageComponent)
 	{
@@ -48,24 +41,35 @@ void APBCircularBladeActor::InitializeBlade(
 			InDuration,
 			InDamageCount);
 	}
-
-	ActivateEffect();
 }
 
-bool APBCircularBladeActor::ActivateEffectInternal()
+void APBCircularBladeActor::EnterActiveState()
 {
 	if (!TimedAreaDamageComponent || !TimedAreaDamageComponent->ActivateEffect())
 	{
-		return false;
+		StopSkill();
+		return;
 	}
 
 	BallPhysicsComponent = OwnerBall->FindComponentByClass<UPBBallPhysicsComponent>();
 	TargetActor = FindTarget();
 	ApplyTargetAcceleration();
-	return true;
+	Super::EnterActiveState();
 }
 
-void APBCircularBladeActor::DeactivateEffectInternal()
+void APBCircularBladeActor::EnterFinishingState()
+{
+	DeactivateBlade();
+	Super::EnterFinishingState();
+}
+
+void APBCircularBladeActor::EnterStoppingState()
+{
+	DeactivateBlade();
+	Super::EnterStoppingState();
+}
+
+void APBCircularBladeActor::DeactivateBlade()
 {
 	if (TimedAreaDamageComponent)
 	{

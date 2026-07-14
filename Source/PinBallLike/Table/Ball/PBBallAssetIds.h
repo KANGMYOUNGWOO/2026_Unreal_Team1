@@ -27,4 +27,12 @@ namespace PBBallAssetIds
 		inline const FName Level_1100202(TEXT("Level_1100202"));
 		inline const FName Level_1100203(TEXT("Level_1100203"));
 	}
+
+	
+	namespace Skill
+	{
+		inline const FName Circular_Blade(TEXT("Circular_Blade"));
+		inline const FName Charge_Laser(TEXT("Charge_Laser"));
+		inline const FName Buff_Test(TEXT("Buff_Test"));
+	}
 }

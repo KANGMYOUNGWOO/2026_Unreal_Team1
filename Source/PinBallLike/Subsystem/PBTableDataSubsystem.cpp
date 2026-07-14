@@ -37,7 +37,7 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	}
 
 	TArray<FSoftObjectPath> TablePaths;
-	TablePaths.Reserve(12);
+	TablePaths.Reserve(13);
 
 	// 테이블 경로는 DeveloperSettings에서 관리한다.
 	const FSoftObjectPath CollectionTablePath = Settings->CollectionTable.ToSoftObjectPath();
@@ -46,6 +46,7 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath BumperEffectTablePath = Settings->BumperEffectTable.ToSoftObjectPath();
 	const FSoftObjectPath BallTablePath = Settings->BallTable.ToSoftObjectPath();
 	const FSoftObjectPath BallStarLevelTablePath = Settings->BallStarLevelTable.ToSoftObjectPath();
+	const FSoftObjectPath SkillTablePath = Settings->SkillTable.ToSoftObjectPath();
 	const FSoftObjectPath BossTablePath = Settings->Boss.ToSoftObjectPath();
 	const FSoftObjectPath BossHitPointTablePath = Settings->BossHitPoint.ToSoftObjectPath();
 	const FSoftObjectPath BossPatternTablePath = Settings->BossPattern.ToSoftObjectPath();
@@ -87,6 +88,11 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	if (BallStarLevelTablePath.IsValid())
 	{
 		TablePaths.Add(BallStarLevelTablePath);
+	}
+
+	if (SkillTablePath.IsValid())
+	{
+		TablePaths.Add(SkillTablePath);
 	}
 
 	if (BossTablePath.IsValid())
@@ -170,6 +176,7 @@ void UPBTableDataSubsystem::UnloadStartupGameData()
 	SetCollectionTable(nullptr);
 	SetBumperTables(nullptr, nullptr, nullptr);
 	SetBallTables(nullptr, nullptr);
+	SetSkillTable(nullptr);
 	SetBossTables(nullptr, nullptr, nullptr);
 	SetStatusEffectTables(nullptr, nullptr, nullptr);
 	SetSynergyTables(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
@@ -191,6 +198,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedBumperEffectTable = nullptr;
 	UDataTable* LoadedBallTable = nullptr;
 	UDataTable* LoadedBallStarLevelTable = nullptr;
+	UDataTable* LoadedSkillTable = nullptr;
 	UDataTable* LoadedBossTable = nullptr;
 	UDataTable* LoadedBossHitPointTable = nullptr;
 	UDataTable* LoadedBossPatternTable = nullptr;
@@ -214,6 +222,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedBumperEffectTable = Cast<UDataTable>(Settings->BumperEffectTable.Get());
 		LoadedBallTable = Cast<UDataTable>(Settings->BallTable.Get());
 		LoadedBallStarLevelTable = Cast<UDataTable>(Settings->BallStarLevelTable.Get());
+		LoadedSkillTable = Cast<UDataTable>(Settings->SkillTable.Get());
 		LoadedBossTable = Cast<UDataTable>(Settings->Boss.Get());
 		LoadedBossHitPointTable = Cast<UDataTable>(Settings->BossHitPoint.Get());
 		LoadedBossPatternTable = Cast<UDataTable>(Settings->BossPattern.Get());
@@ -239,6 +248,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	SetCollectionTable(LoadedCollectionTable);
 	SetBumperTables(LoadedBumperTable, LoadedBumperTriggerTable, LoadedBumperEffectTable);
 	SetBallTables(LoadedBallTable, LoadedBallStarLevelTable);
+	SetSkillTable(LoadedSkillTable);
 	SetBossTables(LoadedBossTable, LoadedBossHitPointTable, LoadedBossPatternTable);
 	SetStatusEffectTables(LoadedStatusEffectTable, LoadedStatusEffectModifierTable, LoadedStatusEffectTriggerTable);
 	SetSynergyTables(
@@ -263,6 +273,7 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 		&& IsValid(BumperEffectTable)
 		&& IsValid(BallTable)
 		&& IsValid(BallStarLevelTable)
+		&& IsValid(SkillTable)
 		&& IsValid(BossTable)
 		&& IsValid(BossHitPointTable)
 		&& IsValid(BossPatternTable);
@@ -328,6 +339,14 @@ void UPBTableDataSubsystem::SetBallTables(UDataTable* InBallTable, UDataTable* I
 	UE_LOG(LogTemp, Log, TEXT("[TableData] Ball tables assigned. Ball=%s StarLevel=%s"),
 		*GetNameSafe(BallTable),
 		*GetNameSafe(BallStarLevelTable));
+}
+
+void UPBTableDataSubsystem::SetSkillTable(UDataTable* InSkillTable)
+{
+	SkillTable = InSkillTable;
+
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Skill table assigned. Skill=%s"),
+		*GetNameSafe(SkillTable));
 }
 
 void UPBTableDataSubsystem::SetBossTables(
@@ -473,6 +492,24 @@ bool UPBTableDataSubsystem::FindBallStarLevelRow(
 	}
 
 	return false;
+}
+
+#pragma endregion
+
+#pragma region Skill
+
+bool UPBTableDataSubsystem::GetAllSkillRows(
+	TArray<FName>& OutRowNames,
+	TArray<FPBBallSkillTableRow>& OutRows) const
+{
+	return GetAllTableRows(SkillTable, OutRowNames, OutRows, TEXT("GetAllSkillRows"));
+}
+
+bool UPBTableDataSubsystem::FindSkillRow(
+	const FName RowName,
+	FPBBallSkillTableRow& OutRow) const
+{
+	return FindTableRow(SkillTable, RowName, OutRow, TEXT("FindSkillRow"));
 }
 
 #pragma endregion

@@ -87,6 +87,15 @@ void APBBallBase::InitializeFromBallInstanceData(const FPBBallInstanceData& InBa
 	ApplyResourceData(BallInstanceData.BaseResources);
 }
 
+void APBBallBase::InitializeSkillActorClass(
+	const TSubclassOf<APBBallSkillActorBase> InSkillActorClass)
+{
+	if (SkillComponent)
+	{
+		SkillComponent->InitializeSkillActorClass(InSkillActorClass);
+	}
+}
+
 void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
 {
 	CombatRole = NewCombatRole;
