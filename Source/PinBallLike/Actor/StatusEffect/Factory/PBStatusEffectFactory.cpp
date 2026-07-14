@@ -1,6 +1,7 @@
 #include "PinBallLike/Actor/StatusEffect/Factory/PBStatusEffectFactory.h"
 
 #include "PinBallLike/Actor/StatusEffect/PBBaseStatusEffect.h"
+#include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBBurnStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBShieldStatusEffect.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectModifierRow.h"
@@ -22,24 +23,39 @@ void PBStatusEffectFactory::RegisterStatusEffectClass(
 UPBBaseStatusEffect* PBStatusEffectFactory::CreateStatusEffect(
 	UObject* Outer,
 	UPBStatusEffectComponent* OwnerComponent,
+	const FName StatusEffectId,
 	const FPBStatusEffectRow& StatusEffectRow,
 	const TArray<FPBStatusEffectModifierRow>& ModifierRows,
 	const TArray<FPBStatusEffectTriggerRow>& TriggerRows)
 {
 	const TSubclassOf<UPBBaseStatusEffect> StatusEffectClass =
-		ResolveStatusEffectClass(StatusEffectRow.StatusEffectId);
+		ResolveStatusEffectClass(StatusEffectId);
+	UClass* StatusEffectClassPtr = StatusEffectClass.Get();
+	const FString StatusEffectIdName = StatusEffectId.ToString();
+	const FString OuterName = Outer ? Outer->GetName() : TEXT("None");
+	const FString OwnerComponentName = OwnerComponent ? OwnerComponent->GetName() : TEXT("None");
+	const FString StatusEffectClassName = StatusEffectClassPtr ? StatusEffectClassPtr->GetName() : TEXT("None");
 	if (!StatusEffectClass)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[StatusEffectFactory] Create failed. StatusEffect class not registered. StatusEffectId=%s Outer=%s OwnerComponent=%s"),
+			*StatusEffectIdName,
+			*OuterName,
+			*OwnerComponentName);
 		return nullptr;
 	}
 
-	UPBBaseStatusEffect* StatusEffect = NewObject<UPBBaseStatusEffect>(Outer, StatusEffectClass);
+	UPBBaseStatusEffect* StatusEffect = NewObject<UPBBaseStatusEffect>(Outer, StatusEffectClassPtr);
 	if (!IsValid(StatusEffect))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[StatusEffectFactory] Create failed. NewObject returned invalid. StatusEffectId=%s Class=%s Outer=%s OwnerComponent=%s"),
+			*StatusEffectIdName,
+			*StatusEffectClassName,
+			*OuterName,
+			*OwnerComponentName);
 		return nullptr;
 	}
 
-	StatusEffect->InitializeStatusEffect(OwnerComponent, StatusEffectRow, ModifierRows, TriggerRows);
+	StatusEffect->InitializeStatusEffect(OwnerComponent, StatusEffectId, StatusEffectRow, ModifierRows, TriggerRows);
 	return StatusEffect;
 }
 

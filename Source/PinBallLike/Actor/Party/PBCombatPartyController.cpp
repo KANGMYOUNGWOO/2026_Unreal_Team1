@@ -11,7 +11,12 @@
 #include "Component/PBPartyDeploymentComponent.h"
 #include "Component/PBPartyLauncherComponent.h"
 #include "Component/PBSnakeFormationComponent.h"
+#include "Engine/GameInstance.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
+#include "PinBallLike/Struct/Common/PBResourceTypes.h"
+#include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 
 APBCombatPartyController::APBCombatPartyController()
 {
@@ -231,6 +236,10 @@ APBCombatPartyController::APBCombatPartyController()
 	{
 		return PartyLauncherComponent && PartyLauncherComponent->LaunchPartyFromReadyPosition();
 	};
+	BattleMessageDependencies.RequestUseSkill = [this](const int32 SkillInputValue)
+	{
+		RequestUseSkill(SkillInputValue);
+	};
 	BattleMessageDependencies.GetPartyActor = [this]() -> AActor*
 	{
 		return this;
@@ -335,6 +344,18 @@ void APBCombatPartyController::RemovePartyBall(APBBallBase* Ball)
 		LeaderBall = nullptr;
 	}
 
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBBallDeckSubsystem* DeckSubsystem = GameInstance->GetSubsystem<UPBBallDeckSubsystem>())
+		{
+			const UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
+			const float CurrentMana = ResourceComponent
+				? ResourceComponent->GetResourceCurrent(PBResourceNames::Mana)
+				: 0.0f;
+			DeckSubsystem->SetOwnedBallSavedMana(Ball->GetBallInstanceId(), CurrentMana);
+		}
+	}
+
 	Ball->SetCombatRole(EPBBallPartyRole::None);
 	Ball->Destroy();
 	RebuildPartyRoles();
@@ -342,6 +363,24 @@ void APBCombatPartyController::RemovePartyBall(APBBallBase* Ball)
 
 void APBCombatPartyController::DestroyPartyBalls()
 {
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBBallDeckSubsystem* DeckSubsystem = GameInstance->GetSubsystem<UPBBallDeckSubsystem>())
+		{
+			for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
+			{
+				if (IsValid(Ball.Get()))
+				{
+					const UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
+					const float CurrentMana = ResourceComponent
+						? ResourceComponent->GetResourceCurrent(PBResourceNames::Mana)
+						: 0.0f;
+					DeckSubsystem->SetOwnedBallSavedMana(Ball->GetBallInstanceId(), CurrentMana);
+				}
+			}
+		}
+	}
+
 	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
 	{
 		if (IsValid(Ball.Get()))
@@ -415,4 +454,53 @@ TArray<APBBallBase*> APBCombatPartyController::GetValidPartyBalls() const
 		}
 	}
 	return ValidPartyBalls;
+}
+
+void APBCombatPartyController::RequestUseSkill(const int32 SkillInputValue)
+{
+	const int32 SlotIndex = SkillInputValue - 1;
+	if (SlotIndex < 0)
+	{
+		return;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	const UPBBallDeckSubsystem* DeckSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBBallDeckSubsystem>() : nullptr;
+	if (!DeckSubsystem)
+	{
+		return;
+	}
+
+	const int32 BallInstanceId = DeckSubsystem->GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, SlotIndex);
+	if (BallInstanceId == INDEX_NONE)
+	{
+		return;
+	}
+
+	APBBallBase* Ball = FindPartyBallByInstanceId(BallInstanceId);
+	if (!IsValid(Ball))
+	{
+		return;
+	}
+
+	Ball->TryActivateSkill();
+}
+
+APBBallBase* APBCombatPartyController::FindPartyBallByInstanceId(const int32 BallInstanceId) const
+{
+	if (BallInstanceId == INDEX_NONE)
+	{
+		return nullptr;
+	}
+
+	for (const TObjectPtr<APBBallBase>& Ball : PartyBalls)
+	{
+		if (IsValid(Ball.Get()) && Ball->GetBallInstanceId() == BallInstanceId)
+		{
+			return Ball.Get();
+		}
+	}
+
+	return nullptr;
 }

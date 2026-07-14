@@ -6,8 +6,10 @@
 #include "Component/PBBallHitReactionComponent.h"
 #include "Component/PBBallComboComponent.h"
 #include "Component/PBBallPhysicsComponent.h"
+#include "Component/PBBallSkillComponent.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
+#include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
 
@@ -30,9 +32,15 @@ APBBallBase::APBBallBase()
 	
 	// Resource
 	ResourceComponent = CreateDefaultSubobject<UPBBaseResourceComponent>(TEXT("ResourceComponent"));
+
+	// StatusEffect
+	StatusEffectComponent = CreateDefaultSubobject<UPBStatusEffectComponent>(TEXT("StatusEffectComponent"));
 	
 	// Combo
 	ComboComponent = CreateDefaultSubobject<UPBBallComboComponent>(TEXT("ComboComponent"));
+
+	// Skill
+	SkillComponent = CreateDefaultSubobject<UPBBallSkillComponent>(TEXT("SkillComponent"));
 	
 	// Physics
 	PhysicsComponent = CreateDefaultSubobject<UPBBallPhysicsComponent>(TEXT("PhysicsComponent"));
@@ -40,7 +48,10 @@ APBBallBase::APBBallBase()
 	
 	// Hit Reaction
 	HitReactionComponent = CreateDefaultSubobject<UPBBallHitReactionComponent>(TEXT("HitReactionComponent"));
-	HitReactionComponent->InitializeDependencies(PhysicsComponent.Get(), StatComponent.Get(), ResourceComponent.Get());
+	HitReactionComponent->InitializeDependencies(
+		PhysicsComponent.Get(),
+		StatComponent.Get(),
+		ResourceComponent.Get());
 }
 
 void APBBallBase::ApplyStatData(const TArray<FPBStatData>& StatData)
@@ -100,6 +111,15 @@ void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
 		CollisionSphere->SetGenerateOverlapEvents(bLeader);
 		CollisionSphere->SetNotifyRigidBodyCollision(bLeader);
 	}
+}
+
+bool APBBallBase::TryActivateSkill()
+{
+	if (IsHidden() || CombatRole == EPBBallPartyRole::None)
+	{
+		return false;
+	}
+	return SkillComponent && SkillComponent->TryActivateSkill();
 }
 
 void APBBallBase::BeginPlay()

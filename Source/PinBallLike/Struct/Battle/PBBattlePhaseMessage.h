@@ -51,6 +51,18 @@ struct PINBALLLIKE_API FPBBattleLaunchCountChangedMessage
 };
 
 USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleShiftCountChangedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 PreviousCount = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 NewCount = 0;
+};
+
+USTRUCT(BlueprintType)
 struct PINBALLLIKE_API FPBBattlePreparationCompletedMessage
 {
 	GENERATED_BODY()
@@ -132,4 +144,16 @@ struct PINBALLLIKE_API FPBBattlePartyShiftRequestedMessage
 
 	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
 	TObjectPtr<AActor> Requester = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleSkillUseRequestedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> Requester = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 SkillInputValue = 0;
 };

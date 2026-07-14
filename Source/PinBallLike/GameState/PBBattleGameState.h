@@ -17,6 +17,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	int32, PreviousCount,
 	int32, NewCount);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FPBBattleShiftCountChangedSignature,
+	int32, PreviousCount,
+	int32, NewCount);
+
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBattleGameState : public AGameStateBase
 {
@@ -37,6 +42,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Battle|Flow")
 	bool ConsumeBattleLaunchCount();
 
+	UFUNCTION(BlueprintCallable, Category = "Battle|Flow")
+	void SetRemainingBattleShiftCount(int32 NewRemainingBattleShiftCount);
+
+	UFUNCTION(BlueprintCallable, Category = "Battle|Flow")
+	bool ConsumeBattleShiftCount();
+
 	UFUNCTION(BlueprintPure, Category = "Battle|Flow")
 	EPBBattleLevelPhase GetBattleLevelPhase() const { return CurrentPhase; }
 
@@ -46,11 +57,20 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Battle|Flow")
 	bool HasRemainingBattleLaunchCount() const { return RemainingBattleLaunchCount > 0; }
 
+	UFUNCTION(BlueprintPure, Category = "Battle|Flow")
+	int32 GetRemainingBattleShiftCount() const { return RemainingBattleShiftCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Battle|Flow")
+	bool HasRemainingBattleShiftCount() const { return RemainingBattleShiftCount > 0; }
+
 	UPROPERTY(BlueprintAssignable, Category = "Battle|Flow")
 	FPBBattleLevelPhaseChangedSignature OnBattleLevelPhaseChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Battle|Flow")
 	FPBBattleLaunchCountChangedSignature OnBattleLaunchCountChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Battle|Flow")
+	FPBBattleShiftCountChangedSignature OnBattleShiftCountChanged;
 
 private:
 	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Flow")
@@ -58,6 +78,9 @@ private:
 
 	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Flow")
 	int32 RemainingBattleLaunchCount = 0;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Flow")
+	int32 RemainingBattleShiftCount = 0;
 	
 #pragma region MessageHandler
 	
@@ -70,6 +93,9 @@ private:
 
 	UFUNCTION()
 	void HandleBattleLaunchCountChanged(int32 PreviousCount, int32 NewCount);
+
+	UFUNCTION()
+	void HandleBattleShiftCountChanged(int32 PreviousCount, int32 NewCount);
 
 #pragma endregion 
 };

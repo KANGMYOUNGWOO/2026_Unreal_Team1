@@ -4,15 +4,6 @@
 #include "PBStatusEffectTypes.generated.h"
 
 UENUM(BlueprintType)
-enum class EPBStatusEffectKind : uint8
-{
-	Modifier,
-	Trigger,
-	ModifierAndTrigger,
-	Marker
-};
-
-UENUM(BlueprintType)
 enum class EPBStatusEffectStackType : uint8
 {
 	Replace,

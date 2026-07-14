@@ -18,6 +18,7 @@ public:
 	static UPBBaseStatusEffect* CreateStatusEffect(
 		UObject* Outer,
 		UPBStatusEffectComponent* OwnerComponent,
+		FName StatusEffectId,
 		const FPBStatusEffectRow& StatusEffectRow,
 		const TArray<FPBStatusEffectModifierRow>& ModifierRows,
 		const TArray<FPBStatusEffectTriggerRow>& TriggerRows);

@@ -7,11 +7,13 @@
 
 void UPBBaseStatusEffect::InitializeStatusEffect(
 	UPBStatusEffectComponent* InOwnerComponent,
+	const FName InStatusEffectId,
 	const FPBStatusEffectRow& InStatusEffectRow,
 	const TArray<FPBStatusEffectModifierRow>& InModifierRows,
 	const TArray<FPBStatusEffectTriggerRow>& InTriggerRows)
 {
 	OwnerComponent = InOwnerComponent;
+	StatusEffectId = InStatusEffectId;
 	StatusEffectRow = InStatusEffectRow;
 	ModifierRows = InModifierRows;
 	TriggerRows = InTriggerRows;

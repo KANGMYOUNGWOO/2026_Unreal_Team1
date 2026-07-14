@@ -75,4 +75,26 @@ public:
 	TSoftObjectPtr<UDataTable> StatusEffectTriggerTable;
 
 #pragma endregion
+
+#pragma region Synergy
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
+	TSoftObjectPtr<UDataTable> SynergyTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
+	TSoftObjectPtr<UDataTable> SynergyTierTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
+	TSoftObjectPtr<UDataTable> SynergyTierEffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
+	TSoftObjectPtr<UDataTable> SynergyEffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
+	TSoftObjectPtr<UDataTable> SynergyEffectModifierTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
+	TSoftObjectPtr<UDataTable> SynergyEffectTriggerTable;
+
+#pragma endregion
 };

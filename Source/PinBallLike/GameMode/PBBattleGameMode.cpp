@@ -33,7 +33,7 @@ void APBBattleGameMode::StartPlay()
 	Super::StartPlay();
 
 	RegisterBattleMessageListeners();
-	InitializeBattleLaunchCount();
+	InitializeBattleCounts();
 	bStartPlayCompleted = true;
 	TryStartLevelPreparing();
 }
@@ -62,7 +62,7 @@ APBBattleGameState* APBBattleGameMode::GetBattleGameState() const
 	return GetGameState<APBBattleGameState>();
 }
 
-void APBBattleGameMode::InitializeBattleLaunchCount()
+void APBBattleGameMode::InitializeBattleCounts()
 {
 	APBBattleGameState* BattleGameState = GetBattleGameState();
 	if (!BattleGameState)
@@ -75,6 +75,8 @@ void APBBattleGameMode::InitializeBattleLaunchCount()
 		GameInstance ? GameInstance->GetSubsystem<UPBPlayerDataSubsystem>() : nullptr;
 	BattleGameState->SetRemainingBattleLaunchCount(
 		PlayerDataSubsystem ? PlayerDataSubsystem->GetInitialBattleLaunchCount() : 0);
+	BattleGameState->SetRemainingBattleShiftCount(
+		PlayerDataSubsystem ? PlayerDataSubsystem->GetInitialBattleShiftCount() : 0);
 }
 
 void APBBattleGameMode::SetBattleLevelPhase(const EPBBattleLevelPhase NewPhase)
@@ -647,7 +649,7 @@ void APBBattleGameMode::HandlePartyShiftRequestedMessage(
 	FGameplayTag Channel,
 	const FPBBattlePartyShiftRequestedMessage& Message)
 {
-	const APBBattleGameState* BattleGameState = GetBattleGameState();
+	APBBattleGameState* BattleGameState = GetBattleGameState();
 	if (!BattleGameState || BattleGameState->GetBattleLevelPhase() != EPBBattleLevelPhase::BallDeployment)
 	{
 		return;
@@ -662,7 +664,16 @@ void APBBattleGameMode::HandlePartyShiftRequestedMessage(
 		return;
 	}
 
-	BallDeckSubsystem->RotateDeploymentSlots();
+	if (!BattleGameState->HasRemainingBattleShiftCount())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Ignore party shift request. No remaining shift count."));
+		return;
+	}
+
+	if (BallDeckSubsystem->RotateDeploymentSlots())
+	{
+		BattleGameState->ConsumeBattleShiftCount();
+	}
 }
 
 #pragma endregion

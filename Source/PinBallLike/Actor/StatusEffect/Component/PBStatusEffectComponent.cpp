@@ -46,6 +46,9 @@ bool UPBStatusEffectComponent::ApplyStatusEffect(const FName StatusEffectId)
 {
 	if (StatusEffectId.IsNone())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[StatusEffect] Apply failed. StatusEffectId is none. Owner=%s Component=%s"),
+			*GetNameSafe(GetOwner()),
+			*GetNameSafe(this));
 		return false;
 	}
 
@@ -60,6 +63,10 @@ bool UPBStatusEffectComponent::ApplyStatusEffect(const FName StatusEffectId)
 	UPBBaseStatusEffect* NewStatusEffect = CreateStatusEffect(StatusEffectId);
 	if (!IsValid(NewStatusEffect))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[StatusEffect] Apply failed. CreateStatusEffect returned invalid. StatusEffectId=%s Owner=%s Component=%s"),
+			*StatusEffectId.ToString(),
+			*GetNameSafe(GetOwner()),
+			*GetNameSafe(this));
 		return false;
 	}
 
@@ -158,12 +165,20 @@ UPBBaseStatusEffect* UPBStatusEffectComponent::CreateStatusEffect(const FName St
 	UPBTableDataSubsystem* TableDataSubsystem = PBSubsystemUtils::GetGameInstanceSubsystem<UPBTableDataSubsystem>(this);
 	if (!TableDataSubsystem)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[StatusEffect] Create failed. Missing TableDataSubsystem. StatusEffectId=%s Owner=%s Component=%s"),
+			*StatusEffectId.ToString(),
+			*GetNameSafe(GetOwner()),
+			*GetNameSafe(this));
 		return nullptr;
 	}
 
 	FPBStatusEffectRow StatusEffectRow;
 	if (!TableDataSubsystem->FindStatusEffectRow(StatusEffectId, StatusEffectRow))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[StatusEffect] Create failed. StatusEffect row not found. StatusEffectId=%s Owner=%s Component=%s"),
+			*StatusEffectId.ToString(),
+			*GetNameSafe(GetOwner()),
+			*GetNameSafe(this));
 		return nullptr;
 	}
 
@@ -175,6 +190,7 @@ UPBBaseStatusEffect* UPBStatusEffectComponent::CreateStatusEffect(const FName St
 	return PBStatusEffectFactory::CreateStatusEffect(
 		this,
 		this,
+		StatusEffectId,
 		StatusEffectRow,
 		ModifierRows,
 		TriggerRows);
