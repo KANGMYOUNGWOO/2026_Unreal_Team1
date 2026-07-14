@@ -27,8 +27,12 @@ class PINBALLLIKE_API ASnakeBoss : public APBBossBase
 public:
 	ASnakeBoss();
 
-	void SetSnakeChargePose(bool IsActive, const FVector& Direction, float BlendAlpha);
 	void SetSnakeProjectilePose(bool IsActive, float BlendAlpha);
+	void SetSnakePinballCollisionEnabled(bool IsEnabled);
+	void UpdateSnakeChargeMovement(
+		float DeltaTime,
+		const FVector& PreviousLocation,
+		const FVector& NextLocation);
 
 	UFUNCTION(BlueprintPure, Category = "Boss|Snake Animation")
 	float GetSnakeAnimationSpeed() const;
@@ -43,9 +47,6 @@ public:
 	bool IsSnakeAnimationMoving() const;
 
 	const TArray<FVector>& GetSnakeSplinePoints() const;
-	const TArray<FVector>& GetSnakeChargeHeadSplinePoints() const;
-	bool IsSnakeChargePoseActive() const;
-	float GetSnakeChargePoseAlpha() const;
 	bool IsSnakeProjectilePoseActive() const;
 	float GetSnakeProjectilePoseAlpha() const;
 
@@ -61,7 +62,6 @@ protected:
 	void ResetSnakePath();
 	void RecordSnakePathLocation(const FVector& Location);
 	void UpdateSnakeSplinePoints();
-	void UpdateSnakeChargeHeadSplinePoints();
 	void TrimSnakePath();
 	bool FindSnakePathLocationAtDistance(float Distance, FVector& OutLocation) const;
 	void SelectNextPatrolTarget();
@@ -110,18 +110,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake Path", meta = (ClampMin = "1.0"))
 	float SnakeSplineLength = 1300.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake Charge", meta = (ClampMin = "2"))
-	int32 SnakeChargeHeadSplinePointCount = 4;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake Charge", meta = (ClampMin = "1.0"))
-	float SnakeChargeHeadSplineLength = 450.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake Charge", meta = (ClampMin = "0.0"))
-	float SnakeChargeHeadCurveOffsetScale = 0.25f;
-
 private:
 	FVector CurrentMoveDirection = FVector::ForwardVector;
-	FVector SnakeChargeDirection = FVector::ForwardVector;
 	FVector PatrolStartLocation = FVector::ZeroVector;
 	FVector PatrolCurveControlLocation = FVector::ZeroVector;
 	FVector PatrolCurveEndControlLocation = FVector::ZeroVector;
@@ -132,13 +122,13 @@ private:
 	float SnakeAnimationTurnAmount = 0.0f;
 	float SnakeAnimationMovePhase = 0.0f;
 	float SnakePathTotalDistance = 0.0f;
-	float SnakeChargePoseAlpha = 0.0f;
 	float SnakeProjectilePoseAlpha = 0.0f;
 	TArray<FPBSnakePathSample> SnakePathSamples;
 	TArray<FVector> SnakeSplinePoints;
-	TArray<FVector> SnakeChargeHeadSplinePoints;
 	bool IsPatrolTargetValid = false;
 	bool IsSnakeAnimationMoveActive = false;
-	bool IsSnakeChargePoseActiveValue = false;
 	bool IsSnakeProjectilePoseActiveValue = false;
+	bool IsSnakePinballCollisionDisabled = false;
+	ECollisionResponse CachedCollisionSpherePhysicsBodyResponse = ECR_Block;
+	ECollisionResponse CachedSnakeMeshPhysicsBodyResponse = ECR_Block;
 };

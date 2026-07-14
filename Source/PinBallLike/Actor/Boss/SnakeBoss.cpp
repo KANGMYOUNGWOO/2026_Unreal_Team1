@@ -1,6 +1,7 @@
 #include "SnakeBoss.h"
 
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SphereComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Boss/PBBossMoveArea.h"
@@ -75,31 +76,67 @@ void ASnakeBoss::StartIdleState_Implementation()
 	SelectNextPatrolTarget();
 }
 
-void ASnakeBoss::SetSnakeChargePose(bool IsActive, const FVector& Direction, float BlendAlpha)
-{
-	IsSnakeChargePoseActiveValue = IsActive;
-	SnakeChargePoseAlpha = IsActive ? FMath::Clamp(BlendAlpha, 0.0f, 1.0f) : 0.0f;
-
-	FVector SafeDirection = Direction;
-	SafeDirection.Z = 0.0f;
-	if (SafeDirection.Normalize())
-	{
-		SnakeChargeDirection = SafeDirection;
-	}
-
-	if (IsSnakeChargePoseActiveValue)
-	{
-		UpdateSnakeChargeHeadSplinePoints();
-		return;
-	}
-
-	SnakeChargeHeadSplinePoints.Reset();
-}
-
 void ASnakeBoss::SetSnakeProjectilePose(bool IsActive, float BlendAlpha)
 {
 	IsSnakeProjectilePoseActiveValue = IsActive;
 	SnakeProjectilePoseAlpha = IsActive ? FMath::Clamp(BlendAlpha, 0.0f, 1.0f) : 0.0f;
+}
+
+void ASnakeBoss::SetSnakePinballCollisionEnabled(bool IsEnabled)
+{
+	if (IsEnabled)
+	{
+		if (!IsSnakePinballCollisionDisabled)
+		{
+			return;
+		}
+
+		if (CollisionSphere)
+		{
+			CollisionSphere->SetCollisionResponseToChannel(
+				ECC_PhysicsBody,
+				CachedCollisionSpherePhysicsBodyResponse);
+		}
+
+		if (SnakeMesh)
+		{
+			SnakeMesh->SetCollisionResponseToChannel(
+				ECC_PhysicsBody,
+				CachedSnakeMeshPhysicsBodyResponse);
+		}
+
+		IsSnakePinballCollisionDisabled = false;
+		return;
+	}
+
+	if (IsSnakePinballCollisionDisabled)
+	{
+		return;
+	}
+
+	if (CollisionSphere)
+	{
+		CachedCollisionSpherePhysicsBodyResponse = CollisionSphere->GetCollisionResponseToChannel(ECC_PhysicsBody);
+		CollisionSphere->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
+	}
+
+	if (SnakeMesh)
+	{
+		CachedSnakeMeshPhysicsBodyResponse = SnakeMesh->GetCollisionResponseToChannel(ECC_PhysicsBody);
+		SnakeMesh->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
+	}
+
+	IsSnakePinballCollisionDisabled = true;
+}
+
+void ASnakeBoss::UpdateSnakeChargeMovement(
+	float DeltaTime,
+	const FVector& PreviousLocation,
+	const FVector& NextLocation)
+{
+	UpdateSnakeAnimationData(DeltaTime, NextLocation, PreviousLocation);
+	RecordSnakePathLocation(NextLocation);
+	UpdateSnakeSplinePoints();
 }
 
 float ASnakeBoss::GetSnakeAnimationSpeed() const
@@ -125,21 +162,6 @@ bool ASnakeBoss::IsSnakeAnimationMoving() const
 const TArray<FVector>& ASnakeBoss::GetSnakeSplinePoints() const
 {
 	return SnakeSplinePoints;
-}
-
-const TArray<FVector>& ASnakeBoss::GetSnakeChargeHeadSplinePoints() const
-{
-	return SnakeChargeHeadSplinePoints;
-}
-
-bool ASnakeBoss::IsSnakeChargePoseActive() const
-{
-	return IsSnakeChargePoseActiveValue;
-}
-
-float ASnakeBoss::GetSnakeChargePoseAlpha() const
-{
-	return SnakeChargePoseAlpha;
 }
 
 bool ASnakeBoss::IsSnakeProjectilePoseActive() const
@@ -228,7 +250,7 @@ void ASnakeBoss::UpdateSnakeAnimationData(float DeltaTime, const FVector& NextLo
 	DeltaLocation.Z = 0.0f;
 
 	SnakeAnimationSpeed = DeltaLocation.Size() / DeltaTime;
-	IsSnakeAnimationMoveActive = SnakeAnimationSpeed > KINDA_SMALL_NUMBER && !IsSnakeChargePoseActiveValue;
+	IsSnakeAnimationMoveActive = SnakeAnimationSpeed > KINDA_SMALL_NUMBER;
 
 	FVector MoveDirection = DeltaLocation;
 	if (MoveDirection.Normalize())
@@ -297,49 +319,6 @@ void ASnakeBoss::UpdateSnakeSplinePoints()
 		FVector PointLocation = GetActorLocation();
 		FindSnakePathLocationAtDistance(TargetDistance, PointLocation);
 		SnakeSplinePoints.Add(MeshTransform.InverseTransformPosition(PointLocation));
-	}
-}
-
-void ASnakeBoss::UpdateSnakeChargeHeadSplinePoints()
-{
-	const int32 SplinePointCount = FMath::Max(SnakeChargeHeadSplinePointCount, 2);
-	const float SplineLength = FMath::Max(SnakeChargeHeadSplineLength, 1.0f);
-	const float ControlDistance = SplineLength * FMath::Max(SnakeChargeHeadCurveOffsetScale, 0.0f);
-	const FTransform MeshTransform = SnakeMesh ? SnakeMesh->GetComponentTransform() : GetActorTransform();
-
-	FVector StartDirection = CurrentMoveDirection;
-	StartDirection.Z = 0.0f;
-	if (!StartDirection.Normalize())
-	{
-		StartDirection = GetActorForwardVector().GetSafeNormal2D();
-	}
-
-	FVector EndDirection = SnakeChargeDirection;
-	EndDirection.Z = 0.0f;
-	if (!EndDirection.Normalize())
-	{
-		EndDirection = StartDirection;
-	}
-
-	const FVector StartLocation = GetActorLocation();
-	const FVector EndLocation = StartLocation + EndDirection * SplineLength;
-	const FVector ControlLocation = StartLocation + StartDirection * ControlDistance;
-	const FVector EndControlLocation = EndLocation - EndDirection * ControlDistance;
-
-	SnakeChargeHeadSplinePoints.Reset();
-	SnakeChargeHeadSplinePoints.Reserve(SplinePointCount);
-
-	for (int32 PointIndex = 0; PointIndex < SplinePointCount; ++PointIndex)
-	{
-		const float Alpha = static_cast<float>(PointIndex) / static_cast<float>(SplinePointCount - 1);
-		const FVector PointLocation = CalculateCubicBezierLocation(
-			StartLocation,
-			ControlLocation,
-			EndControlLocation,
-			EndLocation,
-			Alpha);
-
-		SnakeChargeHeadSplinePoints.Add(MeshTransform.InverseTransformPosition(PointLocation));
 	}
 }
 
@@ -610,20 +589,6 @@ void ASnakeBoss::DrawDebugSnake() const
 			24.0f,
 			10,
 			FColor::Yellow,
-			false,
-			0.0f,
-			0,
-			2.0f);
-	}
-
-	for (const FVector& SnakeChargeHeadSplinePoint : SnakeChargeHeadSplinePoints)
-	{
-		DrawDebugSphere(
-			World,
-			MeshTransform.TransformPosition(SnakeChargeHeadSplinePoint),
-			30.0f,
-			10,
-			FColor::Purple,
 			false,
 			0.0f,
 			0,

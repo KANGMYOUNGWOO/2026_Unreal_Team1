@@ -42,12 +42,9 @@ void UPBSnakeAnimInstance::UpdateAnimationDataFromOwner()
 	TurnAmount = OwnerSnakeBoss->GetSnakeAnimationTurnAmount();
 	MovePhase = OwnerSnakeBoss->GetSnakeAnimationMovePhase();
 	IsMoving = OwnerSnakeBoss->IsSnakeAnimationMoving();
-	IsChargePoseActive = OwnerSnakeBoss->IsSnakeChargePoseActive();
-	ChargePoseAlpha = OwnerSnakeBoss->GetSnakeChargePoseAlpha();
 	IsProjectilePoseActive = OwnerSnakeBoss->IsSnakeProjectilePoseActive();
 	ProjectilePoseAlpha = OwnerSnakeBoss->GetSnakeProjectilePoseAlpha();
 	SnakeSplinePoints = OwnerSnakeBoss->GetSnakeSplinePoints();
-	SnakeChargeHeadSplinePoints = OwnerSnakeBoss->GetSnakeChargeHeadSplinePoints();
 }
 
 void UPBSnakeAnimInstance::ResetAnimationData()
@@ -56,10 +53,7 @@ void UPBSnakeAnimInstance::ResetAnimationData()
 	TurnAmount = 0.0f;
 	MovePhase = 0.0f;
 	IsMoving = false;
-	IsChargePoseActive = false;
-	ChargePoseAlpha = 0.0f;
 	IsProjectilePoseActive = false;
 	ProjectilePoseAlpha = 0.0f;
 	SnakeSplinePoints.Reset();
-	SnakeChargeHeadSplinePoints.Reset();
 }
