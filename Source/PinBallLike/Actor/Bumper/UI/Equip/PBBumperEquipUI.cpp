@@ -191,11 +191,12 @@ void UPBBumperEquipUI::HandleStartupGameDataLoaded()
 
 void UPBBumperEquipUI::HandleBumperUIAssetsLoaded()
 {
-	if (bBumperListItemObjectsBuilt || !bBumperUIAssetLoadRequested)
+	if (bBumperListItemObjectsBuilt || !bBumperUIAssetLoadPending)
 	{
 		return;
 	}
 
+	bBumperUIAssetLoadPending = false;
 	BuildBumperListItemObjects();
 	OnBumperListItemsReady.Broadcast();
 	SelectBumperSlot(EPBBumperSlotType::Top);
@@ -233,13 +234,6 @@ void UPBBumperEquipUI::BindDataLoadEvents()
 			this,
 			&UPBBumperEquipUI::HandleStartupGameDataLoaded);
 	}
-
-	if (IsValid(GameDataLoadSubsystem))
-	{
-		GameDataLoadSubsystem->OnPrimaryAssetsLoaded.AddUniqueDynamic(
-			this,
-			&UPBBumperEquipUI::HandleBumperUIAssetsLoaded);
-	}
 }
 
 void UPBBumperEquipUI::UnbindDataLoadEvents()
@@ -249,13 +243,6 @@ void UPBBumperEquipUI::UnbindDataLoadEvents()
 		TableDataSubsystem->OnStartupGameDataLoaded.RemoveDynamic(
 			this,
 			&UPBBumperEquipUI::HandleStartupGameDataLoaded);
-	}
-
-	if (IsValid(GameDataLoadSubsystem))
-	{
-		GameDataLoadSubsystem->OnPrimaryAssetsLoaded.RemoveDynamic(
-			this,
-			&UPBBumperEquipUI::HandleBumperUIAssetsLoaded);
 	}
 }
 
@@ -288,7 +275,10 @@ bool UPBBumperEquipUI::LoadBumperRowsOnce()
 
 void UPBBumperEquipUI::RequestBumperUIAssetsAsync()
 {
-	if (bBumperUIAssetLoadRequested || !IsValid(GameDataLoadSubsystem) || BumperRowNames.IsEmpty())
+	if (bBumperListItemObjectsBuilt
+		|| bBumperUIAssetLoadPending
+		|| !IsValid(GameDataLoadSubsystem)
+		|| BumperRowNames.IsEmpty())
 	{
 		return;
 	}
@@ -296,11 +286,27 @@ void UPBBumperEquipUI::RequestBumperUIAssetsAsync()
 	TArray<FName> BundleNames;
 	BundleNames.Add(PBAssetBundleNames::UI);
 
-	bBumperUIAssetLoadRequested = true;
-	GameDataLoadSubsystem->LoadPrimaryAssetsByNamesAsync(
-		PBBumperAssetIds::Type::BumperData,
-		BumperRowNames,
-		BundleNames);
+	TArray<FPrimaryAssetId> BumperAssetIds;
+	BumperAssetIds.Reserve(BumperRowNames.Num());
+	for (const FName BumperRowName : BumperRowNames)
+	{
+		if (!BumperRowName.IsNone())
+		{
+			BumperAssetIds.Emplace(PBBumperAssetIds::Type::BumperData, BumperRowName);
+		}
+	}
+	if (BumperAssetIds.IsEmpty())
+	{
+		return;
+	}
+
+	bBumperUIAssetLoadPending = true;
+	GameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
+		BumperAssetIds,
+		BundleNames,
+		FStreamableDelegate::CreateUObject(
+			this,
+			&UPBBumperEquipUI::HandleBumperUIAssetsLoaded));
 }
 
 void UPBBumperEquipUI::BuildBumperListItemObjects()

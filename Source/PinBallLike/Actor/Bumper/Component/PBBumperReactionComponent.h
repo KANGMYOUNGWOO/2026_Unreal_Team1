@@ -35,7 +35,7 @@ protected:
 	FName TargetComponentTag = TEXT("BumperVisual");
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Reaction", meta = (ClampMin = "0.0", Units = "cm"))
-	float PushDistance = 80.0f;
+	float PushDistance = 30.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Reaction|Curve")
 	TObjectPtr<UCurveFloat> MoveCurve;

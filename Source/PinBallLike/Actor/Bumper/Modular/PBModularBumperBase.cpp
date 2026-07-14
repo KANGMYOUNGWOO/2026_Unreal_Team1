@@ -499,8 +499,8 @@ void APBModularBumperBase::ProcessNextPendingActivation()
 
 	while (!PendingActivations.IsEmpty())
 	{
-		const FPendingBumperActivation PendingActivation = PendingActivations[0];
-		PendingActivations.RemoveAt(0);
+		const FPendingBumperActivation PendingActivation = MoveTemp(PendingActivations[0]);
+		PendingActivations.RemoveAt(0, 1, EAllowShrinking::No);
 
 		APBBumperTriggerActorBase* TriggerActor = PendingActivation.TriggerActor.Get();
 		if (!IsValid(TriggerActor) || !TriggerActor->IsTriggerReady())

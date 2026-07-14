@@ -8,13 +8,12 @@
 class UBorder;
 class UButton;
 class UTextBlock;
-class UWidgetTree;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBCollectionEntryClickedSignature, FName, CollectionId);
 
 /**
  * 도감 목록에서 항목 하나의 표시 데이터와 클릭 전달을 담당합니다.
- * 외형은 이 클래스를 부모로 삼은 Widget Blueprint에서 구성하며, C++ UI는 클래스 직접 생성 시 사용하는 호환 폴백입니다.
+ * 외형은 이 클래스를 부모로 삼은 Widget Blueprint에서 구성합니다.
  */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionEntryWidget : public UUserWidget
@@ -39,14 +38,11 @@ protected:
 	void BP_OnCollectionDisplayDataChanged(const FPBCollectionDisplayData& InDisplayData);
 
 private:
-	void BuildDefaultWidgetTree();
 	void Refresh();
 	bool ValidateRequiredWidgetBindings() const;
 
 	UFUNCTION()
 	void HandleClicked();
-
-	static UTextBlock* CreateText(UWidgetTree* InWidgetTree, FName WidgetName, int32 FontSize);
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> EntryButton;

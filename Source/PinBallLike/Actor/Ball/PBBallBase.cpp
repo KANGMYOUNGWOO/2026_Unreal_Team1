@@ -6,6 +6,7 @@
 #include "Component/PBBallHitReactionComponent.h"
 #include "Component/PBBallComboComponent.h"
 #include "Component/PBBallPhysicsComponent.h"
+#include "Component/PBBallSkillComponent.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
@@ -37,6 +38,9 @@ APBBallBase::APBBallBase()
 	
 	// Combo
 	ComboComponent = CreateDefaultSubobject<UPBBallComboComponent>(TEXT("ComboComponent"));
+
+	// Skill
+	SkillComponent = CreateDefaultSubobject<UPBBallSkillComponent>(TEXT("SkillComponent"));
 	
 	// Physics
 	PhysicsComponent = CreateDefaultSubobject<UPBBallPhysicsComponent>(TEXT("PhysicsComponent"));
@@ -107,6 +111,15 @@ void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
 		CollisionSphere->SetGenerateOverlapEvents(bLeader);
 		CollisionSphere->SetNotifyRigidBodyCollision(bLeader);
 	}
+}
+
+bool APBBallBase::TryActivateSkill()
+{
+	if (IsHidden() || CombatRole == EPBBallPartyRole::None)
+	{
+		return false;
+	}
+	return SkillComponent && SkillComponent->TryActivateSkill();
 }
 
 void APBBallBase::BeginPlay()

@@ -136,3 +136,15 @@ struct PINBALLLIKE_API FPBBattlePartyShiftRequestedMessage
 	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
 	TObjectPtr<AActor> Requester = nullptr;
 };
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleSkillUseRequestedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> Requester = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	int32 SkillInputValue = 0;
+};
