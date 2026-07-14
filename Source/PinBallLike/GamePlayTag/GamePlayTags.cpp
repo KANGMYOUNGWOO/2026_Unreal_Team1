@@ -15,6 +15,7 @@ namespace GameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Party_Launched, "Event.Battle.Party.Launched");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Party_AllBallsDead, "Event.Battle.Party.AllBallsDead");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Party_Shift_Requested, "Event.Battle.Party.Shift.Requested");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Skill_Use_Requested, "Event.Battle.Skill.Use.Requested");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Boss_Dead, "Event.Battle.Boss.Dead");
 	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Choice_Exit, "Event.UI.Choice.Exit");
 }

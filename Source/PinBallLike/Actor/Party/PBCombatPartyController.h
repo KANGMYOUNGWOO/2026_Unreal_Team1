@@ -47,6 +47,7 @@ public:
 	bool IsPartyEmpty() const { return PartyBalls.IsEmpty(); }
 	TArray<APBBallBase*> GetValidPartyBalls() const;
 	void RefreshPartyOrder();
+	void RequestUseSkill(int32 SkillInputValue);
 	void SpawnBallDeathEffect(APBBallBase* DeadBall) const;
 	void BroadcastPartyAllBallsDead();
 	void SetPartyBalls(const TArray<TObjectPtr<APBBallBase>>& InPartyBalls);
@@ -56,6 +57,8 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 private:
+	APBBallBase* FindPartyBallByInstanceId(int32 BallInstanceId) const;
+
 	UPROPERTY(VisibleAnywhere, Category = "Party|Launch")
 	TObjectPtr<UPBPartyLauncherComponent> PartyLauncherComponent;
 
