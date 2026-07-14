@@ -8,6 +8,7 @@
 #include "Component/PBBallPhysicsComponent.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
+#include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
 
@@ -30,6 +31,9 @@ APBBallBase::APBBallBase()
 	
 	// Resource
 	ResourceComponent = CreateDefaultSubobject<UPBBaseResourceComponent>(TEXT("ResourceComponent"));
+
+	// StatusEffect
+	StatusEffectComponent = CreateDefaultSubobject<UPBStatusEffectComponent>(TEXT("StatusEffectComponent"));
 	
 	// Combo
 	ComboComponent = CreateDefaultSubobject<UPBBallComboComponent>(TEXT("ComboComponent"));

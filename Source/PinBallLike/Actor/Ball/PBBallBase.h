@@ -10,6 +10,7 @@
 
 class UPBBaseStatComponent;
 class UPBBaseResourceComponent;
+class UPBStatusEffectComponent;
 class UPBBallComboComponent;
 class UPBBallHitReactionComponent;
 class UPBBallPhysicsComponent;
@@ -45,6 +46,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Ball|Resource")
 	UPBBaseResourceComponent* GetResourceComponent() const { return ResourceComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "Ball|StatusEffect")
+	UPBStatusEffectComponent* GetStatusEffectComponent() const { return StatusEffectComponent; }
 	
 protected:
 	virtual void BeginPlay() override;
@@ -60,6 +64,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Resource")
 	TObjectPtr<UPBBaseResourceComponent> ResourceComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Ball|StatusEffect")
+	TObjectPtr<UPBStatusEffectComponent> StatusEffectComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Combo")
 	TObjectPtr<UPBBallComboComponent> ComboComponent;
