@@ -3,6 +3,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Interface/Damageable.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
@@ -63,6 +64,12 @@ void APBGolemLaserWall::BounceBall(AActor* OtherActor, const FHitResult& Hit)
 		UE_LOG(LogTemp, Log, TEXT("[GolemLaserWall] Bounce skipped. Other actor is not a ball. OtherActor=%s"),
 			*GetNameSafe(OtherActor));
 		return;
+	}
+
+	IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball);
+	if (Damageable && !Damageable->IsDead())
+	{
+		Damageable->TakeDamage(1);
 	}
 
 	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
