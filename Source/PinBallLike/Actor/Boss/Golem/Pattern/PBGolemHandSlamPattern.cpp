@@ -15,7 +15,7 @@
 UPBGolemHandSlamPattern::UPBGolemHandSlamPattern()
 {
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> SlamEffectFinder(
-		TEXT("/Game/Free_Magic/VFX_Niagara/NS_Free_Magic_Attack1.NS_Free_Magic_Attack1"));
+		TEXT("/Game/Blueprints/Boss/BossAsset/Niagara/Free_Magic/VFX_Niagara/NS_Free_Magic_Attack1.NS_Free_Magic_Attack1"));
 	SlamEffect = SlamEffectFinder.Object;
 }
 
