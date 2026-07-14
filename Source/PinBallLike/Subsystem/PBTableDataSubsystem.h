@@ -15,6 +15,7 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
+#include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRows.h"
 #include "PBTableDataSubsystem.generated.h"
 
 struct FPBStatusEffectTriggerRow;
@@ -51,6 +52,13 @@ public:
 		UDataTable* InStatusEffectTable,
 		UDataTable* InStatusEffectModifierTable,
 		UDataTable* InStatusEffectTriggerTable);
+	void SetSynergyTables(
+		UDataTable* InSynergyTable,
+		UDataTable* InSynergyTierTable,
+		UDataTable* InSynergyTierEffectTable,
+		UDataTable* InSynergyEffectTable,
+		UDataTable* InSynergyEffectModifierTable,
+		UDataTable* InSynergyEffectTriggerTable);
 
 	UPROPERTY(BlueprintAssignable, Category = "TableData")
 	FPBTableDataLoadEvent OnStartupGameDataLoaded;
@@ -161,6 +169,39 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> StatusEffectTriggerTable;
+
+#pragma endregion
+
+#pragma region Synergy
+
+public:
+	bool GetAllSynergyRows(TArray<FName>& OutRowNames, TArray<FPBSynergyRow>& OutRows) const;
+	bool FindSynergyRow(FName RowName, FPBSynergyRow& OutRow) const;
+	bool FindSynergyTierRow(FName RowName, FPBSynergyTierRow& OutRow) const;
+	bool GetSynergyTierRows(FName SynergyId, TArray<FPBSynergyTierRow>& OutRows) const;
+	bool GetSynergyTierEffectRows(FName SynergyTierId, TArray<FPBSynergyTierEffectRow>& OutRows) const;
+	bool FindSynergyEffectRow(FName RowName, FPBSynergyEffectRow& OutRow) const;
+	bool GetSynergyEffectModifierRows(FName SynergyEffectId, TArray<FPBSynergyEffectModifierRow>& OutRows) const;
+	bool GetSynergyEffectTriggerRows(FName SynergyEffectId, TArray<FPBSynergyEffectTriggerRow>& OutRows) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> SynergyTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> SynergyTierTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> SynergyTierEffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> SynergyEffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> SynergyEffectModifierTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> SynergyEffectTriggerTable;
 
 #pragma endregion
 };
