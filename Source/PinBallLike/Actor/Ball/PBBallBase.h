@@ -45,9 +45,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball|Combat")
 	EPBBallPartyRole GetCombatRole() const { return CombatRole; }
 
-	UFUNCTION(BlueprintPure, Category = "Ball|Data")
-	int32 GetBallInstanceId() const { return BallInstanceData.InstanceId; }
-
 	UFUNCTION(BlueprintPure, Category = "Ball|Resource")
 	UPBBaseResourceComponent* GetResourceComponent() const { return ResourceComponent; }
 
