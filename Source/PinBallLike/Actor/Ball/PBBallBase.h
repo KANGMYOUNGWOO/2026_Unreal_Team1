@@ -14,6 +14,7 @@ class UPBBallComboComponent;
 class UPBBallHitReactionComponent;
 class UPBBallPhysicsComponent;
 class UPBBallSkillComponent;
+class APBBallSkillActorBase;
 class USphereComponent;
 
 UCLASS()
@@ -31,6 +32,7 @@ public:
 	void ApplyResourceData(const TArray<FPBResourceData>& ResourceData);
 
 	void InitializeFromBallInstanceData(const FPBBallInstanceData& InBallInstanceData);
+	void InitializeSkillActorClass(TSubclassOf<APBBallSkillActorBase> InSkillActorClass);
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Combat")
 	void SetCombatRole(EPBBallPartyRole NewCombatRole);

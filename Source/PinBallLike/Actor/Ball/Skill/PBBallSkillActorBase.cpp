@@ -3,7 +3,10 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Ball/Skill/Component/PBTimedAreaDamageComponent.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 #include "EngineUtils.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 
 void APBBallSkillActorBase::InitializeSkill(
 	APBBallBase* InOwnerBall,
@@ -199,6 +202,18 @@ void APBBallSkillActorBase::HandleDamageApplied(
 	const int32 AppliedDamage,
 	const FVector HitLocation)
 {
+	if (UGameplayMessageSubsystem::HasInstance(this))
+	{
+		FPBDamageLogMessage Message;
+		Message.LogType = EPBDamageLogType::Skill;
+		Message.DamageAmount = AppliedDamage;
+		Message.HitLocation = HitLocation;
+
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_UI_DamageLog_Requested,
+			Message);
+	}
+
 	OnHit(Target, AppliedDamage, HitLocation);
 }
 

@@ -12,6 +12,12 @@ UPBBallSkillComponent::UPBBallSkillComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
+void UPBBallSkillComponent::InitializeSkillActorClass(
+	const TSubclassOf<APBBallSkillActorBase> InSkillActorClass)
+{
+	SkillActorClass = InSkillActorClass;
+}
+
 bool UPBBallSkillComponent::TryActivateSkill()
 {
 	return ActivateSkillActor() != nullptr;
@@ -25,7 +31,7 @@ APBBallSkillActorBase* UPBBallSkillComponent::ActivateSkillActor()
 	}
 
 	APBBallBase* OwnerBall = Cast<APBBallBase>(GetOwner());
-	if (!OwnerBall || !OwnerBall->GetWorld() || !SkillData.ActorClass)
+	if (!OwnerBall || !OwnerBall->GetWorld() || !SkillActorClass)
 	{
 		return nullptr;
 	}
@@ -34,7 +40,7 @@ APBBallSkillActorBase* UPBBallSkillComponent::ActivateSkillActor()
 		OwnerBall->GetActorRotation(),
 		OwnerBall->GetActorLocation());
 	ActiveSkillActor = OwnerBall->GetWorld()->SpawnActorDeferred<APBBallSkillActorBase>(
-		SkillData.ActorClass,
+		SkillActorClass,
 		SpawnTransform,
 		OwnerBall,
 		OwnerBall->GetInstigator(),
@@ -46,7 +52,7 @@ APBBallSkillActorBase* UPBBallSkillComponent::ActivateSkillActor()
 			OwnerBall,
 			CalculateFinalDamage(OwnerBall),
 			SkillData.Duration,
-			SkillData.DamageCount);
+			SkillData.Value);
 		ActiveSkillActor->OnDestroyed.AddUniqueDynamic(
 			this,
 			&UPBBallSkillComponent::HandleActiveSkillActorDestroyed);

@@ -16,6 +16,7 @@ class PINBALLLIKE_API UPBBallSkillComponent : public UActorComponent
 
 public:
 	UPBBallSkillComponent();
+	void InitializeSkillActorClass(TSubclassOf<APBBallSkillActorBase> InSkillActorClass);
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill")
 	bool TryActivateSkill();
@@ -38,4 +39,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<APBBallSkillActorBase> ActiveSkillActor;
+
+	UPROPERTY(Transient)
+	TSubclassOf<APBBallSkillActorBase> SkillActorClass;
 };

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/StreamableManager.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallStarLevelRow.h"
+#include "PinBallLike/Table/Ball/Struct/PBBallSkillTableRow.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossHitPointTableRow.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossPatternTableRow.h"
@@ -46,6 +47,7 @@ public:
 
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
 	void SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable);
+	void SetSkillTable(UDataTable* InSkillTable);
 	void SetBossTables(UDataTable* InBossTable, UDataTable* InBossHitPointTable, UDataTable* InBossPatternTable);
 	void SetStatusEffectTables(
 		UDataTable* InStatusEffectTable,
@@ -112,6 +114,18 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> BallStarLevelTable;
+
+#pragma endregion
+
+#pragma region Skill
+
+public:
+	bool GetAllSkillRows(TArray<FName>& OutRowNames, TArray<FPBBallSkillTableRow>& OutRows) const;
+	bool FindSkillRow(FName RowName, FPBBallSkillTableRow& OutRow) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> SkillTable;
 
 #pragma endregion
 
