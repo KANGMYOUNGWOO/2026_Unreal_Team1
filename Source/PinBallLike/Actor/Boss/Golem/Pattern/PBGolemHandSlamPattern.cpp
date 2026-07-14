@@ -1,10 +1,23 @@
 #include "PBGolemHandSlamPattern.h"
 
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "DrawDebugHelpers.h"
 #include "PinBallLike/Actor/Boss/Golem/PBGolemBoss.h"
 #include "PinBallLike/Actor/Boss/Golem/PBGolemBossHand.h"
 #include "PinBallLike/Actor/Boss/Golem/PBGolemHandMovementComponent.h"
+#include "PinBallLike/Interface/Damageable.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
+#include "UObject/ConstructorHelpers.h"
 #include "TimerManager.h"
+
+UPBGolemHandSlamPattern::UPBGolemHandSlamPattern()
+{
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> SlamEffectFinder(
+		TEXT("/Game/Free_Magic/VFX_Niagara/NS_Free_Magic_Attack1.NS_Free_Magic_Attack1"));
+	SlamEffect = SlamEffectFinder.Object;
+}
 
 bool UPBGolemHandSlamPattern::UsesHand(EPBGolemBossHandType TargetHandType) const
 {
@@ -129,6 +142,8 @@ void UPBGolemHandSlamPattern::HandleHandMoveFinished()
 		break;
 	case EPBGolemHandSlamPhase::Slamming:
 		DrawDebugSlamRange(DebugSlamRangeDuration);
+		ApplySlamDamage();
+		SpawnSlamEffect();
 		SlamPhase = EPBGolemHandSlamPhase::Holding;
 		if (SlamHoldDuration <= 0.0f)
 		{
@@ -234,6 +249,57 @@ void UPBGolemHandSlamPattern::DrawDebugSlamRange(float Duration) const
 		FMath::Max(0.0f, Duration),
 		0,
 		2.0f);
+}
+
+void UPBGolemHandSlamPattern::SpawnSlamEffect() const
+{
+	const APBBossBase* Boss = GetOwnerBoss();
+	UWorld* World = Boss ? Boss->GetWorld() : nullptr;
+	if (!World || !SlamEffect || SlamRadius <= 0.0f)
+	{
+		return;
+	}
+
+	UNiagaraComponent* NiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		World,
+		SlamEffect,
+		SlamTargetLocation);
+	if (!NiagaraComponent)
+	{
+		return;
+	}
+
+	const float Scale = SlamRadius / FMath::Max(0.01f, SlamEffectRadiusAtScaleOne);
+	NiagaraComponent->SetVariableFloat(TEXT("User.Scale_All"), Scale);
+}
+
+void UPBGolemHandSlamPattern::ApplySlamDamage() const
+{
+	AActor* PinballActor = FindPinballActor();
+	if (!PinballActor || SlamRadius <= 0.0f || SlamDamage <= 0)
+	{
+		return;
+	}
+
+	FVector SlamToPinball = PinballActor->GetActorLocation() - SlamTargetLocation;
+	SlamToPinball.Z = 0.0f;
+	if (SlamToPinball.SizeSquared() > FMath::Square(SlamRadius))
+	{
+		return;
+	}
+
+	IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(PinballActor);
+	if (!Damageable || Damageable->IsDead())
+	{
+		return;
+	}
+
+	Damageable->TakeDamage(SlamDamage);
+	const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
+	UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+		*SourcePatternName.ToString(),
+		SlamDamage,
+		*GetNameSafe(PinballActor));
 }
 
 void UPBGolemHandSlamPattern::ReturnHandToStartTransform(APBGolemBoss* GolemBoss)

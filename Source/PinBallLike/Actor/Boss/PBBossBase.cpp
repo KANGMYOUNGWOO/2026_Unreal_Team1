@@ -2,6 +2,7 @@
 
 #include "Component/PBBossDamageComponent.h"
 #include "Component/PBBossGroggyComponent.h"
+#include "Component/PBBossHitEffectComponent.h"
 #include "Component/PBBossIntroComponent.h"
 #include "Component/PBBossPatternComponent.h"
 #include "Component/PBBossPinballReactionComponent.h"
@@ -57,6 +58,7 @@ APBBossBase::APBBossBase()
 	BossStatComponent = CreateDefaultSubobject<UPBBossStatComponent>(TEXT("BossStatComponent"));
 	BossGroggyComponent = CreateDefaultSubobject<UPBBossGroggyComponent>(TEXT("BossGroggyComponent"));
 	BossDamageComponent = CreateDefaultSubobject<UPBBossDamageComponent>(TEXT("BossDamageComponent"));
+	BossHitEffectComponent = CreateDefaultSubobject<UPBBossHitEffectComponent>(TEXT("BossHitEffectComponent"));
 	BossPatternComponent = CreateDefaultSubobject<UPBBossPatternComponent>(TEXT("BossPatternComponent"));
 	BossIntroComponent = CreateDefaultSubobject<UPBBossIntroComponent>(TEXT("BossIntroComponent"));
 	BossPinballReactionComponent = CreateDefaultSubobject<UPBBossPinballReactionComponent>(TEXT("BossPinballReactionComponent"));
@@ -400,6 +402,11 @@ bool APBBossBase::IsPinballCollisionDamageBlocked() const
 
 void APBBossBase::NotifyBossDamaged(FName HitPointName, int32 DamageAmount)
 {
+	if (BossHitEffectComponent)
+	{
+		BossHitEffectComponent->PlayHitEffect();
+	}
+
 	BP_OnDamaged(HitPointName, DamageAmount);
 }
 

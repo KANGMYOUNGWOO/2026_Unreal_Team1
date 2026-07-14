@@ -2,6 +2,7 @@
 
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "PinBallLike/Actor/Boss/Component/PBBossHitEffectComponent.h"
 #include "PBGolemBoss.h"
 #include "PBGolemHandMovementComponent.h"
 #include "TimerManager.h"
@@ -25,6 +26,7 @@ APBGolemBossHand::APBGolemBossHand()
 	TelegraphStartPoint->SetupAttachment(HandMesh);
 
 	HandMovementComponent = CreateDefaultSubobject<UPBGolemHandMovementComponent>(TEXT("HandMovementComponent"));
+	HitEffectComponent = CreateDefaultSubobject<UPBBossHitEffectComponent>(TEXT("HitEffectComponent"));
 }
 
 void APBGolemBossHand::Tick(float DeltaSeconds)
@@ -271,6 +273,11 @@ void APBGolemBossHand::RequestIdleAnimationSync()
 	BP_OnIdleAnimationSyncRequested(GetSyncedIdleAnimationPosition());
 }
 
+void APBGolemBossHand::SetIsPunching(bool NewIsPunching)
+{
+	IsPunching = NewIsPunching;
+}
+
 float APBGolemBossHand::GetSyncedIdleAnimationPosition() const
 {
 	return OwnerBoss ? OwnerBoss->GetSyncedGolemIdleAnimationPosition(IdleAnimationLength) : 0.0f;
@@ -298,12 +305,16 @@ USceneComponent* APBGolemBossHand::GetTelegraphStartComponent() const
 
 void APBGolemBossHand::ApplyHandDamage(int32 DamageAmount)
 {
-	if (!IsHandAvailable() || DamageAmount <= 0)
+	if (!IsHandAvailable() || IsPatternMovementLocked || DamageAmount <= 0)
 	{
 		return;
 	}
 
 	CurrentHandHP = FMath::Max(0, CurrentHandHP - DamageAmount);
+	if (HitEffectComponent)
+	{
+		HitEffectComponent->PlayHitEffect();
+	}
 	OnHandHPChanged.Broadcast(CurrentHandHP, MaxHandHP);
 
 	if (CurrentHandHP <= 0)

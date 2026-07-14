@@ -6,11 +6,15 @@
 #include "PBGolemHandSlamPattern.generated.h"
 
 class UPBGolemHandMovementComponent;
+class UNiagaraSystem;
 
 UCLASS(Blueprintable)
 class PINBALLLIKE_API UPBGolemHandSlamPattern : public UPBGolemBossPatternBase
 {
 	GENERATED_BODY()
+
+public:
+	UPBGolemHandSlamPattern();
 
 protected:
 	virtual bool UsesHand(EPBGolemBossHandType TargetHandType) const override;
@@ -39,6 +43,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Pattern|Slam Range", meta = (ClampMin = "0"))
 	float SlamRadius = 150.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Pattern|Slam Range", meta = (ClampMin = "0"))
+	int32 SlamDamage = 1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Golem Pattern|Slam Effect")
+	TObjectPtr<UNiagaraSystem> SlamEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Pattern|Slam Effect", meta = (ClampMin = "0.01"))
+	float SlamEffectRadiusAtScaleOne = 150.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Pattern|Slam Range")
 	bool IsDrawDebugSlamRange = true;
 
@@ -65,6 +78,8 @@ private:
 	void UnbindHandMoveFinished();
 	void ClearSlamHoldTimer();
 	void DrawDebugSlamRange(float Duration) const;
+	void ApplySlamDamage() const;
+	void SpawnSlamEffect() const;
 	void ReturnHandToStartTransform(APBGolemBoss* GolemBoss);
 	void FinishHandSlamPattern();
 

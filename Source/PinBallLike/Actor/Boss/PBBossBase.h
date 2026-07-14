@@ -7,6 +7,7 @@
 #include "PBBossBase.generated.h"
 
 class UPBBossGroggyComponent;
+class UPBBossHitEffectComponent;
 class UPBBossDamageComponent;
 class UPBBossIntroComponent;
 class UPBBossPatternComponent;
@@ -193,6 +194,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossDamageComponent> BossDamageComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
+	TObjectPtr<UPBBossHitEffectComponent> BossHitEffectComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossPatternComponent> BossPatternComponent;

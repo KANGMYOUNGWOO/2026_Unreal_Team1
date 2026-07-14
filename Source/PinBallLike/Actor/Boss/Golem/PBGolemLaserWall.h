@@ -16,7 +16,7 @@ public:
 	APBGolemLaserWall();
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Golem|Laser")
-	void InitializeLaserWall(FVector InLaunchDirection, float InBounceVelocity);
+	void InitializeLaserWall(FVector InLaunchDirection, float InBounceVelocity, FName InSourcePatternName);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem|Laser")
@@ -40,4 +40,5 @@ private:
 		const FHitResult& Hit);
 
 	FVector LaunchDirection = FVector::ForwardVector;
+	FName SourcePatternName = NAME_None;
 };

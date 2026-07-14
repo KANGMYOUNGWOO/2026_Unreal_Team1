@@ -120,6 +120,7 @@ void UPBBossSnakeProjectilePattern::FireProjectile()
 	if (Projectile)
 	{
 		Projectile->SetProjectileSpeed(ProjectileSpeed);
+		Projectile->SetSourcePatternName(PatternName.IsNone() ? GetClass()->GetFName() : PatternName);
 	}
 
 	++FiredProjectileCount;

@@ -6,6 +6,9 @@
 #include "PBBallPhysicsComponent.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
+#include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
+#include "PinBallLike/Actor/Boss/PBBossBase.h"
+#include "PinBallLike/Actor/Boss/Pattern/PBBossPatternBase.h"
 #include "PinBallLike/Interface/BossInterface.h"
 #include "PinBallLike/Interface/Damageable.h"
 #include "PinBallLike/Interface/StatProvider.h"
@@ -71,7 +74,27 @@ void UPBBallHitReactionComponent::ProcessBallContact(AActor* OtherActor)
 
 	if (OwnerDamageable && !OwnerDamageable->IsDead())
 	{
-		OwnerDamageable->TakeDamage(1);
+		constexpr int32 BossCollisionDamage = 1;
+		OwnerDamageable->TakeDamage(BossCollisionDamage);
+
+		APBBossBase* Boss = Cast<APBBossBase>(OtherActor);
+		if (!Boss)
+		{
+			Boss = Cast<APBBossBase>(OtherActor->GetOwner());
+		}
+
+		UPBBossPatternComponent* PatternComponent = Boss ? Boss->GetBossPatternComponent() : nullptr;
+		UPBBossPatternBase* CurrentPattern = PatternComponent ? PatternComponent->GetCurrentPattern() : nullptr;
+		if (CurrentPattern)
+		{
+			const FName SourcePatternName = CurrentPattern->PatternName.IsNone()
+				? CurrentPattern->GetClass()->GetFName()
+				: CurrentPattern->PatternName;
+			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+				*SourcePatternName.ToString(),
+				BossCollisionDamage,
+				*GetNameSafe(Owner));
+		}
 	}
 }
 

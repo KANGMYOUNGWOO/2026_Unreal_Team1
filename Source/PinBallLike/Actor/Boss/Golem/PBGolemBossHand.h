@@ -7,6 +7,7 @@
 #include "PBGolemBossHand.generated.h"
 
 class APBGolemBoss;
+class UPBBossHitEffectComponent;
 class UPBGolemHandMovementComponent;
 class USceneComponent;
 class USkeletalMeshComponent;
@@ -75,6 +76,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|Golem Hand Animation")
 	void RequestIdleAnimationSync();
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Golem Hand Animation")
+	void SetIsPunching(bool NewIsPunching);
+
 	UFUNCTION(BlueprintPure, Category = "Boss|Golem Hand Animation")
 	float GetSyncedIdleAnimationPosition() const;
 
@@ -141,10 +145,16 @@ protected:
 	TObjectPtr<UPBGolemHandMovementComponent> HandMovementComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem Hand")
+	TObjectPtr<UPBBossHitEffectComponent> HitEffectComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem Hand")
 	EPBGolemBossHandType HandType = EPBGolemBossHandType::Left;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Hand Animation", meta = (ClampMin = "0.1"))
 	float IdleAnimationLength = 1.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem Hand Animation")
+	bool IsPunching = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Hand|HP", meta = (ClampMin = "1"))
 	int32 MaxHandHP = 100;

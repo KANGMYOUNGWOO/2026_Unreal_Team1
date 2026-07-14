@@ -22,7 +22,10 @@ APBGolemLaserWall::APBGolemLaserWall()
 	CollisionBox->OnComponentHit.AddUniqueDynamic(this, &APBGolemLaserWall::HandleCollisionHit);
 }
 
-void APBGolemLaserWall::InitializeLaserWall(FVector InLaunchDirection, float InBounceVelocity)
+void APBGolemLaserWall::InitializeLaserWall(
+	FVector InLaunchDirection,
+	float InBounceVelocity,
+	FName InSourcePatternName)
 {
 	LaunchDirection = InLaunchDirection;
 	LaunchDirection.Z = 0.0f;
@@ -34,6 +37,7 @@ void APBGolemLaserWall::InitializeLaserWall(FVector InLaunchDirection, float InB
 	}
 
 	BounceVelocity = FMath::Max(0.0f, InBounceVelocity);
+	SourcePatternName = InSourcePatternName;
 }
 
 void APBGolemLaserWall::HandleCollisionHit(
@@ -69,7 +73,12 @@ void APBGolemLaserWall::BounceBall(AActor* OtherActor, const FHitResult& Hit)
 	IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball);
 	if (Damageable && !Damageable->IsDead())
 	{
-		Damageable->TakeDamage(1);
+		constexpr int32 DamageAmount = 1;
+		Damageable->TakeDamage(DamageAmount);
+		UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+			*SourcePatternName.ToString(),
+			DamageAmount,
+			*GetNameSafe(Ball));
 	}
 
 	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
