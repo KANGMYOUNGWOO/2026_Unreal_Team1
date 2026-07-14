@@ -19,6 +19,7 @@ namespace GameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Party_AllBallsDead);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Party_Shift_Requested);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Skill_Use_Requested);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Boss_Intro_Completed);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Boss_Dead);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_UI_Choice_Exit);
