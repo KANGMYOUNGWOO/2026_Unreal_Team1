@@ -69,6 +69,7 @@ bool UPBCollectionSubsystem::ReloadCollectionData()
 	}
 
 	Entries = MoveTemp(LoadedEntries);
+	RebuildLookupIndexes();
 	ReconcileProgressWithEntries();
 	bIsDataReady = true;
 	UE_LOG(
@@ -234,20 +235,17 @@ TArray<int32> UPBCollectionSubsystem::GetAvailableStarGrades() const
 
 TArray<FName> UPBCollectionSubsystem::FindCollectionIdsBySourceId(FName SourceId) const
 {
-	TArray<FName> Result;
 	if (SourceId.IsNone())
 	{
-		return Result;
+		return {};
 	}
 
-	for (const FPBCollectionEntryData& EntryData : Entries)
+	if (const TArray<FName>* CollectionIds = CollectionIdsBySourceId.Find(SourceId))
 	{
-		if (EntryData.SourceId == SourceId)
-		{
-			Result.Add(EntryData.CollectionId);
-		}
+		return *CollectionIds;
 	}
-	return Result;
+
+	return {};
 }
 
 TArray<FName> UPBCollectionSubsystem::FindCollectionIdsBySourceRow(
@@ -260,11 +258,19 @@ TArray<FName> UPBCollectionSubsystem::FindCollectionIdsBySourceRow(
 		return Result;
 	}
 
-	for (const FPBCollectionEntryData& EntryData : Entries)
+	const TArray<FName>* CandidateIds = CollectionIdsBySourceRowName.Find(SourceRowName);
+	if (!CandidateIds)
 	{
-		if (EntryData.SourceTableName == SourceTableName && EntryData.SourceRowName == SourceRowName)
+		return Result;
+	}
+
+	Result.Reserve(CandidateIds->Num());
+	for (const FName CollectionId : *CandidateIds)
+	{
+		const FPBCollectionEntryData* EntryData = FindEntryData(CollectionId);
+		if (EntryData && EntryData->SourceTableName == SourceTableName)
 		{
-			Result.Add(EntryData.CollectionId);
+			Result.Add(CollectionId);
 		}
 	}
 	return Result;
@@ -682,6 +688,29 @@ bool UPBCollectionSubsystem::BuildEntriesFromCollectionTable(
 	return !OutEntries.IsEmpty();
 }
 
+void UPBCollectionSubsystem::RebuildLookupIndexes()
+{
+	EntryIndexByCollectionId.Reset();
+	CollectionIdsBySourceId.Reset();
+	CollectionIdsBySourceRowName.Reset();
+	EntryIndexByCollectionId.Reserve(Entries.Num());
+
+	for (int32 EntryIndex = 0; EntryIndex < Entries.Num(); ++EntryIndex)
+	{
+		const FPBCollectionEntryData& EntryData = Entries[EntryIndex];
+		EntryIndexByCollectionId.Add(EntryData.CollectionId, EntryIndex);
+
+		if (!EntryData.SourceId.IsNone())
+		{
+			CollectionIdsBySourceId.FindOrAdd(EntryData.SourceId).Add(EntryData.CollectionId);
+		}
+		if (!EntryData.SourceRowName.IsNone())
+		{
+			CollectionIdsBySourceRowName.FindOrAdd(EntryData.SourceRowName).Add(EntryData.CollectionId);
+		}
+	}
+}
+
 void UPBCollectionSubsystem::ReconcileProgressWithEntries()
 {
 	for (const FPBCollectionEntryData& EntryData : Entries)
@@ -714,10 +743,13 @@ void UPBCollectionSubsystem::SanitizeProgressData(FPBCollectionProgressData& Pro
 
 const FPBCollectionEntryData* UPBCollectionSubsystem::FindEntryData(FName CollectionId) const
 {
-	return Entries.FindByPredicate([CollectionId](const FPBCollectionEntryData& EntryData)
+	const int32* EntryIndex = EntryIndexByCollectionId.Find(CollectionId);
+	if (!EntryIndex || !Entries.IsValidIndex(*EntryIndex))
 	{
-		return EntryData.CollectionId == CollectionId;
-	});
+		return nullptr;
+	}
+
+	return &Entries[*EntryIndex];
 }
 
 FPBCollectionProgressData* UPBCollectionSubsystem::FindProgressData(FName CollectionId)

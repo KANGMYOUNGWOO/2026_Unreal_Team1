@@ -164,6 +164,6 @@ private:
 	EPBBumperSlotType SelectedBumperSlotType = EPBBumperSlotType::Top;
 
 	bool bBumperRowsLoaded = false;
-	bool bBumperUIAssetLoadRequested = false;
+	bool bBumperUIAssetLoadPending = false;
 	bool bBumperListItemObjectsBuilt = false;
 };

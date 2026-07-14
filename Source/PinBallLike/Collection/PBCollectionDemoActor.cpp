@@ -17,11 +17,6 @@ void APBCollectionDemoActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!CollectionWidgetClass)
-	{
-		CollectionWidgetClass = UPBCollectionWidget::StaticClass();
-	}
-
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
 	if (bBindToggleKey && PlayerController)
 	{
@@ -59,8 +54,17 @@ void APBCollectionDemoActor::OpenCollection()
 	CollectionWidget = nullptr;
 
 	UGameInstance* GameInstance = GetGameInstance();
-	if (!GameInstance || !CollectionWidgetClass)
+	if (!GameInstance)
 	{
+		return;
+	}
+	if (!CollectionWidgetClass)
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("%s: CollectionWidgetClass에 WBP_CollectionWidget 계열 클래스를 지정해야 합니다."),
+			*GetName());
 		return;
 	}
 

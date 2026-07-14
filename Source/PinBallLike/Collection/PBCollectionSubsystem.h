@@ -117,6 +117,7 @@ private:
 	void HandleStartupGameDataLoaded();
 
 	bool BuildEntriesFromCollectionTable(TArray<FPBCollectionEntryData>& OutEntries) const;
+	void RebuildLookupIndexes();
 	void ReconcileProgressWithEntries();
 	void NotifyProgressChanged(FName CollectionId);
 	static void SanitizeProgressData(FPBCollectionProgressData& ProgressData);
@@ -147,6 +148,11 @@ private:
 
 	UPROPERTY()
 	TMap<FName, FPBCollectionProgressData> ProgressMap;
+
+	/** Entries에서 재생성하는 런타임 전용 인덱스입니다. 저장 대상이 아닙니다. */
+	TMap<FName, int32> EntryIndexByCollectionId;
+	TMap<FName, TArray<FName>> CollectionIdsBySourceId;
+	TMap<FName, TArray<FName>> CollectionIdsBySourceRowName;
 
 	bool bIsDataReady = false;
 };

@@ -35,6 +35,7 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
+	/** 테스트도 실제 UI 경로를 검증하도록 WBP_CollectionWidget 계열 클래스를 지정합니다. */
 	UPROPERTY(EditAnywhere, Category = "Collection|Demo")
 	TSubclassOf<UPBCollectionWidget> CollectionWidgetClass;
 
