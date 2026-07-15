@@ -3,93 +3,157 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Ball/Skill/Component/PBTimedAreaDamageComponent.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
+#include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Common/PBStatTypes.h"
+#include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 #include "EngineUtils.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 
-void APBBallSkillActorBase::ActivateEffect()
+void APBBallSkillActorBase::InitializeSkill(
+	APBBallBase* InOwnerBall,
+	const FPBBallSkillTableRow& InSkillData)
 {
-	if (bIsEnding || !IsValid(OwnerBall))
-	{
-		return;
-	}
+	OwnerBall = InOwnerBall;
+	SkillData = InSkillData;
 
-	OwnerBall->OnDestroyed.AddUniqueDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
-	BP_OnActivated();
+	const UPBBaseStatComponent* StatComponent = OwnerBall
+		? OwnerBall->FindComponentByClass<UPBBaseStatComponent>()
+		: nullptr;
+	const int32 BallAttackPower = StatComponent
+		? StatComponent->GetStat(PBStatNames::Attack)
+		: 0;
+	SkillDamageAmount = FMath::Max(
+		0,
+		FMath::RoundToInt(static_cast<float>(BallAttackPower) * SkillData.DamageMultiplier));
 
-	if (!ActivateEffectInternal())
+	if (OwnerBall)
 	{
-		OwnerBall->OnDestroyed.RemoveDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
+		AttachToActor(OwnerBall, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		SetActorRelativeScale3D(FVector::OneVector);
+		SetActorLocation(OwnerBall->GetActorLocation());
 	}
 }
 
-void APBBallSkillActorBase::DeactivateEffect()
+void APBBallSkillActorBase::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (IsValid(OwnerBall))
+	{
+		OwnerBall->OnDestroyed.AddUniqueDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
+	}
+
+	ChangeState(EPBBallSkillActorState::Preparing);
+}
+
+void APBBallSkillActorBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (IsValid(OwnerBall))
 	{
 		OwnerBall->OnDestroyed.RemoveDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
 	}
-
-	DeactivateEffectInternal();
-}
-
-void APBBallSkillActorBase::FinishEffect()
-{
-	if (bIsEnding)
-	{
-		return;
-	}
-
-	bIsEnding = true;
-	DeactivateEffect();
-	BP_OnFinished();
-
-	if (!ShouldWaitForVisualCompletion())
-	{
-		CompleteEffect();
-	}
-}
-
-void APBBallSkillActorBase::StopEffect()
-{
-	if (bIsEnding)
-	{
-		return;
-	}
-
-	bIsEnding = true;
-	DeactivateEffect();
-	BP_OnStopped();
-
-	if (!ShouldWaitForVisualCompletion())
-	{
-		CompleteEffect();
-	}
-}
-
-void APBBallSkillActorBase::CompleteEffect()
-{
-	if (!bIsEnding || bIsCompleted)
-	{
-		return;
-	}
-
-	bIsCompleted = true;
-	Destroy();
-}
-
-void APBBallSkillActorBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	DeactivateEffect();
 	UnbindDamageEvents();
 	Super::EndPlay(EndPlayReason);
 }
 
-bool APBBallSkillActorBase::ActivateEffectInternal()
+void APBBallSkillActorBase::ActivateSkill()
 {
+	ChangeState(EPBBallSkillActorState::Active);
+}
+
+void APBBallSkillActorBase::FinishSkill()
+{
+	ChangeState(EPBBallSkillActorState::Finishing);
+}
+
+void APBBallSkillActorBase::StopSkill()
+{
+	ChangeState(EPBBallSkillActorState::Stopping);
+}
+
+void APBBallSkillActorBase::CompleteSkill()
+{
+	ChangeState(EPBBallSkillActorState::Completed);
+}
+
+bool APBBallSkillActorBase::ChangeState(const EPBBallSkillActorState NewState)
+{
+	if (State == NewState)
+	{
+		return false;
+	}
+
+	State = NewState;
+
+	switch (NewState)
+	{
+	case EPBBallSkillActorState::Preparing:
+		EnterPreparingState();
+		break;
+	case EPBBallSkillActorState::Active:
+		EnterActiveState();
+		break;
+	case EPBBallSkillActorState::Finishing:
+		EnterFinishingState();
+		break;
+	case EPBBallSkillActorState::Stopping:
+		EnterStoppingState();
+		break;
+	case EPBBallSkillActorState::Completed:
+		EnterCompletedState();
+		break;
+	default:
+		break;
+	}
+
 	return true;
 }
 
-void APBBallSkillActorBase::DeactivateEffectInternal()
+void APBBallSkillActorBase::PrepareSkill_Implementation()
 {
+	ActivateSkill();
+}
+
+void APBBallSkillActorBase::EnterPreparingState()
+{
+	PrepareSkill();
+}
+
+void APBBallSkillActorBase::EnterActiveState()
+{
+	OnActivated();
+}
+
+void APBBallSkillActorBase::EnterFinishingState()
+{
+	if (IsValid(OwnerBall))
+	{
+		OwnerBall->OnDestroyed.RemoveDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
+	}
+	OnFinished();
+	if (!ShouldWaitForVisualCompletion())
+	{
+		CompleteSkill();
+	}
+}
+
+void APBBallSkillActorBase::EnterStoppingState()
+{
+	if (IsValid(OwnerBall))
+	{
+		OwnerBall->OnDestroyed.RemoveDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
+	}
+	OnStopped();
+	if (!ShouldWaitForVisualCompletion())
+	{
+		CompleteSkill();
+	}
+}
+
+void APBBallSkillActorBase::EnterCompletedState()
+{
+	Destroy();
 }
 
 AActor* APBBallSkillActorBase::FindTarget() const
@@ -146,19 +210,31 @@ void APBBallSkillActorBase::HandleDamageApplied(
 	const int32 AppliedDamage,
 	const FVector HitLocation)
 {
-	BP_OnHit(Target, AppliedDamage, HitLocation);
+	if (UGameplayMessageSubsystem::HasInstance(this))
+	{
+		FPBDamageLogMessage Message;
+		Message.LogType = EPBDamageLogType::Skill;
+		Message.DamageAmount = AppliedDamage;
+		Message.HitLocation = HitLocation;
+
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_UI_DamageLog_Requested,
+			Message);
+	}
+
+	OnHit(Target, AppliedDamage, HitLocation);
 }
 
 void APBBallSkillActorBase::HandleAreaDamageFinished()
 {
-	FinishEffect();
+	FinishSkill();
 }
 
 void APBBallSkillActorBase::HandleOwnerBallDestroyed(AActor* DestroyedActor)
 {
 	if (DestroyedActor == OwnerBall)
 	{
-		StopEffect();
+		StopSkill();
 	}
 }
 

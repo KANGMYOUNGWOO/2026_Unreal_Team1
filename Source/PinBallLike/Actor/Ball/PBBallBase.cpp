@@ -85,6 +85,10 @@ void APBBallBase::InitializeFromBallInstanceData(const FPBBallInstanceData& InBa
 	BallInstanceData = InBallInstanceData;
 	ApplyStatData(BallInstanceData.BaseStats);
 	ApplyResourceData(BallInstanceData.BaseResources);
+	if (SkillComponent)
+	{
+		SkillComponent->InitializeSkill(BallInstanceData);
+	}
 }
 
 void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)

@@ -9,6 +9,6 @@ class PINBALLLIKE_API UPBInstantDamageComponent : public UPBDamageComponentBase
 {
 	GENERATED_BODY()
 
-public:
+public: 
 	UPBInstantDamageComponent();
 };
