@@ -12,6 +12,7 @@ class APBBossSpawner;
 class APBBumperSpawner;
 enum class EPBBattlePreparationType : uint8;
 struct FPBBattleBossDeadMessage;
+struct FPBBattleBossIntroCompletedMessage;
 struct FPBBattlePartyAllBallsDeadMessage;
 struct FPBBattlePartyLaunchedMessage;
 struct FPBBattlePartyLaunchRequestedMessage;
@@ -103,6 +104,7 @@ private:
 	void RegisterBattleMessageListeners();
 	void UnregisterBattleMessageListeners();
 	void HandlePreparationCompletedMessage(FGameplayTag Channel, const FPBBattlePreparationCompletedMessage& Message);
+	void HandleBossIntroCompletedMessage(FGameplayTag Channel, const FPBBattleBossIntroCompletedMessage& Message);
 	void HandleBossDeadMessage(FGameplayTag Channel, const FPBBattleBossDeadMessage& Message);
 	void HandlePartyLaunchRequestedMessage(FGameplayTag Channel, const FPBBattlePartyLaunchRequestedMessage& Message);
 	void HandlePartyLaunchedMessage(FGameplayTag Channel, const FPBBattlePartyLaunchedMessage& Message);
@@ -110,6 +112,7 @@ private:
 	void HandlePartyShiftRequestedMessage(FGameplayTag Channel, const FPBBattlePartyShiftRequestedMessage& Message);
 
 	FGameplayMessageListenerHandle PreparationCompletedListenerHandle;
+	FGameplayMessageListenerHandle BossIntroCompletedListenerHandle;
 	FGameplayMessageListenerHandle BossDeadListenerHandle;
 	FGameplayMessageListenerHandle PartyLaunchRequestedListenerHandle;
 	FGameplayMessageListenerHandle PartyLaunchedListenerHandle;

@@ -28,17 +28,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Snake Animation")
 	bool IsMoving = false;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Snake Charge")
-	bool IsChargePoseActive = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Snake Projectile")
+	bool IsProjectilePoseActive = false;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Snake Charge")
-	float ChargePoseAlpha = 0.0f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Snake Projectile")
+	float ProjectilePoseAlpha = 0.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Snake Path")
 	TArray<FVector> SnakeSplinePoints;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Snake Charge")
-	TArray<FVector> SnakeChargeHeadSplinePoints;
 
 private:
 	void CacheOwnerSnakeBoss();

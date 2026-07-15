@@ -8,6 +8,7 @@
 #include "PBBallDataAsset.generated.h"
 
 class UTexture2D;
+class APBBallSkillActorBase;
 
 UCLASS()
 class PINBALLLIKE_API UPBBallDataAsset : public UPrimaryDataAsset
@@ -25,4 +26,7 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Actor", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<APBBallBase> ActorClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Skill", meta = (AssetBundles = "Gameplay"))
+	TSoftClassPtr<APBBallSkillActorBase> SkillActorClass;
 };

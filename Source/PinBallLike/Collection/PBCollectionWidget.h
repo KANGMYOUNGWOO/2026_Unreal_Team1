@@ -11,6 +11,7 @@ class UBorder;
 class UButton;
 class UComboBoxString;
 class UEditableTextBox;
+class UPBCollectionDetailViewModel;
 class UPBCollectionEntryWidget;
 class UPBCollectionSubsystem;
 class UTextBlock;
@@ -34,6 +35,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Collection|UI")
 	FName GetSelectedCollectionId() const { return SelectedCollectionId; }
+
+	UFUNCTION(BlueprintPure, Category = "Collection|UI")
+	UPBCollectionDetailViewModel* GetDetailViewModel() const { return DetailViewModel; }
 
 protected:
 	virtual void NativeOnInitialized() override;
@@ -62,6 +66,8 @@ private:
 
 	void RefreshEntryList();
 	void RefreshDetail();
+	void EnsureDetailViewModel();
+	bool ApplyDetailViewModelToWidget();
 	void SetCategory(EPBCollectionCategory NewCategory);
 	void SelectEntry(FName CollectionId);
 	APlayerController* ResolvePlayerController() const;
@@ -104,8 +110,22 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collection|UI", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UPBCollectionEntryWidget> EntryWidgetClass;
 
+	/** 한 줄에 배치할 도감 카드 수입니다. 카드 자체 크기는 Entry Widget Blueprint에서 정합니다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collection|UI|Layout", meta = (AllowPrivateAccess = "true", ClampMin = "1"))
+	int32 EntryColumnCount = 3;
+
+	/** 도감 카드 사이의 전체 여백입니다. 각 Grid Slot에는 절반씩 적용됩니다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collection|UI|Layout", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float EntrySpacing = 16.0f;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UPBCollectionSubsystem> CollectionSubsystem;
+
+	/** 선택 항목의 상세 표시 상태입니다. 저장 데이터와는 분리된 일시적 UI 객체입니다. */
+	UPROPERTY(Transient)
+	TObjectPtr<UPBCollectionDetailViewModel> DetailViewModel;
+
+	bool bIsDetailViewModelApplied = false;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UUniformGridPanel> EntryGridPanel;
@@ -128,22 +148,22 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UComboBoxString> SortModeComboBox;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Detail", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UTextBlock> DetailNameText;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Detail", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UTextBlock> DetailMetaText;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Detail", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UTextBlock> DetailDescriptionText;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Detail", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UTextBlock> DetailUnlockText;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Detail", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UTextBlock> DetailRecordText;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Detail", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UBorder> DetailAccentBorder;
 
 	UPROPERTY(meta = (BindWidget))

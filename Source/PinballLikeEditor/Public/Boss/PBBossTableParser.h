@@ -29,7 +29,7 @@ protected:
 	TArray<FPBSheetAssetPathPreset> BossClassPresets;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Sheet")
-	FPBSheetAssetPathPreset BossStatusWidgetClassPreset;
+	FPBSheetAssetPathPreset BossUILayerClassPreset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Sheet")
 	FPBSheetAssetPathPreset EnrageCameraShakeClassPreset;

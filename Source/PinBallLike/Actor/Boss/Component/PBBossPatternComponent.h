@@ -2,12 +2,15 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include "GameplayTagContainer.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossPatternData.h"
 #include "TimerManager.h"
 #include "PBBossPatternComponent.generated.h"
 
 class APBBossBase;
 class UPBBossPatternBase;
+struct FPBBattlePhaseChangedMessage;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBBossPatternChangedSignature, UPBBossPatternBase*, Pattern);
 
@@ -111,6 +114,9 @@ private:
 	// 설정된 패턴 클래스들로 패턴 인스턴스를 생성합니다.
 	void InitializePatterns();
 	void ResetPatternStartTime();
+	void RegisterBattlePhaseListener();
+	void UnregisterBattlePhaseListener();
+	void HandleBattlePhaseChangedMessage(FGameplayTag Channel, const FPBBattlePhaseChangedMessage& Message);
 	void InitializePatternDatas(
 		const TArray<FPBBossPatternData>& PatternDataList,
 		TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList);
@@ -161,6 +167,8 @@ private:
 
 	float NextPatternAllowedTime = 0.0f;
 	float PatternSystemPausedTime = 0.0f;
+	bool IsCombatPhaseActive = false;
 	FTimerHandle PatternCheckTimerHandle;
+	FGameplayMessageListenerHandle BattlePhaseChangedListenerHandle;
 	TMap<const UPBBossPatternBase*, float> CooldownEndTimeMap;
 };

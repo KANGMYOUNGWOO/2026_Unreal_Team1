@@ -17,11 +17,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
 	// 지정된 시간과 스케일로 텔레그래프를 표시합니다.
-	void InitTelegraph(float InDurationSeconds, const FVector& InScale);
+	virtual void InitTelegraph(float InDurationSeconds, const FVector& InScale);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Telegraph")
 	// 텔레그래프 액터를 제거합니다.
-	void DestroyTelegraph();
+	virtual void DestroyTelegraph();
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Pattern|Telegraph")

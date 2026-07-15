@@ -14,6 +14,7 @@ class UPBPartyDeploymentComponent;
 class UPBPartyLauncherComponent;
 class UPBSnakeFormationComponent;
 class UParticleSystem;
+class UPBRelicCalculator;
 
 UCLASS()
 class PINBALLLIKE_API APBCombatPartyController : public AActor
@@ -54,6 +55,7 @@ public:
 	void DestroyPartyBalls();
 	
 protected:
+	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 private:
@@ -89,4 +91,9 @@ private:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<APBBallBase>> FollowerBalls;
 	
+	
+	void BindRelicEvents();
+	void UnbindRelicEvents();
+	void HandleRelicsChanged();
+	void RefreshPartyRelicStats();
 };

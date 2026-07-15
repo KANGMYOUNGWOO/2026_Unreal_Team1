@@ -8,6 +8,7 @@
 class UBorder;
 class UButton;
 class UTextBlock;
+class UPBCollectionEntryViewModel;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBCollectionEntryClickedSignature, FName, CollectionId);
 
@@ -30,6 +31,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Collection|Entry")
 	FName GetCollectionId() const { return DisplayData.CollectionId; }
 
+	UFUNCTION(BlueprintPure, Category = "Collection|Entry")
+	UPBCollectionEntryViewModel* GetEntryViewModel() const { return EntryViewModel; }
+
 protected:
 	virtual void NativeOnInitialized() override;
 
@@ -38,6 +42,8 @@ protected:
 	void BP_OnCollectionDisplayDataChanged(const FPBCollectionDisplayData& InDisplayData);
 
 private:
+	void EnsureEntryViewModel();
+	bool ApplyViewModelToWidget();
 	void Refresh();
 	bool ValidateRequiredWidgetBindings() const;
 
@@ -47,24 +53,30 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> EntryButton;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Entry", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UBorder> CardBorder;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Entry", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UBorder> AccentBorder;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Entry", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UBorder> CategoryColorBorder;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Entry", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UTextBlock> NameText;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Entry", meta = (BindWidget, AllowPrivateAccess = "true"))
 	TObjectPtr<UTextBlock> MetaText;
 
-	UPROPERTY(meta = (BindWidgetOptional))
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Entry", meta = (BindWidgetOptional, AllowPrivateAccess = "true"))
 	TObjectPtr<UTextBlock> DescriptionText;
 
 	UPROPERTY(Transient)
 	FPBCollectionDisplayData DisplayData;
+
+	/** WBP의 MVVM 바인딩이 참조하는 카드 표시 상태입니다. */
+	UPROPERTY(Transient)
+	TObjectPtr<UPBCollectionEntryViewModel> EntryViewModel;
+
+	bool bIsEntryViewModelApplied = false;
 };

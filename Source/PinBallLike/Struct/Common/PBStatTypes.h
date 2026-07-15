@@ -4,7 +4,7 @@
 
 namespace PBStatNames
 {
-	static const FName Attack(TEXT("Attack"));
+	static const FName Attack(TEXT("Attack"));																			
 	static const FName StaggerPower(TEXT("StaggerPower"));
 	static const FName Mass(TEXT("Mass"));
 	static const FName Bounciness(TEXT("Bounciness"));

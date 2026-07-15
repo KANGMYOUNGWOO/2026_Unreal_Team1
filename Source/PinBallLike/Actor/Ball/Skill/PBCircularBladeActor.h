@@ -18,16 +18,14 @@ class PINBALLLIKE_API APBCircularBladeActor : public APBBallSkillActorBase
 public:
 	APBCircularBladeActor();
 
-	UFUNCTION(BlueprintCallable, Category = "Ball|Skill|Circular Blade")
-	void InitializeBlade(
+	virtual void InitializeSkill(
 		APBBallBase* InOwnerBall,
-		int32 InDamageAmount,
-		float InDuration,
-		int32 InDamageCount);
+		const FPBBallSkillTableRow& InSkillData) override;
 
 protected:
-	virtual bool ActivateEffectInternal() override;
-	virtual void DeactivateEffectInternal() override;
+	virtual void EnterActiveState() override;
+	virtual void EnterFinishingState() override;
+	virtual void EnterStoppingState() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Skill|Circular Blade")
 	TObjectPtr<USceneComponent> Root;
@@ -42,6 +40,7 @@ protected:
 	float TargetAcceleration = 4500.0f;
 
 private:
+	void DeactivateBlade();
 	void ApplyTargetAcceleration();
 
 	TWeakObjectPtr<UPBBallPhysicsComponent> BallPhysicsComponent;

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/StreamableManager.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallStarLevelRow.h"
+#include "PinBallLike/Table/Ball/Struct/PBBallSkillTableRow.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossHitPointTableRow.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossPatternTableRow.h"
@@ -23,6 +24,8 @@
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectTriggerRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
+#include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
+#include "PinBallLike/Table/Relic/Struct/PBRelicModifierRow.h"
 #include "PBTableDataSubsystem.generated.h"
 
 class UDataTable;
@@ -51,7 +54,9 @@ public:
 
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
 	void SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable);
+	void SetSkillTable(UDataTable* InSkillTable);
 	void SetBossTables(UDataTable* InBossTable, UDataTable* InBossHitPointTable, UDataTable* InBossPatternTable);
+	void SetRelicTable(UDataTable* InRelicTable , UDataTable* InRelicModifierTable);
 	void SetStatusEffectTables(
 		UDataTable* InStatusEffectTable,
 		UDataTable* InStatusEffectModifierTable,
@@ -127,6 +132,19 @@ private:
 
 #pragma endregion
 
+#pragma region Skill
+
+public:
+	bool GetAllSkillRows(TArray<FName>& OutRowNames, TArray<FPBBallSkillTableRow>& OutRows) const;
+	bool FindSkillRow(FName RowName, FPBBallSkillTableRow& OutRow) const;
+	bool FindDefaultSkillRowForBall(FName BallId, FPBBallSkillTableRow& OutRow) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> SkillTable;
+
+#pragma endregion
+
 #pragma region Shop
 
 public:
@@ -138,9 +156,26 @@ private:
 
 #pragma endregion
 
+#pragma  region Relic 
+public:
+	bool FindRelicRow(FName RowName,FPBRelicTableRow& OutRow) const;
+	bool FindRelicModifierRow(FName RowName, FPBRelicModifierRow OutRow) const;
+	
+	void GetRelicModifierRows(FName RelicId, TArray<FPBRelicModifierRow>& OutRows) const;
+	void GetAllRelicIds(TArray<FName>& OutRelicIds) const;
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> RelicTable;
+	
+	UPROPERTY()
+	TObjectPtr<UDataTable> RelicModifierTable;
+	
+#pragma  endregion 
+	
 #pragma region Boss
 
 public:
+	bool GetBossRowNames(TArray<FName>& OutRowNames) const;
 	bool FindBossRow(FName RowName, FPBBossTableRow& OutRow) const;
 	bool FindBossHitPointRow(FName RowName, FPBBossHitPointTableRow& OutRow) const;
 	bool FindBossPatternRow(FName RowName, FPBBossPatternTableRow& OutRow) const;

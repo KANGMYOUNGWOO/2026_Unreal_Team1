@@ -41,6 +41,12 @@ public:
 	UFUNCTION(exec)
 	void DamageBoss(int32 DamageAmount);
 
+	UFUNCTION(exec)
+	void DamageGolemHand(FName HandName, int32 DamageAmount);
+
+	UFUNCTION(exec)
+	void AddBossGroggy(int32 GroggyAmount);
+
 private:
 	UGameInstance* GetCheatGameInstance() const;
 	UPBBallDeckSubsystem* GetBallDeckSubsystem() const;

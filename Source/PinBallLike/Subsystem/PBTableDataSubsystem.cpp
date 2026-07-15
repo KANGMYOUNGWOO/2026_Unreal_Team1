@@ -33,7 +33,7 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	}
 
 	TArray<FSoftObjectPath> TablePaths;
-	TablePaths.Reserve(12);
+	TablePaths.Reserve(13);
 
 	// 테이블 경로는 DeveloperSettings에서 관리한다.
 	const FSoftObjectPath CollectionTablePath = Settings->CollectionTable.ToSoftObjectPath();
@@ -42,6 +42,7 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath BumperEffectTablePath = Settings->BumperEffectTable.ToSoftObjectPath();
 	const FSoftObjectPath BallTablePath = Settings->BallTable.ToSoftObjectPath();
 	const FSoftObjectPath BallStarLevelTablePath = Settings->BallStarLevelTable.ToSoftObjectPath();
+	const FSoftObjectPath SkillTablePath = Settings->SkillTable.ToSoftObjectPath();
 	const FSoftObjectPath BossTablePath = Settings->Boss.ToSoftObjectPath();
 	const FSoftObjectPath BossHitPointTablePath = Settings->BossHitPoint.ToSoftObjectPath();
 	const FSoftObjectPath BossPatternTablePath = Settings->BossPattern.ToSoftObjectPath();
@@ -54,6 +55,9 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath SynergyEffectModifierTablePath = Settings->SynergyEffectModifierTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyEffectTriggerTablePath = Settings->SynergyEffectTriggerTable.ToSoftObjectPath();
 
+	const FSoftObjectPath RelicTablePath = Settings->RelicTable.ToSoftObjectPath();
+    const FSoftObjectPath RelicModifierTablePath = Settings->RelicModifierTable.ToSoftObjectPath();
+	
 	if (CollectionTablePath.IsValid())
 	{
 		TablePaths.Add(CollectionTablePath);
@@ -82,6 +86,11 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	if (BallStarLevelTablePath.IsValid())
 	{
 		TablePaths.Add(BallStarLevelTablePath);
+	}
+
+	if (SkillTablePath.IsValid())
+	{
+		TablePaths.Add(SkillTablePath);
 	}
 
 	if (BossTablePath.IsValid())
@@ -139,6 +148,16 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 		TablePaths.Add(SynergyEffectTriggerTablePath);
 	}
 
+	if(RelicTablePath.IsValid())
+	{
+		TablePaths.Add(RelicTablePath);
+	}
+	
+	if (RelicModifierTablePath.IsValid())
+	{
+		TablePaths.Add(RelicModifierTablePath);
+	}
+	
 	if (TablePaths.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[TableData] No startup table paths are configured."));
@@ -160,8 +179,11 @@ void UPBTableDataSubsystem::UnloadStartupGameData()
 	SetCollectionTable(nullptr);
 	SetBumperTables(nullptr, nullptr, nullptr);
 	SetBallTables(nullptr, nullptr);
+	SetSkillTable(nullptr);
 	SetBossTables(nullptr, nullptr, nullptr);
 	SetStatusEffectTables(nullptr, nullptr, nullptr);
+	SetRelicTable(nullptr,nullptr);
+	
 	SetSynergyTables(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
 	if (StartupGameDataLoadHandle.IsValid())
@@ -181,12 +203,16 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedBumperEffectTable = nullptr;
 	UDataTable* LoadedBallTable = nullptr;
 	UDataTable* LoadedBallStarLevelTable = nullptr;
+	UDataTable* LoadedSkillTable = nullptr;
 	UDataTable* LoadedBossTable = nullptr;
 	UDataTable* LoadedBossHitPointTable = nullptr;
 	UDataTable* LoadedBossPatternTable = nullptr;
 	UDataTable* LoadedStatusEffectTable = nullptr;
 	UDataTable* LoadedStatusEffectModifierTable = nullptr;
 	UDataTable* LoadedStatusEffectTriggerTable = nullptr;
+	UDataTable* LoadedRelicTable = nullptr;
+	UDataTable* LoadedRelicModifierTable = nullptr;
+	
 	UDataTable* LoadedSynergyTable = nullptr;
 	UDataTable* LoadedSynergyTierTable = nullptr;
 	UDataTable* LoadedSynergyTierEffectTable = nullptr;
@@ -204,12 +230,15 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedBumperEffectTable = Cast<UDataTable>(Settings->BumperEffectTable.Get());
 		LoadedBallTable = Cast<UDataTable>(Settings->BallTable.Get());
 		LoadedBallStarLevelTable = Cast<UDataTable>(Settings->BallStarLevelTable.Get());
+		LoadedSkillTable = Cast<UDataTable>(Settings->SkillTable.Get());
 		LoadedBossTable = Cast<UDataTable>(Settings->Boss.Get());
 		LoadedBossHitPointTable = Cast<UDataTable>(Settings->BossHitPoint.Get());
 		LoadedBossPatternTable = Cast<UDataTable>(Settings->BossPattern.Get());
 		LoadedStatusEffectTable = Cast<UDataTable>(Settings->StatusEffectTable.Get());
 		LoadedStatusEffectModifierTable = Cast<UDataTable>(Settings->StatusEffectModifierTable.Get());
 		LoadedStatusEffectTriggerTable = Cast<UDataTable>(Settings->StatusEffectTriggerTable.Get());
+		LoadedRelicTable = Cast<UDataTable>(Settings->RelicTable.Get());
+		LoadedRelicModifierTable = Cast<UDataTable>(Settings->RelicModifierTable.Get());
 		LoadedSynergyTable = Cast<UDataTable>(Settings->SynergyTable.Get());
 		LoadedSynergyTierTable = Cast<UDataTable>(Settings->SynergyTierTable.Get());
 		LoadedSynergyEffectTable = Cast<UDataTable>(Settings->SynergyEffectTable.Get());
@@ -228,6 +257,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	SetCollectionTable(LoadedCollectionTable);
 	SetBumperTables(LoadedBumperTable, LoadedBumperTriggerTable, LoadedBumperEffectTable);
 	SetBallTables(LoadedBallTable, LoadedBallStarLevelTable);
+	SetSkillTable(LoadedSkillTable);
 	SetBossTables(LoadedBossTable, LoadedBossHitPointTable, LoadedBossPatternTable);
 	SetStatusEffectTables(LoadedStatusEffectTable, LoadedStatusEffectModifierTable, LoadedStatusEffectTriggerTable);
 	SetSynergyTables(
@@ -238,6 +268,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedSynergyEffectModifierTable,
 		LoadedSynergyEffectTriggerTable);
 
+	SetRelicTable(LoadedRelicTable,LoadedRelicModifierTable);
+	
 	UE_LOG(LogTemp, Log, TEXT("[TableData] Startup table data loaded. Ready=%s TableCount=%d"),
 		IsTableDataReady() ? TEXT("true") : TEXT("false"),
 		LoadedStartupTables.Num());
@@ -252,6 +284,7 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 		&& IsValid(BumperEffectTable)
 		&& IsValid(BallTable)
 		&& IsValid(BallStarLevelTable)
+		&& IsValid(SkillTable)
 		&& IsValid(BossTable)
 		&& IsValid(BossHitPointTable)
 		&& IsValid(BossPatternTable);
@@ -319,6 +352,14 @@ void UPBTableDataSubsystem::SetBallTables(UDataTable* InBallTable, UDataTable* I
 		*GetNameSafe(BallStarLevelTable));
 }
 
+void UPBTableDataSubsystem::SetSkillTable(UDataTable* InSkillTable)
+{
+	SkillTable = InSkillTable;
+
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Skill table assigned. Skill=%s"),
+		*GetNameSafe(SkillTable));
+}
+
 void UPBTableDataSubsystem::SetBossTables(
 	UDataTable* InBossTable,
 	UDataTable* InBossHitPointTable,
@@ -332,6 +373,13 @@ void UPBTableDataSubsystem::SetBossTables(
 		*GetNameSafe(BossTable),
 		*GetNameSafe(BossHitPointTable),
 		*GetNameSafe(BossPatternTable));
+}
+
+void UPBTableDataSubsystem::SetRelicTable(UDataTable* InRelicTable , UDataTable*  InRelicModifierTable)
+{
+	RelicTable = InRelicTable;
+	RelicModifierTable = InRelicModifierTable;
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Relic tables assigned."));
 }
 
 void UPBTableDataSubsystem::SetStatusEffectTables(
@@ -466,6 +514,39 @@ bool UPBTableDataSubsystem::FindBallStarLevelRow(
 
 #pragma endregion
 
+#pragma region Skill
+
+bool UPBTableDataSubsystem::GetAllSkillRows(
+	TArray<FName>& OutRowNames,
+	TArray<FPBBallSkillTableRow>& OutRows) const
+{
+	return GetAllTableRows(SkillTable, OutRowNames, OutRows, TEXT("GetAllSkillRows"));
+}
+
+bool UPBTableDataSubsystem::FindSkillRow(
+	const FName RowName,
+	FPBBallSkillTableRow& OutRow) const
+{
+	return FindTableRow(SkillTable, RowName, OutRow, TEXT("FindSkillRow"));
+}
+
+bool UPBTableDataSubsystem::FindDefaultSkillRowForBall(
+	const FName BallId,
+	FPBBallSkillTableRow& OutRow) const
+{
+	OutRow = FPBBallSkillTableRow();
+
+	FPBBallTableRow BallRow;
+	if (!FindBallRow(BallId, BallRow) || BallRow.DefaultSkillIds.IsEmpty())
+	{
+		return false;
+	}
+
+	return FindSkillRow(BallRow.DefaultSkillIds[0], OutRow);
+}
+
+#pragma endregion
+
 #pragma region Shop
 
 bool UPBTableDataSubsystem::FindShopRow(FName RowName, FPBShopTableRow& OutRow) const
@@ -476,6 +557,20 @@ bool UPBTableDataSubsystem::FindShopRow(FName RowName, FPBShopTableRow& OutRow) 
 #pragma endregion
 
 #pragma region Boss
+
+
+bool UPBTableDataSubsystem::GetBossRowNames(TArray<FName>& OutRowNames) const
+{
+	OutRowNames.Reset();
+
+	if (!IsValid(BossTable))
+	{
+		return false;
+	}
+
+	OutRowNames = BossTable->GetRowNames();
+	return !OutRowNames.IsEmpty();
+}
 
 bool UPBTableDataSubsystem::FindBossRow(FName RowName, FPBBossTableRow& OutRow) const
 {
@@ -649,3 +744,58 @@ bool UPBTableDataSubsystem::GetSynergyEffectTriggerRows(
 }
 
 #pragma endregion
+
+#pragma region Relic
+bool UPBTableDataSubsystem::FindRelicRow(FName RowName, FPBRelicTableRow& OutRow) const
+{
+	return FindTableRow(RelicTable,RowName,OutRow,TEXT("FindRelicRow"));
+}
+
+bool UPBTableDataSubsystem::FindRelicModifierRow(FName RowName, FPBRelicModifierRow OutRow) const
+{
+	return FindTableRow(RelicModifierTable,RowName,OutRow,TEXT("FindRelicModifierRow"));
+}
+
+void UPBTableDataSubsystem::GetRelicModifierRows(FName RelicId, TArray<FPBRelicModifierRow>& OutRows) const
+{
+	OutRows.Reset();
+
+	if (!RelicModifierTable)
+	{
+		return;
+	}
+
+	TArray<FPBRelicModifierRow*> Rows;
+
+	RelicModifierTable->GetAllRows<FPBRelicModifierRow>(
+		TEXT("GetRelicModifierRows"),
+		Rows);
+
+	for (const FPBRelicModifierRow* Row : Rows)
+	{
+		if (!Row)
+		{
+			continue;
+		}
+
+		if (Row->RelicId != RelicId)
+		{
+			continue;
+		}
+
+		OutRows.Add(*Row);
+	}
+}
+
+void UPBTableDataSubsystem::GetAllRelicIds(TArray<FName>& OutRelicIds) const
+{
+	OutRelicIds.Reset();
+
+	if (!RelicTable)
+	{
+		return;
+	}
+
+	OutRelicIds = RelicTable->GetRowNames();
+}
+#pragma endregion 
