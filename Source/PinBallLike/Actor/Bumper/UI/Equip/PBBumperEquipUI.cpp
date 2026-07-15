@@ -26,8 +26,31 @@ void UPBBumperEquipUI::NativeOnInitialized()
 	}
 }
 
+void UPBBumperEquipUI::NativeConstruct()
+{
+	Super::NativeConstruct();
+	bWidgetConstructed = true;
+
+	// Cached assets can finish during NativeOnInitialized, before Blueprint Construct binds this event.
+	if (bBumperListItemObjectsBuilt)
+	{
+		OnBumperListItemsReady.Broadcast();
+
+		// Recreate the Blueprint list entries first, then restore the visible selection and details.
+		if (!SelectedBumperRowName.IsNone())
+		{
+			SelectBumperRow(SelectedBumperRowName);
+		}
+		else
+		{
+			SelectBumperSlot(SelectedBumperSlotType);
+		}
+	}
+}
+
 void UPBBumperEquipUI::NativeDestruct()
 {
+	bWidgetConstructed = false;
 	UnbindDataLoadEvents();
 
 	Super::NativeDestruct();
@@ -198,7 +221,10 @@ void UPBBumperEquipUI::HandleBumperUIAssetsLoaded()
 
 	bBumperUIAssetLoadPending = false;
 	BuildBumperListItemObjects();
-	OnBumperListItemsReady.Broadcast();
+	if (bWidgetConstructed)
+	{
+		OnBumperListItemsReady.Broadcast();
+	}
 	SelectBumperSlot(EPBBumperSlotType::Top);
 }
 
@@ -434,23 +460,23 @@ void UPBBumperEquipUI::SetBoardSlotButtonState(
 	switch (SlotType)
 	{
 	case EPBBumperSlotType::Top:
-		SlotColor = FLinearColor(0.92f, 0.12f, 0.16f, 1.0f);
+		SlotColor = TopSlotColor;
 		break;
 	case EPBBumperSlotType::Side:
-		SlotColor = FLinearColor(0.08f, 0.35f, 0.95f, 1.0f);
+		SlotColor = SideSlotColor;
 		break;
 	case EPBBumperSlotType::Rebound:
-		SlotColor = FLinearColor(1.0f, 0.34f, 0.06f, 1.0f);
+		SlotColor = ReboundSlotColor;
 		break;
 	case EPBBumperSlotType::Special:
-		SlotColor = FLinearColor(0.10f, 0.68f, 0.24f, 1.0f);
+		SlotColor = SpecialSlotColor;
 		break;
 	default:
 		SlotColor = FLinearColor::White;
 		break;
 	}
 
-	SlotColor.A = SelectedBumperSlotType == SlotType ? 1.0f : 0.38f;
+	SlotColor.A = SelectedBumperSlotType == SlotType ? 1.0f : UnselectedSlotOpacity;
 	Button->SetBackgroundColor(SlotColor);
 }
 
