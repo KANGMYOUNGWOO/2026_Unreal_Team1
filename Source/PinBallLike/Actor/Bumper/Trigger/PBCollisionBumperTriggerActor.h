@@ -7,7 +7,6 @@
 #include "PBCollisionBumperTriggerActor.generated.h"
 
 class UPrimitiveComponent;
-class APBBallBase;
 class UPBBumperReactionComponent;
 
 UCLASS(Blueprintable)
@@ -49,14 +48,14 @@ protected:
 	float TriggerAreaHitPointTolerance = 0.5f;
 
 private:
-	TMap<TWeakObjectPtr<APBBallBase>, int32> TriggeringBallOverlapCounts;
+	TMap<TWeakObjectPtr<AActor>, int32> TriggeringBallOverlapCounts;
 
 	void RegisterCollisionAreas();
 	void SetupCollisionArea(UPrimitiveComponent* CollisionArea);
 	void SetupTriggerArea(UPrimitiveComponent* TriggerArea);
-	bool IsBallInTriggerArea(APBBallBase* Ball) const;
+	bool IsBallInTriggerArea(AActor* BallActor) const;
 	bool IsHitPointInsideTriggerArea(const FVector& HitPoint) const;
-	void AddBounceVelocityToBall(APBBallBase* Ball, const FHitResult& Hit) const;
+	void AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const;
 
 	UFUNCTION()
 	void HandleComponentHit(
