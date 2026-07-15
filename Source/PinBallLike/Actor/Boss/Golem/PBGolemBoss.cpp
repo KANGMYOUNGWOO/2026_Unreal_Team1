@@ -1,6 +1,7 @@
 #include "PBGolemBoss.h"
 
 #include "PBGolemBossHand.h"
+#include "Components/SphereComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossGroggyComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
 #include "PinBallLike/Actor/Boss/Golem/Pattern/PBGolemBossPatternBase.h"
@@ -12,6 +13,11 @@ APBGolemBoss::APBGolemBoss()
 	BossMovementType = EPBBossMovementType::Fixed;
 	LeftHandClass = APBGolemBossHand::StaticClass();
 	RightHandClass = APBGolemBossHand::StaticClass();
+
+	if (CollisionSphere)
+	{
+		CollisionSphere->SetGenerateOverlapEvents(true);
+	}
 }
 
 void APBGolemBoss::BeginPlay()

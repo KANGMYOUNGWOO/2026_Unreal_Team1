@@ -19,7 +19,7 @@ APBGolemBossHand::APBGolemBossHand()
 	HandMesh->SetupAttachment(SceneRoot);
 	HandMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	HandMesh->SetCollisionResponseToAllChannels(ECR_Block);
-	HandMesh->SetGenerateOverlapEvents(false);
+	HandMesh->SetGenerateOverlapEvents(true);
 	HandMesh->SetNotifyRigidBodyCollision(true);
 
 	TelegraphStartPoint = CreateDefaultSubobject<USceneComponent>(TEXT("TelegraphStartPoint"));
