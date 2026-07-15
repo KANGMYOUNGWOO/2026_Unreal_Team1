@@ -1,11 +1,11 @@
-#include "PBPartyBuffSkillActor.h"
+#include "PBStrengthBuffSkillActor.h"
 
 #include "Components/SceneComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
 
-APBPartyBuffSkillActor::APBPartyBuffSkillActor()
+APBStrengthBuffSkillActor::APBStrengthBuffSkillActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -13,13 +13,13 @@ APBPartyBuffSkillActor::APBPartyBuffSkillActor()
 	SetRootComponent(Root);
 }
 
-void APBPartyBuffSkillActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void APBStrengthBuffSkillActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UnbindStatusEffectEvents();
 	Super::EndPlay(EndPlayReason);
 }
 
-void APBPartyBuffSkillActor::EnterActiveState()
+void APBStrengthBuffSkillActor::EnterActiveState()
 {
 	if (!ApplyBuffToParty())
 	{
@@ -30,13 +30,13 @@ void APBPartyBuffSkillActor::EnterActiveState()
 	Super::EnterActiveState();
 }
 
-void APBPartyBuffSkillActor::EnterFinishingState()
+void APBStrengthBuffSkillActor::EnterFinishingState()
 {
 	UnbindStatusEffectEvents();
 	Super::EnterFinishingState();
 }
 
-void APBPartyBuffSkillActor::EnterStoppingState()
+void APBStrengthBuffSkillActor::EnterStoppingState()
 {
 	UnbindStatusEffectEvents();
 
@@ -45,14 +45,14 @@ void APBPartyBuffSkillActor::EnterStoppingState()
 	Super::EnterStoppingState();
 }
 
-APBCombatPartyController* APBPartyBuffSkillActor::GetPartyController() const
+APBCombatPartyController* APBStrengthBuffSkillActor::GetPartyController() const
 {
 	return IsValid(OwnerBall)
 		? Cast<APBCombatPartyController>(OwnerBall->GetOwner())
 		: nullptr;
 }
 
-bool APBPartyBuffSkillActor::ApplyBuffToParty()
+bool APBStrengthBuffSkillActor::ApplyBuffToParty()
 {
 	APBCombatPartyController* PartyController = GetPartyController();
 	if (!IsValid(PartyController) || StatusEffectId.IsNone())
@@ -73,14 +73,14 @@ bool APBPartyBuffSkillActor::ApplyBuffToParty()
 
 		StatusEffectComponent->OnStatusEffectRemoved.AddUniqueDynamic(
 			this,
-			&APBPartyBuffSkillActor::HandleStatusEffectRemoved);
+			&APBStrengthBuffSkillActor::HandleStatusEffectRemoved);
 		AppliedStatusEffectComponents.Add(StatusEffectComponent);
 	}
 
 	return !AppliedStatusEffectComponents.IsEmpty();
 }
 
-void APBPartyBuffSkillActor::RemoveAppliedBuffs()
+void APBStrengthBuffSkillActor::RemoveAppliedBuffs()
 {
 	for (const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent : AppliedStatusEffectComponents)
 	{
@@ -93,7 +93,7 @@ void APBPartyBuffSkillActor::RemoveAppliedBuffs()
 	AppliedStatusEffectComponents.Reset();
 }
 
-void APBPartyBuffSkillActor::UnbindStatusEffectEvents()
+void APBStrengthBuffSkillActor::UnbindStatusEffectEvents()
 {
 	for (const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent : AppliedStatusEffectComponents)
 	{
@@ -101,12 +101,12 @@ void APBPartyBuffSkillActor::UnbindStatusEffectEvents()
 		{
 			StatusEffectComponent->OnStatusEffectRemoved.RemoveDynamic(
 				this,
-				&APBPartyBuffSkillActor::HandleStatusEffectRemoved);
+				&APBStrengthBuffSkillActor::HandleStatusEffectRemoved);
 		}
 	}
 }
 
-void APBPartyBuffSkillActor::RemoveInactiveComponents()
+void APBStrengthBuffSkillActor::RemoveInactiveComponents()
 {
 	AppliedStatusEffectComponents.RemoveAll([this](const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent)
 	{
@@ -115,7 +115,7 @@ void APBPartyBuffSkillActor::RemoveInactiveComponents()
 	});
 }
 
-void APBPartyBuffSkillActor::HandleStatusEffectRemoved(
+void APBStrengthBuffSkillActor::HandleStatusEffectRemoved(
 	const FName RemovedStatusEffectId,
 	const int32 StackCount)
 {
