@@ -57,6 +57,63 @@ void APBBetActor::HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Messag
 	}
 }
 
+void APBBetActor::BindWidget(UPBBettingWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return;
+	}
+
+	BettingWidget = InWidget;
+
+	BettingWidget->OnBetSelected.AddUniqueDynamic(
+		this,
+		&APBBetActor::HandleBetSelected);
+	
+
+}
+
+void APBBetActor::HandleBetSelected(int32 SelectedIndex)
+{
+	const FPBBettingResult Result = ResolveBet(SelectedIndex);
+
+	FinishBet(Result);
+}
+
+FPBBettingResult APBBetActor::ResolveBet(int32 SelectedIndex)
+{
+	FPBBettingResult Result;
+
+	Result.SelectedIndex = SelectedIndex;
+
+	// 현재는 단순 50 : 50
+	Result.WinnerIndex = FMath::RandRange(0, 1);
+
+	Result.bWin =
+		Result.SelectedIndex == Result.WinnerIndex;
+
+	return Result;
+}
+
+void APBBetActor::FinishBet(const FPBBettingResult& Result)
+{
+	UE_LOG(
+	   LogTemp,
+	   Warning,
+	   TEXT(
+		   "Bet Result | Selected: %d | Winner: %d | Win: %s"),
+	   Result.SelectedIndex,
+	   Result.WinnerIndex,
+	   Result.bWin ? TEXT("True") : TEXT("False"));
+
+	FPBChoiceType Message;
+	Message.Exit = 1;
+
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_UI_Choice_Exit,
+		Message);
+}
+
 void APBBetActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);

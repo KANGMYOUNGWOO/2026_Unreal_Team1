@@ -57,6 +57,21 @@ public:
 	
 #pragma endregion
 
+	
+#pragma  region  Relic
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Relic|Table")
+	TSoftObjectPtr<UDataTable> RelicTable;
+	
+	UPROPERTY(Config,EditAnywhere,BlueprintReadOnly, Category = "Relic|Table")
+	TSoftObjectPtr<UDataTable> RelicModifierTable;
+	
+#pragma endregion 
+	
+#pragma  region Choice
+	UPROPERTY(EditDefaultsOnly, Config, Category="Choice|GameData")
+	TSoftObjectPtr<UDataTable> ChoiceTable;
+	
+#pragma endregion 
 #pragma region Boss
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Boss|Table")

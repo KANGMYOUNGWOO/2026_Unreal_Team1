@@ -15,6 +15,22 @@ APBChoiceNodeActor::APBChoiceNodeActor()
 	LabelWidget->SetDrawSize(FVector2D(300.f, 120.f));
 	LabelWidget->SetRelativeLocation(FVector(0.f, 0.f, 150.f));
 	LabelWidget->SetTwoSided(true);
+	
+	PinWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("PinWidget"));
+	PinWidget->SetupAttachment(Mesh);
+	PinWidget->SetWidgetSpace(EWidgetSpace::World);
+	PinWidget->SetDrawSize(FVector2D(100.f, 100.f));
+	PinWidget->SetRelativeLocation(FVector(-106,0,146));
+	PinWidget->SetRelativeRotation(FRotator(120,180,180));
+	PinWidget->SetTwoSided(true);
+	
+	FloorWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FloorWidget"));
+	FloorWidget->SetupAttachment(Mesh);
+	FloorWidget->SetWidgetSpace(EWidgetSpace::World);
+	FloorWidget->SetDrawSize(FVector2D(320.f, 120.f));
+	FloorWidget->SetRelativeLocation(FVector(0.f, 0.f, 10.f));
+	FloorWidget->SetRelativeLocation(FVector(0.f, 90.f, 0.f));
+	FloorWidget->SetTwoSided(true);
 }
 
 void APBChoiceNodeActor::SetupNode(EPBChoiceNodeType InNodeType, int32 InPointIndex)

@@ -31,6 +31,22 @@ public:
 	void ClearNodes();
 
 private:
+	void GenerateRandomNodeTypes(
+		USplineComponent* LeftSpline,
+		USplineComponent* RightSpline);
+
+	void GenerateRandomNodeTypesForRoute(
+		USplineComponent* TargetSpline,
+		TMap<int32, EPBChoiceNodeType>& OutNodeTypes);
+
+	EPBChoiceNodeType GetRandomNormalNodeType() const;
+
+private:
+	UPROPERTY(EditAnywhere, Category = "Choice Node|Random")
+	bool bUseRandomNodeTypes = true;
+	
+	
+private:
 	void BuildNodesFromSpline(
 		EPBChoiceRouteSide RouteSide,
 		USplineComponent* TargetSpline);
@@ -66,4 +82,6 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = "Choice Node")
 	TMap<int32, EPBChoiceNodeType> RightNodeTypes;
+	
+	
 };

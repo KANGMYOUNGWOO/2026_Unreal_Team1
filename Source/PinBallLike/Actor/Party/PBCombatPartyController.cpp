@@ -17,6 +17,8 @@
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/Relic/PBRelicSubsystem.h"
+#include "PinBallLike/Relic/PBRelicCalculator.h"
 
 APBCombatPartyController::APBCombatPartyController()
 {
@@ -257,6 +259,8 @@ void APBCombatPartyController::InitializeFromDeck()
 
 void APBCombatPartyController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UnbindRelicEvents();
+	
 	ClearPartyRoles();
 	DestroyPartyBalls();
 	Super::EndPlay(EndPlayReason);
@@ -321,6 +325,9 @@ bool APBCombatPartyController::IsLauncherActive() const
 void APBCombatPartyController::SetPartyBalls(const TArray<TObjectPtr<APBBallBase>>& InPartyBalls)
 {
 	PartyBalls = InPartyBalls;
+	
+	RefreshPartyRelicStats();
+	
 	RebuildPartyRoles();
 }
 
@@ -392,6 +399,13 @@ void APBCombatPartyController::DestroyPartyBalls()
 	PartyBalls.Reset();
 	LeaderBall = nullptr;
 	FollowerBalls.Reset();
+}
+
+void APBCombatPartyController::BeginPlay()
+{
+	AActor::BeginPlay();
+	
+	BindRelicEvents();
 }
 
 void APBCombatPartyController::RebuildPartyRoles()
@@ -503,4 +517,85 @@ APBBallBase* APBCombatPartyController::FindPartyBallByInstanceId(const int32 Bal
 	}
 
 	return nullptr;
+}
+
+void APBCombatPartyController::BindRelicEvents()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	UPBRelicSubsystem* RelicSubsystem =
+		GameInstance->GetSubsystem<UPBRelicSubsystem>();
+
+	if (!RelicSubsystem)
+	{
+		return;
+	}
+
+	RelicSubsystem->OnRelicsChanged.AddUObject(
+		this,
+		&APBCombatPartyController::HandleRelicsChanged);
+}
+
+void APBCombatPartyController::UnbindRelicEvents()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	UPBRelicSubsystem* RelicSubsystem =
+		GameInstance->GetSubsystem<UPBRelicSubsystem>();
+
+	if (!RelicSubsystem)
+	{
+		return;
+	}
+
+	RelicSubsystem->OnRelicsChanged.RemoveAll(this);
+}
+
+void APBCombatPartyController::HandleRelicsChanged()
+{
+	RefreshPartyRelicStats();
+}
+
+void APBCombatPartyController::RefreshPartyRelicStats()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	UPBRelicSubsystem* RelicSubsystem =
+		GameInstance->GetSubsystem<UPBRelicSubsystem>();
+
+	if (!RelicSubsystem)
+	{
+		return;
+	}
+
+	const UPBRelicCalculator* RelicCalculator =
+		RelicSubsystem->GetCalculator();
+
+	if (!IsValid(RelicCalculator))
+	{
+		return;
+	}
+
+	for (APBBallBase* Ball : GetValidPartyBalls())
+	{
+		if (!IsValid(Ball))
+		{
+			continue;
+		}
+
+		Ball->RefreshRelicStats(
+			RelicCalculator);
+	}
 }

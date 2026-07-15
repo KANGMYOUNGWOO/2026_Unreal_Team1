@@ -7,6 +7,7 @@
 
 class UStaticMeshComponent;
 class UWidgetComponent;
+class UTexture2D;
 
 UCLASS()
 class PINBALLLIKE_API APBChoiceNodeActor : public AActor
@@ -22,16 +23,31 @@ public:
 	EPBChoiceNodeType GetNodeType() const { return NodeType; }
 	int32 GetPointIndex() const { return PointIndex; }
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI")
+	TObjectPtr<UWidgetComponent> LabelWidget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI")
+	TObjectPtr<UWidgetComponent> PinWidget;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI")
+	TObjectPtr<UWidgetComponent> FloorWidget;;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI")
+	FText LabelName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI")
+	UTexture2D* FloorImage;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UI")
+	UTexture2D* PinImage;
+	
 private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> Mesh;
-
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UWidgetComponent> LabelWidget;
-
+	
 	UPROPERTY(EditAnywhere)
 	EPBChoiceNodeType NodeType = EPBChoiceNodeType::None;
-
+	
 	UPROPERTY()
 	int32 PointIndex = INDEX_NONE;
 };

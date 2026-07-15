@@ -7,9 +7,11 @@
 #include "PinBallLike/Interface/PBChoiceNodeAction.h"
 #include "PinBallLike/Struct/Choice/PBChoiceType.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
+#include  "PinBallLike/Struct/Choice/PBBettingResult.h"
 #include "PBBetActor.generated.h"
 
 class UPBBettingWidget;
+
 
 UCLASS()
 class PINBALLLIKE_API APBBetActor : public AActor , public IPBChoiceNodeAction
@@ -36,6 +38,21 @@ protected:
 	void HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message);
 
 	FGameplayMessageListenerHandle ExitStartHandle;
+	
+public:
+	void BindWidget(UPBBettingWidget* InWidget);
+
+private:
+	UFUNCTION()
+	void HandleBetSelected(int32 SelectedIndex);
+
+	FPBBettingResult ResolveBet(int32 SelectedIndex);
+
+	void FinishBet(const FPBBettingResult& Result);
+
+private:
+	UPROPERTY()
+	TObjectPtr<UPBBettingWidget> BettingWidget;
 	
 public:	
 	// Called every frame
