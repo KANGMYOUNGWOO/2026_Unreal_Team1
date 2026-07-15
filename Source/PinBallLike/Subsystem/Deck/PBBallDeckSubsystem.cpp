@@ -5,6 +5,7 @@
 
 #include "PBBallDeckAssetLoadService.h"
 #include "PBBallDeckFusionService.h"
+#include "PBBallDeckSynergyService.h"
 
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
@@ -28,6 +29,22 @@ void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		AssetLoadService->Initialize(this);
 	}
+
+	SynergyService = NewObject<UPBBallDeckSynergyService>(this);
+	if (SynergyService)
+	{
+		SynergyService->Initialize(this);
+	}
+}
+
+void UPBBallDeckSubsystem::Deinitialize()
+{
+	if (SynergyService)
+	{
+		SynergyService->Deinitialize();
+	}
+
+	Super::Deinitialize();
 }
 
 int32 UPBBallDeckSubsystem::AddOwnedBall(FName BallId, int32 StarLevel)
@@ -455,6 +472,11 @@ UPBBallDeckFusionService* UPBBallDeckSubsystem::GetFusionService() const
 UPBBallDeckAssetLoadService* UPBBallDeckSubsystem::GetAssetLoadService() const
 {
 	return AssetLoadService;
+}
+
+UPBBallDeckSynergyService* UPBBallDeckSubsystem::GetSynergyService() const
+{
+	return SynergyService;
 }
 
 bool UPBBallDeckSubsystem::TryStartFusion()

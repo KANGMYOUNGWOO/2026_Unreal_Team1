@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/StreamableManager.h"
 #include "PBBallDeckFusionService.h"
+#include "PBBallDeckSynergyService.h"
 #include "PinBallLike/Struct/Ball/PBBallItemViewData.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
 #include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
@@ -28,6 +29,7 @@ class PINBALLLIKE_API UPBBallDeckSubsystem : public UGameInstanceSubsystem
 	
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 
 #pragma region Common
 
@@ -92,6 +94,7 @@ public:
 	UPBBallDeckFusionService* GetFusionService() const;
 
 	UPBBallDeckAssetLoadService* GetAssetLoadService() const;
+	UPBBallDeckSynergyService* GetSynergyService() const;
 
 	UFUNCTION(BlueprintCallable, Category = "BallDeck|Fusion")
 	bool TryStartFusion();
@@ -190,6 +193,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallDeckFusionService> FusionService;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBBallDeckSynergyService> SynergyService;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallDeckAssetLoadService> AssetLoadService;
