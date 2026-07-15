@@ -9,6 +9,7 @@
 
 class UPBBumperDataAsset;
 
+/** Bumper 시트의 행을 테이블과 런타임용 데이터 에셋으로 변환한다. */
 UCLASS()
 class PINBALLLIKEEDITOR_API UPBBumperTableParser : public UPBTableParserBase
 {
@@ -28,5 +29,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
 	FPBSheetAssetPathPreset IconPreset;
 
-	UPBBumperDataAsset* SetupBumperDataAsset(FName RowName) const;
+	/** 선행 로드된 Trigger/Effect의 Blueprint 클래스를 Bumper 데이터 에셋에 연결한다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset TriggerClassPreset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset EffectClassPreset;
+
+	UPBBumperDataAsset* SetupBumperDataAsset(FName RowName, FName TriggerId, FName EffectId) const;
 };

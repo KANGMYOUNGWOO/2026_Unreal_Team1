@@ -66,7 +66,7 @@ void UPBBumperEffectTableParser::UpdateLinkedBumperDataAssets(const FName Effect
 		}
 
 		UPBBumperDataAsset* BumperDataAsset =
-			GetOrCreateDataAsset<UPBBumperDataAsset>(BumperDataAssetPreset, RowPair.Key, TEXT("Effect"));
+			FindObject<UPBBumperDataAsset>(BumperDataAssetPreset, RowPair.Key).LoadSynchronous();
 		if (IsValid(BumperDataAsset))
 		{
 			BumperDataAsset->EffectClass = EffectClass;

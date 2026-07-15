@@ -5,6 +5,8 @@
 
 #include "PBSheetParserUtils.h"
 #include "Engine/Texture2D.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
+#include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 
@@ -16,6 +18,10 @@ UPBBumperTableParser::UPBBumperTableParser()
 	DataAssetPreset.NameFormat = TEXT("DA_Bumper_{0}");
 	IconPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon");
 	IconPreset.NameFormat = TEXT("T_{0}");
+	TriggerClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Trigger");
+	TriggerClassPreset.NameFormat = TEXT("BP_{0}");
+	EffectClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Effect");
+	EffectClassPreset.NameFormat = TEXT("BP_{0}");
 }
 
 const TCHAR* UPBBumperTableParser::GetParserName() const
@@ -41,7 +47,10 @@ bool UPBBumperTableParser::ParseRow(const FName RowName, const TMap<FString, FSt
 		ParseIntValue(RowData.FindRef(TEXT("RequireTriggerCount")), 1),
 		1);
 	NewRow.EffectID = FName(*TrimCell(RowData.FindRef(TEXT("EffectID"))));
-	if (UPBBumperDataAsset* BumperDataAsset = SetupBumperDataAsset(RowName))
+	if (UPBBumperDataAsset* BumperDataAsset = SetupBumperDataAsset(
+		RowName,
+		NewRow.TriggerID,
+		NewRow.EffectID))
 	{
 		NewRow.BumperDataAsset = TSoftObjectPtr<UPBBumperDataAsset>(BumperDataAsset);
 	}
@@ -50,7 +59,10 @@ bool UPBBumperTableParser::ParseRow(const FName RowName, const TMap<FString, FSt
 	return true;
 }
 
-UPBBumperDataAsset* UPBBumperTableParser::SetupBumperDataAsset(const FName RowName) const
+UPBBumperDataAsset* UPBBumperTableParser::SetupBumperDataAsset(
+	const FName RowName,
+	const FName TriggerId,
+	const FName EffectId) const
 {
 	UPBBumperDataAsset* BumperDataAsset =
 		GetOrCreateDataAsset<UPBBumperDataAsset>(DataAssetPreset, RowName, TEXT("Bumper"));
@@ -63,6 +75,10 @@ UPBBumperDataAsset* UPBBumperTableParser::SetupBumperDataAsset(const FName RowNa
 	{
 		BumperDataAsset->Icon = FindObject<UTexture2D>(IconPreset, RowName);
 	}
+	BumperDataAsset->TriggerClass =
+		FindBlueprintClass<APBBumperTriggerActorBase>(TriggerClassPreset, TriggerId);
+	BumperDataAsset->EffectClass =
+		FindBlueprintClass<UPBBumperEffectBase>(EffectClassPreset, EffectId);
 
 	(void)BumperDataAsset->SetRowNameForImport(RowName);
 	(void)BumperDataAsset->MarkPackageDirty();

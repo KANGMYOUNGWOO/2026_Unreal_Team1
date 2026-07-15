@@ -81,8 +81,8 @@ TArray<FName> UPBPlayerDataSubsystem::GetEquippedBumperRowIds() const
 
 void UPBPlayerDataSubsystem::InitializeDefaultBumpersForTest()
 {
-	EquipBumper(EPBBumperSlotType::Rebound, PBBumperAssetIds::Bumper::Test01);
-	EquipBumper(EPBBumperSlotType::Side, PBBumperAssetIds::Bumper::Test02);
-	EquipBumper(EPBBumperSlotType::Top, PBBumperAssetIds::Bumper::Test03);
-	EquipBumper(EPBBumperSlotType::Special, PBBumperAssetIds::Bumper::Gate01);
+	EquipBumper(EPBBumperSlotType::Rebound, PBBumperAssetIds::Bumper::Rebound_PowerPush);
+	EquipBumper(EPBBumperSlotType::Side, PBBumperAssetIds::Bumper::Side_ShieldCharge);
+	EquipBumper(EPBBumperSlotType::Top, PBBumperAssetIds::Bumper::Top_ComboUp);
+	EquipBumper(EPBBumperSlotType::Special, PBBumperAssetIds::Bumper::Gate_SpeedUp);
 }

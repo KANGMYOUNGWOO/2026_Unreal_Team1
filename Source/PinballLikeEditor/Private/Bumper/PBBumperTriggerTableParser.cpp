@@ -63,7 +63,7 @@ void UPBBumperTriggerTableParser::UpdateLinkedBumperDataAssets(const FName Trigg
 		}
 
 		UPBBumperDataAsset* BumperDataAsset =
-			GetOrCreateDataAsset<UPBBumperDataAsset>(BumperDataAssetPreset, RowPair.Key, TEXT("Trigger"));
+			FindObject<UPBBumperDataAsset>(BumperDataAssetPreset, RowPair.Key).LoadSynchronous();
 		if (IsValid(BumperDataAsset))
 		{
 			BumperDataAsset->TriggerClass = TriggerClass;
