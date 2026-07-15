@@ -92,6 +92,37 @@ namespace PBSheetParserUtils
 		return static_cast<TEnum>(EnumValue);
 	}
 
+	template <typename TEnum>
+	TArray<TEnum> ParseEnumArray(const FString& Value)
+	{
+		TArray<TEnum> EnumValues;
+		TArray<FString> Tokens;
+		Value.ParseIntoArray(Tokens, TEXT(","), true);
+
+		const UEnum* Enum = StaticEnum<TEnum>();
+		if (!Enum)
+		{
+			return EnumValues;
+		}
+
+		for (const FString& Token : Tokens)
+		{
+			const FString TrimmedToken = TrimCell(Token);
+			if (IsUnsetValue(TrimmedToken))
+			{
+				continue;
+			}
+
+			const int64 EnumValue = Enum->GetValueByNameString(TrimmedToken);
+			if (EnumValue != INDEX_NONE)
+			{
+				EnumValues.Add(static_cast<TEnum>(EnumValue));
+			}
+		}
+
+		return EnumValues;
+	}
+
 	// 숫자 셀 파싱.
 	inline int32 ParseIntValue(const FString& Value, const int32 DefaultValue)
 	{

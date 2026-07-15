@@ -20,6 +20,7 @@ bool UPBSynergyTierTableParser::ParseRow(const FName RowName, const TMap<FString
 	FPBSynergyTierRow NewRow;
 	NewRow.SynergyId = ParseNameValue(RowData.FindRef(TEXT("SynergyId")));
 	NewRow.RequiredCount = FMath::Max(0, FMath::RoundToInt(ParseFloatValue(RowData.FindRef(TEXT("RequiredCount")), 0.0f)));
+	NewRow.SynergyEffectId = ParseNameValue(RowData.FindRef(TEXT("SynergyEffectId")));
 	NewRow.TierDescriptionKey = ParseNameValue(RowData.FindRef(TEXT("TierDescriptionKey")));
 
 	TargetTable->AddRow(RowName, NewRow);

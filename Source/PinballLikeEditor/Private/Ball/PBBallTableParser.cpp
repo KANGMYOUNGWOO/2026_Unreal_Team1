@@ -37,6 +37,8 @@ bool UPBBallTableParser::ParseRow(const FName RowName, const TMap<FString, FStri
 	NewRow.DisplayName = FText::FromString(RowData.FindRef(TEXT("DisplayName")));
 	NewRow.DescriptionKey = FText::FromString(RowData.FindRef(TEXT("DescriptionKey")));
 	NewRow.PowerFlipType = ParseEnumValue(RowData.FindRef(TEXT("PowerFlipType")), EPBPowerFlipType::Sword);
+	NewRow.RaceTypes = ParseEnumArray<EPBBallRaceType>(RowData.FindRef(TEXT("RaceTypes")));
+	NewRow.ClassType = ParseEnumValue(RowData.FindRef(TEXT("ClassType")), EPBBallClassType::Attacker);
 	NewRow.SynergyIds = ParseNameArray(RowData.FindRef(TEXT("SynergyIds")));
 	NewRow.DefaultSkillIds = ParseNameArray(RowData.FindRef(TEXT("DefaultSkillIds")));
 	NewRow.StarLevelId = FName(*TrimCell(RowData.FindRef(TEXT("StarLevelId"))));

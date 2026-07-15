@@ -16,5 +16,8 @@ struct PINBALLLIKE_API FPBSynergyTierRow : public FTableRowBase
 	int32 RequiredCount = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Synergy")
+	FName SynergyEffectId = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Synergy")
 	FName TierDescriptionKey = NAME_None;
 };
