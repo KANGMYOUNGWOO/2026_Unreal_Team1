@@ -1,11 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PBGolemBossTypes.h"
 #include "PBGolemBoss.generated.h"
 
 class APBGolemBossHand;
+struct FPBBattlePhaseChangedMessage;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBGolemHandsChangedSignature);
 
@@ -84,7 +86,12 @@ private:
 	void RequestIdleAnimationSync();
 	void StartHandsAutonomousMove();
 	void StopHandsAutonomousMove();
+	void ResetHandsToDefaultOffsets();
 	void DestroyGolemHands();
+	void RegisterBattlePhaseListener();
+	void UnregisterBattlePhaseListener();
+	void HandleBattlePhaseChangedMessage(FGameplayTag Channel, const FPBBattlePhaseChangedMessage& Message);
 
 	float GolemIdleAnimationSyncStartTime = 0.0f;
+	FGameplayMessageListenerHandle BattlePhaseChangedListenerHandle;
 };

@@ -4,6 +4,8 @@
 #include "PinBallLike/Actor/Boss/Component/PBBossGroggyComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
 #include "PinBallLike/Actor/Boss/Golem/Pattern/PBGolemBossPatternBase.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 
 APBGolemBoss::APBGolemBoss()
 {
@@ -17,6 +19,7 @@ void APBGolemBoss::BeginPlay()
 	Super::BeginPlay();
 
 	SpawnGolemHands();
+	RegisterBattlePhaseListener();
 	ResetGolemIdleAnimationSyncTime();
 	RequestIdleAnimationSync();
 	StartHandsAutonomousMove();
@@ -24,6 +27,7 @@ void APBGolemBoss::BeginPlay()
 
 void APBGolemBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UnregisterBattlePhaseListener();
 	DestroyGolemHands();
 
 	Super::EndPlay(EndPlayReason);
@@ -201,6 +205,59 @@ void APBGolemBoss::StopHandsAutonomousMove()
 	if (IsValid(RightHand))
 	{
 		RightHand->StopAutonomousMove();
+	}
+}
+
+void APBGolemBoss::ResetHandsToDefaultOffsets()
+{
+	StopHandsAutonomousMove();
+
+	if (IsValid(LeftHand))
+	{
+		LeftHand->EndPatternMovementLock();
+		LeftHand->ReturnToDefaultOffset(0.0f);
+	}
+
+	if (IsValid(RightHand))
+	{
+		RightHand->EndPatternMovementLock();
+		RightHand->ReturnToDefaultOffset(0.0f);
+	}
+}
+
+void APBGolemBoss::RegisterBattlePhaseListener()
+{
+	if (!UGameplayMessageSubsystem::HasInstance(this) || BattlePhaseChangedListenerHandle.IsValid())
+	{
+		return;
+	}
+
+	BattlePhaseChangedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePhaseChangedMessage>(
+		GameplayTags::Event_Battle_Phase_Changed,
+		this,
+		&APBGolemBoss::HandleBattlePhaseChangedMessage);
+}
+
+void APBGolemBoss::UnregisterBattlePhaseListener()
+{
+	if (!BattlePhaseChangedListenerHandle.IsValid())
+	{
+		return;
+	}
+
+	BattlePhaseChangedListenerHandle.Unregister();
+	BattlePhaseChangedListenerHandle = FGameplayMessageListenerHandle();
+}
+
+void APBGolemBoss::HandleBattlePhaseChangedMessage(
+	FGameplayTag Channel,
+	const FPBBattlePhaseChangedMessage& Message)
+{
+	static_cast<void>(Channel);
+
+	if (Message.NewPhase == EPBBattleLevelPhase::BallDeployment)
+	{
+		ResetHandsToDefaultOffsets();
 	}
 }
 
