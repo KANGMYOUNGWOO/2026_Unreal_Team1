@@ -132,10 +132,6 @@ void APBBallSkillActorBase::EnterFinishingState()
 		OwnerBall->OnDestroyed.RemoveDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
 	}
 	OnFinished();
-	if (!ShouldWaitForVisualCompletion())
-	{
-		CompleteSkill();
-	}
 }
 
 void APBBallSkillActorBase::EnterStoppingState()
@@ -145,10 +141,6 @@ void APBBallSkillActorBase::EnterStoppingState()
 		OwnerBall->OnDestroyed.RemoveDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
 	}
 	OnStopped();
-	if (!ShouldWaitForVisualCompletion())
-	{
-		CompleteSkill();
-	}
 }
 
 void APBBallSkillActorBase::EnterCompletedState()
@@ -182,9 +174,14 @@ bool APBBallSkillActorBase::IsTargetValid(const AActor* Target) const
 	return IsValid(Boss) && !Boss->IsDead();
 }
 
-bool APBBallSkillActorBase::ShouldWaitForVisualCompletion() const
+void APBBallSkillActorBase::OnFinished_Implementation()
 {
-	return GetClass()->ClassGeneratedBy != nullptr;
+	CompleteSkill();
+}
+
+void APBBallSkillActorBase::OnStopped_Implementation()
+{
+	CompleteSkill();
 }
 
 void APBBallSkillActorBase::BindDamageEvents(UPBTimedAreaDamageComponent* DamageComponent)

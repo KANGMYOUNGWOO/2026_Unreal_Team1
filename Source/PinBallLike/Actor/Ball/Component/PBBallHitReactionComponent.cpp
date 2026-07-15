@@ -6,15 +6,18 @@
 #include "PBBallPhysicsComponent.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "Engine/World.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Interface/StatProvider.h"
 #include "PinBallLike/Interface/BossInterface.h"
 #include "PinBallLike/Interface/Damageable.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
+#include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 
 
 UPBBallHitReactionComponent::UPBBallHitReactionComponent()
@@ -53,12 +56,13 @@ void UPBBallHitReactionComponent::EndPlay(const EEndPlayReason::Type EndPlayReas
 
 void UPBBallHitReactionComponent::HandleMovementHit(const FHitResult& Hit)
 {
-	ProcessBallContact(Hit.GetActor());
+	ProcessBallContact(Hit);
 }
 
-void UPBBallHitReactionComponent::ProcessBallContact(AActor* OtherActor)
+void UPBBallHitReactionComponent::ProcessBallContact(const FHitResult& Hit)
 {
 	AActor* Owner = GetOwner();
+	AActor* OtherActor = Hit.GetActor();
 	if (!Owner || !OtherActor || OtherActor == Owner || WasContactProcessedThisFrame(OtherActor))
 	{
 		return;
@@ -71,8 +75,20 @@ void UPBBallHitReactionComponent::ProcessBallContact(AActor* OtherActor)
 
 	const int32 Damage = StatProvider ? StatProvider->GetStat(PBStatNames::Attack) : 0;
 	IBossInterface::Execute_DamageToBoss(OtherActor, Damage);
+	
 	if (Damage > 0)
 	{
+		if (UGameplayMessageSubsystem::HasInstance(this))
+		{
+			FPBDamageLogMessage Message;
+			Message.LogType = EPBDamageLogType::Ball;
+			Message.DamageAmount = Damage;
+			Message.HitLocation = Hit.ImpactPoint;
+			UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+				GameplayTags::Event_UI_DamageLog_Requested,
+				Message);
+		}
+
 		ApplyManaGainOnDamage();
 	}
 

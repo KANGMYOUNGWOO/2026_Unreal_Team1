@@ -156,25 +156,20 @@ void AFlipper::SetIsMove(const bool bIsMove)
 
 void AFlipper::ApplyForceToMovableActors(const float DeltaTime, const float MotionAlpha)
 {
-	// 현재 Trigger 안에서 공통 이동 계약을 제공하는 Actor에게만 이번 프레임의 속도를 전달한다.
+	// 현재 Trigger 안에 있는 Ball에게만 이번 프레임의 속도를 전달한다.
 	if (DeltaTime <= 0.0f || MotionAlpha <= 0.0f)
 	{
 		return;
 	}
 
-	// 구체 클래스가 아니라 IMovable 구현 여부로 플리퍼와 상호작용할 대상을 결정한다.
+	// 플리퍼가 움직일때만 ball이 충돌하는지 연산함.
 	TArray<AActor*> OverlappingActors;
 	BallDetectTrigger->GetOverlappingActors(OverlappingActors);
 
 	for (AActor* OverlappingActor : OverlappingActors)
 	{
-		if (!IsValid(OverlappingActor))
-		{
-			continue;
-		}
-
 		IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(OverlappingActor);
-		if (!Movable)
+		if (!IsValid(OverlappingActor) || !Movable)
 		{
 			continue;
 		}
