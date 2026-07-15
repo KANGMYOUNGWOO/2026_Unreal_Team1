@@ -6,6 +6,8 @@
 #include "Components/SceneComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
+#include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBBumperTriggerActorBase::APBBumperTriggerActorBase()
 {
@@ -87,7 +89,7 @@ bool APBBumperTriggerActorBase::CanIncreaseTrigger() const
 		&& Bumper->CanAccumulateTrigger();
 }
 
-bool APBBumperTriggerActorBase::CanReactToBall() const
+bool APBBumperTriggerActorBase::CanReactToMovableActor() const
 {
 	return CurrentState != EPBBumperState::Disabled;
 }
@@ -113,16 +115,26 @@ void APBBumperTriggerActorBase::BeginPlay()
 	NotifyTriggerProgressChanged();
 }
 
-void APBBumperTriggerActorBase::IncreaseTrigger(APBBallBase* Ball, const FHitResult& TriggerHit)
+void APBBumperTriggerActorBase::IncreaseTrigger(
+	AActor* InteractionActor,
+	const FHitResult& TriggerHit)
 {
-	if (!IsValid(Ball) || !CanIncreaseTrigger())
+	if (!IsValid(InteractionActor)
+		|| !PBInterfaceUtils::FindInterface<IMovable>(InteractionActor)
+		|| !CanIncreaseTrigger())
 	{
 		return;
 	}
 
 	// 자식 액터가 감지한 판정을 범퍼 본체의 카운트 증가 흐름으로 전달한다.
-	OwnerBumper->HandleTriggerActorActivated(this, Ball, TriggerHit);
-	OnTriggerActivated(Ball, TriggerHit);
+	OwnerBumper->HandleTriggerActorActivated(this, InteractionActor, TriggerHit);
+	OnMovableActorTriggered(InteractionActor, TriggerHit);
+
+	// 이미 제작된 Blueprint의 Ball 타입 이벤트는 실제 Ball일 때 계속 호출한다.
+	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
+	{
+		OnTriggerActivated(Ball, TriggerHit);
+	}
 }
 
 bool APBBumperTriggerActorBase::AddTriggerProgress(const int32 Amount)

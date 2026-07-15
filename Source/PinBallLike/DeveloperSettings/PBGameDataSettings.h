@@ -19,6 +19,7 @@ public:
 	TSoftObjectPtr<UDataTable> CollectionTable;
 
 #pragma endregion
+	
 #pragma region Bumper
 	
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Bumper|Table")
@@ -105,9 +106,6 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
 	TSoftObjectPtr<UDataTable> SynergyTierTable;
-
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
-	TSoftObjectPtr<UDataTable> SynergyTierEffectTable;
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
 	TSoftObjectPtr<UDataTable> SynergyEffectTable;

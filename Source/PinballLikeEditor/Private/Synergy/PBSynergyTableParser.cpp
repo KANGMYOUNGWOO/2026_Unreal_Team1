@@ -1,7 +1,7 @@
 #include "Synergy/PBSynergyTableParser.h"
 
 #include "PBSheetParserUtils.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyRow.h"
+#include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
 
 using namespace PBSheetParserUtils;
 
@@ -20,16 +20,20 @@ const TCHAR* UPBSynergyTableParser::GetParserName() const
 
 UScriptStruct* UPBSynergyTableParser::GetRowStruct() const
 {
-	return FPBSynergyRow::StaticStruct();
+	return FPBSynergyTableRow::StaticStruct();
 }
 
 bool UPBSynergyTableParser::ParseRow(const FName RowName, const TMap<FString, FString>& RowData)
 {
-	FPBSynergyRow NewRow;
+	FPBSynergyTableRow NewRow;
 	NewRow.DisplayName = FText::FromString(TrimCell(RowData.FindRef(TEXT("DisplayName"))));
 	NewRow.DescriptionKey = ParseNameValue(RowData.FindRef(TEXT("Description")));
+	NewRow.SynergyKind = ParseEnumValue(RowData.FindRef(TEXT("SynergyKind")), EPBSynergyKind::Race);
+	NewRow.RuleType = ParseEnumValue(RowData.FindRef(TEXT("RuleType")), EPBSynergyRuleType::Stat);
 	NewRow.SortOrder = FMath::RoundToInt(ParseFloatValue(RowData.FindRef(TEXT("SortOrder")), 0.0f));
 
+	(void)SetupSynergyDataAsset(RowName, RowData);
+	
 	TargetTable->AddRow(RowName, NewRow);
 	return true;
 }
@@ -38,7 +42,7 @@ UPBSynergyDataAsset* UPBSynergyTableParser::SetupSynergyDataAsset(FName RowName,
 	const TMap<FString, FString>& RowData) const
 {
 	UPBSynergyDataAsset* SynergyDataAsset =
-	GetOrCreateDataAsset<UPBSynergyDataAsset>(DataAssetPreset, RowName, TEXT("SynergyData"));
+	GetOrCreateDataAsset<UPBSynergyDataAsset>(DataAssetPreset, RowName, TEXT("Synergy"));
 	if (!IsValid(SynergyDataAsset))
 	{
 		return nullptr;

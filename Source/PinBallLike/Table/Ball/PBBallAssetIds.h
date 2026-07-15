@@ -34,5 +34,6 @@ namespace PBBallAssetIds
 		inline const FName Circular_Blade(TEXT("Circular_Blade"));
 		inline const FName Charge_Laser(TEXT("Charge_Laser"));
 		inline const FName Buff_Test(TEXT("Buff_Test"));
+		inline const FName Summon_Test(TEXT("Summon_Test"));
 	}
 }

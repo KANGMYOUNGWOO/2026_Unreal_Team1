@@ -16,9 +16,9 @@ class PINBALLLIKE_API UPBSynergyDataAsset : public UPrimaryDataAsset
 public:
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "StatusEffect|Data")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Synergy|Data")
 	FName RowName = NAME_None;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "StatusEffect|Visual", meta = (AssetBundles = "UI"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Synergy|Visual", meta = (AssetBundles = "UI"))
 	TSoftObjectPtr<UTexture2D> Icon;
 };

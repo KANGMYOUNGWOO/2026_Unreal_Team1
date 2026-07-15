@@ -44,27 +44,27 @@ void APBModularBumperBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void APBModularBumperBase::HandleTriggerActorActivated(
 	APBBumperTriggerActorBase* TriggerActor,
-	APBBallBase* Ball,
+	AActor* InteractionActor,
 	const FHitResult& TriggerHit)
 {
-	if (!IsValid(TriggerActor) || !IsValid(Ball) || !CanAccumulateTrigger())
+	if (!IsValid(TriggerActor) || !IsValid(InteractionActor) || !CanAccumulateTrigger())
 	{
 		return;
 	}
 
-	AddTriggerCount(TriggerActor, Ball);
+	AddTriggerCount(TriggerActor, InteractionActor);
 }
 
-void APBModularBumperBase::ActivateBumper(APBBallBase* Ball)
+void APBModularBumperBase::ActivateBumper(AActor* InteractionActor)
 {
-	if (!IsValid(Ball) || !CanActivate())
+	if (!IsValid(InteractionActor) || !CanActivate())
 	{
 		return;
 	}
 
 	if (APBBumperTriggerActorBase* ReadyTrigger = FindReadyTrigger())
 	{
-		StartActivation(ReadyTrigger, Ball);
+		StartActivation(ReadyTrigger, InteractionActor);
 	}
 }
 
@@ -248,12 +248,12 @@ void APBModularBumperBase::InitializeBumper(
 
 void APBModularBumperBase::AddTriggerCount(
 	APBBumperTriggerActorBase* TriggerActor,
-	APBBallBase* Ball,
+	AActor* InteractionActor,
 	const int32 Amount)
 {
 	if (!IsValid(TriggerActor)
 		|| TriggerActor->GetOwnerBumper() != this
-		|| !IsValid(Ball)
+		|| !IsValid(InteractionActor)
 		|| !CanAccumulateTrigger()
 		|| Amount <= 0)
 	{
@@ -274,7 +274,7 @@ void APBModularBumperBase::AddTriggerCount(
 	if (bBecameReady)
 	{
 		OnBumperReady();
-		RequestActivation(TriggerActor, Ball);
+		RequestActivation(TriggerActor, InteractionActor);
 	}
 }
 
@@ -365,28 +365,30 @@ APBBumperTriggerActorBase* APBModularBumperBase::FindReadyTrigger() const
 
 void APBModularBumperBase::RequestActivation(
 	APBBumperTriggerActorBase* TriggerActor,
-	APBBallBase* Ball)
+	AActor* InteractionActor)
 {
-	if (!IsValid(TriggerActor) || !IsValid(Ball) || !TriggerActor->IsTriggerReady())
+	if (!IsValid(TriggerActor)
+		|| !IsValid(InteractionActor)
+		|| !TriggerActor->IsTriggerReady())
 	{
 		return;
 	}
 
 	if (RuntimeState.CurrentState == EPBBumperState::Idle && !ActiveTriggerActor.IsValid())
 	{
-		StartActivation(TriggerActor, Ball);
+		StartActivation(TriggerActor, InteractionActor);
 		return;
 	}
 
-	QueueActivation(TriggerActor, Ball);
+	QueueActivation(TriggerActor, InteractionActor);
 }
 
 void APBModularBumperBase::QueueActivation(
 	APBBumperTriggerActorBase* TriggerActor,
-	APBBallBase* Ball)
+	AActor* InteractionActor)
 {
 	if (!IsValid(TriggerActor)
-		|| !IsValid(Ball)
+		|| !IsValid(InteractionActor)
 		|| !TriggerActor->IsTriggerReady()
 		|| HasPendingActivationFor(TriggerActor))
 	{
@@ -394,7 +396,7 @@ void APBModularBumperBase::QueueActivation(
 	}
 
 	TriggerActor->SetTriggerProgressState(EPBBumperTriggerProgressState::Queued);
-	PendingActivations.Add({TriggerActor, Ball});
+	PendingActivations.Add({TriggerActor, InteractionActor});
 
 	if (EffectData.ExecutionPolicy == EPBBumperEffectExecutionPolicy::Immediate)
 	{
@@ -418,28 +420,30 @@ void APBModularBumperBase::QueueActivation(
 
 void APBModularBumperBase::StartActivation(
 	APBBumperTriggerActorBase* TriggerActor,
-	APBBallBase* Ball)
+	AActor* InteractionActor)
 {
-	if (!IsValid(TriggerActor) || !IsValid(Ball) || !TriggerActor->IsTriggerReady())
+	if (!IsValid(TriggerActor)
+		|| !IsValid(InteractionActor)
+		|| !TriggerActor->IsTriggerReady())
 	{
 		return;
 	}
 
 	if (RuntimeState.CurrentState != EPBBumperState::Idle || ActiveTriggerActor.IsValid())
 	{
-		QueueActivation(TriggerActor, Ball);
+		QueueActivation(TriggerActor, InteractionActor);
 		return;
 	}
 
 	ActiveTriggerActor = TriggerActor;
 	TriggerActor->SetTriggerProgressState(EPBBumperTriggerProgressState::Executing);
 	TriggerActor->SetTriggerState(EPBBumperState::Activated);
-	ExecuteActivation(Ball);
+	ExecuteActivation(InteractionActor);
 }
 
-void APBModularBumperBase::ExecuteActivation(APBBallBase* Ball)
+void APBModularBumperBase::ExecuteActivation(AActor* InteractionActor)
 {
-	if (!IsValid(Ball) || !ActiveTriggerActor.IsValid())
+	if (!IsValid(InteractionActor) || !ActiveTriggerActor.IsValid())
 	{
 		if (ActiveTriggerActor.IsValid())
 		{
@@ -449,7 +453,11 @@ void APBModularBumperBase::ExecuteActivation(APBBallBase* Ball)
 	}
 
 	SetBumperState(EPBBumperState::Activated);
-	OnBumperActivated(Ball);
+	OnMovableActorActivated(InteractionActor);
+	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
+	{
+		OnBumperActivated(Ball);
+	}
 	if (!ActiveTriggerActor.IsValid())
 	{
 		return;
@@ -457,11 +465,11 @@ void APBModularBumperBase::ExecuteActivation(APBBallBase* Ball)
 
 	if (IsValid(BumperEffect))
 	{
-		BumperEffect->ActivateEffect(this, Ball);
+		BumperEffect->ActivateEffectForActor(this, InteractionActor);
 		return;
 	}
 
-	ApplyBumperEffect(Ball);
+	ApplyBumperEffectToActor(InteractionActor);
 }
 
 void APBModularBumperBase::ScheduleNextPendingActivation()
@@ -510,11 +518,11 @@ void APBModularBumperBase::ProcessNextPendingActivation()
 			continue;
 		}
 
-		APBBallBase* Ball = PendingActivation.Ball.Get();
-		if (!IsValid(Ball))
+		AActor* InteractionActor = PendingActivation.InteractionActor.Get();
+		if (!IsValid(InteractionActor))
 		{
 			UE_LOG(LogTemp, Warning,
-				TEXT("[Bumper] Queued effect request discarded because Ball is invalid. Bumper=%s Trigger=%s"),
+				TEXT("[Bumper] Queued effect request discarded because the interaction Actor is invalid. Bumper=%s Trigger=%s"),
 				*GetNameSafe(this),
 				*GetNameSafe(TriggerActor));
 			TriggerActor->FinishTrigger();
@@ -522,7 +530,7 @@ void APBModularBumperBase::ProcessNextPendingActivation()
 			continue;
 		}
 
-		StartActivation(TriggerActor, Ball);
+		StartActivation(TriggerActor, InteractionActor);
 		return;
 	}
 }
@@ -580,6 +588,18 @@ void APBModularBumperBase::NotifyTriggerCountChanged()
 	RuntimeState.CurrentTriggerCount = GetCurrentTriggerCount();
 	OnBumperTriggerCountChanged.Broadcast(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
 	OnTriggerCountChanged(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
+}
+
+void APBModularBumperBase::ApplyBumperEffectToActor_Implementation(AActor* InteractionActor)
+{
+	// 기존 Ball Blueprint 구현은 그대로 재사용하고, 일반 Actor에 구현이 없으면 실행 레인을 해제한다.
+	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
+	{
+		ApplyBumperEffect(Ball);
+		return;
+	}
+
+	FinishActivation();
 }
 
 void APBModularBumperBase::ApplyBumperEffect_Implementation(APBBallBase* Ball)

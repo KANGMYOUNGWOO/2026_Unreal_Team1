@@ -27,6 +27,9 @@ public:
 	virtual void StartAction(APBModularBumperBase* Bumper, APBBallBase* Ball);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Summon")
+	virtual void StartActionForActor(APBModularBumperBase* Bumper, AActor* InteractionActor);
+
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Summon")
 	virtual void FinishAction();
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Summon")
@@ -37,6 +40,10 @@ public:
 
 protected:
 #pragma region Blueprint Events
+	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Summon")
+	void OnStartActionForActor(APBModularBumperBase* Bumper, AActor* InteractionActor);
+
+	/** 기존 Ball 타입 Blueprint 이벤트 핀 호환을 위해 유지한다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Summon")
 	void OnStartAction(APBModularBumperBase* Bumper, APBBallBase* Ball);
 

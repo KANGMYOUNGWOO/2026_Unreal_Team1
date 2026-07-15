@@ -16,14 +16,18 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRows.h"
+#include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectModifierRow.h"
+#include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectRow.h"
+#include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectTriggerRow.h"
+#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectModifierRow.h"
+#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectRow.h"
+#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectTriggerRow.h"
+#include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
+#include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicModifierRow.h"
 #include "PBTableDataSubsystem.generated.h"
 
-struct FPBStatusEffectTriggerRow;
-struct FPBStatusEffectModifierRow;
-struct FPBStatusEffectRow;
 class UDataTable;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBTableDataLoadEvent);
@@ -210,11 +214,10 @@ private:
 #pragma region Synergy
 
 public:
-	bool GetAllSynergyRows(TArray<FName>& OutRowNames, TArray<FPBSynergyRow>& OutRows) const;
-	bool FindSynergyRow(FName RowName, FPBSynergyRow& OutRow) const;
+	bool GetAllSynergyRows(TArray<FName>& OutRowNames, TArray<FPBSynergyTableRow>& OutRows) const;
+	bool FindSynergyRow(FName RowName, FPBSynergyTableRow& OutRow) const;
 	bool FindSynergyTierRow(FName RowName, FPBSynergyTierRow& OutRow) const;
 	bool GetSynergyTierRows(FName SynergyId, TArray<FPBSynergyTierRow>& OutRows) const;
-	bool GetSynergyTierEffectRows(FName SynergyTierId, TArray<FPBSynergyTierEffectRow>& OutRows) const;
 	bool FindSynergyEffectRow(FName RowName, FPBSynergyEffectRow& OutRow) const;
 	bool GetSynergyEffectModifierRows(FName SynergyEffectId, TArray<FPBSynergyEffectModifierRow>& OutRows) const;
 	bool GetSynergyEffectTriggerRows(FName SynergyEffectId, TArray<FPBSynergyEffectTriggerRow>& OutRows) const;

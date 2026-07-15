@@ -8,7 +8,8 @@
 UENUM(BlueprintType)
 enum class EPBPowerFlipType : uint8
 {
-	Sword,
-	Punch,
-	Archer
+	Sword = 0 UMETA(DisplayName = "Sword"),
+	Fighting = 1 UMETA(DisplayName = "Fighting"),
+	Shooting = 2 UMETA(DisplayName = "Shooting"),
+	Special = 3 UMETA(DisplayName = "Special")
 };

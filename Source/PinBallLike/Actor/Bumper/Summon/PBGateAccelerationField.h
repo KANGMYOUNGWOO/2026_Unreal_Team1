@@ -6,14 +6,13 @@
 #include "PinBallLike/Actor/Bumper/Summon/PBBumperSummonActor.h"
 #include "PBGateAccelerationField.generated.h"
 
-class APBBallBase;
 class UBoxComponent;
 class UPrimitiveComponent;
 class UStaticMeshComponent;
 
 /**
  * Gate 효과가 활성화하는 가속 영역이다.
- * 공이 영역에 새로 진입할 때 현재 진행 방향을 유지한 채 속도를 비율로 증가시킨다.
+ * IMovable Actor가 영역에 새로 진입할 때 현재 진행 방향을 유지한 채 속도를 비율로 증가시킨다.
  */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBGateAccelerationField : public APBBumperSummonActor
@@ -23,7 +22,9 @@ class PINBALLLIKE_API APBGateAccelerationField : public APBBumperSummonActor
 public:
 	APBGateAccelerationField();
 
-	virtual void StartAction(APBModularBumperBase* Bumper, APBBallBase* Ball) override;
+	virtual void StartActionForActor(
+		APBModularBumperBase* Bumper,
+		AActor* InteractionActor) override;
 	virtual void DeactivateSummon() override;
 
 	/** Effect 시트의 Power와 Effect BP의 지속시간을 실제 영역 설정으로 전달한다. */
@@ -45,11 +46,11 @@ protected:
 	float ActiveDuration = 5.0f;
 
 private:
-	TMap<TWeakObjectPtr<APBBallBase>, int32> OverlappingBallCounts;
+	TMap<TWeakObjectPtr<AActor>, int32> OverlappingActorCounts;
 	FTimerHandle ActiveDurationTimerHandle;
 
 	void SetFieldActive(bool bIsActive);
-	void ApplyAcceleration(APBBallBase* Ball) const;
+	void ApplyAcceleration(AActor* InteractionActor) const;
 	void HandleActiveDurationFinished();
 
 	UFUNCTION()

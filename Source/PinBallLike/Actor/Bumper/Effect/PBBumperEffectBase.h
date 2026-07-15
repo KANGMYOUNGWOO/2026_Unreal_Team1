@@ -9,6 +9,7 @@
 
 class APBBallBase;
 class APBModularBumperBase;
+class AActor;
 
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API UPBBumperEffectBase : public UObject
@@ -26,6 +27,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Effect")
 	virtual void ActivateEffect(APBModularBumperBase* Bumper, APBBallBase* Ball);
+
+	/** APBBallBase 상속 여부와 무관하게 효과 대상 Actor를 전달하는 공통 실행 경로다. */
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Effect")
+	virtual void ActivateEffectForActor(APBModularBumperBase* Bumper, AActor* InteractionActor);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Effect")
 	virtual void FinishEffect();
