@@ -59,25 +59,33 @@ void UPBCollectionSubsystem::HandleStartupGameDataLoaded()
 bool UPBCollectionSubsystem::ReloadCollectionData()
 {
 	TArray<FPBCollectionEntryData> LoadedEntries;
-	if (!BuildEntriesFromCollectionTable(LoadedEntries))
+	const bool bMetadataLoaded = BuildEntriesFromCollectionTable(LoadedEntries);
+	if (bMetadataLoaded)
 	{
-		// 일시적인 재로딩 실패가 이미 표시 중인 정상 데이터를 지우지 않게 합니다.
-		bIsDataReady = !Entries.IsEmpty();
-		return false;
+		Entries = MoveTemp(LoadedEntries);
+		RebuildLookupIndexes();
 	}
 
-	Entries = MoveTemp(LoadedEntries);
-	RebuildLookupIndexes();
-	bIsDataReady = true;
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
+		: nullptr;
+	bIsDataReady = IsValid(TableDataSubsystem) && TableDataSubsystem->IsTableDataReady();
+	if (!bIsDataReady)
+	{
+		return bMetadataLoaded;
+	}
+
 	UE_LOG(
 		LogTemp,
 		Log,
-		TEXT("[Collection] Catalog data reload completed. EntryCount=%d"),
+		TEXT("[Collection] Catalog source data is ready. MetadataLoaded=%s MetadataEntryCount=%d"),
+		bMetadataLoaded ? TEXT("true") : TEXT("false"),
 		Entries.Num());
 
 	OnCollectionDataReady.Broadcast(true);
 	OnCollectionEntryChanged.Broadcast(NAME_None);
-	return true;
+	return bMetadataLoaded;
 }
 
 TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntries(EPBCollectionCategory Category) const
@@ -306,15 +314,17 @@ FText UPBCollectionSubsystem::GetCategoryDisplayText(EPBCollectionCategory Categ
 	case EPBCollectionCategory::All:
 		return NSLOCTEXT("PBCollection", "CategoryAll", "전체");
 	case EPBCollectionCategory::Ball:
-		return NSLOCTEXT("PBCollection", "CategoryBall", "Ball");
+		return NSLOCTEXT("PBCollection", "CategoryBall", "볼");
 	case EPBCollectionCategory::Bumper:
-		return NSLOCTEXT("PBCollection", "CategoryBumper", "Bumper");
+		return NSLOCTEXT("PBCollection", "CategoryBumper", "범퍼");
 	case EPBCollectionCategory::Boss:
-		return NSLOCTEXT("PBCollection", "CategoryBoss", "Boss");
+		return NSLOCTEXT("PBCollection", "CategoryBoss", "보스");
 	case EPBCollectionCategory::Relic:
-		return NSLOCTEXT("PBCollection", "CategoryRelic", "Relic");
+		return NSLOCTEXT("PBCollection", "CategoryRelic", "유물");
 	case EPBCollectionCategory::Achievement:
 		return NSLOCTEXT("PBCollection", "CategoryAchievement", "업적");
+	case EPBCollectionCategory::Synergy:
+		return NSLOCTEXT("PBCollection", "CategorySynergy", "시너지");
 	default:
 		return FText::GetEmpty();
 	}

@@ -11,7 +11,8 @@ enum class EPBCollectionCategory : uint8
 	Bumper UMETA(DisplayName = "Bumper"),
 	Boss UMETA(DisplayName = "Boss"),
 	Relic UMETA(DisplayName = "Relic"),
-	Achievement UMETA(DisplayName = "Achievement")
+	Achievement UMETA(DisplayName = "Achievement"),
+	Synergy UMETA(DisplayName = "Synergy")
 };
 
 UENUM(BlueprintType)
