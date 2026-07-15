@@ -2,7 +2,6 @@
 
 #include "PBGateAccelerationBumperEffect.h"
 
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBGateAccelerationField.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
@@ -19,9 +18,9 @@ void UPBGateAccelerationBumperEffect::Initialize(APBModularBumperBase* InOwnerBu
 	ConfigureAccelerationField();
 }
 
-void UPBGateAccelerationBumperEffect::ActivateEffect(
+void UPBGateAccelerationBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
-	APBBallBase* Ball)
+	AActor* InteractionActor)
 {
 	if (!FMath::IsFinite(EffectData.Power) || EffectData.Power <= 0.0f)
 	{
@@ -32,12 +31,12 @@ void UPBGateAccelerationBumperEffect::ActivateEffect(
 		return;
 	}
 
-	if (!IsValid(Bumper) || !IsValid(Ball) || !IsValid(SpawnedSummonActor))
+	if (!IsValid(Bumper) || !IsValid(InteractionActor) || !IsValid(SpawnedSummonActor))
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("[Bumper] Gate acceleration activation context is invalid. Bumper=%s Ball=%s Field=%s"),
+			TEXT("[Bumper] Gate acceleration activation context is invalid. Bumper=%s Target=%s Field=%s"),
 			*GetNameSafe(Bumper),
-			*GetNameSafe(Ball),
+			*GetNameSafe(InteractionActor),
 			*GetNameSafe(SpawnedSummonActor));
 		FinishEffect();
 		return;
@@ -61,7 +60,7 @@ void UPBGateAccelerationBumperEffect::ActivateEffect(
 		return;
 	}
 
-	Super::ActivateEffect(Bumper, Ball);
+	Super::ActivateEffectForActor(Bumper, InteractionActor);
 }
 
 bool UPBGateAccelerationBumperEffect::ConfigureAccelerationField() const

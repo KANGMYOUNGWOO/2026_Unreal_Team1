@@ -21,6 +21,13 @@ void UPBBumperEffectBase::Initialize(APBModularBumperBase* InOwnerBumper)
 
 void UPBBumperEffectBase::ActivateEffect(APBModularBumperBase* Bumper, APBBallBase* Ball)
 {
+	ActivateEffectForActor(Bumper, Ball);
+}
+
+void UPBBumperEffectBase::ActivateEffectForActor(
+	APBModularBumperBase* Bumper,
+	AActor* InteractionActor)
+{
 	FinishEffect();
 }
 

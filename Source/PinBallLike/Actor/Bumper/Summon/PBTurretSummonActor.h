@@ -17,11 +17,17 @@ class PINBALLLIKE_API APBTurretSummonActor : public APBBumperSummonActor
 public:
 	APBTurretSummonActor();
 
-	virtual void StartAction(APBModularBumperBase* Bumper, APBBallBase* Ball) override;
+	virtual void StartActionForActor(
+		APBModularBumperBase* Bumper,
+		AActor* InteractionActor) override;
 	virtual void DeactivateSummon() override;
 
 protected:
 #pragma region Blueprint Events
+	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Summon|Turret")
+	void OnTurretActivatedForActor(APBModularBumperBase* Bumper, AActor* InteractionActor);
+
+	/** 기존 Ball 타입 Blueprint 이벤트 핀 호환을 위해 유지한다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Summon|Turret")
 	void OnTurretActivated(APBModularBumperBase* Bumper, APBBallBase* Ball);
 

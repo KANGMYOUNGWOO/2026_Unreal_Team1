@@ -7,7 +7,6 @@
 #include "PBCollisionBumperTriggerActor.generated.h"
 
 class UPrimitiveComponent;
-class APBBallBase;
 class UPBBumperReactionComponent;
 
 UCLASS(Blueprintable)
@@ -40,7 +39,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Collision", meta = (ClampMin = "0.0", Units = "cm/s"))
 	float BounceVelocityStrength = 1200.0f;
 
-	/** true면 Ball Overlap 기록 대신 충돌 지점이 Trigger Area 내부인지 검사한다. */
+	/** true면 Actor Overlap 기록 대신 충돌 지점이 Trigger Area 내부인지 검사한다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Collision")
 	bool bUseHitPointTriggerAreaValidation = false;
 
@@ -49,14 +48,14 @@ protected:
 	float TriggerAreaHitPointTolerance = 0.5f;
 
 private:
-	TMap<TWeakObjectPtr<APBBallBase>, int32> TriggeringBallOverlapCounts;
+	TMap<TWeakObjectPtr<AActor>, int32> TriggeringActorOverlapCounts;
 
 	void RegisterCollisionAreas();
 	void SetupCollisionArea(UPrimitiveComponent* CollisionArea);
 	void SetupTriggerArea(UPrimitiveComponent* TriggerArea);
-	bool IsBallInTriggerArea(APBBallBase* Ball) const;
+	bool IsActorInTriggerArea(AActor* InteractionActor) const;
 	bool IsHitPointInsideTriggerArea(const FVector& HitPoint) const;
-	void AddBounceVelocityToBall(APBBallBase* Ball, const FHitResult& Hit) const;
+	void AddBounceVelocityToActor(AActor* InteractionActor, const FHitResult& Hit) const;
 
 	UFUNCTION()
 	void HandleComponentHit(

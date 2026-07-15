@@ -72,7 +72,7 @@ public:
 	bool CanIncreaseTrigger() const;
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
-	bool CanReactToBall() const;
+	bool CanReactToMovableActor() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger")
 	void FinishTrigger();
@@ -88,9 +88,14 @@ protected:
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger", meta = (BlueprintProtected = "true"))
-	void IncreaseTrigger(APBBallBase* Ball, const FHitResult& TriggerHit);
+	void IncreaseTrigger(AActor* InteractionActor, const FHitResult& TriggerHit);
 
 #pragma region Blueprint Events
+	/** 새 이동 Actor 구현에서 사용하는 일반 이벤트다. */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Trigger")
+	void OnMovableActorTriggered(AActor* InteractionActor, const FHitResult& TriggerHit);
+
+	/** 기존 Ball 기반 Blueprint 그래프의 핀 호환을 위해 유지한다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Trigger")
 	void OnTriggerActivated(APBBallBase* Ball, const FHitResult& TriggerHit);
 #pragma endregion

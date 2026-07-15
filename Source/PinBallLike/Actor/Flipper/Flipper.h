@@ -6,7 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "Flipper.generated.h"
 
-class APBBallBase;
 class UBoxComponent;
 class USceneComponent;
 
@@ -31,7 +30,7 @@ protected:
 	float GetFlipperLength() const;
 	float CalculateDistanceAlpha(FVector WorldLocation) const;
 	FVector CalculateForceDirection(float DistanceAlpha) const;
-	void ApplyForceToBalls(float DeltaTime, float MotionAlpha);
+	void ApplyForceToMovableActors(float DeltaTime, float MotionAlpha);
 	void DrawForceDirectionDebug() const;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flipper|Launch")

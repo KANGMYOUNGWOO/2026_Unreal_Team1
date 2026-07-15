@@ -15,7 +15,9 @@ class PINBALLLIKE_API UPBSummonBumperEffect : public UPBBumperEffectBase
 
 public:
 	virtual void Initialize(APBModularBumperBase* InOwnerBumper) override;
-	virtual void ActivateEffect(APBModularBumperBase* Bumper, APBBallBase* Ball) override;
+	virtual void ActivateEffectForActor(
+		APBModularBumperBase* Bumper,
+		AActor* InteractionActor) override;
 	virtual void FinishEffect() override;
 	virtual void BeginDestroy() override;
 

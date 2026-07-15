@@ -19,7 +19,9 @@ public:
 	UPBGateAccelerationBumperEffect();
 
 	virtual void Initialize(APBModularBumperBase* InOwnerBumper) override;
-	virtual void ActivateEffect(APBModularBumperBase* Bumper, APBBallBase* Ball) override;
+	virtual void ActivateEffectForActor(
+		APBModularBumperBase* Bumper,
+		AActor* InteractionActor) override;
 
 protected:
 	/** 영역 지속시간. 가속률은 Effect 시트의 Power에서 읽는다. */
