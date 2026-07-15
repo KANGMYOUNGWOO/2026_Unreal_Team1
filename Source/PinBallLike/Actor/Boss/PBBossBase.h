@@ -154,7 +154,7 @@ public:
 	void NotifyBossDamaged(FName HitPointName, int32 DamageAmount);
 
 	// BossInterface를 통해 보스 데미지를 적용합니다.
-	virtual void DamageToBoss_Implementation(int32 DamageAmount) override;
+	virtual bool DamageToBoss_Implementation(int32 DamageAmount) override;
 	// BossInterface를 통해 그로기 진입 처리를 실행합니다.
 	virtual void OnGroggyTriggered_Implementation() override;
 	virtual void IncreaseGroggy_Implementation(int32 GroggyAmount) override;
