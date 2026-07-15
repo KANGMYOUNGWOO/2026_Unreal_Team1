@@ -47,9 +47,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
 	float DamageCooldownSeconds = 0.25f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
-	float PinballHitImpulseStrength = 500.0f;
-
 private:
 	UFUNCTION()
 	void HandleHitPartComponentHit(
@@ -61,7 +58,6 @@ private:
 
 	const UPBBossHitPartComponent* FindHitPartComponent(const UPrimitiveComponent* HitComponent) const;
 	void BindHitPartCollisionEvents();
-	void ApplyPinballHitImpulse(AActor* OtherActor, const FHitResult& Hit) const;
 	bool CanApplyDamage(FName HitPointName, int32 DamageAmount) const;
 	FName ResolveHitPointName() const;
 	bool CanApplyDamageRateLimit() const;
