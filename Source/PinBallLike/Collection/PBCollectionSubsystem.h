@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "PinBallLike/Struct/Collection/PBCollectionMessage.h"
+#include "PinBallLike/Struct/Collection/PBCollectionTabTypes.h"
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBCollectionSubsystem.generated.h"
@@ -15,8 +16,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	Message);
 
 /**
- * DT_Collection의 고정 데이터를 읽어 검색, 필터, 정렬 가능한 카탈로그로 제공합니다.
- * 발견/해금/완료 상태는 사용하지 않으며 모든 항목을 처음부터 공개합니다.
+ * 팀의 원본 게임 테이블을 카테고리별 카탈로그 데이터로 조합합니다.
+ * DT_Collection은 도감 전용 표시 메타데이터만 보충하며, 발견/해금/완료 상태는 사용하지 않습니다.
  */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionSubsystem : public UGameInstanceSubsystem
@@ -35,7 +36,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
 	FPBCollectionProgressChangedSignature OnCollectionProgressChanged;
 
-	/** DT_Collection을 읽어 실제 도감 항목을 준비한 뒤 발생합니다. */
+	/** 원본 게임 테이블을 조회할 준비가 끝난 뒤 발생합니다. DT_Collection 메타데이터는 선택 사항입니다. */
 	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
 	FPBCollectionDataReadySignature OnCollectionDataReady;
 
@@ -43,7 +44,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
 	FPBCollectionNotificationRequestedSignature OnCollectionNotificationRequested;
 
-	/** 준비된 DT_Collection을 다시 읽습니다. */
+	/** DT_Collection 표시 메타데이터를 다시 읽고 조회 인덱스를 갱신합니다. 원본 카탈로그 준비 여부와는 독립적입니다. */
 	UFUNCTION(BlueprintCallable, Category = "Collection|Data")
 	bool ReloadCollectionData();
 
@@ -64,6 +65,27 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Collection|Query")
 	TArray<int32> GetAvailableStarGrades() const;
+
+	/** 원본 Ball/Skill 테이블을 결합한 볼 탭 전용 표시 데이터입니다. */
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionBallDisplayData> GetBallCatalogEntries() const;
+
+	/** Synergy, Tier, Effect, Modifier, Trigger 테이블을 결합한 시너지 탭 전용 표시 데이터입니다. */
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionSynergyDisplayData> GetSynergyCatalogEntries() const;
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionRelicDisplayData> GetRelicCatalogEntries() const;
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionBumperDisplayData> GetBumperCatalogEntries() const;
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionBossDisplayData> GetBossCatalogEntries() const;
+
+	/** 도감 화면을 열기 전에 확인할 수 있는 원본 테이블 참조 오류 목록입니다. */
+	UFUNCTION(BlueprintPure, Category = "Collection|Validation")
+	TArray<FPBCollectionValidationIssue> GetCatalogValidationIssues() const;
 
 	/** 원본 시스템 식별자와 연결된 모든 도감 ID를 반환합니다. */
 	UFUNCTION(BlueprintPure, Category = "Collection|Source")
@@ -123,6 +145,15 @@ private:
 	const FPBCollectionEntryData* FindEntryData(FName CollectionId) const;
 
 	FPBCollectionDisplayData MakeDisplayData(const FPBCollectionEntryData& EntryData) const;
+	const FPBCollectionEntryData* FindEntryDataBySourceRow(
+		EPBCollectionCategory Category,
+		FName SourceRowName) const;
+	FPBCollectionItemSummary MakeItemSummary(
+		EPBCollectionCategory Category,
+		FName SourceRowName,
+		const FText& SourceDisplayName,
+		const FText& SourceDescription,
+		int32 DefaultSortOrder = 0) const;
 	bool DoesEntryMatchQuery(
 		const FPBCollectionEntryData& EntryData,
 		const FPBCollectionQuery& Query) const;
