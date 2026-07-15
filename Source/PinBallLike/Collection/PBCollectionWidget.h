@@ -178,7 +178,7 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> BossTabButton;
 
-	UPROPERTY(meta = (BindWidgetOptional))
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> RelicTabButton;
 
 	UPROPERTY(meta = (BindWidget))

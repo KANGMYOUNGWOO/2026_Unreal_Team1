@@ -121,13 +121,12 @@ bool UPBCollectionWidget::ValidateRequiredWidgetBindings() const
 	CheckBinding(DetailNameText, TEXT("DetailNameText"));
 	CheckBinding(DetailMetaText, TEXT("DetailMetaText"));
 	CheckBinding(DetailDescriptionText, TEXT("DetailDescriptionText"));
-	CheckBinding(DetailUnlockText, TEXT("DetailUnlockText"));
-	CheckBinding(DetailRecordText, TEXT("DetailRecordText"));
 	CheckBinding(DetailAccentBorder, TEXT("DetailAccentBorder"));
 	CheckBinding(AllTabButton, TEXT("AllTabButton"));
 	CheckBinding(BallTabButton, TEXT("BallTabButton"));
 	CheckBinding(BumperTabButton, TEXT("BumperTabButton"));
 	CheckBinding(BossTabButton, TEXT("BossTabButton"));
+	CheckBinding(RelicTabButton, TEXT("RelicTabButton"));
 	CheckBinding(AchievementTabButton, TEXT("AchievementTabButton"));
 	CheckBinding(CloseButton, TEXT("CloseButton"));
 
@@ -150,6 +149,16 @@ void UPBCollectionWidget::NativeConstruct()
 			Error,
 			TEXT("%s: EntryWidgetClass가 비어 있습니다. 도감 항목 Widget Blueprint를 지정해야 합니다."),
 			*GetName());
+	}
+
+	// 이전 WBP의 MVVM 바인딩을 깨지 않으면서 진행도 전용 영역은 화면에서 제거합니다.
+	if (DetailUnlockText)
+	{
+		DetailUnlockText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (DetailRecordText)
+	{
+		DetailRecordText->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
 	CollectionSubsystem = GetGameInstance()
@@ -332,10 +341,7 @@ void UPBCollectionWidget::PopulateFilterOptions()
 				EPBCollectionSortMode::StarGradeDesc),
 			TPair<FString, EPBCollectionSortMode>(
 				NSLOCTEXT("PBCollection", "SortStarAsc", "성급 낮은순").ToString(),
-				EPBCollectionSortMode::StarGradeAsc),
-			TPair<FString, EPBCollectionSortMode>(
-				NSLOCTEXT("PBCollection", "SortState", "진행순").ToString(),
-				EPBCollectionSortMode::StateDesc)
+				EPBCollectionSortMode::StarGradeAsc)
 		};
 
 		for (const TPair<FString, EPBCollectionSortMode>& SortOption : SortOptions)
@@ -516,10 +522,6 @@ void UPBCollectionWidget::SelectEntry(FName CollectionId)
 {
 	SelectedCollectionId = CollectionId;
 	RefreshDetail();
-	if (CollectionSubsystem)
-	{
-		CollectionSubsystem->MarkEntryAsSeen(CollectionId);
-	}
 }
 
 APlayerController* UPBCollectionWidget::ResolvePlayerController() const
