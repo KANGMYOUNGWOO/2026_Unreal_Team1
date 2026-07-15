@@ -33,7 +33,7 @@ private:
 	UFUNCTION()
 	void HandleMovementHit(const FHitResult& Hit);
 	
-	void ProcessBallContact(AActor* OtherActor);
+	void ProcessBallContact(const FHitResult& Hit);
 	void ApplyManaGainOnDamage();
 	void ApplyManaGainToBall(class APBBallBase* Ball) const;
 	APBCombatPartyController* FindOwningPartyController() const;

@@ -39,7 +39,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Collision", meta = (ClampMin = "0.0", Units = "cm/s"))
 	float BounceVelocityStrength = 1200.0f;
 
-	/** true면 Actor Overlap 기록 대신 충돌 지점이 Trigger Area 내부인지 검사한다. */
+	/** true면 Ball Overlap 기록 대신 충돌 지점이 Trigger Area 내부인지 검사한다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Collision")
 	bool bUseHitPointTriggerAreaValidation = false;
 
@@ -48,14 +48,14 @@ protected:
 	float TriggerAreaHitPointTolerance = 0.5f;
 
 private:
-	TMap<TWeakObjectPtr<AActor>, int32> TriggeringActorOverlapCounts;
+	TMap<TWeakObjectPtr<AActor>, int32> TriggeringBallOverlapCounts;
 
 	void RegisterCollisionAreas();
 	void SetupCollisionArea(UPrimitiveComponent* CollisionArea);
 	void SetupTriggerArea(UPrimitiveComponent* TriggerArea);
-	bool IsActorInTriggerArea(AActor* InteractionActor) const;
+	bool IsBallInTriggerArea(AActor* BallActor) const;
 	bool IsHitPointInsideTriggerArea(const FVector& HitPoint) const;
-	void AddBounceVelocityToActor(AActor* InteractionActor, const FHitResult& Hit) const;
+	void AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const;
 
 	UFUNCTION()
 	void HandleComponentHit(

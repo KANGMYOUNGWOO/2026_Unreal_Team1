@@ -42,6 +42,9 @@ public:
 	void DamageBoss(int32 DamageAmount);
 
 	UFUNCTION(exec)
+	void DamageBall();
+
+	UFUNCTION(exec)
 	void DamageGolemHand(FName HandName, int32 DamageAmount);
 
 	UFUNCTION(exec)
