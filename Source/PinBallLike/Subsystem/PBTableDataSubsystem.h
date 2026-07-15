@@ -15,6 +15,8 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
 #include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectModifierRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectRow.h"
@@ -61,6 +63,9 @@ public:
 		UDataTable* InStatusEffectTable,
 		UDataTable* InStatusEffectModifierTable,
 		UDataTable* InStatusEffectTriggerTable);
+	void SetEffectTables(
+		UDataTable* InEffectTable,
+		UDataTable* InEffectParamTable);
 	void SetSynergyTables(
 		UDataTable* InSynergyTable,
 		UDataTable* InSynergyTierTable,
@@ -208,6 +213,21 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> StatusEffectTriggerTable;
+
+#pragma endregion
+
+#pragma region Effect
+
+public:
+	bool FindEffectRow(FName RowName, FPBEffectTableRow& OutRow) const;
+	bool GetEffectParamRows(FName EffectId, TArray<FPBEffectParamRow>& OutRows) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> EffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> EffectParamTable;
 
 #pragma endregion
 

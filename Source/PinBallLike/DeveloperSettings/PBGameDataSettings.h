@@ -99,6 +99,16 @@ public:
 
 #pragma endregion
 
+#pragma region Effect
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> EffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> EffectParamTable;
+
+#pragma endregion
+
 #pragma region Synergy
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
