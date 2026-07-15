@@ -42,7 +42,7 @@ public:
 	void DamageBoss(int32 DamageAmount);
 
 	UFUNCTION(exec)
-	void BallDamage();
+	void DamageBall();
 
 private:
 	UGameInstance* GetCheatGameInstance() const;

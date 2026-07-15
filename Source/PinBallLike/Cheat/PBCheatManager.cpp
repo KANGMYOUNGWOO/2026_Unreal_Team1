@@ -174,12 +174,12 @@ void UPBCheatManager::DamageBoss(const int32 DamageAmount)
 	UE_LOG(LogTemp, Log, TEXT("[Cheat] DamageBoss succeeded. Damage=%d"), DamageAmount);
 }
 
-void UPBCheatManager::BallDamage()
+void UPBCheatManager::DamageBall()
 {
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Cheat] BallDamage failed. World is invalid."));
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] DamageBall failed. World is invalid."));
 		return;
 	}
 
@@ -200,7 +200,7 @@ void UPBCheatManager::BallDamage()
 	}
 
 	UE_LOG(LogTemp, Log,
-		TEXT("[Cheat] BallDamage finished. Damage=%d DamagedBalls=%d"),
+		TEXT("[Cheat] DamageBall finished. Damage=%d DamagedBalls=%d"),
 		DamageAmount,
 		DamagedBallCount);
 }
