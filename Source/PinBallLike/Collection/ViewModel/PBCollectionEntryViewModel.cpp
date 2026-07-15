@@ -4,15 +4,16 @@ void UPBCollectionEntryViewModel::SetDisplayData(const FPBCollectionDisplayData&
 {
 	UE_MVVM_SET_PROPERTY_VALUE(CollectionId, InDisplayData.CollectionId);
 	UE_MVVM_SET_PROPERTY_VALUE(DisplayName, InDisplayData.DisplayName);
-	UE_MVVM_SET_PROPERTY_VALUE(MetaText, FText::Format(
-		NSLOCTEXT("PBCollection", "EntryMetaFormat", "{0} · {1} · {2}성"),
-		InDisplayData.CategoryText,
-		InDisplayData.StateText,
-		FText::AsNumber(InDisplayData.StarGrade)));
+	UE_MVVM_SET_PROPERTY_VALUE(MetaText, InDisplayData.StarGrade > 0
+		? FText::Format(
+			NSLOCTEXT("PBCollection", "EntryMetaFormat", "{0} · {1}성"),
+			InDisplayData.CategoryText,
+			FText::AsNumber(InDisplayData.StarGrade))
+		: InDisplayData.CategoryText);
 	UE_MVVM_SET_PROPERTY_VALUE(ShortDescription, InDisplayData.ShortDescription);
-	UE_MVVM_SET_PROPERTY_VALUE(CardColor, ResolveCardColor(InDisplayData.State));
-	UE_MVVM_SET_PROPERTY_VALUE(AccentColor, ResolveAccentColor(InDisplayData.Category, InDisplayData.State));
-	UE_MVVM_SET_PROPERTY_VALUE(CategoryColor, ResolveCategoryColor(InDisplayData.Category, InDisplayData.State));
+	UE_MVVM_SET_PROPERTY_VALUE(CardColor, ResolveCardColor());
+	UE_MVVM_SET_PROPERTY_VALUE(AccentColor, ResolveAccentColor(InDisplayData.Category));
+	UE_MVVM_SET_PROPERTY_VALUE(CategoryColor, ResolveCategoryColor(InDisplayData.Category));
 }
 
 void UPBCollectionEntryViewModel::Clear()
@@ -26,22 +27,14 @@ void UPBCollectionEntryViewModel::Clear()
 	UE_MVVM_SET_PROPERTY_VALUE(CategoryColor, FLinearColor::Transparent);
 }
 
-FLinearColor UPBCollectionEntryViewModel::ResolveCardColor(const EPBCollectionState State)
+FLinearColor UPBCollectionEntryViewModel::ResolveCardColor()
 {
-	return State == EPBCollectionState::Locked
-		? FLinearColor(0.05f, 0.055f, 0.07f, 0.92f)
-		: FLinearColor(0.07f, 0.105f, 0.13f, 0.96f);
+	return FLinearColor(0.07f, 0.105f, 0.13f, 0.96f);
 }
 
 FLinearColor UPBCollectionEntryViewModel::ResolveAccentColor(
-	const EPBCollectionCategory Category,
-	const EPBCollectionState State)
+	const EPBCollectionCategory Category)
 {
-	if (State == EPBCollectionState::Locked)
-	{
-		return FLinearColor(0.28f, 0.28f, 0.32f, 1.0f);
-	}
-
 	switch (Category)
 	{
 	case EPBCollectionCategory::Ball:
@@ -60,10 +53,9 @@ FLinearColor UPBCollectionEntryViewModel::ResolveAccentColor(
 }
 
 FLinearColor UPBCollectionEntryViewModel::ResolveCategoryColor(
-	const EPBCollectionCategory Category,
-	const EPBCollectionState State)
+	const EPBCollectionCategory Category)
 {
-	FLinearColor Color = ResolveAccentColor(Category, State);
-	Color.A = State == EPBCollectionState::Locked ? 0.48f : 0.94f;
+	FLinearColor Color = ResolveAccentColor(Category);
+	Color.A = 0.94f;
 	return Color;
 }

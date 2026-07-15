@@ -16,22 +16,19 @@ namespace PBBumperAssetIds
 	// RowNames for BumperTable
 	namespace Bumper
 	{
-		inline const FName BasicCombo(TEXT("BasicCombo"));
-		inline const FName Test01(TEXT("Test01"));
-		inline const FName Test02(TEXT("Test02"));
-		inline const FName Test03(TEXT("Test03"));
-		inline const FName Gate01(TEXT("Gate01"));
+		inline const FName Rebound_PowerPush(TEXT("Rebound_PowerPush"));
+		inline const FName Side_ShieldCharge(TEXT("Side_ShieldCharge"));
+		inline const FName Top_ComboUp(TEXT("Top_ComboUp"));
+		inline const FName Gate_SpeedUp(TEXT("Gate_SpeedUp"));
 	}
 
-	// RowNames forTriggerTable
+	// RowNames for TriggerTable
 	namespace Trigger
 	{
-		inline const FName Circle_Trigger_1(TEXT("Circle_Trigger_1"));
-		inline const FName Trigger_Test01(TEXT("Trigger_Test01"));
-		inline const FName Trigger_Test02(TEXT("Trigger_Test02"));
-		inline const FName Trigger_Test03(TEXT("Trigger_Test03"));
-		inline const FName Rebound_Trigger(TEXT("Rebound_Trigger"));
-		inline const FName GateBumper(TEXT("GateBumper"));
+		inline const FName Rebound_Trigger_PowerPush(TEXT("Rebound_Trigger_PowerPush"));
+		inline const FName Side_Trigger_ShieldCharge(TEXT("Side_Trigger_ShieldCharge"));
+		inline const FName Top_Trigger_ComboUp(TEXT("Top_Trigger_ComboUp"));
+		inline const FName Gate_Trigger_SpeedUp(TEXT("Gate_Trigger_SpeedUp"));
 	}
 
 	// RowNames for EffectTable

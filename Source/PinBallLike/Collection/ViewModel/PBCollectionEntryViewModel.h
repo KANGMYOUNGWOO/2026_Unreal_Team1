@@ -43,7 +43,7 @@ public:
 	FLinearColor CategoryColor = FLinearColor::Transparent;
 
 private:
-	static FLinearColor ResolveCardColor(EPBCollectionState State);
-	static FLinearColor ResolveAccentColor(EPBCollectionCategory Category, EPBCollectionState State);
-	static FLinearColor ResolveCategoryColor(EPBCollectionCategory Category, EPBCollectionState State);
+	static FLinearColor ResolveCardColor();
+	static FLinearColor ResolveAccentColor(EPBCollectionCategory Category);
+	static FLinearColor ResolveCategoryColor(EPBCollectionCategory Category);
 };

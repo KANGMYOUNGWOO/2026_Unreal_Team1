@@ -4,12 +4,9 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBCollectionGameEventSubsystem.generated.h"
 
-class UPBBallDeckSubsystem;
-class UPBCollectionSubsystem;
-
 /**
- * 게임 시스템의 안정적인 식별자 이벤트를 도감 진행도 API로 변환합니다.
- * 도감 데이터나 진행도를 직접 소유하지 않고, 팀원 시스템과 도감 사이의 연결만 담당합니다.
+ * 이전 Ball 소유 기반 도감 해금 연동 클래스입니다.
+ * Blueprint 직렬화 호환을 위해 클래스를 유지하지만 항상 공개형 도감에서는 이벤트를 구독하지 않습니다.
  */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionGameEventSubsystem : public UGameInstanceSubsystem
@@ -20,29 +17,7 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	/** 현재 덱에 배치된 Ball 소유 정보를 다시 읽어 도감 해금 상태와 맞춥니다. */
-	UFUNCTION(BlueprintCallable, Category = "Collection|Integration")
+	/** 항상 공개형 도감에서는 아무 작업도 하지 않는 이전 호환 API입니다. */
+	UFUNCTION(BlueprintCallable, Category = "Collection|Integration", meta = (DeprecatedFunction, DeprecationMessage = "도감은 Ball 소유 여부와 무관하게 모든 항목을 표시합니다."))
 	void SynchronizeCurrentBallOwnership();
-
-private:
-	UFUNCTION()
-	void HandleDeploymentSlotChanged(int32 SlotIndex, int32 BallInstanceId);
-
-	UFUNCTION()
-	void HandleBenchSlotChanged(int32 SlotIndex, int32 BallInstanceId);
-
-	UFUNCTION()
-	void HandleCollectionDataReady(bool bIsReady);
-
-	void UnlockBallByInstanceId(int32 BallInstanceId);
-	void UnlockBallBySourceId(FName BallId);
-
-	UPROPERTY(Transient)
-	TObjectPtr<UPBCollectionSubsystem> CollectionSubsystem;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UPBBallDeckSubsystem> BallDeckSubsystem;
-
-	/** 도감 데이터 준비 전에 획득한 Ball을 로드 완료 후 처리하기 위한 대기 집합입니다. */
-	TSet<FName> PendingBallIds;
 };
