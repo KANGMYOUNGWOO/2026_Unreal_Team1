@@ -44,6 +44,14 @@ UPBBossIntroWidget* UPBBossUIComponent::GetBossIntroWidget() const
 	return BossUILayer ? BossUILayer->GetBossIntroWidget() : nullptr;
 }
 
+void UPBBossUIComponent::ConfigureBossUILayerClass(TSoftClassPtr<UPBBossUILayerWidget> NewBossUILayerClass)
+{
+	if (!NewBossUILayerClass.IsNull())
+	{
+		BossUILayerClass = NewBossUILayerClass;
+	}
+}
+
 void UPBBossUIComponent::CreateBossUILayer()
 {
 	if (BossUILayer || BossUILayerClass.IsNull())

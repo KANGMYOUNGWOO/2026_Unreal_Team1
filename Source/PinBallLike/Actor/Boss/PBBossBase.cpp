@@ -316,6 +316,10 @@ void APBBossBase::InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAs
 	BossMovementType = BossDataAsset->BossMovementType;
 	GroggyDurationSeconds = FMath::Max(0.1f, BossDataAsset->GroggyDurationSeconds);
 	EnrageCameraShakeClass = BossDataAsset->EnrageCameraShakeClass.Get();
+	if (BossUIComponent && !BossDataAsset->BossUILayerClass.IsNull())
+	{
+		BossUIComponent->ConfigureBossUILayerClass(BossDataAsset->BossUILayerClass);
+	}
 
 	if (BossStatComponent)
 	{

@@ -6,7 +6,7 @@
 #include "PBSheetParserUtils.h"
 #include "Camera/CameraShakeBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
-#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
+#include "PinBallLike/Actor/Boss/UI/PBBossUILayerWidget.h"
 #include "PinBallLike/Table/Boss/DataAsset/PBBossDataAsset.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossTableRow.h"
 
@@ -38,8 +38,8 @@ UPBBossTableParser::UPBBossTableParser()
 	GolemBossClassPreset.NameFormat = TEXT("BP_{0}");
 	BossClassPresets.Add(GolemBossClassPreset);
 
-	BossStatusWidgetClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/UI");
-	BossStatusWidgetClassPreset.NameFormat = TEXT("WBP_{0}");
+	BossUILayerClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/UI");
+	BossUILayerClassPreset.NameFormat = TEXT("WBP_{0}");
 	EnrageCameraShakeClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/UI");
 	EnrageCameraShakeClassPreset.NameFormat = TEXT("BP_{0}");
 }
@@ -95,7 +95,7 @@ UPBBossDataAsset* UPBBossTableParser::SetupBossDataAsset(
 	}
 
 	const FName BossClassId = GetClassIdOrRowName(RowData, TEXT("BossClassID"), RowName);
-	const FName BossStatusWidgetClassId = GetClassIdOrRowName(RowData, TEXT("BossStatusWidgetClassID"), NAME_None);
+	const FName BossUILayerClassId = GetClassIdOrRowName(RowData, TEXT("BossUILayerClassID"), NAME_None);
 	const FName EnrageCameraShakeClassId = GetClassIdOrRowName(RowData, TEXT("EnrageCameraShakeClassID"), NAME_None);
 
 	BossDataAsset->BossName = FText::FromString(RowData.FindRef(TEXT("DisplayName")));
@@ -118,10 +118,14 @@ UPBBossDataAsset* UPBBossTableParser::SetupBossDataAsset(
 		BossDataAsset->BossClass = FindBossClass(BossClassId);
 	}
 
-	if (BossStatusWidgetClassPreset.IsValid() && !BossStatusWidgetClassId.IsNone())
+	if (BossUILayerClassPreset.IsValid() && !BossUILayerClassId.IsNone())
 	{
-		BossDataAsset->BossStatusWidgetClass =
-			FindBlueprintClass<UPBBossStatusWidget>(BossStatusWidgetClassPreset, BossStatusWidgetClassId);
+		BossDataAsset->BossUILayerClass =
+			FindBlueprintClass<UPBBossUILayerWidget>(BossUILayerClassPreset, BossUILayerClassId);
+	}
+	else
+	{
+		BossDataAsset->BossUILayerClass.Reset();
 	}
 
 	if (EnrageCameraShakeClassPreset.IsValid() && !EnrageCameraShakeClassId.IsNone())

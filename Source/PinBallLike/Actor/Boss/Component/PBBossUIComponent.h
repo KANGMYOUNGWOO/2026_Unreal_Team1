@@ -26,6 +26,7 @@ public:
 	void HideEnrageWarning();
 
 	UPBBossIntroWidget* GetBossIntroWidget() const;
+	void ConfigureBossUILayerClass(TSoftClassPtr<UPBBossUILayerWidget> NewBossUILayerClass);
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|UI Component")
