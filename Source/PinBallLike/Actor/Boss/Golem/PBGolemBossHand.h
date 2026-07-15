@@ -80,6 +80,9 @@ public:
 	void SetIsPunching(bool NewIsPunching);
 
 	UFUNCTION(BlueprintPure, Category = "Boss|Golem Hand Animation")
+	float GetPunchAlpha() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Golem Hand Animation")
 	float GetSyncedIdleAnimationPosition() const;
 
 	UFUNCTION(BlueprintPure, Category = "Boss|Golem Hand")

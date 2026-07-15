@@ -278,6 +278,11 @@ void APBGolemBossHand::SetIsPunching(bool NewIsPunching)
 	IsPunching = NewIsPunching;
 }
 
+float APBGolemBossHand::GetPunchAlpha() const
+{
+	return IsPunching ? 1.0f : 0.0f;
+}
+
 float APBGolemBossHand::GetSyncedIdleAnimationPosition() const
 {
 	return OwnerBoss ? OwnerBoss->GetSyncedGolemIdleAnimationPosition(IdleAnimationLength) : 0.0f;
