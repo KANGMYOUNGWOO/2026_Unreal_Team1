@@ -1,8 +1,8 @@
 #include "PBBossIntroComponent.h"
 
 #include "GameFramework/GameplayMessageSubsystem.h"
-#include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
+#include "PinBallLike/Actor/Boss/Component/PBBossUIComponent.h"
 #include "PinBallLike/Actor/Boss/UI/PBBossIntroWidget.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
@@ -10,8 +10,6 @@
 UPBBossIntroComponent::UPBBossIntroComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	BossIntroWidgetClass = TSoftClassPtr<UPBBossIntroWidget>(FSoftObjectPath(
-		TEXT("/Game/Blueprints/Boss/UI/WBP_BossIntro.WBP_BossIntro_C")));
 }
 
 void UPBBossIntroComponent::BeginPlay()
@@ -84,39 +82,25 @@ void UPBBossIntroComponent::HandleBattlePhaseChangedMessage(
 	IsBossIntroActive = true;
 	OnBossIntroStarted.Broadcast();
 
-	if (!BossIntroWidgetClass.IsNull())
-	{
-		CreateBossIntroWidget();
-		return;
-	}
-
-	CompleteBossIntro();
+	CreateBossIntroWidget();
 }
 
 void UPBBossIntroComponent::CreateBossIntroWidget()
 {
-	if (BossIntroWidget || BossIntroWidgetClass.IsNull())
+	if (BossIntroWidget)
 	{
 		return;
 	}
 
 	APBBossBase* Boss = Cast<APBBossBase>(GetOwner());
-	UWorld* World = GetWorld();
-	APlayerController* PlayerController = World ? World->GetFirstPlayerController() : nullptr;
-	if (!Boss || !PlayerController)
+	UPBBossUIComponent* BossUIComponent = Boss ? Boss->GetBossUIComponent() : nullptr;
+	if (!Boss || !BossUIComponent)
 	{
 		CompleteBossIntro();
 		return;
 	}
 
-	const TSubclassOf<UPBBossIntroWidget> LoadedWidgetClass = BossIntroWidgetClass.LoadSynchronous();
-	if (!LoadedWidgetClass)
-	{
-		CompleteBossIntro();
-		return;
-	}
-
-	BossIntroWidget = CreateWidget<UPBBossIntroWidget>(PlayerController, LoadedWidgetClass);
+	BossIntroWidget = BossUIComponent->GetBossIntroWidget();
 	if (!BossIntroWidget)
 	{
 		CompleteBossIntro();
@@ -125,7 +109,7 @@ void UPBBossIntroComponent::CreateBossIntroWidget()
 
 	BossIntroWidget->OnBossIntroFinished.AddUniqueDynamic(this, &UPBBossIntroComponent::HandleBossIntroFinished);
 	BossIntroWidget->SetBoss(Boss);
-	BossIntroWidget->AddToViewport(BossIntroWidgetZOrder);
+	BossIntroWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
 	BossIntroWidget->PlayBossIntroAnimation();
 }
 
@@ -137,8 +121,7 @@ void UPBBossIntroComponent::RemoveBossIntroWidget()
 	}
 
 	BossIntroWidget->OnBossIntroFinished.RemoveDynamic(this, &UPBBossIntroComponent::HandleBossIntroFinished);
-	BossIntroWidget->ClearBoss();
-	BossIntroWidget->RemoveFromParent();
+	BossIntroWidget->SetVisibility(ESlateVisibility::Collapsed);
 	BossIntroWidget = nullptr;
 }
 

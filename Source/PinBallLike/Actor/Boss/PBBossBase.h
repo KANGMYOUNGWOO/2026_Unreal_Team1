@@ -13,7 +13,6 @@ class UPBBossIntroComponent;
 class UPBBossPatternComponent;
 class UPBBossPinballReactionComponent;
 class UPBBossStatComponent;
-class UPBBossStatusWidget;
 class UPBBossUIComponent;
 class UPBBossWeaknessComponent;
 class UPBBossDataAsset;
@@ -230,12 +229,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Groggy", meta = (ClampMin = "0.1"))
 	float GroggyDurationSeconds = 3.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base UI")
-	TSubclassOf<UPBBossStatusWidget> BossStatusWidgetClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base UI", meta = (ClampMin = "0"))
-	int32 BossStatusWidgetZOrder = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Enrage")
 	TSubclassOf<UCameraShakeBase> EnrageCameraShakeClass;

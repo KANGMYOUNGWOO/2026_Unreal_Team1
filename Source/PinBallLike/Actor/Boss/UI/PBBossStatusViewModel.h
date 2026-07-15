@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/SlateWrapperTypes.h"
 #include "MVVMViewModelBase.h"
 #include "PBBossStatusViewModel.generated.h"
 
@@ -30,21 +29,6 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Boss|Status ViewModel")
 	float GroggyPercent = 0.0f;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Boss|Enrage ViewModel")
-	ESlateVisibility EnrageWarningVisibility = ESlateVisibility::Collapsed;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Boss|Enrage ViewModel")
-	FText EnrageWarningText = FText::FromString(TEXT("Warning!!"));
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Boss|Enrage ViewModel")
-	float VignetteOpacity = 0.0f;
-
-	UFUNCTION(BlueprintCallable, Category = "Boss|Enrage ViewModel")
-	void ShowEnrageWarning();
-
-	UFUNCTION(BlueprintCallable, Category = "Boss|Enrage ViewModel")
-	void HideEnrageWarning();
 
 protected:
 	virtual void BeginDestroy() override;

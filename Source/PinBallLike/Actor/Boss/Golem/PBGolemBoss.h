@@ -6,7 +6,6 @@
 #include "PBGolemBoss.generated.h"
 
 class APBGolemBossHand;
-class UPBGolemHandStatusWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBGolemHandsChangedSignature);
 
@@ -74,20 +73,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Animation", meta = (ClampMin = "0.1"))
 	float GolemIdleAnimationLength = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Hand UI")
-	TSubclassOf<UPBGolemHandStatusWidget> HandStatusWidgetClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Hand UI")
-	int32 HandStatusWidgetZOrder = 1;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem Hand")
 	TObjectPtr<APBGolemBossHand> LeftHand;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem Hand")
 	TObjectPtr<APBGolemBossHand> RightHand;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UPBGolemHandStatusWidget> HandStatusWidget;
 
 private:
 	APBGolemBossHand* SpawnGolemHand(EPBGolemBossHandType HandType, FVector HandOffset);
@@ -95,8 +85,6 @@ private:
 	void StartHandsAutonomousMove();
 	void StopHandsAutonomousMove();
 	void DestroyGolemHands();
-	void CreateHandStatusWidget();
-	void RemoveHandStatusWidget();
 
 	float GolemIdleAnimationSyncStartTime = 0.0f;
 };

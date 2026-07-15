@@ -1,94 +1,83 @@
 #include "PBBossUIComponent.h"
 
-#include "Blueprint/UserWidget.h"
 #include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
-#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
+#include "PinBallLike/Actor/Boss/UI/PBBossUILayerWidget.h"
 
 UPBBossUIComponent::UPBBossUIComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	BossUILayerClass = TSoftClassPtr<UPBBossUILayerWidget>(FSoftObjectPath(
+		TEXT("/Game/Blueprints/Boss/UI/WBP_BossLayer.WBP_BossLayer_C")));
 }
 
 void UPBBossUIComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	CreateBossStatusWidget();
+	CreateBossUILayer();
 }
 
 void UPBBossUIComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	RemoveBossStatusWidget();
-
+	RemoveBossUILayer();
 	Super::EndPlay(EndPlayReason);
-}
-
-void UPBBossUIComponent::CreateBossStatusWidget()
-{
-	if (BossStatusWidget || !BossStatusWidgetClass)
-	{
-		return;
-	}
-
-	APBBossBase* Boss = Cast<APBBossBase>(GetOwner());
-	if (!Boss)
-	{
-		return;
-	}
-
-	UWorld* World = GetWorld();
-	APlayerController* PlayerController = World ? World->GetFirstPlayerController() : nullptr;
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	BossStatusWidget = CreateWidget<UPBBossStatusWidget>(PlayerController, BossStatusWidgetClass);
-	if (!BossStatusWidget)
-	{
-		return;
-	}
-
-	BossStatusWidget->SetBoss(Boss);
-	BossStatusWidget->AddToViewport(BossStatusWidgetZOrder);
-}
-
-void UPBBossUIComponent::RemoveBossStatusWidget()
-{
-	if (!BossStatusWidget)
-	{
-		return;
-	}
-
-	BossStatusWidget->ClearBoss();
-	BossStatusWidget->RemoveFromParent();
-	BossStatusWidget = nullptr;
 }
 
 void UPBBossUIComponent::ShowEnrageWarning()
 {
-	if (BossStatusWidget)
+	if (BossUILayer)
 	{
-		BossStatusWidget->ShowEnrageWarning();
+		BossUILayer->ShowEnrageWarning();
 	}
 }
 
 void UPBBossUIComponent::HideEnrageWarning()
 {
-	if (BossStatusWidget)
+	if (BossUILayer)
 	{
-		BossStatusWidget->HideEnrageWarning();
+		BossUILayer->HideEnrageWarning();
 	}
 }
 
-void UPBBossUIComponent::ConfigureBossStatusWidget(TSubclassOf<UPBBossStatusWidget> NewBossStatusWidgetClass, int32 NewBossStatusWidgetZOrder)
+UPBBossIntroWidget* UPBBossUIComponent::GetBossIntroWidget() const
 {
-	BossStatusWidgetClass = NewBossStatusWidgetClass;
-	BossStatusWidgetZOrder = NewBossStatusWidgetZOrder;
+	return BossUILayer ? BossUILayer->GetBossIntroWidget() : nullptr;
+}
 
-	if (HasBegunPlay())
+void UPBBossUIComponent::CreateBossUILayer()
+{
+	if (BossUILayer || BossUILayerClass.IsNull())
 	{
-		CreateBossStatusWidget();
+		return;
 	}
+
+	APBBossBase* Boss = Cast<APBBossBase>(GetOwner());
+	UWorld* World = GetWorld();
+	APlayerController* PlayerController = World ? World->GetFirstPlayerController() : nullptr;
+	const TSubclassOf<UPBBossUILayerWidget> LoadedWidgetClass = BossUILayerClass.LoadSynchronous();
+	if (!Boss || !PlayerController || !LoadedWidgetClass)
+	{
+		return;
+	}
+
+	BossUILayer = CreateWidget<UPBBossUILayerWidget>(PlayerController, LoadedWidgetClass);
+	if (!BossUILayer)
+	{
+		return;
+	}
+
+	BossUILayer->SetBoss(Boss);
+	BossUILayer->AddToViewport();
+}
+
+void UPBBossUIComponent::RemoveBossUILayer()
+{
+	if (!BossUILayer)
+	{
+		return;
+	}
+
+	BossUILayer->ClearBoss();
+	BossUILayer->RemoveFromParent();
+	BossUILayer = nullptr;
 }

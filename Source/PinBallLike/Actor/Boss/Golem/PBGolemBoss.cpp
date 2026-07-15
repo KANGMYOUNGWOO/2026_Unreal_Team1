@@ -1,12 +1,9 @@
 #include "PBGolemBoss.h"
 
 #include "PBGolemBossHand.h"
-#include "Blueprint/UserWidget.h"
-#include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossGroggyComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
 #include "PinBallLike/Actor/Boss/Golem/Pattern/PBGolemBossPatternBase.h"
-#include "PinBallLike/Actor/Boss/Golem/UI/PBGolemHandStatusWidget.h"
 
 APBGolemBoss::APBGolemBoss()
 {
@@ -20,7 +17,6 @@ void APBGolemBoss::BeginPlay()
 	Super::BeginPlay();
 
 	SpawnGolemHands();
-	CreateHandStatusWidget();
 	ResetGolemIdleAnimationSyncTime();
 	RequestIdleAnimationSync();
 	StartHandsAutonomousMove();
@@ -28,7 +24,6 @@ void APBGolemBoss::BeginPlay()
 
 void APBGolemBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	RemoveHandStatusWidget();
 	DestroyGolemHands();
 
 	Super::EndPlay(EndPlayReason);
@@ -225,40 +220,4 @@ void APBGolemBoss::DestroyGolemHands()
 
 	LeftHand = nullptr;
 	RightHand = nullptr;
-}
-
-void APBGolemBoss::CreateHandStatusWidget()
-{
-	if (HandStatusWidget || !HandStatusWidgetClass)
-	{
-		return;
-	}
-
-	UWorld* World = GetWorld();
-	APlayerController* PlayerController = World ? World->GetFirstPlayerController() : nullptr;
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	HandStatusWidget = CreateWidget<UPBGolemHandStatusWidget>(PlayerController, HandStatusWidgetClass);
-	if (!HandStatusWidget)
-	{
-		return;
-	}
-
-	HandStatusWidget->SetGolemBoss(this);
-	HandStatusWidget->AddToViewport(HandStatusWidgetZOrder);
-}
-
-void APBGolemBoss::RemoveHandStatusWidget()
-{
-	if (!HandStatusWidget)
-	{
-		return;
-	}
-
-	HandStatusWidget->ClearGolemBoss();
-	HandStatusWidget->RemoveFromParent();
-	HandStatusWidget = nullptr;
 }

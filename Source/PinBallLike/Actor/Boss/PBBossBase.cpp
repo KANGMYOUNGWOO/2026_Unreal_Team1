@@ -15,7 +15,6 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Boss/StateTree/PBBossStateTreeTags.h"
-#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Table/Boss/DataAsset/PBBossDataAsset.h"
@@ -316,7 +315,6 @@ void APBBossBase::InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAs
 
 	BossMovementType = BossDataAsset->BossMovementType;
 	GroggyDurationSeconds = FMath::Max(0.1f, BossDataAsset->GroggyDurationSeconds);
-	BossStatusWidgetClass = BossDataAsset->BossStatusWidgetClass.Get();
 	EnrageCameraShakeClass = BossDataAsset->EnrageCameraShakeClass.Get();
 
 	if (BossStatComponent)
@@ -422,10 +420,6 @@ void APBBossBase::BeginPlay()
 		BossStateTreeComponent->StartLogic();
 	}
 
-	if (BossUIComponent && BossStatusWidgetClass)
-	{
-		BossUIComponent->ConfigureBossStatusWidget(BossStatusWidgetClass, BossStatusWidgetZOrder);
-	}
 }
 
 void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)

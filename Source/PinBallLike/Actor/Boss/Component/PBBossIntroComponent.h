@@ -28,12 +28,6 @@ public:
 	FPBBossIntroStartedSignature OnBossIntroStarted;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Intro")
-	TSoftClassPtr<UPBBossIntroWidget> BossIntroWidgetClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Intro", meta = (ClampMin = "0"))
-	int32 BossIntroWidgetZOrder = 100;
-
 private:
 	void RegisterBattlePhaseListener();
 	void UnregisterBattlePhaseListener();
