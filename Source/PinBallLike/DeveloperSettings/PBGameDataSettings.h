@@ -43,6 +43,13 @@ public:
 	
 #pragma endregion
 
+#pragma region Skill
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Skill|Table")
+	TSoftObjectPtr<UDataTable> SkillTable;
+
+#pragma endregion
+
 #pragma region Shop
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Shop|Table")
