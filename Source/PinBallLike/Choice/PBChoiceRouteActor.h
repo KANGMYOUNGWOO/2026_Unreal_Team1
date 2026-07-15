@@ -5,10 +5,15 @@
 #include "PBChoiceNodeTypes.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Struct/Choice/PBChoiceType.h"
+#include "Components/SplineMeshComponent.h"
 #include "PBChoiceRouteActor.generated.h"
 
 class USceneComponent;
 class USplineComponent;
+class USplineMeshComponent;
+class UStaticMesh;
+class UMaterialInterface;
+
 class APBChoiceBallActor;
 class APBChoiceNodeManager;
 class APBShopActor;
@@ -26,7 +31,6 @@ struct FPBChoiceNodeDestination
     TObjectPtr<AActor> ActionActor = nullptr;
 };
 
-
 UCLASS()
 class PINBALLLIKE_API APBChoiceRouteActor : public AActor
 {
@@ -42,21 +46,39 @@ public:
     void ChooseRight();
 
 protected:
+    virtual void OnConstruction(const FTransform& Transform) override;
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
 
 private:
-    void StartMove(USplineComponent* TargetSpline, EPBChoiceRouteSide RouteSide);
-    void MoveToNextPoint();
+    void BuildSplineMeshes(
+        USplineComponent* TargetSpline,
+        TArray<TObjectPtr<USplineMeshComponent>>& OutSplineMeshes,
+        const FString& ComponentNamePrefix);
 
+    void ClearSplineMeshes(
+        TArray<TObjectPtr<USplineMeshComponent>>& SplineMeshes);
+
+    void StartMove(
+        USplineComponent* TargetSpline,
+        EPBChoiceRouteSide RouteSide);
+
+    void MoveToNextPoint();
     void ApplyBallTransform(float DeltaTime);
     void ArriveAtPoint(int32 PointIndex);
 
     void OnReachPoint(EPBChoiceNodeType NodeType);
     void FinishMove();
 
-    void FadeToShop();
-    void OnFadeOutFinished();
+    void FadeToNodeDestination(EPBChoiceNodeType NodeType);
+    void OnFadeToDestinationFinished();
+
+    void HandleExitStart(
+        FGameplayTag Exit,
+        const FPBChoiceType& Message);
+
+    void FadeBackToBallAndMove();
+    void OnFadeBackToBallFinished();
 
 private:
     UPROPERTY(VisibleAnywhere)
@@ -67,6 +89,37 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Choice Route|Spline")
     TObjectPtr<USplineComponent> RightSpline;
+
+    /*
+     * 스플라인 구간에 휘어질 원본 메시입니다.
+     * 메시가 X축 방향으로 길게 만들어졌다면 ForwardAxis를 X로 설정합니다.
+     */
+    UPROPERTY(EditAnywhere, Category = "Choice Route|Spline Mesh")
+    TObjectPtr<UStaticMesh> RouteSplineMesh;
+
+    UPROPERTY(EditAnywhere, Category = "Choice Route|Spline Mesh")
+    TObjectPtr<UMaterialInterface> RouteSplineMaterial;
+
+    UPROPERTY(EditAnywhere, Category = "Choice Route|Spline Mesh")
+    TEnumAsByte<ESplineMeshAxis::Type> SplineMeshForwardAxis =
+        ESplineMeshAxis::X;
+
+    UPROPERTY(EditAnywhere, Category = "Choice Route|Spline Mesh")
+    FVector2D SplineMeshScale = FVector2D(1.f, 1.f);
+
+    UPROPERTY(EditAnywhere, Category = "Choice Route|Spline Mesh")
+    bool bSplineMeshCollisionEnabled = false;
+
+    UPROPERTY(EditAnywhere, Category = "Choice Route|Spline Mesh")
+    bool bSmoothInterpRollScale = true;
+    /*
+     * OnConstruction에서 생성한 컴포넌트를 추적하기 위한 배열입니다.
+     */
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<USplineMeshComponent>> LeftSplineMeshes;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<USplineMeshComponent>> RightSplineMeshes;
 
     UPROPERTY(EditAnywhere, Category = "Choice Route|Ball")
     TObjectPtr<APBChoiceBallActor> ChoiceBallActor;
@@ -79,7 +132,7 @@ private:
 
     UPROPERTY(EditAnywhere, Category = "Choice Route|Camera")
     TObjectPtr<AActor> OverviewCameraActor;
-    
+
     UPROPERTY(EditAnywhere, Category = "Choice Route|Move")
     float MoveSpeed = 500.f;
 
@@ -91,12 +144,9 @@ private:
 
     UPROPERTY(EditAnywhere, Category = "Choice Route|Camera")
     float FadeInTime = 0.5f;
-    
-    UPROPERTY(EditAnywhere, Category="Choice Route|Destination")
+
+    UPROPERTY(EditAnywhere, Category = "Choice Route|Destination")
     TMap<EPBChoiceNodeType, FPBChoiceNodeDestination> NodeDestinations;
-    
-    void FadeToNodeDestination(EPBChoiceNodeType NodeType);
-    void OnFadeToDestinationFinished();
 
     EPBChoiceNodeType PendingNodeType = EPBChoiceNodeType::None;
 
@@ -106,21 +156,15 @@ private:
     UPROPERTY()
     TObjectPtr<AActor> PendingActionActor;
 
-    FTimerHandle FadeToDestinationTimerHandle;
-    
     UPROPERTY()
     TObjectPtr<USplineComponent> CurrentSpline;
 
     UPROPERTY()
     TObjectPtr<UPBChoiceWidget> ChoiceWidget;
-    
+
     UPROPERTY(EditAnywhere, Category = "Choice Route|UI")
     TSubclassOf<UPBChoiceWidget> ChoiceWidgetClass;
-    
-    void HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message);
-    void FadeBackToBallAndMove();
-    void OnFadeBackToBallFinished();
-    
+
     EPBChoiceRouteSide CurrentRouteSide = EPBChoiceRouteSide::Left;
 
     int32 CurrentPointIndex = 0;
@@ -132,10 +176,7 @@ private:
     bool bMoving = false;
 
     FGameplayMessageListenerHandle ExitStartHandle;
-    
-    FTimerHandle FadeTimerHandle;
-    FTimerHandle FadeBackTimerHandle; 
-  
 
-   
+    FTimerHandle FadeToDestinationTimerHandle;
+    FTimerHandle FadeBackTimerHandle;
 };

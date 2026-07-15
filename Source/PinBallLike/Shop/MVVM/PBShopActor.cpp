@@ -106,11 +106,6 @@ void APBShopActor::OpenShop()
 
 		const FText Name = BallRow.DisplayName;
 
-		const FText Synergy =
-			BallRow.SynergyIds.Num() > 0
-				? FText::FromName(BallRow.SynergyIds[0])
-				: FText::GetEmpty();
-
 		// TODO: 가격은 나중에 ShopId 기반 ShopTable에서 가져오도록 교체
 		const int32 TempPrice = 100;
 
@@ -118,7 +113,7 @@ void APBShopActor::OpenShop()
 			i,
 			Name,
 			TempPrice,
-			Synergy
+			FText::GetEmpty()
 		);
 
 		LoadedMeshes.Add(CubeMesh);

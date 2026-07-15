@@ -19,6 +19,7 @@ public:
 	TSoftObjectPtr<UDataTable> CollectionTable;
 
 #pragma endregion
+	
 #pragma region Bumper
 	
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Bumper|Table")
@@ -57,6 +58,21 @@ public:
 	
 #pragma endregion
 
+	
+#pragma  region  Relic
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Relic|Table")
+	TSoftObjectPtr<UDataTable> RelicTable;
+	
+	UPROPERTY(Config,EditAnywhere,BlueprintReadOnly, Category = "Relic|Table")
+	TSoftObjectPtr<UDataTable> RelicModifierTable;
+	
+#pragma endregion 
+	
+#pragma  region Choice
+	UPROPERTY(EditDefaultsOnly, Config, Category="Choice|GameData")
+	TSoftObjectPtr<UDataTable> ChoiceTable;
+	
+#pragma endregion 
 #pragma region Boss
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Boss|Table")
@@ -90,9 +106,6 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
 	TSoftObjectPtr<UDataTable> SynergyTierTable;
-
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
-	TSoftObjectPtr<UDataTable> SynergyTierEffectTable;
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
 	TSoftObjectPtr<UDataTable> SynergyEffectTable;

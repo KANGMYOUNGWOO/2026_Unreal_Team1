@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "PinBallLike/Struct/Ball/PBBallClassType.h"
+#include "PinBallLike/Struct/Ball/PBBallRaceType.h"
 #include "PinBallLike/Struct/Ball/PBPowerFlipType.h"
 #include "PBBallTableRow.generated.h"
 
@@ -23,7 +25,10 @@ struct PINBALLLIKE_API FPBBallTableRow : public FTableRowBase
 	EPBPowerFlipType PowerFlipType = EPBPowerFlipType::Sword;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
-	TArray<FName> SynergyIds;
+	TArray<EPBBallRaceType> RaceTypes;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
+	EPBBallClassType ClassType = EPBBallClassType::Attacker;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
 	TArray<FName> DefaultSkillIds;
