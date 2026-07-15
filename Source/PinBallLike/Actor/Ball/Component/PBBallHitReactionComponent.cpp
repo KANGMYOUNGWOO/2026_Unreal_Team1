@@ -74,9 +74,9 @@ void UPBBallHitReactionComponent::ProcessBallContact(const FHitResult& Hit)
 	}
 
 	const int32 Damage = StatProvider ? StatProvider->GetStat(PBStatNames::Attack) : 0;
-	IBossInterface::Execute_DamageToBoss(OtherActor, Damage);
+	const bool bDamageApplied = IBossInterface::Execute_DamageToBoss(OtherActor, Damage);
 	
-	if (Damage > 0)
+	if (bDamageApplied)
 	{
 		if (UGameplayMessageSubsystem::HasInstance(this))
 		{
