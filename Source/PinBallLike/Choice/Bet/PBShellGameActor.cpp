@@ -7,7 +7,7 @@
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Struct/Choice/PBChoiceType.h"
-
+#include "Kismet/GameplayStatics.h"
 
 APBShellGameActor::APBShellGameActor()
 {
@@ -235,6 +235,17 @@ void APBShellGameActor::StartShellGame()
         TEXT("[ShellGame] Started. WinningCupIndex=%d"),
         WinningCupIndex);
 
+    APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+    if (!PC)
+    {
+        return;	
+    }
+    
+    PC->bShowMouseCursor = true;
+    PC->SetInputMode(FInputModeGameAndUI());
+    PC->bEnableClickEvents = true;
+    PC->bEnableMouseOverEvents = true;
+    
     StartShowingBall();
 }
 

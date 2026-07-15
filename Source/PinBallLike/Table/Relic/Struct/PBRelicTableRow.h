@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "PBRelicTypes.h"
+#include "PinBallLike/Struct/Relic/PBRelicTypes.h"
 #include "PBRelicTableRow.generated.h"
 
 USTRUCT(BlueprintType)
@@ -19,10 +19,5 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Relic")
 	EPBRelicRarity Rarity = EPBRelicRarity::Common;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Relic")
-	EPBRelicEffectType EffectType = EPBRelicEffectType::None;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Relic")
-	float EffectValue = 0.f;
+	
 };

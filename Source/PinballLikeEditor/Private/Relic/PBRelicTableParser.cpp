@@ -1,7 +1,8 @@
 ﻿
 #include "PinballLikeEditor/Public/Relic/PBRelicTableParser.h"
 #include "PBSheetParserUtils.h"
-#include "PinBallLike/Struct/Relic//PBRelicTableRow.h"
+#include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
+#include "PinBallLike/Struct/Relic/PBRelicTypes.h"
 
 using namespace PBSheetParserUtils;
 
@@ -22,25 +23,17 @@ bool UPBRelicTableParser::ParseRow(
 	FPBRelicTableRow NewRow;
 
 	NewRow.DisplayName =
-		FText::FromString(RowData.FindRef(TEXT("DisplayName")));
+		FText::FromString(
+			RowData.FindRef(TEXT("DisplayName")));
 
 	NewRow.Description =
-		FText::FromString(RowData.FindRef(TEXT("Description")));
+		FText::FromString(
+			RowData.FindRef(TEXT("Description")));
 
 	NewRow.Rarity =
 		ParseEnumValue(
 			RowData.FindRef(TEXT("Rarity")),
 			EPBRelicRarity::Common);
-
-	NewRow.EffectType =
-		ParseEnumValue(
-			RowData.FindRef(TEXT("EffectType")),
-			EPBRelicEffectType::None);
-
-	NewRow.EffectValue =
-		ParseFloatValue(
-			RowData.FindRef(TEXT("EffectValue")),
-			0.f);
 
 	TargetTable->AddRow(RowName, NewRow);
 

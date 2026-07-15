@@ -16,6 +16,7 @@ class UPBBallHitReactionComponent;
 class UPBBallPhysicsComponent;
 class UPBBallSkillComponent;
 class USphereComponent;
+class UPBRelicCalculator;
 
 UCLASS()
 class PINBALLLIKE_API APBBallBase : public AActor
@@ -45,9 +46,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball|Combat")
 	EPBBallPartyRole GetCombatRole() const { return CombatRole; }
 
-	UFUNCTION(BlueprintPure, Category = "Ball|Data")
-	int32 GetBallInstanceId() const { return BallInstanceData.InstanceId; }
-
 	UFUNCTION(BlueprintPure, Category = "Ball|Resource")
 	UPBBaseResourceComponent* GetResourceComponent() const { return ResourceComponent; }
 
@@ -56,6 +54,8 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill")
 	bool TryActivateSkill();
+	
+	void RefreshRelicStats(const UPBRelicCalculator* RelicCalculator);
 	
 protected:
 	virtual void BeginPlay() override;

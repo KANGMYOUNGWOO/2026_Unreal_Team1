@@ -2,7 +2,7 @@
 
 
 #include "PBBallBase.h"
-
+#include  "PinBallLike/Relic/PBRelicCalculator.h"
 #include "Component/PBBallHitReactionComponent.h"
 #include "Component/PBBallComboComponent.h"
 #include "Component/PBBallPhysicsComponent.h"
@@ -120,6 +120,33 @@ bool APBBallBase::TryActivateSkill()
 		return false;
 	}
 	return SkillComponent && SkillComponent->TryActivateSkill();
+}
+
+void APBBallBase::RefreshRelicStats(const UPBRelicCalculator* RelicCalculator)
+{
+	if (!IsValid(RelicCalculator) ||
+		!IsValid(StatComponent))
+	{
+		return;
+	}
+
+	for (const FPBStatData& BaseStat : BallInstanceData.BaseStats)
+	{
+		if (BaseStat.StatName.IsNone())
+		{
+			continue;
+		}
+
+		const int32 FinalValue =
+			RelicCalculator->CalculateBallStat(
+				BaseStat.StatName,
+				BaseStat.Value);
+
+		StatComponent->SetStat(
+			BaseStat.StatName,
+			FinalValue);
+	}
+	
 }
 
 void APBBallBase::BeginPlay()

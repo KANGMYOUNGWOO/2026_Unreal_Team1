@@ -51,7 +51,9 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath StatusEffectTablePath = Settings->StatusEffectTable.ToSoftObjectPath();
 	const FSoftObjectPath StatusEffectModifierTablePath = Settings->StatusEffectModifierTable.ToSoftObjectPath();
 	const FSoftObjectPath StatusEffectTriggerTablePath = Settings->StatusEffectTriggerTable.ToSoftObjectPath();
-
+	const FSoftObjectPath RelicTablePath = Settings->RelicTable.ToSoftObjectPath();
+    const FSoftObjectPath RelicModifierTablePath = Settings->RelicModifierTable.ToSoftObjectPath();
+	
 	if (CollectionTablePath.IsValid())
 	{
 		TablePaths.Add(CollectionTablePath);
@@ -112,6 +114,16 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 		TablePaths.Add(StatusEffectTriggerTablePath);
 	}
 
+	if(RelicTablePath.IsValid())
+	{
+		TablePaths.Add(RelicTablePath);
+	}
+	
+	if (RelicModifierTablePath.IsValid())
+	{
+		TablePaths.Add(RelicModifierTablePath);
+	}
+	
 	if (TablePaths.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[TableData] No startup table paths are configured."));
@@ -135,7 +147,8 @@ void UPBTableDataSubsystem::UnloadStartupGameData()
 	SetBallTables(nullptr, nullptr);
 	SetBossTables(nullptr, nullptr, nullptr);
 	SetStatusEffectTables(nullptr, nullptr, nullptr);
-
+	SetRelicTable(nullptr,nullptr);
+	
 	if (StartupGameDataLoadHandle.IsValid())
 	{
 		StartupGameDataLoadHandle->ReleaseHandle();
@@ -159,7 +172,9 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedStatusEffectTable = nullptr;
 	UDataTable* LoadedStatusEffectModifierTable = nullptr;
 	UDataTable* LoadedStatusEffectTriggerTable = nullptr;
-
+	UDataTable* LoadedRelicTable = nullptr;
+	UDataTable* LoadedRelicModifierTable = nullptr;
+	
 	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
 	if (IsValid(Settings))
 	{
@@ -176,6 +191,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedStatusEffectTable = Cast<UDataTable>(Settings->StatusEffectTable.Get());
 		LoadedStatusEffectModifierTable = Cast<UDataTable>(Settings->StatusEffectModifierTable.Get());
 		LoadedStatusEffectTriggerTable = Cast<UDataTable>(Settings->StatusEffectTriggerTable.Get());
+		LoadedRelicTable = Cast<UDataTable>(Settings->RelicTable.Get());
+		LoadedRelicModifierTable = Cast<UDataTable>(Settings->RelicModifierTable.Get());
 	}
 
 	for (const FSoftObjectPath& LoadedPath : LoadedPaths)
@@ -191,7 +208,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	SetBallTables(LoadedBallTable, LoadedBallStarLevelTable);
 	SetBossTables(LoadedBossTable, LoadedBossHitPointTable, LoadedBossPatternTable);
 	SetStatusEffectTables(LoadedStatusEffectTable, LoadedStatusEffectModifierTable, LoadedStatusEffectTriggerTable);
-
+	SetRelicTable(LoadedRelicTable,LoadedRelicModifierTable);
+	
 	UE_LOG(LogTemp, Log, TEXT("[TableData] Startup table data loaded. Ready=%s TableCount=%d"),
 		IsTableDataReady() ? TEXT("true") : TEXT("false"),
 		LoadedStartupTables.Num());
@@ -286,6 +304,13 @@ void UPBTableDataSubsystem::SetBossTables(
 		*GetNameSafe(BossTable),
 		*GetNameSafe(BossHitPointTable),
 		*GetNameSafe(BossPatternTable));
+}
+
+void UPBTableDataSubsystem::SetRelicTable(UDataTable* InRelicTable , UDataTable*  InRelicModifierTable)
+{
+	RelicTable = InRelicTable;
+	RelicModifierTable = InRelicModifierTable;
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Relic tables assigned."));
 }
 
 void UPBTableDataSubsystem::SetStatusEffectTables(
@@ -407,6 +432,7 @@ bool UPBTableDataSubsystem::FindShopRow(FName RowName, FPBShopTableRow& OutRow) 
 
 #pragma region Boss
 
+
 bool UPBTableDataSubsystem::FindBossRow(FName RowName, FPBBossTableRow& OutRow) const
 {
 	return FindTableRow(BossTable, RowName, OutRow, TEXT("FindBossRow"));
@@ -478,3 +504,58 @@ bool UPBTableDataSubsystem::GetStatusEffectTriggerRows(
 }
 
 #pragma endregion
+
+#pragma region Relic
+bool UPBTableDataSubsystem::FindRelicRow(FName RowName, FPBRelicTableRow& OutRow) const
+{
+	return FindTableRow(RelicTable,RowName,OutRow,TEXT("FindRelicRow"));
+}
+
+bool UPBTableDataSubsystem::FindRelicModifierRow(FName RowName, FPBRelicModifierRow OutRow) const
+{
+	return FindTableRow(RelicModifierTable,RowName,OutRow,TEXT("FindRelicModifierRow"));
+}
+
+void UPBTableDataSubsystem::GetRelicModifierRows(FName RelicId, TArray<FPBRelicModifierRow>& OutRows) const
+{
+	OutRows.Reset();
+
+	if (!RelicModifierTable)
+	{
+		return;
+	}
+
+	TArray<FPBRelicModifierRow*> Rows;
+
+	RelicModifierTable->GetAllRows<FPBRelicModifierRow>(
+		TEXT("GetRelicModifierRows"),
+		Rows);
+
+	for (const FPBRelicModifierRow* Row : Rows)
+	{
+		if (!Row)
+		{
+			continue;
+		}
+
+		if (Row->RelicId != RelicId)
+		{
+			continue;
+		}
+
+		OutRows.Add(*Row);
+	}
+}
+
+void UPBTableDataSubsystem::GetAllRelicIds(TArray<FName>& OutRelicIds) const
+{
+	OutRelicIds.Reset();
+
+	if (!RelicTable)
+	{
+		return;
+	}
+
+	OutRelicIds = RelicTable->GetRowNames();
+}
+#pragma endregion 

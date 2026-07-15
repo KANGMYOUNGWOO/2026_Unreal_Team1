@@ -27,3 +27,22 @@ enum class EPBRelicEffectType : uint8
 
 	BallSpeedMultiply
 };
+
+UENUM(BlueprintType)
+enum class EPBRelicTargetType : uint8
+{
+	None,
+	Ball,
+	Bumper,
+	Shop,
+	Boss,
+	Reward
+};
+
+UENUM(BlueprintType)
+enum class EPBRelicModifyType : uint8
+{
+	Add,
+	Multiply,
+	Set
+};

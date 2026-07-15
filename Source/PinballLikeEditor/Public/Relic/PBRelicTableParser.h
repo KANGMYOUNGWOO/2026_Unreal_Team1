@@ -12,6 +12,7 @@ class PINBALLLIKEEDITOR_API UPBRelicTableParser : public UPBTableParserBase
 
 protected:
 	virtual const TCHAR* GetParserName() const override;
+
 	virtual UScriptStruct* GetRowStruct() const override;
 	virtual bool ParseRow(FName RowName, const TMap<FString, FString>& RowData) override;
 	
