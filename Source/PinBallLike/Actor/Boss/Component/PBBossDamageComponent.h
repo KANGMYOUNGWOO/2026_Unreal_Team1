@@ -22,7 +22,7 @@ public:
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
-	void ApplyHitPartDamage(int32 DamageAmount);
+	bool ApplyHitPartDamage(int32 DamageAmount);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
 	void SetPinballCollisionDamageBlocked(bool IsBlocked);

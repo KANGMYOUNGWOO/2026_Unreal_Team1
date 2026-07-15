@@ -441,14 +441,14 @@ void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void APBBossBase::DamageToBoss_Implementation(int32 DamageAmount)
+bool APBBossBase::DamageToBoss_Implementation(int32 DamageAmount)
 {
 	if (!BossDamageComponent)
 	{
-		return;
+		return false;
 	}
 
-	BossDamageComponent->ApplyHitPartDamage(DamageAmount);
+	return BossDamageComponent->ApplyHitPartDamage(DamageAmount);
 }
 
 void APBBossBase::OnGroggyTriggered_Implementation()

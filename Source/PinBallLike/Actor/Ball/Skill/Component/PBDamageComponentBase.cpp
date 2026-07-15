@@ -39,7 +39,10 @@ bool UPBDamageComponentBase::ApplyDamage(AActor* Target, const int32 DamageAmoun
 
 	if (Target->GetClass()->ImplementsInterface(UBossInterface::StaticClass()))
 	{
-		IBossInterface::Execute_DamageToBoss(Target, DamageAmount);
+		if (!IBossInterface::Execute_DamageToBoss(Target, DamageAmount))
+		{
+			return false;
+		}
 	}
 	else
 	{

@@ -43,9 +43,11 @@ void APBGolemBossHand::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void APBGolemBossHand::DamageToBoss_Implementation(int32 DamageAmount)
+bool APBGolemBossHand::DamageToBoss_Implementation(int32 DamageAmount)
 {
+	const int32 PreviousHandHP = CurrentHandHP;
 	ApplyHandDamage(DamageAmount);
+	return CurrentHandHP < PreviousHandHP;
 }
 
 void APBGolemBossHand::InitializeGolemHand(
