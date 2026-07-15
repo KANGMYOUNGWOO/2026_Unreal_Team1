@@ -50,48 +50,41 @@ protected:
 private:
 	void SetChargePatternState(EPBBossSnakeChargePatternState NewState);
 	void StartAiming(APBBossBase* Boss);
-	void FinishAiming();
+	UFUNCTION()
+	void HandleChargeTelegraphFinished(FVector TargetLocation, FVector Direction);
 	float GetChargeTelegraphDurationSeconds() const;
 	void PrepareCharge(APBBossBase* Boss);
 	void RefreshChargeDirection(APBBossBase* Boss);
-	void ApplySnakeChargePose(APBBossBase* Boss, float Alpha) const;
+	void BuildChargePath(const FVector& TargetLocation);
+	FVector GetChargePathLocation(float Distance) const;
 	void SpawnChargeTelegraph(APBBossBase* Boss);
-	void StartChargeAim(float AimDurationSeconds);
-	void UpdateChargeAim();
-	void ClearChargeAimTimers();
-	void UpdateChargeTelegraph() const;
 	void StartCharge();
 	void UpdateCharge();
-	bool MoveBossByChargeDistance(
-		APBBossBase* Boss,
-		float ChargeDistance,
-		float& OutMovedDistance,
-		FHitResult& OutHitResult);
-	void HandleChargeBlocked(const FHitResult& Hit);
+	void MoveBossByChargeDistance(APBBossBase* Boss, float ChargeDistance);
+	void FinishCharge();
 	void StartRebound();
 	void UpdateRebound();
 	void FinishRebound();
 	void StartGroggy();
 	void FinishGroggy();
 	void ClearPatternTimers();
-	void ClearChargeTelegraphTimer();
 	void DestroyChargeTelegraph();
 	void SetPinballCollisionDamageBlocked(bool IsBlocked) const;
 
 	FVector ChargeStartLocation = FVector::ZeroVector;
+	FVector ChargeEndLocation = FVector::ZeroVector;
+	FRotator ChargeStartRotation = FRotator::ZeroRotator;
 	FVector ChargeDirection = FVector::ForwardVector;
+	float ChargePathLength = 0.0f;
 	float ChargeProgressDistance = 0.0f;
-	float ReboundProgressAlpha = 0.0f;
 	float ChargeAimElapsedSeconds = 0.0f;
 	float ChargeAimDurationSeconds = 0.0f;
 	float GroggyEndTimeSeconds = 0.0f;
 	float PausedGroggyRemainingSeconds = 0.0f;
+	bool IsChargeMovementStarted = false;
 
 	UPROPERTY(Transient)
 	TObjectPtr<class APBBossChargeTelegraph> SpawnedChargeTelegraph;
-
-	FTimerHandle ChargeAimTimerHandle;
-	FTimerHandle ChargeTelegraphTimerHandle;
 	FTimerHandle ChargeTimerHandle;
 	FTimerHandle ReboundTimerHandle;
 	FTimerHandle GroggyTimerHandle;

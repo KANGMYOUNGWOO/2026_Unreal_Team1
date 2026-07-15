@@ -72,6 +72,9 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<APBBossBase> OwnerBoss;
 
+	UPROPERTY(Transient)
+	TMap<TObjectPtr<UPrimitiveComponent>, TObjectPtr<UPBBossHitPartComponent>> HitPartByCollisionComponent;
+
 	float LastDamageTimeSeconds = -1.0f;
 	uint64 LastDamageFrameNumber = 0;
 	uint64 LastHitFrameNumber = 0;

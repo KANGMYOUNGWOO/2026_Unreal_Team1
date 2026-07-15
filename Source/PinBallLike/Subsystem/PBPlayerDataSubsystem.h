@@ -31,6 +31,11 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
 	int32 GetInitialBattleShiftCount() const { return InitialBattleShiftCount; }
+
+	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
+	int32 GetCurrentBossIndex() const { return CurrentBossIndex; }
+
+	void AdvanceBossProgress(int32 BossCount);
 #pragma endregion
 
 #pragma region Bumper
@@ -59,5 +64,8 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 InitialBattleShiftCount = 3;
+
+	UPROPERTY(Transient)
+	int32 CurrentBossIndex = 0;
 
 };

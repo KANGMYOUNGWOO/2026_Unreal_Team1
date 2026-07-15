@@ -6,7 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Pattern/PBBossPatternBase.h"
-#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
+#include "PinBallLike/Actor/Boss/UI/PBBossUILayerWidget.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossHitPointData.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossPatternData.h"
 #include "PBBossDataAsset.generated.h"
@@ -70,7 +70,7 @@ public:
 	TArray<FPBBossPatternData> EnragedEntryPatternDatas;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|UI", meta = (AssetBundles = "UI"))
-	TSoftClassPtr<UPBBossStatusWidget> BossStatusWidgetClass;
+	TSoftClassPtr<UPBBossUILayerWidget> BossUILayerClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|UI", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<UCameraShakeBase> EnrageCameraShakeClass;

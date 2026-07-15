@@ -152,6 +152,7 @@ private:
 #pragma region Boss
 
 public:
+	bool GetBossRowNames(TArray<FName>& OutRowNames) const;
 	bool FindBossRow(FName RowName, FPBBossTableRow& OutRow) const;
 	bool FindBossHitPointRow(FName RowName, FPBBossHitPointTableRow& OutRow) const;
 	bool FindBossPatternRow(FName RowName, FPBBossPatternTableRow& OutRow) const;

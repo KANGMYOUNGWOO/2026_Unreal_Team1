@@ -103,7 +103,16 @@ void UPBBossPatternBase::SetOwnerBoss(APBBossBase* Boss)
 
 AActor* UPBBossPatternBase::FindPinballActor() const
 {
-	const APBBossBase* Boss = GetOwnerBoss();
+	return FindPinballActor(GetOwnerBoss());
+}
+
+AActor* UPBBossPatternBase::FindPinballActor(APBBossBase* Boss) const
+{
+	if (CachedPinballActor.IsValid())
+	{
+		return CachedPinballActor.Get();
+	}
+
 	if (!Boss)
 	{
 		return nullptr;
@@ -115,7 +124,8 @@ AActor* UPBBossPatternBase::FindPinballActor() const
 		return nullptr;
 	}
 
-	return UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
+	CachedPinballActor = UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
+	return CachedPinballActor.Get();
 }
 
 void UPBBossPatternBase::StartExecutePattern()

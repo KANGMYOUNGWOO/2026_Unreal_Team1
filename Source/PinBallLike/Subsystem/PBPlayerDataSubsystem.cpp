@@ -12,6 +12,14 @@ void UPBPlayerDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	InitializeDefaultBumpersForTest();
 }
 
+void UPBPlayerDataSubsystem::AdvanceBossProgress(const int32 BossCount)
+{
+	if (CurrentBossIndex + 1 < BossCount)
+	{
+		++CurrentBossIndex;
+	}
+}
+
 bool UPBPlayerDataSubsystem::EquipBumper(const EPBBumperSlotType SlotType, const FName BumperRowId)
 {
 	if (BumperRowId.IsNone())
