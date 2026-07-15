@@ -4,7 +4,6 @@
 #include "PBSummonBumperEffect.h"
 
 #include "Engine/World.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBBumperSummonActor.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 
@@ -15,16 +14,20 @@ void UPBSummonBumperEffect::Initialize(APBModularBumperBase* InOwnerBumper)
 	EnsureSummonActor(InOwnerBumper);
 }
 
-void UPBSummonBumperEffect::ActivateEffect(APBModularBumperBase* Bumper, APBBallBase* Ball)
+void UPBSummonBumperEffect::ActivateEffectForActor(
+	APBModularBumperBase* Bumper,
+	AActor* InteractionActor)
 {
 	APBModularBumperBase* TargetBumper = IsValid(Bumper) ? Bumper : OwnerBumper.Get();
-	if (!IsValid(TargetBumper) || !IsValid(Ball) || !EnsureSummonActor(TargetBumper))
+	if (!IsValid(TargetBumper)
+		|| !IsValid(InteractionActor)
+		|| !EnsureSummonActor(TargetBumper))
 	{
 		FinishEffect();
 		return;
 	}
 
-	SpawnedSummonActor->StartAction(TargetBumper, Ball);
+	SpawnedSummonActor->StartActionForActor(TargetBumper, InteractionActor);
 }
 
 void UPBSummonBumperEffect::FinishEffect()

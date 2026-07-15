@@ -3,15 +3,23 @@
 
 #include "PBTurretSummonActor.h"
 
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
+
 APBTurretSummonActor::APBTurretSummonActor()
 {
 }
 
-void APBTurretSummonActor::StartAction(APBModularBumperBase* Bumper, APBBallBase* Ball)
+void APBTurretSummonActor::StartActionForActor(
+	APBModularBumperBase* Bumper,
+	AActor* InteractionActor)
 {
-	Super::StartAction(Bumper, Ball);
+	Super::StartActionForActor(Bumper, InteractionActor);
+	OnTurretActivatedForActor(Bumper, InteractionActor);
 
-	OnTurretActivated(Bumper, Ball);
+	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
+	{
+		OnTurretActivated(Bumper, Ball);
+	}
 }
 
 void APBTurretSummonActor::DeactivateSummon()

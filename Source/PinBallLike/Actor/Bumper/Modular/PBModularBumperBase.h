@@ -42,11 +42,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger")
 	virtual void HandleTriggerActorActivated(
 		APBBumperTriggerActorBase* TriggerActor,
-		APBBallBase* Ball,
+		AActor* InteractionActor,
 		const FHitResult& TriggerHit);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
-	void ActivateBumper(APBBallBase* Ball);
+	void ActivateBumper(AActor* InteractionActor);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
 	void FinishActivation();
@@ -101,7 +101,7 @@ protected:
 
 	void AddTriggerCount(
 		APBBumperTriggerActorBase* TriggerActor,
-		APBBallBase* Ball,
+		AActor* InteractionActor,
 		int32 Amount = 1);
 	APBBumperTriggerActorBase* SpawnTriggerActor(
 		TSubclassOf<APBBumperTriggerActorBase> TriggerClass,
@@ -115,6 +115,12 @@ protected:
 	void ClearTriggerActors();
 
 #pragma region Blueprint Events
+	/** 일반 이동 Actor를 지원하는 기본 효과 확장 지점이다. */
+	UFUNCTION(BlueprintNativeEvent, Category = "Bumper")
+	void ApplyBumperEffectToActor(AActor* InteractionActor);
+	virtual void ApplyBumperEffectToActor_Implementation(AActor* InteractionActor);
+
+	/** 기존 Ball 기반 Blueprint의 효과 함수를 깨지 않기 위한 호환 경로다. */
 	UFUNCTION(BlueprintNativeEvent, Category = "Bumper")
 	void ApplyBumperEffect(APBBallBase* Ball);
 	virtual void ApplyBumperEffect_Implementation(APBBallBase* Ball);
@@ -125,6 +131,10 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
 	void OnTriggerCountChanged(int32 InCurrentTriggerCount, int32 InRequiredTriggerCount);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
+	void OnMovableActorActivated(AActor* InteractionActor);
+
+	/** 기존 Ball 타입 Blueprint 이벤트 핀 호환을 위해 유지한다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
 	void OnBumperActivated(APBBallBase* Ball);
 
@@ -164,15 +174,15 @@ private:
 	struct FPendingBumperActivation
 	{
 		TWeakObjectPtr<APBBumperTriggerActorBase> TriggerActor;
-		TWeakObjectPtr<APBBallBase> Ball;
+		TWeakObjectPtr<AActor> InteractionActor;
 	};
 
 	bool FindBumperPositionTransform(EPBBumperPositionId PositionId, FTransform& OutTransform) const;
 	APBBumperTriggerActorBase* FindReadyTrigger() const;
-	void RequestActivation(APBBumperTriggerActorBase* TriggerActor, APBBallBase* Ball);
-	void QueueActivation(APBBumperTriggerActorBase* TriggerActor, APBBallBase* Ball);
-	void StartActivation(APBBumperTriggerActorBase* TriggerActor, APBBallBase* Ball);
-	void ExecuteActivation(APBBallBase* Ball);
+	void RequestActivation(APBBumperTriggerActorBase* TriggerActor, AActor* InteractionActor);
+	void QueueActivation(APBBumperTriggerActorBase* TriggerActor, AActor* InteractionActor);
+	void StartActivation(APBBumperTriggerActorBase* TriggerActor, AActor* InteractionActor);
+	void ExecuteActivation(AActor* InteractionActor);
 	void ScheduleNextPendingActivation();
 	void ProcessNextPendingActivation();
 	bool HasPendingActivationFor(const APBBumperTriggerActorBase* TriggerActor) const;

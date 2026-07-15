@@ -5,7 +5,6 @@
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 #include "TimerManager.h"
@@ -37,16 +36,18 @@ APBGateAccelerationField::APBGateAccelerationField()
 	SetFieldActive(false);
 }
 
-void APBGateAccelerationField::StartAction(APBModularBumperBase* Bumper, APBBallBase* Ball)
+void APBGateAccelerationField::StartActionForActor(
+	APBModularBumperBase* Bumper,
+	AActor* InteractionActor)
 {
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(ActiveDurationTimerHandle);
 	}
 
-	OverlappingBallCounts.Reset();
+	OverlappingActorCounts.Reset();
 	SetFieldActive(true);
-	Super::StartAction(Bumper, Ball);
+	Super::StartActionForActor(Bumper, InteractionActor);
 
 	if (UWorld* World = GetWorld())
 	{
@@ -66,7 +67,7 @@ void APBGateAccelerationField::DeactivateSummon()
 		World->GetTimerManager().ClearTimer(ActiveDurationTimerHandle);
 	}
 
-	OverlappingBallCounts.Reset();
+	OverlappingActorCounts.Reset();
 	SetFieldActive(false);
 	Super::DeactivateSummon();
 }
@@ -90,7 +91,7 @@ void APBGateAccelerationField::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		World->GetTimerManager().ClearTimer(ActiveDurationTimerHandle);
 	}
 
-	OverlappingBallCounts.Reset();
+	OverlappingActorCounts.Reset();
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -101,19 +102,19 @@ void APBGateAccelerationField::SetFieldActive(const bool bIsActive)
 	FieldVisual->SetVisibility(bIsActive, true);
 }
 
-void APBGateAccelerationField::ApplyAcceleration(APBBallBase* Ball) const
+void APBGateAccelerationField::ApplyAcceleration(AActor* InteractionActor) const
 {
-	if (!IsValid(Ball) || SpeedBoostPercent <= 0.0f)
+	if (!IsValid(InteractionActor) || SpeedBoostPercent <= 0.0f)
 	{
 		return;
 	}
 
-	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
+	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(InteractionActor);
 	if (!Movable)
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("[Bumper] Gate acceleration skipped because Ball has no movement interface. Ball=%s"),
-			*GetNameSafe(Ball));
+			TEXT("[Bumper] Gate acceleration skipped because the target has no movement interface. Target=%s"),
+			*GetNameSafe(InteractionActor));
 		return;
 	}
 
@@ -132,9 +133,9 @@ void APBGateAccelerationField::ApplyAcceleration(APBBallBase* Ball) const
 	const float AfterSpeed = Movable->GetVelocity().Size2D();
 
 	UE_LOG(LogTemp, Log,
-		TEXT("[Bumper] Gate acceleration applied. Field=%s Ball=%s Percent=%.1f BeforeSpeed=%.1f AfterSpeed=%.1f"),
+		TEXT("[Bumper] Gate acceleration applied. Field=%s Target=%s Percent=%.1f BeforeSpeed=%.1f AfterSpeed=%.1f"),
 		*GetNameSafe(this),
-		*GetNameSafe(Ball),
+		*GetNameSafe(InteractionActor),
 		SpeedBoostPercent,
 		BeforeSpeed,
 		AfterSpeed);
@@ -153,17 +154,17 @@ void APBGateAccelerationField::HandleFieldBeginOverlap(
 	bool bFromSweep,
 	const FHitResult& SweepResult)
 {
-	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
-	if (!IsValid(Ball))
+	if (!IsValid(OtherActor)
+		|| !PBInterfaceUtils::FindInterface<IMovable>(OtherActor))
 	{
 		return;
 	}
 
-	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
-	int32& OverlapCount = OverlappingBallCounts.FindOrAdd(BallKey);
+	const TWeakObjectPtr<AActor> ActorKey = OtherActor;
+	int32& OverlapCount = OverlappingActorCounts.FindOrAdd(ActorKey);
 	if (OverlapCount == 0)
 	{
-		ApplyAcceleration(Ball);
+		ApplyAcceleration(OtherActor);
 	}
 	++OverlapCount;
 }
@@ -174,14 +175,13 @@ void APBGateAccelerationField::HandleFieldEndOverlap(
 	UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex)
 {
-	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
-	if (!IsValid(Ball))
+	if (!IsValid(OtherActor))
 	{
 		return;
 	}
 
-	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
-	int32* OverlapCount = OverlappingBallCounts.Find(BallKey);
+	const TWeakObjectPtr<AActor> ActorKey = OtherActor;
+	int32* OverlapCount = OverlappingActorCounts.Find(ActorKey);
 	if (OverlapCount == nullptr)
 	{
 		return;
@@ -190,6 +190,6 @@ void APBGateAccelerationField::HandleFieldEndOverlap(
 	--(*OverlapCount);
 	if (*OverlapCount <= 0)
 	{
-		OverlappingBallCounts.Remove(BallKey);
+		OverlappingActorCounts.Remove(ActorKey);
 	}
 }
