@@ -31,9 +31,6 @@ struct PINBALLLIKE_API FPBBallTableRow : public FTableRowBase
 	EPBBallClassType ClassType = EPBBallClassType::Attacker;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
-	TArray<FName> SynergyIds;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
 	TArray<FName> DefaultSkillIds;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
