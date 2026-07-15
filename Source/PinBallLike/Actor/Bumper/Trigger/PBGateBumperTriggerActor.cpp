@@ -8,7 +8,6 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "PhysicsEngine/ConstraintInstance.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
@@ -52,8 +51,8 @@ void APBGateBumperTriggerActor::EndPlay(const EEndPlayReason::Type EndPlayReason
 	}
 
 	GateAreas.Reset();
-	PassingBallOverlapCounts.Reset();
-	FlagSpinBallOverlapCounts.Reset();
+	PassingActorOverlapCounts.Reset();
+	FlagSpinActorOverlapCounts.Reset();
 	GaugeMaterial = nullptr;
 	FlagVisualMesh = nullptr;
 	LastFlagSpinAngularVelocity = FVector::ZeroVector;
@@ -314,27 +313,27 @@ FVector APBGateBumperTriggerActor::CalculateFlagSpinAxis() const
 	return (FlagEnd - FlagPivot).GetSafeNormal();
 }
 
-bool APBGateBumperTriggerActor::RegisterFlagSpinBallOverlap(APBBallBase* Ball)
+bool APBGateBumperTriggerActor::RegisterFlagSpinActorOverlap(AActor* InteractionActor)
 {
-	if (!IsValid(Ball))
+	if (!IsValid(InteractionActor))
 	{
 		return false;
 	}
 
-	int32& OverlapCount = FlagSpinBallOverlapCounts.FindOrAdd(Ball);
+	int32& OverlapCount = FlagSpinActorOverlapCounts.FindOrAdd(InteractionActor);
 	++OverlapCount;
 	return OverlapCount == 1;
 }
 
-void APBGateBumperTriggerActor::UnregisterFlagSpinBallOverlap(APBBallBase* Ball)
+void APBGateBumperTriggerActor::UnregisterFlagSpinActorOverlap(AActor* InteractionActor)
 {
-	if (!IsValid(Ball))
+	if (!IsValid(InteractionActor))
 	{
 		return;
 	}
 
-	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
-	int32* OverlapCount = FlagSpinBallOverlapCounts.Find(BallKey);
+	const TWeakObjectPtr<AActor> ActorKey = InteractionActor;
+	int32* OverlapCount = FlagSpinActorOverlapCounts.Find(ActorKey);
 	if (!OverlapCount)
 	{
 		return;
@@ -343,20 +342,22 @@ void APBGateBumperTriggerActor::UnregisterFlagSpinBallOverlap(APBBallBase* Ball)
 	--(*OverlapCount);
 	if (*OverlapCount <= 0)
 	{
-		FlagSpinBallOverlapCounts.Remove(BallKey);
+		FlagSpinActorOverlapCounts.Remove(ActorKey);
 	}
 }
 
 void APBGateBumperTriggerActor::ApplyFlagSpinReaction(
-	APBBallBase* Ball,
+	AActor* InteractionActor,
 	const UPrimitiveComponent* GateArea)
 {
-	if (!bIsFlagSpinReactionReady || !IsValid(FlagVisualMesh) || !IsValid(Ball))
+	if (!bIsFlagSpinReactionReady
+		|| !IsValid(FlagVisualMesh)
+		|| !IsValid(InteractionActor))
 	{
 		return;
 	}
 
-	const IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
+	const IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(InteractionActor);
 	if (!Movable)
 	{
 		return;
@@ -382,7 +383,7 @@ void APBGateBumperTriggerActor::ApplyFlagSpinReaction(
 
 	const FVector BallDirection = PlanarVelocity / BallSpeed;
 	const FVector PlanarLever = FVector::VectorPlaneProject(
-		Ball->GetActorLocation() - FlagPivot,
+		InteractionActor->GetActorLocation() - FlagPivot,
 		SpinAxis);
 	const FVector SpinSideAxis = FVector::CrossProduct(BallDirection, SpinAxis).GetSafeNormal();
 	if (SpinSideAxis.IsNearlyZero())
@@ -446,20 +447,20 @@ void APBGateBumperTriggerActor::ApplyFlagSpinReaction(
 	FlagVisualMesh->WakeAllRigidBodies();
 }
 
-bool APBGateBumperTriggerActor::MeetsMinimumPassSpeed(APBBallBase* Ball) const
+bool APBGateBumperTriggerActor::MeetsMinimumPassSpeed(AActor* InteractionActor) const
 {
 	if (MinimumPassSpeed <= 0.0f)
 	{
 		return true;
 	}
 
-	const IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball);
+	const IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(InteractionActor);
 	if (!Movable)
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("[Bumper] Gate pass speed could not be checked. Trigger=%s Ball=%s"),
+			TEXT("[Bumper] Gate pass speed could not be checked. Trigger=%s Target=%s"),
 			*GetNameSafe(this),
-			*GetNameSafe(Ball));
+			*GetNameSafe(InteractionActor));
 		return false;
 	}
 
@@ -489,15 +490,15 @@ void APBGateBumperTriggerActor::HandleGateBeginOverlap(
 	bool IsFromSweep,
 	const FHitResult& SweepResult)
 {
-	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
-	if (!IsValid(Ball))
+	if (!IsValid(OtherActor)
+		|| !PBInterfaceUtils::FindInterface<IMovable>(OtherActor))
 	{
 		return;
 	}
 
-	if (CanReactToBall() && RegisterFlagSpinBallOverlap(Ball))
+	if (CanReactToMovableActor() && RegisterFlagSpinActorOverlap(OtherActor))
 	{
-		ApplyFlagSpinReaction(Ball, OverlappedComponent);
+		ApplyFlagSpinReaction(OtherActor, OverlappedComponent);
 	}
 
 	if (!CanIncreaseTrigger())
@@ -505,8 +506,8 @@ void APBGateBumperTriggerActor::HandleGateBeginOverlap(
 		return;
 	}
 
-	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
-	int32& OverlapCount = PassingBallOverlapCounts.FindOrAdd(BallKey);
+	const TWeakObjectPtr<AActor> ActorKey = OtherActor;
+	int32& OverlapCount = PassingActorOverlapCounts.FindOrAdd(ActorKey);
 	++OverlapCount;
 }
 
@@ -516,16 +517,15 @@ void APBGateBumperTriggerActor::HandleGateEndOverlap(
 	UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex)
 {
-	APBBallBase* Ball = Cast<APBBallBase>(OtherActor);
-	if (!IsValid(Ball))
+	if (!IsValid(OtherActor))
 	{
 		return;
 	}
 
-	UnregisterFlagSpinBallOverlap(Ball);
+	UnregisterFlagSpinActorOverlap(OtherActor);
 
-	const TWeakObjectPtr<APBBallBase> BallKey = Ball;
-	int32* OverlapCount = PassingBallOverlapCounts.Find(BallKey);
+	const TWeakObjectPtr<AActor> ActorKey = OtherActor;
+	int32* OverlapCount = PassingActorOverlapCounts.Find(ActorKey);
 	if (OverlapCount == nullptr)
 	{
 		return;
@@ -537,11 +537,11 @@ void APBGateBumperTriggerActor::HandleGateEndOverlap(
 		return;
 	}
 
-	PassingBallOverlapCounts.Remove(BallKey);
-	if (!CanIncreaseTrigger() || !MeetsMinimumPassSpeed(Ball))
+	PassingActorOverlapCounts.Remove(ActorKey);
+	if (!CanIncreaseTrigger() || !MeetsMinimumPassSpeed(OtherActor))
 	{
 		return;
 	}
 
-	IncreaseTrigger(Ball, FHitResult());
+	IncreaseTrigger(OtherActor, FHitResult());
 }

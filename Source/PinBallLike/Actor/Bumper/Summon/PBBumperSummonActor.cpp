@@ -4,6 +4,7 @@
 #include "PBBumperSummonActor.h"
 
 #include "Components/SceneComponent.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 
 APBBumperSummonActor::APBBumperSummonActor()
 {
@@ -15,7 +16,18 @@ APBBumperSummonActor::APBBumperSummonActor()
 
 void APBBumperSummonActor::StartAction(APBModularBumperBase* Bumper, APBBallBase* Ball)
 {
-	OnStartAction(Bumper, Ball);
+	StartActionForActor(Bumper, Ball);
+}
+
+void APBBumperSummonActor::StartActionForActor(
+	APBModularBumperBase* Bumper,
+	AActor* InteractionActor)
+{
+	OnStartActionForActor(Bumper, InteractionActor);
+	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
+	{
+		OnStartAction(Bumper, Ball);
+	}
 }
 
 void APBBumperSummonActor::FinishAction()

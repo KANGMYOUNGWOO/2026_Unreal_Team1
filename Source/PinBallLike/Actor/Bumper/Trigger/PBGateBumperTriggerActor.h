@@ -6,15 +6,14 @@
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PBGateBumperTriggerActor.generated.h"
 
-class APBBallBase;
 class UMaterialInstanceDynamic;
 class UMeshComponent;
 class UPrimitiveComponent;
 class USkeletalMeshComponent;
 
 /**
- * 공이 Gate 판정 영역에 들어왔다가 완전히 빠져나오면 통과 횟수를 1 증가시킨다.
- * 여러 충돌 컴포넌트가 동시에 겹쳐도 공별 Overlap 수를 합산해 중복 집계를 막는다.
+ * IMovable Actor가 Gate 판정 영역에 들어왔다가 완전히 빠져나오면 통과 횟수를 1 증가시킨다.
+ * 여러 충돌 컴포넌트가 동시에 겹쳐도 Actor별 Overlap 수를 합산해 중복 집계를 막는다.
  * 진행도는 재질 게이지에 전달하고, Flag는 게임 판정과 독립된 Twist 회전 연출로 반응한다.
  */
 UCLASS(Blueprintable)
@@ -104,8 +103,8 @@ protected:
 	bool bIsFlagSpinReactionReady = false;
 
 private:
-	TMap<TWeakObjectPtr<APBBallBase>, int32> PassingBallOverlapCounts;
-	TMap<TWeakObjectPtr<APBBallBase>, int32> FlagSpinBallOverlapCounts;
+	TMap<TWeakObjectPtr<AActor>, int32> PassingActorOverlapCounts;
+	TMap<TWeakObjectPtr<AActor>, int32> FlagSpinActorOverlapCounts;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> GaugeMaterial;
@@ -119,10 +118,10 @@ private:
 	void InitializeFlagSpinReaction();
 	USkeletalMeshComponent* FindFlagVisualMesh() const;
 	FVector CalculateFlagSpinAxis() const;
-	bool RegisterFlagSpinBallOverlap(APBBallBase* Ball);
-	void UnregisterFlagSpinBallOverlap(APBBallBase* Ball);
-	void ApplyFlagSpinReaction(APBBallBase* Ball, const UPrimitiveComponent* GateArea);
-	bool MeetsMinimumPassSpeed(APBBallBase* Ball) const;
+	bool RegisterFlagSpinActorOverlap(AActor* InteractionActor);
+	void UnregisterFlagSpinActorOverlap(AActor* InteractionActor);
+	void ApplyFlagSpinReaction(AActor* InteractionActor, const UPrimitiveComponent* GateArea);
+	bool MeetsMinimumPassSpeed(AActor* InteractionActor) const;
 
 	UFUNCTION()
 	void HandleTriggerProgressChanged(int32 CurrentCount, int32 RequiredCount);
