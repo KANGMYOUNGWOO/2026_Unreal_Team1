@@ -2,6 +2,7 @@
 
 #include "PinBallLike/Actor/StatusEffect/PBBaseStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
+#include "PinBallLike/Actor/StatusEffect/Effects/PBStrengthStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBBurnStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBShieldStatusEffect.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectModifierRow.h"
@@ -70,6 +71,7 @@ TMap<FName, TSubclassOf<UPBBaseStatusEffect>>& PBStatusEffectFactory::GetStatusE
 	static TMap<FName, TSubclassOf<UPBBaseStatusEffect>> StatusEffectClassMap;
 	if (StatusEffectClassMap.Num() == 0)
 	{
+		StatusEffectClassMap.Add(TEXT("Strength"), UPBStrengthStatusEffect::StaticClass());
 		StatusEffectClassMap.Add(TEXT("Burn"), UPBBurnStatusEffect::StaticClass());
 		StatusEffectClassMap.Add(TEXT("Shield"), UPBShieldStatusEffect::StaticClass());
 	}
