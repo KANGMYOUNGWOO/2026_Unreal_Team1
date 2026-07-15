@@ -1,7 +1,11 @@
 #include "PBBossPatternComponent.h"
 
+#include "Engine/World.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/GameState/PBBattleGameState.h"
 #include "PinBallLike/Actor/Boss/Pattern/PBBossPatternBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 
 UPBBossPatternComponent::UPBBossPatternComponent()
 {
@@ -14,11 +18,19 @@ void UPBBossPatternComponent::BeginPlay()
 
 	OwnerBoss = Cast<APBBossBase>(GetOwner());
 	InitializePatterns();
-	ResetPatternStartTime();
+	RegisterBattlePhaseListener();
+
+	const APBBattleGameState* BattleGameState = GetWorld() ? GetWorld()->GetGameState<APBBattleGameState>() : nullptr;
+	if (!BattleGameState || BattleGameState->GetBattleLevelPhase() == EPBBattleLevelPhase::Combat)
+	{
+		IsCombatPhaseActive = true;
+		ResetPatternStartTime();
+	}
 }
 
 void UPBBossPatternComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UnregisterBattlePhaseListener();
 	StopPatternSystem();
 	Super::EndPlay(EndPlayReason);
 }
@@ -217,6 +229,7 @@ bool UPBBossPatternComponent::CanStartPattern() const
 		&& !OwnerBoss->IsDead()
 		&& OwnerBoss->GetBossState() != EPBBossState::Groggy
 		&& OwnerBoss->GetBossState() != EPBBossState::Dead
+		&& IsCombatPhaseActive
 		&& GetCurrentTimeSeconds() >= NextPatternAllowedTime;
 }
 
@@ -256,6 +269,47 @@ void UPBBossPatternComponent::ResetPatternStartTime()
 	NextPatternAllowedTime = GetCurrentTimeSeconds() + MinPatternIntervalSeconds;
 }
 
+void UPBBossPatternComponent::RegisterBattlePhaseListener()
+{
+	if (!UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	BattlePhaseChangedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattlePhaseChangedMessage>(
+		GameplayTags::Event_Battle_Phase_Changed,
+		this,
+		&UPBBossPatternComponent::HandleBattlePhaseChangedMessage);
+}
+
+void UPBBossPatternComponent::UnregisterBattlePhaseListener()
+{
+	if (!BattlePhaseChangedListenerHandle.IsValid())
+	{
+		return;
+	}
+
+	BattlePhaseChangedListenerHandle.Unregister();
+	BattlePhaseChangedListenerHandle = FGameplayMessageListenerHandle();
+}
+
+void UPBBossPatternComponent::HandleBattlePhaseChangedMessage(
+	FGameplayTag Channel,
+	const FPBBattlePhaseChangedMessage& Message)
+{
+	static_cast<void>(Channel);
+
+	IsCombatPhaseActive = Message.NewPhase == EPBBattleLevelPhase::Combat;
+	if (!IsCombatPhaseActive)
+	{
+		StopPatternSystem();
+		return;
+	}
+
+	ResetPatternStartTime();
+	StartPatternSystem();
+}
+
 void UPBBossPatternComponent::InitializePatternDatas(
 	const TArray<FPBBossPatternData>& PatternDataList,
 	TArray<TObjectPtr<UPBBossPatternBase>>& PatternInstanceList)
@@ -270,12 +324,19 @@ void UPBBossPatternComponent::InitializePatternDatas(
 		TSubclassOf<UPBBossPatternBase> PatternClass = PatternData.PatternClass.Get();
 		if (!PatternClass)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[BossPatternComponent] InitializePatternDatas failed. Pattern class load failed. Boss=%s PatternName=%s Path=%s"),
+				*GetNameSafe(OwnerBoss),
+				*PatternData.PatternName.ToString(),
+				*PatternData.PatternClass.ToSoftObjectPath().ToString());
 			continue;
 		}
 
 		UPBBossPatternBase* Pattern = NewObject<UPBBossPatternBase>(this, PatternClass);
 		if (!Pattern)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[BossPatternComponent] InitializePatternDatas failed. PatternName=%s PatternClass=%s"),
+				*PatternData.PatternName.ToString(),
+				*GetNameSafe(PatternClass));
 			continue;
 		}
 
@@ -411,7 +472,15 @@ UPBBossPatternBase* UPBBossPatternComponent::SelectExecutablePatternFromList(con
 
 	for (UPBBossPatternBase* Pattern : PatternInstanceList)
 	{
-		if (!Pattern || !IsPatternCooldownReady(Pattern) || !Pattern->CanExecute(OwnerBoss))
+		if (!Pattern)
+		{
+			continue;
+		}
+
+		const bool IsCooldownReady = IsPatternCooldownReady(Pattern);
+		const bool IsCanExecute = IsCooldownReady && Pattern->CanExecute(OwnerBoss);
+
+		if (!IsCanExecute)
 		{
 			continue;
 		}

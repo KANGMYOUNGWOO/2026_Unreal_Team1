@@ -24,7 +24,8 @@ public class PinBallLike : ModuleRules
 			"AssetRegistry",
 			"DeveloperSettings",
 			"GameplayTags",
-			"GameplayMessageRuntime"
+			"GameplayMessageRuntime",
+			"Niagara"
 			
 		});
 

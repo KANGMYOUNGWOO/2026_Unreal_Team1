@@ -7,17 +7,20 @@
 #include "PBBossBase.generated.h"
 
 class UPBBossGroggyComponent;
+class UPBBossHitEffectComponent;
 class UPBBossDamageComponent;
+class UPBBossIntroComponent;
 class UPBBossPatternComponent;
 class UPBBossPinballReactionComponent;
 class UPBBossStatComponent;
-class UPBBossStatusWidget;
 class UPBBossUIComponent;
 class UPBBossWeaknessComponent;
 class UPBBossDataAsset;
 class UCameraShakeBase;
 class UStateTreeComponent;
+class UTexture2D;
 class USphereComponent;
+struct FPBBossStateTreeTask;
 
 UENUM(BlueprintType)
 enum class EPBBossState : uint8
@@ -72,9 +75,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|Base Component")
 	UPBBossUIComponent* GetBossUIComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
-	// 보스의 현재 상태를 변경합니다.
-	void SetBossState(EPBBossState NewBossState);
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Component")
+	UPBBossIntroComponent* GetBossIntroComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void RequestBossState(EPBBossState NewBossState);
@@ -111,7 +113,7 @@ public:
 	void StartIdleState();
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
-	void StartPatternState();
+	virtual void StartPatternState();
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Base State")
 	void StopPatternState();
@@ -134,6 +136,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Base Profile")
 	// UI 등에 표시할 보스 이름을 반환합니다.
 	FText GetBossName() const;
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Base Profile")
+	UTexture2D* GetBossIntroImage() const;
 
 	void InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAsset);
 
@@ -162,6 +167,8 @@ public:
 	bool IsDead() const;
 
 protected:
+	void SetBossState(EPBBossState NewBossState);
+
 	// 게임 시작 시 컴포넌트 바인딩과 UI 초기화를 수행합니다.
 	virtual void BeginPlay() override;
 	// 액터 종료 시 타이머와 UI를 정리합니다.
@@ -188,7 +195,13 @@ protected:
 	TObjectPtr<UPBBossDamageComponent> BossDamageComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
+	TObjectPtr<UPBBossHitEffectComponent> BossHitEffectComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossPatternComponent> BossPatternComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
+	TObjectPtr<UPBBossIntroComponent> BossIntroComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base Component")
 	TObjectPtr<UPBBossPinballReactionComponent> BossPinballReactionComponent;
@@ -211,14 +224,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Profile")
 	FText BossName;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Profile")
+	TObjectPtr<UTexture2D> BossIntroImage;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Groggy", meta = (ClampMin = "0.1"))
 	float GroggyDurationSeconds = 3.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base UI")
-	TSubclassOf<UPBBossStatusWidget> BossStatusWidgetClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base UI", meta = (ClampMin = "0"))
-	int32 BossStatusWidgetZOrder = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Enrage")
 	TSubclassOf<UCameraShakeBase> EnrageCameraShakeClass;
@@ -240,7 +250,7 @@ protected:
 	void BP_OnDead();
 
 private:
+	friend struct FPBBossStateTreeTask;
+
 	FTimerHandle GroggyResetTimerHandle;
-	bool IsGroggyStateActive = false;
-	bool IsDeadStateActive = false;
 };

@@ -5,7 +5,8 @@
 #include "PBBossUIComponent.generated.h"
 
 class APBBossBase;
-class UPBBossStatusWidget;
+class UPBBossIntroWidget;
+class UPBBossUILayerWidget;
 
 UCLASS(ClassGroup = (Boss), meta = (BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBossUIComponent : public UActorComponent
@@ -19,27 +20,22 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|UI Component")
-	void CreateBossStatusWidget();
-
-	UFUNCTION(BlueprintCallable, Category = "Boss|UI Component")
-	void RemoveBossStatusWidget();
-
-	UFUNCTION(BlueprintCallable, Category = "Boss|UI Component")
 	void ShowEnrageWarning();
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|UI Component")
 	void HideEnrageWarning();
 
-	void ConfigureBossStatusWidget(TSubclassOf<UPBBossStatusWidget> NewBossStatusWidgetClass, int32 NewBossStatusWidgetZOrder);
+	UPBBossIntroWidget* GetBossIntroWidget() const;
+	void ConfigureBossUILayerClass(TSoftClassPtr<UPBBossUILayerWidget> NewBossUILayerClass);
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|UI Component")
-	TSubclassOf<UPBBossStatusWidget> BossStatusWidgetClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|UI Component", meta = (ClampMin = "0"))
-	int32 BossStatusWidgetZOrder = 0;
+	TSoftClassPtr<UPBBossUILayerWidget> BossUILayerClass;
 
 private:
+	void CreateBossUILayer();
+	void RemoveBossUILayer();
+
 	UPROPERTY(Transient)
-	TObjectPtr<UPBBossStatusWidget> BossStatusWidget;
+	TObjectPtr<UPBBossUILayerWidget> BossUILayer;
 };

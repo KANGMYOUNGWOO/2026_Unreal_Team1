@@ -2,6 +2,8 @@
 
 #include "Component/PBBossDamageComponent.h"
 #include "Component/PBBossGroggyComponent.h"
+#include "Component/PBBossHitEffectComponent.h"
+#include "Component/PBBossIntroComponent.h"
 #include "Component/PBBossPatternComponent.h"
 #include "Component/PBBossPinballReactionComponent.h"
 #include "Component/PBBossStatComponent.h"
@@ -13,7 +15,6 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Boss/StateTree/PBBossStateTreeTags.h"
-#include "PinBallLike/Actor/Boss/UI/PBBossStatusWidget.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Table/Boss/DataAsset/PBBossDataAsset.h"
@@ -56,7 +57,9 @@ APBBossBase::APBBossBase()
 	BossStatComponent = CreateDefaultSubobject<UPBBossStatComponent>(TEXT("BossStatComponent"));
 	BossGroggyComponent = CreateDefaultSubobject<UPBBossGroggyComponent>(TEXT("BossGroggyComponent"));
 	BossDamageComponent = CreateDefaultSubobject<UPBBossDamageComponent>(TEXT("BossDamageComponent"));
+	BossHitEffectComponent = CreateDefaultSubobject<UPBBossHitEffectComponent>(TEXT("BossHitEffectComponent"));
 	BossPatternComponent = CreateDefaultSubobject<UPBBossPatternComponent>(TEXT("BossPatternComponent"));
+	BossIntroComponent = CreateDefaultSubobject<UPBBossIntroComponent>(TEXT("BossIntroComponent"));
 	BossPinballReactionComponent = CreateDefaultSubobject<UPBBossPinballReactionComponent>(TEXT("BossPinballReactionComponent"));
 	BossWeaknessComponent = CreateDefaultSubobject<UPBBossWeaknessComponent>(TEXT("BossWeaknessComponent"));
 	BossStateTreeComponent = CreateDefaultSubobject<UStateTreeComponent>(TEXT("BossStateTreeComponent"));
@@ -97,6 +100,11 @@ UStateTreeComponent* APBBossBase::GetBossStateTreeComponent() const
 UPBBossUIComponent* APBBossBase::GetBossUIComponent() const
 {
 	return BossUIComponent;
+}
+
+UPBBossIntroComponent* APBBossBase::GetBossIntroComponent() const
+{
+	return BossIntroComponent;
 }
 
 void APBBossBase::SetBossState(EPBBossState NewBossState)
@@ -181,12 +189,11 @@ void APBBossBase::StopPatternState()
 
 void APBBossBase::StartGroggyState()
 {
-	if (IsGroggyStateActive || IsDead())
+	if (IsGroggyState() || IsDead())
 	{
 		return;
 	}
 
-	IsGroggyStateActive = true;
 	SetBossState(EPBBossState::Groggy);
 
 	if (BossPatternComponent)
@@ -206,12 +213,11 @@ void APBBossBase::StartGroggyState()
 
 void APBBossBase::FinishGroggyState()
 {
-	if (!IsGroggyStateActive || !BossGroggyComponent || IsDead())
+	if (!IsGroggyState() || !BossGroggyComponent || IsDead())
 	{
 		return;
 	}
 
-	IsGroggyStateActive = false;
 	SetWeaknessState(false);
 	ClearGroggyResetTimer();
 
@@ -257,13 +263,11 @@ void APBBossBase::StartEnragedState()
 
 void APBBossBase::StartDeadState()
 {
-	if (IsDeadStateActive)
+	if (IsDeadState())
 	{
 		return;
 	}
 
-	IsDeadStateActive = true;
-	IsGroggyStateActive = false;
 	SetBossState(EPBBossState::Dead);
 
 	if (BossPatternComponent)
@@ -285,11 +289,18 @@ void APBBossBase::StartDeadState()
 			GameplayTags::Event_Battle_Boss_Dead,
 			Message);
 	}
+
+	Destroy();
 }
 
 FText APBBossBase::GetBossName() const
 {
 	return BossName;
+}
+
+UTexture2D* APBBossBase::GetBossIntroImage() const
+{
+	return BossIntroImage;
 }
 
 void APBBossBase::InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAsset)
@@ -306,8 +317,11 @@ void APBBossBase::InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAs
 
 	BossMovementType = BossDataAsset->BossMovementType;
 	GroggyDurationSeconds = FMath::Max(0.1f, BossDataAsset->GroggyDurationSeconds);
-	BossStatusWidgetClass = BossDataAsset->BossStatusWidgetClass.Get();
 	EnrageCameraShakeClass = BossDataAsset->EnrageCameraShakeClass.Get();
+	if (BossUIComponent && !BossDataAsset->BossUILayerClass.IsNull())
+	{
+		BossUIComponent->ConfigureBossUILayerClass(BossDataAsset->BossUILayerClass);
+	}
 
 	if (BossStatComponent)
 	{
@@ -392,6 +406,11 @@ bool APBBossBase::IsPinballCollisionDamageBlocked() const
 
 void APBBossBase::NotifyBossDamaged(FName HitPointName, int32 DamageAmount)
 {
+	if (BossHitEffectComponent)
+	{
+		BossHitEffectComponent->PlayHitEffect();
+	}
+
 	BP_OnDamaged(HitPointName, DamageAmount);
 }
 
@@ -407,10 +426,6 @@ void APBBossBase::BeginPlay()
 		BossStateTreeComponent->StartLogic();
 	}
 
-	if (BossUIComponent && BossStatusWidgetClass)
-	{
-		BossUIComponent->ConfigureBossStatusWidget(BossStatusWidgetClass, BossStatusWidgetZOrder);
-	}
 }
 
 void APBBossBase::EndPlay(const EEndPlayReason::Type EndPlayReason)

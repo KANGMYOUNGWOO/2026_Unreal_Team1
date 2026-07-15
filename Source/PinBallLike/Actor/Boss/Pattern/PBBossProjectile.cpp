@@ -22,6 +22,11 @@ float APBBossProjectile::GetProjectileSpeed() const
 	return ProjectileSpeed;
 }
 
+void APBBossProjectile::SetSourcePatternName(FName NewSourcePatternName)
+{
+	SourcePatternName = NewSourcePatternName;
+}
+
 void APBBossProjectile::BeginPlay()
 {
 	Super::BeginPlay();
@@ -132,6 +137,10 @@ void APBBossProjectile::ProcessPinballOverlap(APBBallBase* Pinball)
 	if (Damageable && !Damageable->IsDead())
 	{
 		Damageable->TakeDamage(DamageAmount);
+		UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+			*SourcePatternName.ToString(),
+			DamageAmount,
+			*GetNameSafe(Pinball));
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Boss Projectile Hit Pinball: Projectile=%s, Pinball=%s"),

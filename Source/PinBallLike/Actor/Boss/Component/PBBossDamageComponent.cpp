@@ -3,8 +3,6 @@
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossStatComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossWeaknessComponent.h"
-#include "PinBallLike/Interface/Movable.h"
-#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 UPBBossDamageComponent::UPBBossDamageComponent()
 {
@@ -75,28 +73,19 @@ void UPBBossDamageComponent::HandleHitPartComponentHit(
 		LastHitFrameNumber = GFrameCounter;
 	}
 
-	ApplyPinballHitImpulse(OtherActor, Hit);
+	static_cast<void>(OtherActor);
+	static_cast<void>(Hit);
 }
 
 const UPBBossHitPartComponent* UPBBossDamageComponent::FindHitPartComponent(const UPrimitiveComponent* HitComponent) const
 {
-	if (!OwnerBoss || !HitComponent)
+	if (!HitComponent)
 	{
 		return nullptr;
 	}
 
-	TArray<UPBBossHitPartComponent*> HitPartComponents;
-	OwnerBoss->GetComponents<UPBBossHitPartComponent>(HitPartComponents);
-
-	for (const UPBBossHitPartComponent* HitPartComponent : HitPartComponents)
-	{
-		if (HitPartComponent && HitPartComponent->IsTargetHitComponent(HitComponent))
-		{
-			return HitPartComponent;
-		}
-	}
-
-	return nullptr;
+	const TObjectPtr<UPBBossHitPartComponent>* HitPartComponent = HitPartByCollisionComponent.Find(HitComponent);
+	return HitPartComponent ? HitPartComponent->Get() : nullptr;
 }
 
 void UPBBossDamageComponent::BindHitPartCollisionEvents()
@@ -106,10 +95,12 @@ void UPBBossDamageComponent::BindHitPartCollisionEvents()
 		return;
 	}
 
+	HitPartByCollisionComponent.Reset();
+
 	TArray<UPBBossHitPartComponent*> HitPartComponents;
 	OwnerBoss->GetComponents<UPBBossHitPartComponent>(HitPartComponents);
 
-	for (const UPBBossHitPartComponent* HitPartComponent : HitPartComponents)
+	for (UPBBossHitPartComponent* HitPartComponent : HitPartComponents)
 	{
 		if (!HitPartComponent)
 		{
@@ -123,42 +114,12 @@ void UPBBossDamageComponent::BindHitPartCollisionEvents()
 		{
 			if (HitCollisionComponent)
 			{
+				HitPartByCollisionComponent.Add(HitCollisionComponent, HitPartComponent);
 				HitCollisionComponent->SetNotifyRigidBodyCollision(true);
 				HitCollisionComponent->OnComponentHit.AddUniqueDynamic(this, &UPBBossDamageComponent::HandleHitPartComponentHit);
 			}
 		}
 	}
-}
-
-void UPBBossDamageComponent::ApplyPinballHitImpulse(AActor* OtherActor, const FHitResult& Hit) const
-{
-	if (!OwnerBoss || !OtherActor || OtherActor == OwnerBoss || PinballHitImpulseStrength <= 0.0f)
-	{
-		return;
-	}
-
-	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(OtherActor);
-	if (!Movable)
-	{
-		return;
-	}
-
-	FVector ImpulseDirection = OtherActor->GetActorLocation() - OwnerBoss->GetActorLocation();
-	ImpulseDirection.Z = 0.0f;
-
-	if (ImpulseDirection.IsNearlyZero())
-	{
-		ImpulseDirection = Hit.ImpactNormal;
-		ImpulseDirection.Z = 0.0f;
-	}
-
-	ImpulseDirection = ImpulseDirection.GetSafeNormal();
-	if (ImpulseDirection.IsNearlyZero())
-	{
-		return;
-	}
-
-	Movable->AddImpulse(ImpulseDirection * PinballHitImpulseStrength);
 }
 
 FName UPBBossDamageComponent::ResolveHitPointName() const

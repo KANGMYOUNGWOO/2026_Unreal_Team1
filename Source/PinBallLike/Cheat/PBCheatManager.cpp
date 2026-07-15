@@ -7,7 +7,10 @@
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
+#include "PinBallLike/Actor/Boss/Component/PBBossGroggyComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossStatComponent.h"
+#include "PinBallLike/Actor/Boss/Golem/PBGolemBoss.h"
+#include "PinBallLike/Actor/Boss/Golem/PBGolemBossHand.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
@@ -15,6 +18,9 @@
 
 namespace
 {
+const FName LeftGolemHandName = TEXT("Left");
+const FName RightGolemHandName = TEXT("Right");
+
 FName GetCheatSceneMapPath(const int32 SceneIndex)
 {
 	switch (SceneIndex)
@@ -169,6 +175,88 @@ void UPBCheatManager::DamageBoss(const int32 DamageAmount)
 
 	BossStatComponent->ApplyBossDamage(NAME_None, DamageAmount);
 	UE_LOG(LogTemp, Log, TEXT("[Cheat] DamageBoss succeeded. Damage=%d"), DamageAmount);
+}
+
+void UPBCheatManager::DamageGolemHand(const FName HandName, const int32 DamageAmount)
+{
+	if (DamageAmount <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] DamageGolemHand failed. DamageAmount must be greater than 0."));
+		return;
+	}
+
+	EPBGolemBossHandType HandType;
+	if (HandName == LeftGolemHandName)
+	{
+		HandType = EPBGolemBossHandType::Left;
+	}
+	else if (HandName == RightGolemHandName)
+	{
+		HandType = EPBGolemBossHandType::Right;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] DamageGolemHand failed. Unknown HandName=%s. Use Left or Right."),
+			*HandName.ToString());
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	APBGolemBoss* GolemBoss = World
+		? Cast<APBGolemBoss>(UGameplayStatics::GetActorOfClass(World, APBGolemBoss::StaticClass()))
+		: nullptr;
+	if (!GolemBoss)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] DamageGolemHand failed. GolemBoss is missing."));
+		return;
+	}
+
+	APBGolemBossHand* GolemHand = GolemBoss->GetGolemHand(HandType);
+	if (!GolemHand)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] DamageGolemHand failed. Hand=%s is missing."), *HandName.ToString());
+		return;
+	}
+
+	GolemHand->ApplyHandDamage(DamageAmount);
+	UE_LOG(LogTemp, Log, TEXT("[Cheat] DamageGolemHand succeeded. Hand=%s Damage=%d HP=%d/%d Available=%s"),
+		*HandName.ToString(),
+		DamageAmount,
+		GolemHand->GetCurrentHandHP(),
+		GolemHand->GetMaxHandHP(),
+		GolemHand->IsHandAvailable() ? TEXT("true") : TEXT("false"));
+}
+
+void UPBCheatManager::AddBossGroggy(const int32 GroggyAmount)
+{
+	if (GroggyAmount <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] AddBossGroggy failed. GroggyAmount must be greater than 0."));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	APBBossBase* Boss = World
+		? Cast<APBBossBase>(UGameplayStatics::GetActorOfClass(World, APBBossBase::StaticClass()))
+		: nullptr;
+	if (!Boss)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] AddBossGroggy failed. Boss is missing."));
+		return;
+	}
+
+	UPBBossGroggyComponent* BossGroggyComponent = Boss->GetBossGroggyComponent();
+	if (!BossGroggyComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] AddBossGroggy failed. BossGroggyComponent is invalid."));
+		return;
+	}
+
+	BossGroggyComponent->ApplyGroggyDamage(GroggyAmount);
+	UE_LOG(LogTemp, Log, TEXT("[Cheat] AddBossGroggy succeeded. Amount=%d Gauge=%d/%d"),
+		GroggyAmount,
+		BossGroggyComponent->GroggyGauge,
+		BossGroggyComponent->MaxGroggyGauge);
 }
 
 UGameInstance* UPBCheatManager::GetCheatGameInstance() const

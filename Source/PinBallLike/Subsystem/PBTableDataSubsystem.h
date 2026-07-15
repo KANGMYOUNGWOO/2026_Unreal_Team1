@@ -17,6 +17,8 @@
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRows.h"
+#include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
+#include "PinBallLike/Table/Relic/Struct/PBRelicModifierRow.h"
 #include "PBTableDataSubsystem.generated.h"
 
 struct FPBStatusEffectTriggerRow;
@@ -50,6 +52,7 @@ public:
 	void SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable);
 	void SetSkillTable(UDataTable* InSkillTable);
 	void SetBossTables(UDataTable* InBossTable, UDataTable* InBossHitPointTable, UDataTable* InBossPatternTable);
+	void SetRelicTable(UDataTable* InRelicTable , UDataTable* InRelicModifierTable);
 	void SetStatusEffectTables(
 		UDataTable* InStatusEffectTable,
 		UDataTable* InStatusEffectModifierTable,
@@ -149,9 +152,26 @@ private:
 
 #pragma endregion
 
+#pragma  region Relic 
+public:
+	bool FindRelicRow(FName RowName,FPBRelicTableRow& OutRow) const;
+	bool FindRelicModifierRow(FName RowName, FPBRelicModifierRow OutRow) const;
+	
+	void GetRelicModifierRows(FName RelicId, TArray<FPBRelicModifierRow>& OutRows) const;
+	void GetAllRelicIds(TArray<FName>& OutRelicIds) const;
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> RelicTable;
+	
+	UPROPERTY()
+	TObjectPtr<UDataTable> RelicModifierTable;
+	
+#pragma  endregion 
+	
 #pragma region Boss
 
 public:
+	bool GetBossRowNames(TArray<FName>& OutRowNames) const;
 	bool FindBossRow(FName RowName, FPBBossTableRow& OutRow) const;
 	bool FindBossHitPointRow(FName RowName, FPBBossHitPointTableRow& OutRow) const;
 	bool FindBossPatternRow(FName RowName, FPBBossPatternTableRow& OutRow) const;

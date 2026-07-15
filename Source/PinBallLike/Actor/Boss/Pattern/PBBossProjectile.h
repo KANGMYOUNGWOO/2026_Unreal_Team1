@@ -24,6 +24,8 @@ public:
 	// 현재 투사체 이동 속도를 반환합니다.
 	float GetProjectileSpeed() const;
 
+	void SetSourcePatternName(FName NewSourcePatternName);
+
 protected:
 	// 게임 시작 시 충돌 설정과 초기 겹침 검사를 수행합니다.
 	virtual void BeginPlay() override;
@@ -51,4 +53,5 @@ private:
 	void ProcessPinballOverlap(APBBallBase* Pinball);
 
 	TSet<TObjectKey<APBBallBase>> ProcessedPinballs;
+	FName SourcePatternName = NAME_None;
 };

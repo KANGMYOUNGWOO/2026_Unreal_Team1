@@ -1,13 +1,17 @@
 #include "PBChoiceRouteActor.h"
 
 #include "Components/SplineComponent.h"
+#include "Components/SplineMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInterface.h"
 #include "Kismet/GameplayStatics.h"
+
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PBChoiceBallActor.h"
 #include "PBChoiceNodeManager.h"
 #include "Blueprint/UserWidget.h"
 #include "PinBallLike/Shop/MVVM/PBShopActor.h"
-#include  "UI/PBChoiceWidget.h"
+#include "UI/PBChoiceWidget.h"
 
 APBChoiceRouteActor::APBChoiceRouteActor()
 {
@@ -66,6 +70,165 @@ void APBChoiceRouteActor::ChooseLeft()
 void APBChoiceRouteActor::ChooseRight()
 {
     StartMove(RightSpline, EPBChoiceRouteSide::Right);
+}
+
+void APBChoiceRouteActor::OnConstruction(const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+    
+    BuildSplineMeshes(
+        LeftSpline,
+        LeftSplineMeshes,
+        TEXT("LeftRouteMesh"));
+
+    BuildSplineMeshes(
+        RightSpline,
+        RightSplineMeshes,
+        TEXT("RightRouteMesh"));
+        
+}
+
+void APBChoiceRouteActor::BuildSplineMeshes(USplineComponent* TargetSpline,
+    TArray<TObjectPtr<USplineMeshComponent>>& OutSplineMeshes, const FString& ComponentNamePrefix)
+{
+     ClearSplineMeshes(OutSplineMeshes);
+
+    if (!IsValid(TargetSpline))
+    {
+        return;
+    }
+
+    if (!IsValid(RouteSplineMesh))
+    {
+        return;
+    }
+
+    const int32 PointCount =
+        TargetSpline->GetNumberOfSplinePoints();
+
+    if (PointCount < 2)
+    {
+        return;
+    }
+
+    /*
+     * 포인트가 N개라면 구간은 N - 1개입니다.
+     *
+     * 0 ─ 1 ─ 2 ─ 3
+     *   0   1   2
+     */
+    for (int32 PointIndex = 0;
+         PointIndex < PointCount - 1;
+         ++PointIndex)
+    {
+        const FVector StartPosition =
+            TargetSpline->GetLocationAtSplinePoint(
+                PointIndex,
+                ESplineCoordinateSpace::Local);
+
+        const FVector StartTangent =
+            TargetSpline->GetTangentAtSplinePoint(
+                PointIndex,
+                ESplineCoordinateSpace::Local);
+
+        const FVector EndPosition =
+            TargetSpline->GetLocationAtSplinePoint(
+                PointIndex + 1,
+                ESplineCoordinateSpace::Local);
+
+        const FVector EndTangent =
+            TargetSpline->GetTangentAtSplinePoint(
+                PointIndex + 1,
+                ESplineCoordinateSpace::Local);
+
+        const FName ComponentName(
+            *FString::Printf(
+                TEXT("%s_%d"),
+                *ComponentNamePrefix,
+                PointIndex));
+
+        USplineMeshComponent* SplineMesh =
+            NewObject<USplineMeshComponent>(
+                this,
+                USplineMeshComponent::StaticClass(),
+                ComponentName,
+                RF_Transactional);
+
+        if (!IsValid(SplineMesh))
+        {
+            continue;
+        }
+
+        /*
+         * 동적으로 생성한 컴포넌트를 액터가 소유하도록 등록합니다.
+         */
+        AddInstanceComponent(SplineMesh);
+
+        /*
+         * 좌표를 Local로 읽었으므로 TargetSpline의 자식으로 붙입니다.
+         */
+        SplineMesh->SetupAttachment(TargetSpline);
+
+        SplineMesh->SetMobility(EComponentMobility::Movable);
+        SplineMesh->SetStaticMesh(RouteSplineMesh);
+
+        SplineMesh->SetForwardAxis(
+            SplineMeshForwardAxis,
+            false);
+
+        SplineMesh->SetStartAndEnd(
+            StartPosition,
+            StartTangent,
+            EndPosition,
+            EndTangent,
+            false);
+
+        SplineMesh->SetStartScale(
+            SplineMeshScale,
+            false);
+
+        SplineMesh->SetEndScale(
+            SplineMeshScale,
+            false);
+
+        if (IsValid(RouteSplineMaterial))
+        {
+            SplineMesh->SetMaterial(
+                0,
+                RouteSplineMaterial);
+        }
+
+        SplineMesh->SetCollisionEnabled(
+            bSplineMeshCollisionEnabled
+                ? ECollisionEnabled::QueryAndPhysics
+                : ECollisionEnabled::NoCollision);
+
+        SplineMesh->RegisterComponent();
+        SplineMesh->UpdateMesh();
+        SplineMesh->bSmoothInterpRollScale =
+            bSmoothInterpRollScale;
+        OutSplineMeshes.Add(SplineMesh);
+        
+        
+    }
+    
+}
+
+void APBChoiceRouteActor::ClearSplineMeshes(TArray<TObjectPtr<USplineMeshComponent>>& SplineMeshes)
+{
+
+    for (USplineMeshComponent* SplineMesh : SplineMeshes)
+    {
+        if (!IsValid(SplineMesh))
+        {
+            continue;
+        }
+
+        RemoveInstanceComponent(SplineMesh);
+        SplineMesh->DestroyComponent();
+    }
+
+    SplineMeshes.Empty();
 }
 
 void APBChoiceRouteActor::StartMove(

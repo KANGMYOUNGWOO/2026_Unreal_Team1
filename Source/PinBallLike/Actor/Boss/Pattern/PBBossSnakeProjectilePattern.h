@@ -37,6 +37,9 @@ protected:
 	float FireIntervalSeconds = 0.2f;
 
 private:
+	void ApplySnakeProjectilePose(APBBossBase* Boss, float Alpha) const;
+	void FinishProjectilePattern();
+
 	// 설정된 위치와 방향으로 투사체 하나를 발사합니다.
 	void FireProjectile();
 	// 반복 발사 타이머를 해제합니다.
