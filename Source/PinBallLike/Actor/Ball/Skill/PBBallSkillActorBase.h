@@ -60,7 +60,6 @@ protected:
 
 	virtual AActor* FindTarget() const;
 	virtual bool IsTargetValid(const AActor* Target) const;
-	virtual bool ShouldWaitForVisualCompletion() const;
 	const FPBBallSkillTableRow& GetSkillData() const { return SkillData; }
 	int32 GetSkillDamageAmount() const { return SkillDamageAmount; }
 
@@ -75,11 +74,13 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ball|Skill|Effect")
 	void OnHit(AActor* Target, int32 AppliedDamage, FVector HitLocation);
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Ball|Skill|Effect")
+	UFUNCTION(BlueprintNativeEvent, Category = "Ball|Skill|Effect")
 	void OnFinished();
+	virtual void OnFinished_Implementation();
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Ball|Skill|Effect")
+	UFUNCTION(BlueprintNativeEvent, Category = "Ball|Skill|Effect")
 	void OnStopped();
+	virtual void OnStopped_Implementation();
 
 	UFUNCTION()
 	void HandleDamageApplied(AActor* Target, int32 AppliedDamage, FVector HitLocation);
