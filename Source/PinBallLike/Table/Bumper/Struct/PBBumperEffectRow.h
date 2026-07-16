@@ -22,6 +22,10 @@ struct PINBALLLIKE_API FPBBumperEffectRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
 	float Power = 0.0f;
 
+	/** 효과가 실제 실행될 때 재생할 Niagara System의 논리 에셋 이름. None이면 연출을 생략한다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
+	FName ActivationVfxId = NAME_None;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
 	FText Description;
 

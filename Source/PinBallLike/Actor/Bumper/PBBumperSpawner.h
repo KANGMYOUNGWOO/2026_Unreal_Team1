@@ -18,6 +18,7 @@ class UPBGameDataLoadSubsystem;
 class UPBPlayerDataSubsystem;
 class UPBTableDataSubsystem;
 class USceneComponent;
+class UNiagaraSystem;
 
 struct FPBPreparedBumperSpawnData
 {
@@ -26,6 +27,7 @@ struct FPBPreparedBumperSpawnData
 	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
 	FPBBumperEffectRow EffectRow;
 	TSubclassOf<UPBBumperEffectBase> EffectClass;
+	UNiagaraSystem* ActivationVfx = nullptr;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
