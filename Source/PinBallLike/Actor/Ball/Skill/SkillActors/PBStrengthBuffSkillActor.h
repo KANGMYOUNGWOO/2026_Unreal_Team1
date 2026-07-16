@@ -2,19 +2,19 @@
 
 #include "CoreMinimal.h"
 #include "PinBallLike/Actor/Ball/Skill/PBBallSkillActorBase.h"
-#include "PBPartyBuffSkillActor.generated.h"
+#include "PBStrengthBuffSkillActor.generated.h"
 
 class APBCombatPartyController;
 class UPBStatusEffectComponent;
 class USceneComponent;
 
 UCLASS(Blueprintable)
-class PINBALLLIKE_API APBPartyBuffSkillActor : public APBBallSkillActorBase
+class PINBALLLIKE_API APBStrengthBuffSkillActor : public APBBallSkillActorBase
 {
 	GENERATED_BODY()
 
 public:
-	APBPartyBuffSkillActor();
+	APBStrengthBuffSkillActor();
 
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

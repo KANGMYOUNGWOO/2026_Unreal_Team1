@@ -15,6 +15,7 @@
 #include "PinBallLike/Actor/Boss/Golem/PBGolemBoss.h"
 #include "PinBallLike/Actor/Boss/Golem/PBGolemBossHand.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
+#include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Table/Ball/PBBallAssetIds.h"
@@ -291,6 +292,34 @@ void UPBCheatManager::DamageBall()
 		TEXT("[Cheat] DamageBall finished. Damage=%d DamagedBalls=%d"),
 		DamageAmount,
 		DamagedBallCount);
+}
+
+void UPBCheatManager::RegenMana()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	constexpr float ManaAmount = 500.0f;
+	int32 RestoredBallCount = 0;
+	for (TActorIterator<APBBallBase> It(World); It; ++It)
+	{
+		UPBBaseResourceComponent* ResourceComponent = It->GetResourceComponent();
+		if (!ResourceComponent || !ResourceComponent->HasResource(PBResourceNames::Mana))
+		{
+			continue;
+		}
+
+		ResourceComponent->ApplyResourceDelta(PBResourceNames::Mana, ManaAmount);
+		++RestoredBallCount;
+	}
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[Cheat] RestoreBallMana finished. Mana=%.0f RestoredBalls=%d"),
+		ManaAmount,
+		RestoredBallCount);
 }
 
 UGameInstance* UPBCheatManager::GetCheatGameInstance() const

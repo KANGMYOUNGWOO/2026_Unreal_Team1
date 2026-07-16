@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PBBallSkillActorBase.h"
+#include "PinBallLike/Actor/Ball/Skill/PBBallSkillActorBase.h"
 #include "PBLaserSkillActor.generated.h"
 
 class APBBallBase;

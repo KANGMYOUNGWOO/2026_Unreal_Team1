@@ -190,20 +190,7 @@ void APBGolemBossHand::LaunchFistAtLocation(FVector TargetWorldLocation, float D
 
 void APBGolemBossHand::LaunchFistAtLocationForPattern(FVector TargetWorldLocation, FVector Direction, float Duration)
 {
-	FVector SafeDirection = Direction;
-	SafeDirection.Z = 0.0f;
-	SafeDirection = SafeDirection.GetSafeNormal();
-	if (!SafeDirection.IsNearlyZero())
-	{
-		const FVector TelegraphStartLocation = TelegraphStartPoint
-			? TelegraphStartPoint->GetComponentLocation()
-			: GetActorLocation();
-		SetActorRotation(SafeDirection.Rotation());
-		if (TelegraphStartPoint)
-		{
-			AddActorWorldOffset(TelegraphStartLocation - TelegraphStartPoint->GetComponentLocation());
-		}
-	}
+	static_cast<void>(Direction);
 
 	BP_OnFistLaunchStarted(TargetWorldLocation);
 	MoveTelegraphStartToWorldLocationForPattern(TargetWorldLocation, Duration);
