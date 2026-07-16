@@ -32,9 +32,9 @@ bool UPBBossTurtleChargePattern::CanExecute_Implementation(APBBossBase* Boss) co
 
 void UPBBossTurtleChargePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 {
-	TurtleBoss = Cast<APBTurtleBoss>(Boss);
+	APBTurtleBoss* TurtleBoss = Cast<APBTurtleBoss>(Boss);
 	AActor* Ball = FindPinballActor(Boss);
-	if (!TurtleBoss.IsValid() || !Ball)
+	if (!TurtleBoss || !Ball)
 	{
 		FinishPattern();
 		return;
@@ -49,7 +49,7 @@ void UPBBossTurtleChargePattern::ExecutePattern_Implementation(APBBossBase* Boss
 	}
 
 	ChargeDirection = Direction;
-	IsChargeEndLocationValid = FindChargeEndLocation(TurtleBoss.Get(), ChargeEndLocation);
+	IsChargeEndLocationValid = FindChargeEndLocation(TurtleBoss, ChargeEndLocation);
 	FRotator ChargeRotation = ChargeDirection.Rotation();
 	ChargeRotation.Pitch = 0.0f;
 	ChargeRotation.Yaw += ChargeFacingYawOffset;
@@ -81,26 +81,14 @@ void UPBBossTurtleChargePattern::ExecutePattern_Implementation(APBBossBase* Boss
 
 void UPBBossTurtleChargePattern::StartCharge()
 {
-	APBTurtleBoss* Boss = TurtleBoss.Get();
+	APBTurtleBoss* Boss = GetTurtleBoss();
 	if (!Boss)
 	{
 		CompleteChargePattern();
 		return;
 	}
 
-	DamagedBalls.Reset();
-	ChargeCollision = NewObject<USphereComponent>(Boss, TEXT("ChargeCollision"));
-	ChargeCollision->InitSphereRadius(ChargeCollisionRadius);
-	ChargeCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	ChargeCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
-	ChargeCollision->SetGenerateOverlapEvents(true);
-	ChargeCollision->RegisterComponent();
-	ChargeCollision->AttachToComponent(
-		Boss->GetRootComponent(),
-		FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	ChargeCollision->OnComponentBeginOverlap.AddUniqueDynamic(
-		this,
-		&UPBBossTurtleChargePattern::HandleChargeBeginOverlap);
+	CreateChargeHitCollision(Boss);
 
 	Boss->GetWorldTimerManager().SetTimer(
 		ChargeUpdateTimerHandle,
@@ -112,7 +100,7 @@ void UPBBossTurtleChargePattern::StartCharge()
 
 void UPBBossTurtleChargePattern::UpdateCharge()
 {
-	if (APBTurtleBoss* Boss = TurtleBoss.Get())
+	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
 		if (IsDrawChargeDamageRange)
 		{
@@ -152,23 +140,17 @@ void UPBBossTurtleChargePattern::UpdateCharge()
 
 void UPBBossTurtleChargePattern::StopCharge()
 {
-	if (APBTurtleBoss* Boss = TurtleBoss.Get())
+	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
 		Boss->GetWorldTimerManager().ClearTimer(ChargeUpdateTimerHandle);
 	}
 
-	if (ChargeCollision)
-	{
-		ChargeCollision->DestroyComponent();
-		ChargeCollision = nullptr;
-	}
-
-	DamagedBalls.Reset();
+	DestroyChargeHitCollision();
 }
 
 void UPBBossTurtleChargePattern::FinishCharge()
 {
-	APBTurtleBoss* Boss = TurtleBoss.Get();
+	APBTurtleBoss* Boss = GetTurtleBoss();
 	if (!Boss)
 	{
 		CompleteChargePattern();
@@ -196,7 +178,7 @@ void UPBBossTurtleChargePattern::FinishCharge()
 
 void UPBBossTurtleChargePattern::UpdateReturnToMoveArea()
 {
-	APBTurtleBoss* Boss = TurtleBoss.Get();
+	APBTurtleBoss* Boss = GetTurtleBoss();
 	if (!Boss)
 	{
 		CompleteChargePattern();
@@ -220,7 +202,7 @@ void UPBBossTurtleChargePattern::UpdateReturnToMoveArea()
 
 void UPBBossTurtleChargePattern::CompleteChargePattern()
 {
-	if (APBTurtleBoss* Boss = TurtleBoss.Get())
+	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
 		Boss->SetActorRotation(FRotator::ZeroRotator);
 		Boss->SetPinballCollisionDamageBlocked(false);
@@ -232,7 +214,7 @@ void UPBBossTurtleChargePattern::CompleteChargePattern()
 
 void UPBBossTurtleChargePattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
 {
-	if (APBTurtleBoss* Turtle = TurtleBoss.Get())
+	if (APBTurtleBoss* Turtle = GetTurtleBoss())
 	{
 		Turtle->SetActorRotation(FRotator::ZeroRotator);
 		Turtle->SetPinballCollisionDamageBlocked(false);
@@ -244,7 +226,7 @@ void UPBBossTurtleChargePattern::CancelPatternInternal_Implementation(APBBossBas
 
 void UPBBossTurtleChargePattern::CleanupCharge()
 {
-	if (APBTurtleBoss* Boss = TurtleBoss.Get())
+	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
 		FTimerManager& TimerManager = Boss->GetWorldTimerManager();
 		TimerManager.ClearTimer(ChargeStartTimerHandle);
@@ -254,15 +236,46 @@ void UPBBossTurtleChargePattern::CleanupCharge()
 		TimerManager.ClearTimer(ReturnUpdateTimerHandle);
 	}
 
-	if (ChargeCollision)
+	DestroyChargeHitCollision();
+	IsChargeEndLocationValid = false;
+}
+
+APBTurtleBoss* UPBBossTurtleChargePattern::GetTurtleBoss() const
+{
+	return Cast<APBTurtleBoss>(GetOwnerBoss());
+}
+
+void UPBBossTurtleChargePattern::CreateChargeHitCollision(APBTurtleBoss* Boss)
+{
+	DestroyChargeHitCollision();
+	if (!Boss || ChargeCollisionRadius <= 0.0f)
 	{
-		ChargeCollision->DestroyComponent();
-		ChargeCollision = nullptr;
+		return;
 	}
 
-	TurtleBoss.Reset();
+	ChargeHitCollision = NewObject<USphereComponent>(Boss, TEXT("TurtleChargeHitCollision"));
+	ChargeHitCollision->InitSphereRadius(ChargeCollisionRadius);
+	ChargeHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	ChargeHitCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
+	ChargeHitCollision->SetGenerateOverlapEvents(true);
+	ChargeHitCollision->RegisterComponent();
+	ChargeHitCollision->AttachToComponent(
+		Boss->GetRootComponent(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	ChargeHitCollision->OnComponentBeginOverlap.AddUniqueDynamic(
+		this,
+		&UPBBossTurtleChargePattern::HandleChargeBeginOverlap);
+}
+
+void UPBBossTurtleChargePattern::DestroyChargeHitCollision()
+{
+	if (ChargeHitCollision)
+	{
+		ChargeHitCollision->DestroyComponent();
+		ChargeHitCollision = nullptr;
+	}
+
 	DamagedBalls.Reset();
-	IsChargeEndLocationValid = false;
 }
 
 bool UPBBossTurtleChargePattern::FindChargeEndLocation(
@@ -356,10 +369,10 @@ void UPBBossTurtleChargePattern::HandleChargeBeginOverlap(
 	bool IsFromSweep,
 	const FHitResult& SweepResult)
 {
-	ApplyChargeDamage(Cast<APBBallBase>(OtherActor));
+	ApplyChargeHit(Cast<APBBallBase>(OtherActor));
 }
 
-void UPBBossTurtleChargePattern::ApplyChargeDamage(APBBallBase* Ball)
+void UPBBossTurtleChargePattern::ApplyChargeHit(APBBallBase* Ball)
 {
 	if (!Ball || ChargeDamage <= 0)
 	{
@@ -373,19 +386,14 @@ void UPBBossTurtleChargePattern::ApplyChargeDamage(APBBallBase* Ball)
 	}
 
 	DamagedBalls.Add(BallKey);
-	IDamageable* Damageable = Cast<IDamageable>(Ball);
-	if (!Damageable)
+	if (IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball))
 	{
-		Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball);
-	}
-
-	if (Damageable && !Damageable->IsDead())
-	{
-		Damageable->TakeDamage(ChargeDamage);
-		const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
-		UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
-			*SourcePatternName.ToString(),
-			ChargeDamage,
-			*GetNameSafe(Ball));
+		if (!Damageable->IsDead())
+		{
+			Damageable->TakeDamage(ChargeDamage);
+			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
+			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+				*SourcePatternName.ToString(), ChargeDamage, *GetNameSafe(Ball));
+		}
 	}
 }

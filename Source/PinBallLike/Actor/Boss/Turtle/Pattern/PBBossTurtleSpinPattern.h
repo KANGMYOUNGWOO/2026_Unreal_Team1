@@ -39,7 +39,10 @@ protected:
 	void StopSpin();
 	void CompletePattern();
 	void CleanupSpin();
-	void ApplySpinDamage(APBBallBase* Ball);
+	APBTurtleBoss* GetTurtleBoss() const;
+	void CreateSpinHitCollision(APBTurtleBoss* Boss);
+	void DestroySpinHitCollision();
+	void ApplySpinHit(APBBallBase* Ball);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Spin")
 	TObjectPtr<UAnimSequence> HideAnimation;
@@ -76,12 +79,11 @@ protected:
 
 private:
 	UPROPERTY(Transient)
-	TObjectPtr<USphereComponent> SpinCollision;
+	TObjectPtr<USphereComponent> SpinHitCollision;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UNiagaraComponent> SpinEffectComponent;
 
-	TWeakObjectPtr<APBTurtleBoss> TurtleBoss;
 	TSet<TObjectKey<APBBallBase>> DamagedBalls;
 	FTimerHandle SpinStartTimerHandle;
 	FTimerHandle SpinUpdateTimerHandle;

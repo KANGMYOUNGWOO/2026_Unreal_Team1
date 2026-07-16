@@ -38,7 +38,10 @@ protected:
 	void FinishCharge();
 	void UpdateReturnToMoveArea();
 	void CompleteChargePattern();
-	void ApplyChargeDamage(APBBallBase* Ball);
+	APBTurtleBoss* GetTurtleBoss() const;
+	void CreateChargeHitCollision(APBTurtleBoss* Boss);
+	void DestroyChargeHitCollision();
+	void ApplyChargeHit(APBBallBase* Ball);
 	void CleanupCharge();
 	bool FindChargeEndLocation(const APBTurtleBoss* Boss, FVector& OutChargeEndLocation) const;
 
@@ -83,9 +86,8 @@ protected:
 
 private:
 	UPROPERTY(Transient)
-	TObjectPtr<USphereComponent> ChargeCollision;
+	TObjectPtr<USphereComponent> ChargeHitCollision;
 
-	TWeakObjectPtr<APBTurtleBoss> TurtleBoss;
 	TSet<TObjectKey<APBBallBase>> DamagedBalls;
 	FVector ChargeDirection = FVector::ForwardVector;
 	FVector ChargeEndLocation = FVector::ZeroVector;

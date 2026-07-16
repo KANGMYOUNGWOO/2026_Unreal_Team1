@@ -35,8 +35,8 @@ bool UPBBossTurtleSpinPattern::CanExecute_Implementation(APBBossBase* Boss) cons
 
 void UPBBossTurtleSpinPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 {
-	TurtleBoss = Cast<APBTurtleBoss>(Boss);
-	if (!TurtleBoss.IsValid())
+	APBTurtleBoss* TurtleBoss = Cast<APBTurtleBoss>(Boss);
+	if (!TurtleBoss)
 	{
 		FinishPattern();
 		return;
@@ -56,22 +56,14 @@ void UPBBossTurtleSpinPattern::CancelPatternInternal_Implementation(APBBossBase*
 
 void UPBBossTurtleSpinPattern::StartSpin()
 {
-	APBTurtleBoss* Boss = TurtleBoss.Get();
+	APBTurtleBoss* Boss = GetTurtleBoss();
 	if (!Boss)
 	{
 		CompletePattern();
 		return;
 	}
 
-	DamagedBalls.Reset();
-	SpinCollision = NewObject<USphereComponent>(Boss, TEXT("SpinCollision"));
-	SpinCollision->InitSphereRadius(SpinCollisionRadius);
-	SpinCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	SpinCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
-	SpinCollision->SetGenerateOverlapEvents(true);
-	SpinCollision->RegisterComponent();
-	SpinCollision->AttachToComponent(Boss->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	SpinCollision->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPBBossTurtleSpinPattern::HandleSpinBeginOverlap);
+	CreateSpinHitCollision(Boss);
 
 	if (SpinEffect)
 	{
@@ -103,7 +95,7 @@ void UPBBossTurtleSpinPattern::StartSpin()
 
 void UPBBossTurtleSpinPattern::UpdateSpin()
 {
-	if (APBTurtleBoss* Boss = TurtleBoss.Get())
+	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
 		Boss->AddActorLocalRotation(FRotator(0.0f, SpinRotationSpeed * 0.016f, 0.0f));
 
@@ -125,16 +117,12 @@ void UPBBossTurtleSpinPattern::UpdateSpin()
 
 void UPBBossTurtleSpinPattern::StopSpin()
 {
-	if (APBTurtleBoss* Boss = TurtleBoss.Get())
+	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
 		Boss->GetWorldTimerManager().ClearTimer(SpinUpdateTimerHandle);
 	}
 
-	if (SpinCollision)
-	{
-		SpinCollision->DestroyComponent();
-		SpinCollision = nullptr;
-	}
+	DestroySpinHitCollision();
 
 	if (SpinEffectComponent)
 	{
@@ -142,12 +130,11 @@ void UPBBossTurtleSpinPattern::StopSpin()
 		SpinEffectComponent = nullptr;
 	}
 
-	DamagedBalls.Reset();
 }
 
 void UPBBossTurtleSpinPattern::CompletePattern()
 {
-	if (APBTurtleBoss* Boss = TurtleBoss.Get())
+	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
 		FRotator BossRotation = Boss->GetActorRotation();
 		BossRotation.Yaw = 0.0f;
@@ -160,7 +147,7 @@ void UPBBossTurtleSpinPattern::CompletePattern()
 
 void UPBBossTurtleSpinPattern::CleanupSpin()
 {
-	if (APBTurtleBoss* Boss = TurtleBoss.Get())
+	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
 		FTimerManager& TimerManager = Boss->GetWorldTimerManager();
 		TimerManager.ClearTimer(SpinStartTimerHandle);
@@ -170,11 +157,7 @@ void UPBBossTurtleSpinPattern::CleanupSpin()
 		Boss->RestoreTurtleAnimationMode();
 	}
 
-	if (SpinCollision)
-	{
-		SpinCollision->DestroyComponent();
-		SpinCollision = nullptr;
-	}
+	DestroySpinHitCollision();
 
 	if (SpinEffectComponent)
 	{
@@ -182,7 +165,43 @@ void UPBBossTurtleSpinPattern::CleanupSpin()
 		SpinEffectComponent = nullptr;
 	}
 
-	TurtleBoss.Reset();
+}
+
+APBTurtleBoss* UPBBossTurtleSpinPattern::GetTurtleBoss() const
+{
+	return Cast<APBTurtleBoss>(GetOwnerBoss());
+}
+
+void UPBBossTurtleSpinPattern::CreateSpinHitCollision(APBTurtleBoss* Boss)
+{
+	DestroySpinHitCollision();
+	if (!Boss || SpinCollisionRadius <= 0.0f)
+	{
+		return;
+	}
+
+	SpinHitCollision = NewObject<USphereComponent>(Boss, TEXT("TurtleSpinHitCollision"));
+	SpinHitCollision->InitSphereRadius(SpinCollisionRadius);
+	SpinHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	SpinHitCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
+	SpinHitCollision->SetGenerateOverlapEvents(true);
+	SpinHitCollision->RegisterComponent();
+	SpinHitCollision->AttachToComponent(
+		Boss->GetRootComponent(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	SpinHitCollision->OnComponentBeginOverlap.AddUniqueDynamic(
+		this,
+		&UPBBossTurtleSpinPattern::HandleSpinBeginOverlap);
+}
+
+void UPBBossTurtleSpinPattern::DestroySpinHitCollision()
+{
+	if (SpinHitCollision)
+	{
+		SpinHitCollision->DestroyComponent();
+		SpinHitCollision = nullptr;
+	}
+
 	DamagedBalls.Reset();
 }
 
@@ -194,10 +213,10 @@ void UPBBossTurtleSpinPattern::HandleSpinBeginOverlap(
 	bool IsFromSweep,
 	const FHitResult& SweepResult)
 {
-	ApplySpinDamage(Cast<APBBallBase>(OtherActor));
+	ApplySpinHit(Cast<APBBallBase>(OtherActor));
 }
 
-void UPBBossTurtleSpinPattern::ApplySpinDamage(APBBallBase* Ball)
+void UPBBossTurtleSpinPattern::ApplySpinHit(APBBallBase* Ball)
 {
 	if (!Ball || SpinDamage <= 0)
 	{
@@ -211,23 +230,18 @@ void UPBBossTurtleSpinPattern::ApplySpinDamage(APBBallBase* Ball)
 	}
 
 	DamagedBalls.Add(BallKey);
-	IDamageable* Damageable = Cast<IDamageable>(Ball);
-	if (!Damageable)
+	if (IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball))
 	{
-		Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball);
+		if (!Damageable->IsDead())
+		{
+			Damageable->TakeDamage(SpinDamage);
+			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
+			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+				*SourcePatternName.ToString(), SpinDamage, *GetNameSafe(Ball));
+		}
 	}
 
-	if (Damageable && !Damageable->IsDead())
-	{
-		Damageable->TakeDamage(SpinDamage);
-		const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
-		UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
-			*SourcePatternName.ToString(),
-			SpinDamage,
-			*GetNameSafe(Ball));
-	}
-
-	APBTurtleBoss* Boss = TurtleBoss.Get();
+	APBTurtleBoss* Boss = GetTurtleBoss();
 	if (Boss && SpinBounceVelocity > 0.0f)
 	{
 		if (IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball))
