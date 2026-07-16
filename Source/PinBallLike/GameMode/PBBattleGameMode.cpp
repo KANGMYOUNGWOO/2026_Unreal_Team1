@@ -560,6 +560,15 @@ void APBBattleGameMode::HandleBossDeadMessage(
 				TArray<FName> BossRowNames;
 				if (TableDataSubsystem->GetBossRowNames(BossRowNames))
 				{
+					const bool IsAllBossesCleared =
+						BossRowNames.Num() > 0
+						&& PlayerDataSubsystem->GetCurrentBossIndex() >= BossRowNames.Num() - 1;
+					if (IsAllBossesCleared)
+					{
+						UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/Lv_MainMenu")));
+						return;
+					}
+
 					PlayerDataSubsystem->AdvanceBossProgress(BossRowNames.Num());
 				}
 			}
