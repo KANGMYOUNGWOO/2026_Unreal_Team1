@@ -498,7 +498,16 @@ void APBCombatPartyController::RequestUseSkill(const int32 SkillInputValue)
 		return;
 	}
 
-	Ball->TryActivateSkill();
+	UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
+	const float MaxMana = ResourceComponent
+		? ResourceComponent->GetResourceMax(PBResourceNames::Mana)
+		: 0.0f;
+	if (MaxMana > 0.0f
+		&& ResourceComponent->GetResourceCurrent(PBResourceNames::Mana) >= MaxMana
+		&& Ball->TryActivateSkill())
+	{
+		ResourceComponent->ConsumeResource(PBResourceNames::Mana, MaxMana);
+	}
 }
 
 APBBallBase* APBCombatPartyController::FindPartyBallByInstanceId(const int32 BallInstanceId) const
