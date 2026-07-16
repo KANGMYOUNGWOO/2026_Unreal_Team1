@@ -18,6 +18,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FPBBumperSelectedSlotChangedSignature,
 	EPBBumperSlotType,
 	SelectedSlotType);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+	FPBBumperSelectedEquipSlotChangedSignature,
+	EPBBumperEquipSlot,
+	SelectedEquipSlot);
 
 UCLASS(BlueprintType, Blueprintable)
 class PINBALLLIKE_API UPBBumperEquipUI : public UPBUserWidget
@@ -40,6 +44,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
 	bool SelectBumperSlot(EPBBumperSlotType SlotType);
 
+	/** 좌우를 포함한 실제 보드 장착 위치를 선택합니다. */
+	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
+	bool SelectBumperEquipSlot(EPBBumperEquipSlot EquipSlot);
+
 	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
 	void SelectBumperRow(FName RowName);
 
@@ -59,11 +67,17 @@ public:
 	FName GetSelectedBumperRowName() const { return SelectedBumperRowName; }
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
-	EPBBumperSlotType GetSelectedBumperSlotType() const { return SelectedBumperSlotType; }
+	EPBBumperSlotType GetSelectedBumperSlotType() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
+	EPBBumperEquipSlot GetSelectedBumperEquipSlot() const { return SelectedBumperEquipSlot; }
 
 	/** 보드 미리보기에 표시할 슬롯별 현재 장착 Row를 반환한다. */
 	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
 	bool GetEquippedBumperForSlot(EPBBumperSlotType SlotType, FName& OutBumperRowId) const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
+	bool GetEquippedBumperForEquipSlot(EPBBumperEquipSlot EquipSlot, FName& OutBumperRowId) const;
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
 	UPBBumperInfoPanelViewModel* GetInfoPanelViewModel() const { return InfoPanelViewModel; }
@@ -73,6 +87,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|EquipUI")
 	FPBBumperSelectedSlotChangedSignature OnSelectedBumperSlotChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Bumper|EquipUI")
+	FPBBumperSelectedEquipSlotChangedSignature OnSelectedBumperEquipSlotChanged;
 
 private:
 	UFUNCTION()
@@ -93,16 +110,26 @@ private:
 	void RefreshBumperEquipState(FName RowName);
 	void BindBoardSlotButtons();
 	void RefreshBoardSlotSelection();
-	void SetBoardSlotButtonState(UButton* Button, EPBBumperSlotType SlotType) const;
+	void SetBoardSlotButtonState(UButton* Button, EPBBumperEquipSlot EquipSlot) const;
+	void BroadcastSelectedSlotChanged();
 
 	UFUNCTION()
-	void HandleTopSlotClicked();
+	void HandleTopLeftSlotClicked();
 
 	UFUNCTION()
-	void HandleSideSlotClicked();
+	void HandleTopRightSlotClicked();
 
 	UFUNCTION()
-	void HandleReboundSlotClicked();
+	void HandleSideLeftSlotClicked();
+
+	UFUNCTION()
+	void HandleSideRightSlotClicked();
+
+	UFUNCTION()
+	void HandleReboundLeftSlotClicked();
+
+	UFUNCTION()
+	void HandleReboundRightSlotClicked();
 
 	UFUNCTION()
 	void HandleSpecialSlotClicked();
@@ -179,7 +206,7 @@ private:
 	FName SelectedBumperRowName = NAME_None;
 
 	UPROPERTY(Transient)
-	EPBBumperSlotType SelectedBumperSlotType = EPBBumperSlotType::Top;
+	EPBBumperEquipSlot SelectedBumperEquipSlot = EPBBumperEquipSlot::TopLeft;
 
 	bool bBumperRowsLoaded = false;
 	bool bBumperUIAssetLoadPending = false;
