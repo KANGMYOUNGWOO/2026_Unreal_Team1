@@ -18,6 +18,7 @@
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectTriggerRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
+#include "PinBallLike/Utils/PBTextFormatUtils.h"
 
 #define LOCTEXT_NAMESPACE "PBCollectionCatalog"
 
@@ -79,13 +80,6 @@ FLinearColor GetCategoryAccentColor(const EPBCollectionCategory Category)
 FText JoinLines(const TArray<FString>& Lines)
 {
 	return FText::FromString(FString::Join(Lines, LINE_TERMINATOR));
-}
-
-FText FormatSingleValueTemplate(const FText& TemplateText, const FText& Value)
-{
-	return TemplateText.ToString().Contains(TEXT("{0}"))
-		? FText::Format(TemplateText, Value)
-		: TemplateText;
 }
 
 void AddIssue(
@@ -426,6 +420,9 @@ TArray<FPBCollectionBumperDisplayData> UPBCollectionSubsystem::GetBumperCatalogE
 			BumperRowName,
 			BumperRow.DisplayName,
 			BumperRow.Description);
+		DisplayData.Summary.Description = PBTextFormatUtils::FormatSingleValueTemplate(
+			DisplayData.Summary.Description,
+			FText::AsNumber(BumperRow.RequiredTriggerCount));
 		DisplayData.BumperTypeText = GetEnumDisplayText(BumperRow.BumperType);
 		DisplayData.RoleTypeText = GetEnumDisplayText(BumperRow.RoleType);
 		DisplayData.EffectTypeText = GetEnumDisplayText(BumperRow.EffectType);
@@ -441,7 +438,7 @@ TArray<FPBCollectionBumperDisplayData> UPBCollectionSubsystem::GetBumperCatalogE
 			DisplayData.bHasValidTrigger = true;
 			DisplayData.TriggerTypeText = GetEnumDisplayText(TriggerRow.TriggerType);
 			DisplayData.PositionText = JoinEnumDisplayTexts(TriggerRow.PositionIds);
-			DisplayData.TriggerDescription = FormatSingleValueTemplate(
+			DisplayData.TriggerDescription = PBTextFormatUtils::FormatSingleValueTemplate(
 				TriggerRow.TriggerDescription,
 				FText::AsNumber(BumperRow.RequiredTriggerCount));
 		}
@@ -451,7 +448,7 @@ TArray<FPBCollectionBumperDisplayData> UPBCollectionSubsystem::GetBumperCatalogE
 		{
 			DisplayData.bHasValidEffect = true;
 			DisplayData.ExecutionPolicyText = GetEnumDisplayText(EffectRow.ExecutionPolicy);
-			DisplayData.EffectDescription = FormatSingleValueTemplate(
+			DisplayData.EffectDescription = PBTextFormatUtils::FormatSingleValueTemplate(
 				EffectRow.Description,
 				FText::AsNumber(EffectRow.Power));
 			DisplayData.EffectPower = EffectRow.Power;
