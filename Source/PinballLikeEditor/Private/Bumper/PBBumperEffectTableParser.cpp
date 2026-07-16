@@ -5,6 +5,7 @@
 
 #include "PBSheetParserUtils.h"
 #include "Engine/DataTable.h"
+#include "NiagaraSystem.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
 #include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
 #include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
@@ -19,6 +20,8 @@ UPBBumperEffectTableParser::UPBBumperEffectTableParser()
 	EffectClassPreset.NameFormat = TEXT("BP_{0}");
 	BumperDataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Bumper");
 	BumperDataAssetPreset.NameFormat = TEXT("DA_Bumper_{0}");
+	ActivationVfxPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Effect/VFX");
+	ActivationVfxPreset.NameFormat = TEXT("{0}");
 }
 
 const TCHAR* UPBBumperEffectTableParser::GetParserName() const
@@ -39,14 +42,17 @@ bool UPBBumperEffectTableParser::ParseRow(const FName RowName, const TMap<FStrin
 		RowData.FindRef(TEXT("ExecutionPolicy")),
 		EPBBumperEffectExecutionPolicy::Immediate);
 	NewRow.Power = ParseFloatValue(RowData.FindRef(TEXT("Power")), 0.0f);
+	NewRow.ActivationVfxId = ParseNameValue(RowData.FindRef(TEXT("ActivationVfxId")));
 	NewRow.Description = FText::FromString(RowData.FindRef(TEXT("Description")));
 
 	TargetTable->AddRow(RowName, NewRow);
-	UpdateLinkedBumperDataAssets(RowName);
+	UpdateLinkedBumperDataAssets(RowName, NewRow.ActivationVfxId);
 	return true;
 }
 
-void UPBBumperEffectTableParser::UpdateLinkedBumperDataAssets(const FName EffectId) const
+void UPBBumperEffectTableParser::UpdateLinkedBumperDataAssets(
+	const FName EffectId,
+	const FName ActivationVfxId) const
 {
 	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
 	UDataTable* BumperTable = Settings ? Settings->BumperTable.LoadSynchronous() : nullptr;
@@ -57,6 +63,9 @@ void UPBBumperEffectTableParser::UpdateLinkedBumperDataAssets(const FName Effect
 
 	const TSoftClassPtr<UPBBumperEffectBase> EffectClass =
 		FindBlueprintClass<UPBBumperEffectBase>(EffectClassPreset, EffectId);
+	const TSoftObjectPtr<UNiagaraSystem> ActivationVfx = ActivationVfxId.IsNone()
+		? nullptr
+		: FindObject<UNiagaraSystem>(ActivationVfxPreset, ActivationVfxId);
 	for (const TPair<FName, uint8*>& RowPair : BumperTable->GetRowMap())
 	{
 		const FPBBumperTableRow* BumperRow = reinterpret_cast<FPBBumperTableRow*>(RowPair.Value);
@@ -70,6 +79,7 @@ void UPBBumperEffectTableParser::UpdateLinkedBumperDataAssets(const FName Effect
 		if (IsValid(BumperDataAsset))
 		{
 			BumperDataAsset->EffectClass = EffectClass;
+			BumperDataAsset->ActivationVfx = ActivationVfx;
 			(void)BumperDataAsset->MarkPackageDirty();
 		}
 	}

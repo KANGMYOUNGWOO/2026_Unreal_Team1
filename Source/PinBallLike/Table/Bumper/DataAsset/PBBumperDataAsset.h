@@ -10,6 +10,7 @@
 #include "PBBumperDataAsset.generated.h"
 
 class UTexture2D;
+class UNiagaraSystem;
 
 UCLASS(BlueprintType)
 class PINBALLLIKE_API UPBBumperDataAsset : public UPrimaryDataAsset
@@ -42,4 +43,8 @@ public:
 	// AssetBundles 값은 PBAssetBundleNames와 맞춰야 한다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<UPBBumperEffectBase> EffectClass;
+
+	/** Effect 시트의 ActivationVfxId를 파서가 실제 에셋 참조로 변환한다. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
+	TSoftObjectPtr<UNiagaraSystem> ActivationVfx;
 };

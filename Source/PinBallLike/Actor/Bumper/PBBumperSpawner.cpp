@@ -6,6 +6,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraSystem.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBBumperPositionAnchor.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
@@ -225,6 +226,16 @@ bool APBBumperSpawner::TryBuildBumperSpawnData(
 	}
 
 	OutSpawnData.EffectClass = TSubclassOf<UPBBumperEffectBase>(LoadedEffectClass);
+	OutSpawnData.ActivationVfx = BumperDataAsset->ActivationVfx.Get();
+	if (!OutSpawnData.EffectRow.ActivationVfxId.IsNone()
+		&& !IsValid(OutSpawnData.ActivationVfx))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Activation VFX was configured but not loaded. RowName=%s EffectId=%s VfxId=%s"),
+			*BumperRowId.ToString(),
+			*OutSpawnData.BumperRow.EffectID.ToString(),
+			*OutSpawnData.EffectRow.ActivationVfxId.ToString());
+	}
 	return true;
 }
 
@@ -296,6 +307,7 @@ APBModularBumperBase* APBBumperSpawner::PlaceBumperActor(const FPBPreparedBumper
 		SpawnData.TriggerSpawnInfos,
 		SpawnData.EffectRow,
 		SpawnData.EffectClass,
+		SpawnData.ActivationVfx,
 		AnchorTransforms);
 	UGameplayStatics::FinishSpawningActor(Bumper, FTransform::Identity);
 

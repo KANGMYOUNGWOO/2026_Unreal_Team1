@@ -16,6 +16,7 @@ class APBBumperPositionAnchor;
 class APBBumperTriggerActorBase;
 class UPBBumperEffectBase;
 class USceneComponent;
+class UNiagaraSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	FPBModularBumperTriggerCountChangedSignature,
@@ -87,6 +88,7 @@ public:
 		const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
 		const FPBBumperEffectRow& InEffectData,
 		TSubclassOf<UPBBumperEffectBase> InEffectClass,
+		UNiagaraSystem* InActivationVfx,
 		const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms);
 
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
@@ -161,6 +163,10 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
 	TObjectPtr<UPBBumperEffectBase> BumperEffect;
 
+	/** Gameplay 번들에서 미리 로드한 일회성 효과 발동 연출이다. */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
+	TObjectPtr<UNiagaraSystem> ActivationVfx;
+
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<TObjectPtr<APBBumperTriggerActorBase>> SpawnedTriggerActors;
 
@@ -183,6 +189,7 @@ private:
 	void QueueActivation(APBBumperTriggerActorBase* TriggerActor, AActor* InteractionActor);
 	void StartActivation(APBBumperTriggerActorBase* TriggerActor, AActor* InteractionActor);
 	void ExecuteActivation(AActor* InteractionActor);
+	void SpawnActivationVfx() const;
 	void ScheduleNextPendingActivation();
 	void ProcessNextPendingActivation();
 	bool HasPendingActivationFor(const APBBumperTriggerActorBase* TriggerActor) const;
