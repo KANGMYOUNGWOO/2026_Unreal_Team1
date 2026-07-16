@@ -13,7 +13,7 @@ struct FPBBumperRewardApplyResult
 	int32 AppliedCount = 0;
 };
 
-/** 획득 아이템과 지원 영역이 같은 보상 규칙을 공유하도록 모은 범퍼 전용 유틸리티입니다. */
+/** 즉시 보상, 획득 아이템, 지원 영역이 같은 적용 규칙을 공유하도록 모은 범퍼 전용 유틸리티입니다. */
 namespace PBBumperRewardUtils
 {
 	FPBBumperRewardApplyResult ApplyReward(

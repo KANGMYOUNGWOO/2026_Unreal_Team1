@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBBumperSummonActor.h"
+#include "PinBallLike/Actor/Bumper/Projectile/PBBumperProjectile.h"
 #include "PBTurretSummonActor.generated.h"
 
 class APBBallBase;
@@ -16,6 +17,9 @@ class PINBALLLIKE_API APBTurretSummonActor : public APBBumperSummonActor
 
 public:
 	APBTurretSummonActor();
+
+	/** Effect 시트의 Power를 각 포탑 탄환에 전달합니다. */
+	void SetAttackPayload(EPBBumperProjectilePayload InPayload, int32 InPower);
 
 	virtual void StartActionForActor(
 		APBModularBumperBase* Bumper,
@@ -32,4 +36,10 @@ protected:
 	void OnTurretActivated(APBModularBumperBase* Bumper, APBBallBase* Ball);
 
 #pragma endregion
+
+private:
+	AActor* FindBossTarget() const;
+
+	EPBBumperProjectilePayload AttackPayload = EPBBumperProjectilePayload::None;
+	int32 AttackPower = 0;
 };

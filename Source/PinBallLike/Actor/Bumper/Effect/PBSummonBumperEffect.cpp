@@ -44,9 +44,15 @@ void UPBSummonBumperEffect::FinishEffect()
 	Super::FinishEffect();
 }
 
-void UPBSummonBumperEffect::BeginDestroy()
+void UPBSummonBumperEffect::ShutdownEffect()
 {
 	DestroySummonActor();
+	Super::ShutdownEffect();
+}
+
+void UPBSummonBumperEffect::BeginDestroy()
+{
+	ShutdownEffect();
 
 	Super::BeginDestroy();
 }

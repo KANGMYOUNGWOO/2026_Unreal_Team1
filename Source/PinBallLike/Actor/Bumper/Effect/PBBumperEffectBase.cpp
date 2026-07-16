@@ -39,6 +39,11 @@ void UPBBumperEffectBase::FinishEffect()
 	}
 }
 
+void UPBBumperEffectBase::ShutdownEffect()
+{
+	OwnerBumper.Reset();
+}
+
 FPBBumperEffectRow UPBBumperEffectBase::GetEffectData() const
 {
 	return EffectData;

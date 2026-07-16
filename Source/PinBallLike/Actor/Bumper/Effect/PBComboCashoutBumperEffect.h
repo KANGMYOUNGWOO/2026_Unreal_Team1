@@ -5,8 +5,8 @@
 #include "PBComboCashoutBumperEffect.generated.h"
 
 /**
- * 충돌한 Ball의 현재 콤보를 모두 소비하고 콤보 x Effect Power만큼 보스 피해를 줍니다.
- * 보스 피해 적용이 실패하면 콤보는 소비하지 않습니다.
+ * 충돌한 Ball의 현재 콤보를 모두 소비하고 콤보 x Effect Power를 담은 유도탄을 발사합니다.
+ * 탄환 생성이 실패하면 콤보를 복구하며, 정상 발사 후 빗나간 경우에는 소비가 유지됩니다.
  */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API UPBComboCashoutBumperEffect : public UPBBossTargetBumperEffectBase
