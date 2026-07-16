@@ -4,18 +4,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PinBallLike/Struct/Bumper/PBBumperEquipSlot.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBPlayerDataSubsystem.generated.h"
-
-UENUM(BlueprintType)
-enum class EPBBumperSlotType : uint8
-{
-	Rebound = 0 UMETA(DisplayName = "Rebound"),
-	Side = 1 UMETA(DisplayName = "Side"),
-	Special = 2 UMETA(DisplayName = "Special"),
-	// 기존 열거형 값을 유지하기 위해 새 Top 슬롯은 마지막에 추가한다.
-	Top = 3 UMETA(DisplayName = "Top")
-};
 
 UCLASS()
 class PINBALLLIKE_API UPBPlayerDataSubsystem : public UGameInstanceSubsystem
@@ -39,6 +30,20 @@ public:
 #pragma endregion
 
 #pragma region Bumper
+	/** 지정한 좌우 물리 슬롯 하나에 범퍼를 장착합니다. */
+	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
+	bool EquipBumperAtSlot(EPBBumperEquipSlot EquipSlot, FName BumperRowId);
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
+	bool UnequipBumperAtSlot(EPBBumperEquipSlot EquipSlot);
+
+	UFUNCTION(BlueprintPure, Category = "PlayerData|Bumper")
+	bool GetEquippedBumperAtSlot(EPBBumperEquipSlot EquipSlot, FName& OutBumperRowId) const;
+
+	UFUNCTION(BlueprintPure, Category = "PlayerData|Bumper")
+	TArray<FPBEquippedBumperSlot> GetEquippedBumperSlots() const;
+
+	/** 기존 카테고리 기반 호출을 보존합니다. 좌우 카테고리는 두 위치를 함께 변경합니다. */
 	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
 	bool EquipBumper(EPBBumperSlotType SlotType, FName BumperRowId);
 
@@ -57,7 +62,7 @@ private:
 	void InitializeDefaultBumpersForTest();
 
 	UPROPERTY(Transient)
-	TMap<EPBBumperSlotType, FName> EquippedBumperRowIds;
+	TMap<EPBBumperEquipSlot, FName> EquippedBumperRowIds;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 InitialBattleLaunchCount = 5;

@@ -8,6 +8,7 @@
 #include "PBBumperTableParser.generated.h"
 
 class UPBBumperDataAsset;
+class UNiagaraSystem;
 
 /** Bumper 시트의 행을 테이블과 런타임용 데이터 에셋으로 변환한다. */
 UCLASS()
@@ -36,5 +37,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
 	FPBSheetAssetPathPreset EffectClassPreset;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset ActivationVfxPreset;
+
 	UPBBumperDataAsset* SetupBumperDataAsset(FName RowName, FName TriggerId, FName EffectId) const;
+	TSoftObjectPtr<UNiagaraSystem> ResolveActivationVfx(FName EffectId) const;
 };

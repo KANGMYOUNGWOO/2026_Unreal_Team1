@@ -7,6 +7,8 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "TimerManager.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
@@ -237,12 +239,14 @@ void APBModularBumperBase::InitializeBumper(
 	const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
 	const FPBBumperEffectRow& InEffectData,
 	TSubclassOf<UPBBumperEffectBase> InEffectClass,
+	UNiagaraSystem* InActivationVfx,
 	const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms)
 {
 	BumperData = InBumperData;
 	TriggerSpawnInfos = InTriggerSpawnInfos;
 	EffectData = InEffectData;
 	EffectClass = InEffectClass;
+	ActivationVfx = InActivationVfx;
 	AnchorTransforms = InAnchorTransforms;
 }
 
@@ -453,6 +457,7 @@ void APBModularBumperBase::ExecuteActivation(AActor* InteractionActor)
 	}
 
 	SetBumperState(EPBBumperState::Activated);
+	SpawnActivationVfx();
 	OnMovableActorActivated(InteractionActor);
 	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
 	{
@@ -470,6 +475,28 @@ void APBModularBumperBase::ExecuteActivation(AActor* InteractionActor)
 	}
 
 	ApplyBumperEffectToActor(InteractionActor);
+}
+
+void APBModularBumperBase::SpawnActivationVfx() const
+{
+	if (!IsValid(ActivationVfx))
+	{
+		return;
+	}
+
+	const AActor* SpawnSource = ActiveTriggerActor.IsValid()
+		? static_cast<const AActor*>(ActiveTriggerActor.Get())
+		: static_cast<const AActor*>(this);
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		this,
+		ActivationVfx.Get(),
+		SpawnSource->GetActorLocation(),
+		SpawnSource->GetActorRotation(),
+		FVector::OneVector,
+		true,
+		true,
+		ENCPoolMethod::AutoRelease,
+		true);
 }
 
 void APBModularBumperBase::ScheduleNextPendingActivation()

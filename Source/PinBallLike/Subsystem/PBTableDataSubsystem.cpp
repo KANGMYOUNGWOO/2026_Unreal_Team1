@@ -54,7 +54,7 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath SynergyEffectTablePath = Settings->SynergyEffectTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyEffectModifierTablePath = Settings->SynergyEffectModifierTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyEffectTriggerTablePath = Settings->SynergyEffectTriggerTable.ToSoftObjectPath();
-
+	const FSoftObjectPath ShopTablePath = Settings->ShopTable.ToSoftObjectPath();
 	const FSoftObjectPath RelicTablePath = Settings->RelicTable.ToSoftObjectPath();
     const FSoftObjectPath RelicModifierTablePath = Settings->RelicModifierTable.ToSoftObjectPath();
 	
@@ -147,6 +147,11 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	{
 		TablePaths.Add(SynergyEffectTriggerTablePath);
 	}
+	
+	if(ShopTablePath.IsValid())
+	{
+		TablePaths.Add(ShopTablePath);
+	}
 
 	if(RelicTablePath.IsValid())
 	{
@@ -183,6 +188,7 @@ void UPBTableDataSubsystem::UnloadStartupGameData()
 	SetBossTables(nullptr, nullptr, nullptr);
 	SetStatusEffectTables(nullptr, nullptr, nullptr);
 	SetRelicTable(nullptr,nullptr);
+	SetShopTable(nullptr);
 	
 	SetSynergyTables(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
@@ -219,7 +225,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedSynergyEffectTable = nullptr;
 	UDataTable* LoadedSynergyEffectModifierTable = nullptr;
 	UDataTable* LoadedSynergyEffectTriggerTable = nullptr;
-
+	UDataTable* LoadedShopTable = nullptr;
+	
 	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
 	if (IsValid(Settings))
 	{
@@ -244,6 +251,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedSynergyEffectTable = Cast<UDataTable>(Settings->SynergyEffectTable.Get());
 		LoadedSynergyEffectModifierTable = Cast<UDataTable>(Settings->SynergyEffectModifierTable.Get());
 		LoadedSynergyEffectTriggerTable = Cast<UDataTable>(Settings->SynergyEffectTriggerTable.Get());
+		LoadedShopTable = Cast<UDataTable>(Settings->ShopTable.Get());
 	}
 
 	for (const FSoftObjectPath& LoadedPath : LoadedPaths)
@@ -269,6 +277,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedSynergyEffectTriggerTable);
 
 	SetRelicTable(LoadedRelicTable,LoadedRelicModifierTable);
+	SetShopTable(LoadedShopTable);
 	
 	UE_LOG(LogTemp, Log, TEXT("[TableData] Startup table data loaded. Ready=%s TableCount=%d"),
 		IsTableDataReady() ? TEXT("true") : TEXT("false"),
@@ -380,6 +389,11 @@ void UPBTableDataSubsystem::SetRelicTable(UDataTable* InRelicTable , UDataTable*
 	RelicTable = InRelicTable;
 	RelicModifierTable = InRelicModifierTable;
 	UE_LOG(LogTemp, Log, TEXT("[TableData] Relic tables assigned."));
+}
+
+void UPBTableDataSubsystem::SetShopTable(UDataTable* InShopTable)
+{
+	ShopTable = InShopTable;
 }
 
 void UPBTableDataSubsystem::SetStatusEffectTables(
@@ -548,6 +562,19 @@ bool UPBTableDataSubsystem::FindDefaultSkillRowForBall(
 #pragma endregion
 
 #pragma region Shop
+
+
+void UPBTableDataSubsystem::GetAllShopRowName(TArray<FName>& OutShopIds)
+{
+	OutShopIds.Reset();
+	
+	if (!ShopTable)
+	{
+		return;
+	}
+	
+	OutShopIds = ShopTable->GetRowNames();
+}
 
 bool UPBTableDataSubsystem::FindShopRow(FName RowName, FPBShopTableRow& OutRow) const
 {

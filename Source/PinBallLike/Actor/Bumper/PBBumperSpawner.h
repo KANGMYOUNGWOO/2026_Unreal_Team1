@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/StreamableManager.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Struct/Bumper/PBBumperEquipSlot.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
@@ -18,6 +19,7 @@ class UPBGameDataLoadSubsystem;
 class UPBPlayerDataSubsystem;
 class UPBTableDataSubsystem;
 class USceneComponent;
+class UNiagaraSystem;
 
 struct FPBPreparedBumperSpawnData
 {
@@ -26,6 +28,7 @@ struct FPBPreparedBumperSpawnData
 	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
 	FPBBumperEffectRow EffectRow;
 	TSubclassOf<UPBBumperEffectBase> EffectClass;
+	UNiagaraSystem* ActivationVfx = nullptr;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
@@ -69,10 +72,11 @@ private:
 
 	bool BuildPreparedBumperSpawnData();
 	bool TryBuildBumperSpawnData(
-		FName BumperRowId,
+		const FPBEquippedBumperSlot& EquippedSlot,
 		FPBPreparedBumperSpawnData& OutSpawnData) const;
 	bool TryBuildTriggerSpawnInfos(
 		FName BumperRowId,
+		EPBBumperEquipSlot EquipSlot,
 		const UPBBumperDataAsset* BumperDataAsset,
 		TArray<FPBBumperTriggerSpawnInfo>& OutTriggerSpawnInfos) const;
 
@@ -93,7 +97,7 @@ private:
 	TMap<EPBBumperPositionId, FTransform> AnchorTransforms;
 
 	UPROPERTY(Transient)
-	TArray<FName> PendingBumperRowIds;
+	TArray<FPBEquippedBumperSlot> PendingEquippedSlots;
 
 	TArray<FPBPreparedBumperSpawnData> PreparedBumperSpawnDataList;
 
