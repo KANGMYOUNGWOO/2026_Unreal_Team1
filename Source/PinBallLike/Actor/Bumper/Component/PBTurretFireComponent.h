@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "PinBallLike/Actor/Bumper/Projectile/PBBumperProjectile.h"
 #include "PBTurretFireComponent.generated.h"
 
 class AProjectileBase;
@@ -25,6 +26,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Fire")
 	AActor* FireOnce();
+
+	/** 이후 발사되는 범퍼 탄환이 추적할 보스와 명중 payload를 설정합니다. */
+	void ConfigureAttack(
+		AActor* InTargetActor,
+		EPBBumperProjectilePayload InPayload,
+		int32 InPower);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Pool")
 	void ReleaseProjectile(AActor* Projectile);
@@ -58,6 +65,7 @@ protected:
 	int32 MaxPoolSize = 20;
 
 private:
+	void HandleBumperProjectileResolved(APBBumperProjectile* Projectile, bool bApplied);
 	FTransform GetMuzzleTransform() const;
 	AProjectileBase* GetProjectileFromPool();
 	AProjectileBase* SpawnProjectileActor();
@@ -72,4 +80,8 @@ private:
 	TArray<TObjectPtr<AProjectileBase>> ActiveProjectiles;
 
 	TMap<TWeakObjectPtr<AProjectileBase>, FTimerHandle> ProjectileLifeTimerHandles;
+
+	TWeakObjectPtr<AActor> AttackTarget;
+	EPBBumperProjectilePayload AttackPayload = EPBBumperProjectilePayload::None;
+	int32 AttackPower = 0;
 };

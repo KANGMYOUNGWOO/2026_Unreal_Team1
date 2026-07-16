@@ -19,6 +19,7 @@ public:
 		APBModularBumperBase* Bumper,
 		AActor* InteractionActor) override;
 	virtual void FinishEffect() override;
+	virtual void ShutdownEffect() override;
 	virtual void BeginDestroy() override;
 
 protected:
@@ -34,11 +35,13 @@ protected:
 	UPROPERTY()
 	TObjectPtr<APBBumperSummonActor> SpawnedSummonActor;
 
+	/** 파생 Effect가 발동 전 소환 Actor를 구성할 수 있도록 생성 여부를 보장합니다. */
+	bool EnsureSummonActor(APBModularBumperBase* Bumper);
+
 private:
 	UFUNCTION()
 	void HandleSummonActionFinished(APBBumperSummonActor* SummonActor);
 
-	bool EnsureSummonActor(APBModularBumperBase* Bumper);
 	void DeactivateSummonActor() const;
 	void DestroySummonActor();
 };

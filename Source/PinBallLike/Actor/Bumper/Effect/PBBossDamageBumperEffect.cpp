@@ -1,7 +1,7 @@
 #include "PBBossDamageBumperEffect.h"
 
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
-#include "PinBallLike/Interface/BossInterface.h"
+#include "PinBallLike/Actor/Bumper/Projectile/PBBumperProjectile.h"
 
 void UPBBossDamageBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
@@ -22,13 +22,17 @@ void UPBBossDamageBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
-	const bool bApplied = IBossInterface::Execute_DamageToBoss(BossTarget, DamageAmount);
+	const bool bSpawned = SpawnBossProjectile(
+		Bumper,
+		BossTarget,
+		EPBBumperProjectilePayload::BossDamage,
+		DamageAmount);
 	UE_LOG(LogTemp, Log,
-		TEXT("[Bumper] Boss damage requested. Bumper=%s Boss=%s Amount=%d Applied=%s"),
+		TEXT("[Bumper] Boss damage projectile requested. Bumper=%s Boss=%s Amount=%d Spawned=%s"),
 		*GetNameSafe(Bumper),
 		*GetNameSafe(BossTarget),
 		DamageAmount,
-		bApplied ? TEXT("true") : TEXT("false"));
+		bSpawned ? TEXT("true") : TEXT("false"));
 
 	FinishEffect();
 }
