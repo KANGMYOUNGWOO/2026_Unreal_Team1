@@ -22,6 +22,34 @@
 #include "PinBallLike/Table/PBAssetBundleNames.h"
 #include "PinBallLike/Utils/PBSubsystemUtils.h"
 
+namespace
+{
+	bool DoesBumperTypeMatchEquipSlot(
+		const EPBBumperType BumperType,
+		const EPBBumperEquipSlot EquipSlot)
+	{
+		EPBBumperSlotType EquipSlotType;
+		if (!PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, EquipSlotType))
+		{
+			return false;
+		}
+
+		switch (BumperType)
+		{
+		case EPBBumperType::TopTarget:
+			return EquipSlotType == EPBBumperSlotType::Top;
+		case EPBBumperType::Side:
+			return EquipSlotType == EPBBumperSlotType::Side;
+		case EPBBumperType::Rebound:
+			return EquipSlotType == EPBBumperSlotType::Rebound;
+		case EPBBumperType::Gate:
+			return EquipSlotType == EPBBumperSlotType::Special;
+		default:
+			return false;
+		}
+	}
+}
+
 APBBumperSpawner::APBBumperSpawner()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -78,7 +106,7 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 		return FGuid();
 	}
 
-	PendingBumperRowIds = CachedPlayerDataSubsystem->GetEquippedBumperRowIds();
+	PendingEquippedSlots = CachedPlayerDataSubsystem->GetEquippedBumperSlots();
 
 	// 장착된 RowId를 PrimaryAssetId로 바꿔 Gameplay 번들을 로드한다.
 	TArray<FPrimaryAssetId> BumperAssetIds;
@@ -148,13 +176,15 @@ void APBBumperSpawner::GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpe
 void APBBumperSpawner::BuildPendingBumperAssetIds(TArray<FPrimaryAssetId>& OutAssetIds) const
 {
 	OutAssetIds.Reset();
-	OutAssetIds.Reserve(PendingBumperRowIds.Num());
+	OutAssetIds.Reserve(PendingEquippedSlots.Num());
 
-	for (const FName& BumperRowId : PendingBumperRowIds)
+	for (const FPBEquippedBumperSlot& EquippedSlot : PendingEquippedSlots)
 	{
-		if (!BumperRowId.IsNone())
+		if (!EquippedSlot.BumperRowId.IsNone())
 		{
-			OutAssetIds.Add(FPrimaryAssetId(PBBumperAssetIds::Type::BumperData, BumperRowId));
+			OutAssetIds.AddUnique(FPrimaryAssetId(
+				PBBumperAssetIds::Type::BumperData,
+				EquippedSlot.BumperRowId));
 		}
 	}
 }
@@ -162,32 +192,43 @@ void APBBumperSpawner::BuildPendingBumperAssetIds(TArray<FPrimaryAssetId>& OutAs
 bool APBBumperSpawner::BuildPreparedBumperSpawnData()
 {
 	PreparedBumperSpawnDataList.Reset();
-	if (PendingBumperRowIds.IsEmpty())
+	if (PendingEquippedSlots.IsEmpty())
 	{
 		return false;
 	}
 
-	for (const FName& BumperRowId : PendingBumperRowIds)
+	for (const FPBEquippedBumperSlot& EquippedSlot : PendingEquippedSlots)
 	{
 		FPBPreparedBumperSpawnData SpawnData;
-		if (TryBuildBumperSpawnData(BumperRowId, SpawnData))
+		if (TryBuildBumperSpawnData(EquippedSlot, SpawnData))
 		{
 			PreparedBumperSpawnDataList.Add(SpawnData);
 		}
 	}
 
-	return PreparedBumperSpawnDataList.Num() == PendingBumperRowIds.Num();
+	return PreparedBumperSpawnDataList.Num() == PendingEquippedSlots.Num();
 }
 
 bool APBBumperSpawner::TryBuildBumperSpawnData(
-	const FName BumperRowId,
+	const FPBEquippedBumperSlot& EquippedSlot,
 	FPBPreparedBumperSpawnData& OutSpawnData) const
 {
+	const FName BumperRowId = EquippedSlot.BumperRowId;
 	if (BumperRowId.IsNone()
 		|| !CachedTableDataSubsystem
 		|| !CachedGameDataLoadSubsystem
 		|| !CachedTableDataSubsystem->FindBumperRow(BumperRowId, OutSpawnData.BumperRow))
 	{
+		return false;
+	}
+
+	if (!DoesBumperTypeMatchEquipSlot(OutSpawnData.BumperRow.BumperType, EquippedSlot.EquipSlot))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Equipped row does not match the physical slot. Slot=%s RowName=%s BumperType=%s"),
+			*UEnum::GetValueAsString(EquippedSlot.EquipSlot),
+			*BumperRowId.ToString(),
+			*UEnum::GetValueAsString(OutSpawnData.BumperRow.BumperType));
 		return false;
 	}
 
@@ -200,7 +241,11 @@ bool APBBumperSpawner::TryBuildBumperSpawnData(
 		return false;
 	}
 
-	if (!TryBuildTriggerSpawnInfos(BumperRowId, BumperDataAsset, OutSpawnData.TriggerSpawnInfos))
+	if (!TryBuildTriggerSpawnInfos(
+		BumperRowId,
+		EquippedSlot.EquipSlot,
+		BumperDataAsset,
+		OutSpawnData.TriggerSpawnInfos))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Failed to prepare trigger data. RowName=%s TriggerId=%s"),
 			*BumperRowId.ToString(),
@@ -241,6 +286,7 @@ bool APBBumperSpawner::TryBuildBumperSpawnData(
 
 bool APBBumperSpawner::TryBuildTriggerSpawnInfos(
 	const FName BumperRowId,
+	const EPBBumperEquipSlot EquipSlot,
 	const UPBBumperDataAsset* BumperDataAsset,
 	TArray<FPBBumperTriggerSpawnInfo>& OutTriggerSpawnInfos) const
 {
@@ -255,11 +301,23 @@ bool APBBumperSpawner::TryBuildTriggerSpawnInfos(
 		return false;
 	}
 
-	// Modular Bumper가 BeginPlay에서 이 정보로 trigger actor를 생성한다.
+	EPBBumperPositionId PositionId = EPBBumperPositionId::None;
+	if (!PBBumperEquipSlotUtils::TryGetPositionId(EquipSlot, PositionId)
+		|| !TriggerRow.PositionIds.Contains(PositionId))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Trigger row does not support the equipped position. Slot=%s RowName=%s Position=%s"),
+			*UEnum::GetValueAsString(EquipSlot),
+			*BumperRowId.ToString(),
+			*UEnum::GetValueAsString(PositionId));
+		return false;
+	}
+
+	// 같은 Row가 좌우에 장착돼도 각 Modular Bumper는 자기 위치의 Trigger 하나만 생성한다.
 	FPBBumperTriggerSpawnInfo TriggerSpawnInfo;
 	TriggerSpawnInfo.TriggerClass =
 		TSubclassOf<APBBumperTriggerActorBase>(BumperDataAsset->TriggerClass.Get());
-	TriggerSpawnInfo.PositionIds = TriggerRow.PositionIds;
+	TriggerSpawnInfo.PositionIds.Add(PositionId);
 
 	OutTriggerSpawnInfos.Reset();
 	OutTriggerSpawnInfos.Add(TriggerSpawnInfo);

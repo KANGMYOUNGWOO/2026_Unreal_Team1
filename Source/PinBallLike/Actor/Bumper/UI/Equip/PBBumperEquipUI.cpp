@@ -43,7 +43,7 @@ void UPBBumperEquipUI::NativeConstruct()
 		}
 		else
 		{
-			SelectBumperSlot(SelectedBumperSlotType);
+			SelectBumperEquipSlot(SelectedBumperEquipSlot);
 		}
 	}
 }
@@ -86,11 +86,22 @@ bool UPBBumperEquipUI::SelectBumperSlot(const EPBBumperSlotType SlotType)
 		return false;
 	}
 
-	SelectedBumperSlotType = SlotType;
+	return SelectBumperEquipSlot(PBBumperEquipSlotUtils::GetDefaultEquipSlot(SlotType));
+}
+
+bool UPBBumperEquipUI::SelectBumperEquipSlot(const EPBBumperEquipSlot EquipSlot)
+{
+	EPBBumperSlotType SlotType;
+	if (!PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, SlotType))
+	{
+		return false;
+	}
+
+	SelectedBumperEquipSlot = EquipSlot;
 	SelectedBumperRowName = NAME_None;
 
 	FName EquippedRowName = NAME_None;
-	if (GetEquippedBumperForSlot(SlotType, EquippedRowName))
+	if (GetEquippedBumperForEquipSlot(EquipSlot, EquippedRowName))
 	{
 		SelectedBumperRowName = EquippedRowName;
 		UpdateInfoPanelByRowName(EquippedRowName);
@@ -100,7 +111,7 @@ bool UPBBumperEquipUI::SelectBumperSlot(const EPBBumperSlotType SlotType)
 		InfoPanelViewModel->ClearBumperInfoPanelData();
 	}
 
-	OnSelectedBumperSlotChanged.Broadcast(SlotType);
+	BroadcastSelectedSlotChanged();
 	RefreshBoardSlotSelection();
 	return true;
 }
@@ -117,8 +128,14 @@ void UPBBumperEquipUI::SelectBumperRow(const FName RowName)
 	EPBBumperSlotType SlotType;
 	if (PBBumperEquipUIBuilder::TryGetBumperSlotTypeByRowName(BumperRowNames, BumperRows, RowName, SlotType))
 	{
-		SelectedBumperSlotType = SlotType;
-		OnSelectedBumperSlotChanged.Broadcast(SlotType);
+		EPBBumperSlotType CurrentSlotType;
+		if (!PBBumperEquipSlotUtils::TryGetSlotType(SelectedBumperEquipSlot, CurrentSlotType)
+			|| CurrentSlotType != SlotType)
+		{
+			SelectedBumperEquipSlot = PBBumperEquipSlotUtils::GetDefaultEquipSlot(SlotType);
+		}
+
+		BroadcastSelectedSlotChanged();
 		RefreshBoardSlotSelection();
 	}
 
@@ -129,13 +146,34 @@ bool UPBBumperEquipUI::GetEquippedBumperForSlot(
 	const EPBBumperSlotType SlotType,
 	FName& OutBumperRowId) const
 {
+	EPBBumperSlotType SelectedSlotType;
+	const EPBBumperEquipSlot EquipSlot =
+		PBBumperEquipSlotUtils::TryGetSlotType(SelectedBumperEquipSlot, SelectedSlotType)
+		&& SelectedSlotType == SlotType
+			? SelectedBumperEquipSlot
+			: PBBumperEquipSlotUtils::GetDefaultEquipSlot(SlotType);
+
+	return GetEquippedBumperForEquipSlot(EquipSlot, OutBumperRowId);
+}
+
+bool UPBBumperEquipUI::GetEquippedBumperForEquipSlot(
+	const EPBBumperEquipSlot EquipSlot,
+	FName& OutBumperRowId) const
+{
 	if (!IsValid(PlayerDataSubsystem))
 	{
 		OutBumperRowId = NAME_None;
 		return false;
 	}
 
-	return PlayerDataSubsystem->GetEquippedBumper(SlotType, OutBumperRowId);
+	return PlayerDataSubsystem->GetEquippedBumperAtSlot(EquipSlot, OutBumperRowId);
+}
+
+EPBBumperSlotType UPBBumperEquipUI::GetSelectedBumperSlotType() const
+{
+	EPBBumperSlotType SlotType = EPBBumperSlotType::Top;
+	PBBumperEquipSlotUtils::TryGetSlotType(SelectedBumperEquipSlot, SlotType);
+	return SlotType;
 }
 
 bool UPBBumperEquipUI::EquipBumperRow(const FName RowName)
@@ -153,7 +191,9 @@ bool UPBBumperEquipUI::EquipBumperRow(const FName RowName)
 		return false;
 	}
 
-	if (!PlayerDataSubsystem->EquipBumper(SlotType, RowName))
+	SelectBumperRow(RowName);
+	if (GetSelectedBumperSlotType() != SlotType
+		|| !PlayerDataSubsystem->EquipBumperAtSlot(SelectedBumperEquipSlot, RowName))
 	{
 		return false;
 	}
@@ -178,13 +218,16 @@ bool UPBBumperEquipUI::UnequipBumperRow(const FName RowName)
 		return false;
 	}
 
+	SelectBumperRow(RowName);
 	FName EquippedRowName = NAME_None;
-	if (!PlayerDataSubsystem->GetEquippedBumper(SlotType, EquippedRowName) || EquippedRowName != RowName)
+	if (GetSelectedBumperSlotType() != SlotType
+		|| !PlayerDataSubsystem->GetEquippedBumperAtSlot(SelectedBumperEquipSlot, EquippedRowName)
+		|| EquippedRowName != RowName)
 	{
 		return false;
 	}
 
-	if (!PlayerDataSubsystem->UnequipBumper(SlotType))
+	if (!PlayerDataSubsystem->UnequipBumperAtSlot(SelectedBumperEquipSlot))
 	{
 		return false;
 	}
@@ -225,7 +268,7 @@ void UPBBumperEquipUI::HandleBumperUIAssetsLoaded()
 	{
 		OnBumperListItemsReady.Broadcast();
 	}
-	SelectBumperSlot(EPBBumperSlotType::Top);
+	SelectBumperEquipSlot(EPBBumperEquipSlot::TopLeft);
 }
 
 void UPBBumperEquipUI::CacheRequiredSubsystems()
@@ -376,13 +419,16 @@ void UPBBumperEquipUI::UpdateInfoPanelByRowName(const FName RowName)
 		return;
 	}
 
-	const TSet<FName> EquippedRowIds = PBBumperEquipUIBuilder::MakeEquippedBumperRowIdSet(PlayerDataSubsystem.Get());
+	FName EquippedRowName = NAME_None;
+	const bool bIsEquippedInSelectedSlot = IsValid(PlayerDataSubsystem)
+		&& PlayerDataSubsystem->GetEquippedBumperAtSlot(SelectedBumperEquipSlot, EquippedRowName)
+		&& EquippedRowName == RowName;
 
 	InfoPanelViewModel->SetBumperInfoPanelData(
 		Row->DisplayName,
 		PBBumperEquipUIBuilder::ResolveBumperIconTexture(GameDataLoadSubsystem.Get(), RowName, *Row),
 		PBBumperEquipUIBuilder::ResolveBumperDescription(TableDataSubsystem.Get(), *Row),
-		PBBumperEquipUIBuilder::IsBumperEquipped(RowName, EquippedRowIds));
+		bIsEquippedInSelectedSlot);
 }
 
 void UPBBumperEquipUI::UpdateBumperListEquipStates()
@@ -406,27 +452,27 @@ void UPBBumperEquipUI::BindBoardSlotButtons()
 {
 	if (IsValid(TopLeftMarker))
 	{
-		TopLeftMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleTopSlotClicked);
+		TopLeftMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleTopLeftSlotClicked);
 	}
 	if (IsValid(TopRightMarker))
 	{
-		TopRightMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleTopSlotClicked);
+		TopRightMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleTopRightSlotClicked);
 	}
 	if (IsValid(SideLeftMarker))
 	{
-		SideLeftMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleSideSlotClicked);
+		SideLeftMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleSideLeftSlotClicked);
 	}
 	if (IsValid(SideRightMarker))
 	{
-		SideRightMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleSideSlotClicked);
+		SideRightMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleSideRightSlotClicked);
 	}
 	if (IsValid(ReboundLeftMarker))
 	{
-		ReboundLeftMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleReboundSlotClicked);
+		ReboundLeftMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleReboundLeftSlotClicked);
 	}
 	if (IsValid(ReboundRightMarker))
 	{
-		ReboundRightMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleReboundSlotClicked);
+		ReboundRightMarker->OnClicked.AddUniqueDynamic(this, &UPBBumperEquipUI::HandleReboundRightSlotClicked);
 	}
 	if (IsValid(SpecialCenterMarker))
 	{
@@ -438,20 +484,26 @@ void UPBBumperEquipUI::BindBoardSlotButtons()
 
 void UPBBumperEquipUI::RefreshBoardSlotSelection()
 {
-	SetBoardSlotButtonState(TopLeftMarker, EPBBumperSlotType::Top);
-	SetBoardSlotButtonState(TopRightMarker, EPBBumperSlotType::Top);
-	SetBoardSlotButtonState(SideLeftMarker, EPBBumperSlotType::Side);
-	SetBoardSlotButtonState(SideRightMarker, EPBBumperSlotType::Side);
-	SetBoardSlotButtonState(ReboundLeftMarker, EPBBumperSlotType::Rebound);
-	SetBoardSlotButtonState(ReboundRightMarker, EPBBumperSlotType::Rebound);
-	SetBoardSlotButtonState(SpecialCenterMarker, EPBBumperSlotType::Special);
+	SetBoardSlotButtonState(TopLeftMarker, EPBBumperEquipSlot::TopLeft);
+	SetBoardSlotButtonState(TopRightMarker, EPBBumperEquipSlot::TopRight);
+	SetBoardSlotButtonState(SideLeftMarker, EPBBumperEquipSlot::SideLeft);
+	SetBoardSlotButtonState(SideRightMarker, EPBBumperEquipSlot::SideRight);
+	SetBoardSlotButtonState(ReboundLeftMarker, EPBBumperEquipSlot::ReboundLeft);
+	SetBoardSlotButtonState(ReboundRightMarker, EPBBumperEquipSlot::ReboundRight);
+	SetBoardSlotButtonState(SpecialCenterMarker, EPBBumperEquipSlot::Special);
 }
 
 void UPBBumperEquipUI::SetBoardSlotButtonState(
 	UButton* Button,
-	const EPBBumperSlotType SlotType) const
+	const EPBBumperEquipSlot EquipSlot) const
 {
 	if (!IsValid(Button))
+	{
+		return;
+	}
+
+	EPBBumperSlotType SlotType;
+	if (!PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, SlotType))
 	{
 		return;
 	}
@@ -476,26 +528,47 @@ void UPBBumperEquipUI::SetBoardSlotButtonState(
 		break;
 	}
 
-	SlotColor.A = SelectedBumperSlotType == SlotType ? 1.0f : UnselectedSlotOpacity;
+	SlotColor.A = SelectedBumperEquipSlot == EquipSlot ? 1.0f : UnselectedSlotOpacity;
 	Button->SetBackgroundColor(SlotColor);
 }
 
-void UPBBumperEquipUI::HandleTopSlotClicked()
+void UPBBumperEquipUI::BroadcastSelectedSlotChanged()
 {
-	SelectBumperSlot(EPBBumperSlotType::Top);
+	OnSelectedBumperEquipSlotChanged.Broadcast(SelectedBumperEquipSlot);
+	OnSelectedBumperSlotChanged.Broadcast(GetSelectedBumperSlotType());
 }
 
-void UPBBumperEquipUI::HandleSideSlotClicked()
+void UPBBumperEquipUI::HandleTopLeftSlotClicked()
 {
-	SelectBumperSlot(EPBBumperSlotType::Side);
+	SelectBumperEquipSlot(EPBBumperEquipSlot::TopLeft);
 }
 
-void UPBBumperEquipUI::HandleReboundSlotClicked()
+void UPBBumperEquipUI::HandleTopRightSlotClicked()
 {
-	SelectBumperSlot(EPBBumperSlotType::Rebound);
+	SelectBumperEquipSlot(EPBBumperEquipSlot::TopRight);
+}
+
+void UPBBumperEquipUI::HandleSideLeftSlotClicked()
+{
+	SelectBumperEquipSlot(EPBBumperEquipSlot::SideLeft);
+}
+
+void UPBBumperEquipUI::HandleSideRightSlotClicked()
+{
+	SelectBumperEquipSlot(EPBBumperEquipSlot::SideRight);
+}
+
+void UPBBumperEquipUI::HandleReboundLeftSlotClicked()
+{
+	SelectBumperEquipSlot(EPBBumperEquipSlot::ReboundLeft);
+}
+
+void UPBBumperEquipUI::HandleReboundRightSlotClicked()
+{
+	SelectBumperEquipSlot(EPBBumperEquipSlot::ReboundRight);
 }
 
 void UPBBumperEquipUI::HandleSpecialSlotClicked()
 {
-	SelectBumperSlot(EPBBumperSlotType::Special);
+	SelectBumperEquipSlot(EPBBumperEquipSlot::Special);
 }
