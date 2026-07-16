@@ -57,6 +57,7 @@ public:
 	void SetSkillTable(UDataTable* InSkillTable);
 	void SetBossTables(UDataTable* InBossTable, UDataTable* InBossHitPointTable, UDataTable* InBossPatternTable);
 	void SetRelicTable(UDataTable* InRelicTable , UDataTable* InRelicModifierTable);
+	void SetShopTable(UDataTable* InShopTable);
 	void SetStatusEffectTables(
 		UDataTable* InStatusEffectTable,
 		UDataTable* InStatusEffectModifierTable,
@@ -148,6 +149,9 @@ private:
 #pragma region Shop
 
 public:
+	
+	
+	void GetAllShopRowName(TArray<FName>& OutShopIds);
 	bool FindShopRow(FName RowName, FPBShopTableRow& OutRow) const;
 
 private:
@@ -243,6 +247,8 @@ private:
 
 #pragma endregion
 };
+
+
 
 template <typename RowType>
 bool UPBTableDataSubsystem::FindTableRow(

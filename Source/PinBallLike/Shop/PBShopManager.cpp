@@ -1,36 +1,158 @@
 #include "PBShopManager.h"
 
-#include "Kismet/GameplayStatics.h"
 #include "Engine/GameInstance.h"
 #include "Engine/StreamableManager.h"
+#include "Kismet/GameplayStatics.h"
 
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+
 #include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
+#include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
+
+////////////////////////////////////////////////////////////
+// OpenShop
 
 TArray<FName> UPBShopManager::OpenShop()
 {
-    CurrentShopItemBallIds.Empty();
     CurrentGold = 1000;
 
-    // 임시 상품 목록.
-    // 반드시 BallTable에 실제 존재하는 RowName이어야 한다.
-    CurrentShopItemBallIds =
-    {
-        FName(TEXT("Ball_Test01")),
-        FName(TEXT("Ball_Test02")),
-        FName(TEXT("Ball_Test01")),
-        FName(TEXT("Ball_Test02")),
-        FName(TEXT("Ball_Test01")),
-        FName(TEXT("Ball_Test02")),
-        FName(TEXT("Ball_Test01")),
-        FName(TEXT("Ball_Test02"))
-    };
-
-    ShopItemIsSell.Init(false, CurrentShopItemBallIds.Num());
+    GenerateShopItems(8);
 
     return CurrentShopItemBallIds;
 }
+
+////////////////////////////////////////////////////////////
+// GenerateShopItems
+
+bool UPBShopManager::GenerateShopItems(const int32 SlotCount)
+{
+    UGameInstance* GI = UGameplayStatics::GetGameInstance(GetWorld());
+    if (!GI)
+    {
+        return false;
+    }
+
+    UPBTableDataSubsystem* TableSub =
+        GI->GetSubsystem<UPBTableDataSubsystem>();
+
+    if (!TableSub)
+    {
+        return false;
+    }
+
+    //------------------------------------------------------
+    // 기존 데이터를 바로 지우지 않는다.
+    //------------------------------------------------------
+
+    TArray<FName> NewBallIds;
+    TArray<FName> NewShopRows;
+
+    //------------------------------------------------------
+    // ShopTable의 모든 Row 가져오기
+    //------------------------------------------------------
+
+    TArray<FName> AllShopRows;
+    TableSub->GetAllShopRowName(AllShopRows);
+
+    if (AllShopRows.IsEmpty())
+    {
+        return false;
+    }
+
+    //------------------------------------------------------
+    // 랜덤 생성
+    //------------------------------------------------------
+
+    for (int32 i = 0; i < SlotCount; i++)
+    {
+        const int32 RandomIndex =
+            FMath::RandRange(
+                0,
+                AllShopRows.Num() - 1);
+
+        const FName SelectedRow =
+            AllShopRows[RandomIndex];
+
+        FPBShopTableRow ShopRow;
+
+        if (!TableSub->FindShopRow(
+            SelectedRow,
+            ShopRow))
+        {
+            continue;
+        }
+
+        NewShopRows.Add(SelectedRow);
+        NewBallIds.Add(ShopRow.BallKey);
+    }
+
+    //------------------------------------------------------
+    // 생성 실패
+    //------------------------------------------------------
+
+    if (NewBallIds.Num() != SlotCount)
+    {
+        return false;
+    }
+
+    //------------------------------------------------------
+    // 성공 시 교체
+    //------------------------------------------------------
+
+    CurrentShopItemBallIds = MoveTemp(NewBallIds);
+    CurrentShopItemRowNames = MoveTemp(NewShopRows);
+
+    ShopItemIsSold.Init(
+        false,
+        CurrentShopItemBallIds.Num());
+
+    return true;
+}
+
+int32 UPBShopManager::GetShopItemPrice(int32 SlotIndex) const
+{
+    if (!CurrentShopItemRowNames.IsValidIndex(SlotIndex))
+    {
+        return 0;
+    }
+
+    const UGameInstance* GameInstance =
+        UGameplayStatics::GetGameInstance(GetWorld());
+
+    if (!GameInstance)
+    {
+        return 0;
+    }
+
+    const UPBTableDataSubsystem* TableSubsystem =
+        GameInstance->GetSubsystem<UPBTableDataSubsystem>();
+
+    if (!TableSubsystem)
+    {
+        return 0;
+    }
+
+    FPBShopTableRow ShopRow;
+    if (!TableSubsystem->FindShopRow(
+        CurrentShopItemRowNames[SlotIndex],
+        ShopRow))
+    {
+        return 0;
+    }
+
+    return ShopRow.BuyPrice;
+}
+
+FName UPBShopManager::GetShopItemRowName(int32 SlotIndex) const
+{
+    return CurrentShopItemRowNames.IsValidIndex(SlotIndex)
+        ? CurrentShopItemRowNames[SlotIndex]
+        : NAME_None;
+}
+
+////////////////////////////////////////////////////////////
+// BuyItem
 
 bool UPBShopManager::BuyItem(int32 SlotIndex)
 {
@@ -39,81 +161,126 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
         return false;
     }
 
-    if (ShopItemIsSell.IsValidIndex(SlotIndex) && ShopItemIsSell[SlotIndex])
+    if (ShopItemIsSold[SlotIndex])
     {
         return false;
     }
 
-    UGameInstance* GI = UGameplayStatics::GetGameInstance(GetWorld());
+    UGameInstance* GI =
+        UGameplayStatics::GetGameInstance(GetWorld());
+
     if (!GI)
     {
         return false;
     }
 
-    UPBTableDataSubsystem* TableSub = GI->GetSubsystem<UPBTableDataSubsystem>();
-    if (!TableSub)
+    UPBTableDataSubsystem* TableSub =
+        GI->GetSubsystem<UPBTableDataSubsystem>();
+
+    UPBBallDeckSubsystem* DeckSubsystem =
+        GI->GetSubsystem<UPBBallDeckSubsystem>();
+
+    if (!TableSub || !DeckSubsystem)
     {
         return false;
     }
 
-    UPBBallDeckSubsystem* DeckSubsystem = GI->GetSubsystem<UPBBallDeckSubsystem>();
-    if (!DeckSubsystem)
+    //------------------------------------------------------
+    // ShopRow 가져오기
+    //------------------------------------------------------
+
+    FPBShopTableRow ShopRow;
+
+    if (!TableSub->FindShopRow(
+        CurrentShopItemRowNames[SlotIndex],
+        ShopRow))
     {
-        UE_LOG(LogTemp, Warning, TEXT("BuyItem failed: DeckSubsystem is null."));
         return false;
     }
 
-    const FName SelectedBallId = CurrentShopItemBallIds[SlotIndex];
+    const int32 Price = ShopRow.BuyPrice;
 
-    FPBBallTableRow BallRow;
-    if (!TableSub->FindBallRow(SelectedBallId, BallRow))
+    //------------------------------------------------------
+    // 골드 검사
+    //------------------------------------------------------
+
+    if (CurrentGold < Price)
     {
-        UE_LOG(LogTemp, Warning, TEXT("BallRow not found: %s"), *SelectedBallId.ToString());
         return false;
     }
 
-    constexpr int32 TempPrice = 100;
+    //------------------------------------------------------
+    // Ball 획득
+    //------------------------------------------------------
 
-    if (CurrentGold < TempPrice)
+    if (!DeckSubsystem->AddNewBallToDeck(
+        ShopRow.BallKey))
     {
-        UE_LOG(LogTemp, Warning, TEXT("돈 부족 : Gold=%d Price=%d"), CurrentGold, TempPrice);
         return false;
     }
 
-    if (!DeckSubsystem->AddNewBallToDeck(SelectedBallId))
-    {
-        UE_LOG(LogTemp, Warning,
-            TEXT("BuyItem failed: AddNewBallToDeck failed. BallId=%s"),
-            *SelectedBallId.ToString());
-        return false;
-    }
+    DeckSubsystem->LoadPlacedBallUIAssetsAsync(
+        FStreamableDelegate());
 
-    DeckSubsystem->LoadPlacedBallUIAssetsAsync(FStreamableDelegate());
-    DeckSubsystem->LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate());
+    DeckSubsystem->LoadPlacedBallGameplayAssetsAsync(
+        FStreamableDelegate());
 
-    ShopItemIsSell[SlotIndex] = true;
-    CurrentGold -= TempPrice;
+    //------------------------------------------------------
+
+    ShopItemIsSold[SlotIndex] = true;
+
+    CurrentGold -= Price;
 
     if (ShopActorHandler)
     {
         ShopActorHandler->BuyItem(SlotIndex);
     }
 
-    UE_LOG(LogTemp, Warning,
-        TEXT("BuyItem succeeded. Slot=%d BallId=%s Gold=%d"),
-        SlotIndex,
-        *SelectedBallId.ToString(),
-        CurrentGold);
+    UE_LOG(
+        LogTemp,
+        Warning,
+        TEXT("BuyItem : %s"),
+        *ShopRow.BallKey.ToString());
 
     return true;
 }
+
+////////////////////////////////////////////////////////////
+// Reroll
+
+bool UPBShopManager::RerollShop()
+{
+    constexpr int32 RerollCost = 50;
+
+    if (CurrentGold < RerollCost)
+    {
+        return false;
+    }
+
+    if (!GenerateShopItems(8))
+    {
+        return false;
+    }
+
+    CurrentGold -= RerollCost;
+
+    if (ShopActorHandler)
+    {
+        //ShopActorHandler->RefreshShop();
+    }
+
+    return true;
+}
+
+////////////////////////////////////////////////////////////
 
 int32 UPBShopManager::GetCurrentGold() const
 {
     return CurrentGold;
 }
 
-void UPBShopManager::SetShopActorHandler(IIShopActorHandler* Handler)
+void UPBShopManager::SetShopActorHandler(
+    IIShopActorHandler* Handler)
 {
     ShopActorHandler = Handler;
 }

@@ -7,6 +7,7 @@
 class UButton;
 class UTextBlock;
 class UImage;
+class UWidgetAnimation;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FOnBetSelected,
@@ -24,6 +25,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Betting")
 	FOnBetSelected OnBetSelected;
 
+	void PlayIntroAnimation();
+	
 private:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> ExitButton;
@@ -49,6 +52,9 @@ private:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Flag2;
 
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> IntroAnim;
+	
 	UFUNCTION()
 	void OnNationButton1Clicked();
 
@@ -57,4 +63,6 @@ private:
 
 	UFUNCTION()
 	void OnExitButtonClicked();
+	
+	
 };
