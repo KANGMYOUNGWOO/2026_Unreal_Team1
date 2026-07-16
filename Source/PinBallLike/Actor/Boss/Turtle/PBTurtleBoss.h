@@ -20,8 +20,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Turtle|Falling Rock")
 	FVector GetRandomFallingRockLocation(float SpawnHeight = 0.0f) const;
 
-	void PlayTurtleAnimation(UAnimationAsset* Animation);
+	void PlayTurtleAnimation(UAnimationAsset* Animation, bool IsLockRootMotion = false);
 	void RestoreTurtleAnimationMode();
+	FVector GetClosestMoveAreaLocation(const FVector& SourceLocation) const;
 
 protected:
 	virtual void BeginPlay() override;

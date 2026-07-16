@@ -9,6 +9,7 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/Turtle/PBTurtleBoss.h"
 #include "PinBallLike/Interface/Damageable.h"
+#include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
@@ -219,5 +220,24 @@ void UPBBossTurtleSpinPattern::ApplySpinDamage(APBBallBase* Ball)
 	if (Damageable && !Damageable->IsDead())
 	{
 		Damageable->TakeDamage(SpinDamage);
+		const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
+		UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+			*SourcePatternName.ToString(),
+			SpinDamage,
+			*GetNameSafe(Ball));
+	}
+
+	APBTurtleBoss* Boss = TurtleBoss.Get();
+	if (Boss && SpinBounceVelocity > 0.0f)
+	{
+		if (IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball))
+		{
+			FVector BounceDirection = Ball->GetActorLocation() - Boss->GetActorLocation();
+			BounceDirection.Z = 0.0f;
+			if (BounceDirection.Normalize())
+			{
+				Movable->AddVelocity(BounceDirection * SpinBounceVelocity);
+			}
+		}
 	}
 }

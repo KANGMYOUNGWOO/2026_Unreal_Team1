@@ -1,5 +1,7 @@
 #include "PBTurtleBoss.h"
 
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimSequence.h"
 #include "Components/BoxComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -56,11 +58,24 @@ FVector APBTurtleBoss::GetRandomFallingRockLocation(float SpawnHeight) const
 		AreaCenter.Z + SpawnHeight);
 }
 
-void APBTurtleBoss::PlayTurtleAnimation(UAnimationAsset* Animation)
+void APBTurtleBoss::PlayTurtleAnimation(UAnimationAsset* Animation, const bool IsLockRootMotion)
 {
 	if (TurtleMesh && Animation)
 	{
+		if (IsLockRootMotion)
+		{
+			if (UAnimSequence* AnimSequence = Cast<UAnimSequence>(Animation))
+			{
+				AnimSequence->bEnableRootMotion = true;
+				AnimSequence->bForceRootLock = true;
+			}
+		}
+
 		TurtleMesh->PlayAnimation(Animation, false);
+		if (UAnimInstance* AnimInstance = TurtleMesh->GetAnimInstance())
+		{
+			AnimInstance->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
+		}
 	}
 }
 
@@ -70,6 +85,18 @@ void APBTurtleBoss::RestoreTurtleAnimationMode()
 	{
 		TurtleMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 	}
+}
+
+FVector APBTurtleBoss::GetClosestMoveAreaLocation(const FVector& SourceLocation) const
+{
+	if (!BossMoveArea)
+	{
+		return SourceLocation;
+	}
+
+	FVector ClosestLocation = BossMoveArea->ClampLocation(SourceLocation);
+	ClosestLocation.Z = SourceLocation.Z;
+	return ClosestLocation;
 }
 
 void APBTurtleBoss::Tick(float DeltaTime)

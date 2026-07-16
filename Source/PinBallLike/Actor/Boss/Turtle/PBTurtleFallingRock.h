@@ -17,6 +17,7 @@ public:
 	APBTurtleFallingRock();
 
 	void SetFallingSpeed(float NewFallingSpeed);
+	void SetSourcePatternName(FName NewSourcePatternName);
 
 protected:
 	virtual void BeginPlay() override;
@@ -38,6 +39,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Falling Rock", meta = (ClampMin = "0"))
 	int32 DamageAmount = 1;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Falling Rock", meta = (ClampMin = "0.0"))
+	float BounceVelocity = 1000.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Falling Rock")
 	TObjectPtr<UNiagaraSystem> HitEffect;
+
+	FName SourcePatternName = NAME_None;
 };

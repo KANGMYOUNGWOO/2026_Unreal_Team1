@@ -37,6 +37,8 @@ void UPBBossTurtleFallingRockPattern::ExecutePattern_Implementation(APBBossBase*
 
 		if (FallingRock)
 		{
+			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
+			FallingRock->SetSourcePatternName(SourcePatternName);
 			FallingRock->SetFallingSpeed(FallingSpeed);
 		}
 	}

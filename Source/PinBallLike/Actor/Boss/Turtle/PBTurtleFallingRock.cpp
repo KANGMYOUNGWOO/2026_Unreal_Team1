@@ -6,6 +6,7 @@
 #include "NiagaraSystem.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Interface/Damageable.h"
+#include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -53,6 +54,11 @@ void APBTurtleFallingRock::SetFallingSpeed(float NewFallingSpeed)
 	FallingMovement->Velocity = FVector::DownVector * FallingSpeed;
 }
 
+void APBTurtleFallingRock::SetSourcePatternName(const FName NewSourcePatternName)
+{
+	SourcePatternName = NewSourcePatternName;
+}
+
 void APBTurtleFallingRock::HandleRockHit(
 	UPrimitiveComponent* HitComponent,
 	AActor* OtherActor,
@@ -71,6 +77,27 @@ void APBTurtleFallingRock::HandleRockHit(
 		if (Damageable && !Damageable->IsDead() && DamageAmount > 0)
 		{
 			Damageable->TakeDamage(DamageAmount);
+			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+				*SourcePatternName.ToString(),
+				DamageAmount,
+				*GetNameSafe(Ball));
+		}
+
+		if (BounceVelocity > 0.0f)
+		{
+			if (IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball))
+			{
+				FVector BounceDirection = Hit.ImpactNormal;
+				BounceDirection.Z = 0.0f;
+				if (!BounceDirection.Normalize())
+				{
+					BounceDirection = Ball->GetActorLocation() - GetActorLocation();
+					BounceDirection.Z = 0.0f;
+					BounceDirection.Normalize();
+				}
+
+				Movable->AddVelocity(BounceDirection * BounceVelocity);
+			}
 		}
 	}
 

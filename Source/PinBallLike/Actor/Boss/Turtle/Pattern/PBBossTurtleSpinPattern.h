@@ -54,6 +54,9 @@ protected:
 	int32 SpinDamage = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Spin", meta = (ClampMin = "0.0"))
+	float SpinBounceVelocity = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Spin", meta = (ClampMin = "0.0"))
 	float SpinCollisionRadius = 300.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Spin", meta = (ClampMin = "0.0"))
