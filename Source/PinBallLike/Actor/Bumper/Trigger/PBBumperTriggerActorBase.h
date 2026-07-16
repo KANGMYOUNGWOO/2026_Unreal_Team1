@@ -11,6 +11,7 @@
 
 class APBBallBase;
 class APBModularBumperBase;
+class UCameraShakeBase;
 class USceneComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
@@ -90,6 +91,10 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger", meta = (BlueprintProtected = "true"))
 	void IncreaseTrigger(AActor* InteractionActor, const FHitResult& TriggerHit);
 
+	/** 강한 물리 반발이 실제 적용된 뒤 호출하는 공통 카메라 피드백 함수다. */
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Feedback|Camera", meta = (BlueprintProtected = "true"))
+	bool PlayImpactCameraShake(float ScaleMultiplier = 1.0f);
+
 #pragma region Blueprint Events
 	/** 새 이동 Actor 구현에서 사용하는 일반 이벤트다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Trigger")
@@ -105,6 +110,20 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	EPBBumperTriggerType TriggerType = EPBBumperTriggerType::HitCount;
+
+	/** 자식 Trigger가 별도 설정을 하지 않아도 사용할 범퍼 공통 충돌 셰이크다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Feedback|Camera")
+	TSubclassOf<UCameraShakeBase> ImpactCameraShakeClass;
+
+	/** 범퍼 종류별 체감 차이가 필요할 때 자식 Blueprint에서 조정하는 최종 강도다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Feedback|Camera",
+		meta = (ClampMin = "0.0", UIMin = "0.0", UIMax = "2.0"))
+	float ImpactCameraShakeScale = 1.0f;
+
+	/** 동일 Trigger의 빠른 연속 Hit가 카메라를 계속 재시작하지 않게 하는 최소 간격이다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Feedback|Camera",
+		meta = (ClampMin = "0.0", Units = "s"))
+	float MinimumImpactCameraShakeInterval = 0.08f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	EPBBumperState CurrentState = EPBBumperState::Idle;
@@ -131,4 +150,6 @@ private:
 	void ResetTriggerProgress();
 	void SetTriggerProgressState(EPBBumperTriggerProgressState NewState);
 	void NotifyTriggerProgressChanged();
+
+	double LastImpactCameraShakeTime = -1.0;
 };

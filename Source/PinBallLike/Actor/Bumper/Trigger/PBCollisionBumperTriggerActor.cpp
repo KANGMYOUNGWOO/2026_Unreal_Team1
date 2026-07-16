@@ -172,35 +172,36 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 	return false;
 }
 
-void APBCollisionBumperTriggerActor::AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const
+bool APBCollisionBumperTriggerActor::AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const
 {
 	if (!IsValid(BallActor))
 	{
-		return;
+		return false;
 	}
 
 	const IStatProvider* StatProvider = PBInterfaceUtils::FindInterface<IStatProvider>(BallActor);
 	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(BallActor);
 	if (!StatProvider || !Movable)
 	{
-		return;
+		return false;
 	}
 
 	const int32 BallBounce = StatProvider->GetStat(PBStatNames::Bounciness);
 	const float BounceForce = BallBounce + BounceVelocityStrength;
 	if (BounceForce <= 0.0f)
 	{
-		return;
+		return false;
 	}
 
 	FVector BounceDirection = Hit.ImpactNormal;
 	BounceDirection.Z = 0.0f;
 	if (!BounceDirection.Normalize())
 	{
-		return;
+		return false;
 	}
 
 	Movable->AddVelocity(BounceDirection * BounceForce);
+	return true;
 }
 
 void APBCollisionBumperTriggerActor::HandleComponentHit(
@@ -233,7 +234,10 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 		ReactionComponent->PlayImpactReaction(Hit);
 	}
 
-	AddBounceVelocityToBall(OtherActor, Hit);
+	if (AddBounceVelocityToBall(OtherActor, Hit))
+	{
+		PlayImpactCameraShake();
+	}
 	if (APBBallBase* Ball = Cast<APBBallBase>(OtherActor))
 	{
 		IncreaseTrigger(Ball, Hit);
