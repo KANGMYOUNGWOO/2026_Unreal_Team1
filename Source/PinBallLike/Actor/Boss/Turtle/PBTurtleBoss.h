@@ -5,6 +5,7 @@
 #include "PBTurtleBoss.generated.h"
 
 class APBBossMoveArea;
+class UAnimationAsset;
 class UBoxComponent;
 class USkeletalMeshComponent;
 
@@ -18,6 +19,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Boss|Turtle|Falling Rock")
 	FVector GetRandomFallingRockLocation(float SpawnHeight = 0.0f) const;
+
+	void PlayTurtleAnimation(UAnimationAsset* Animation);
+	void RestoreTurtleAnimationMode();
 
 protected:
 	virtual void BeginPlay() override;

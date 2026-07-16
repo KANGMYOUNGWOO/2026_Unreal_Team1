@@ -56,6 +56,22 @@ FVector APBTurtleBoss::GetRandomFallingRockLocation(float SpawnHeight) const
 		AreaCenter.Z + SpawnHeight);
 }
 
+void APBTurtleBoss::PlayTurtleAnimation(UAnimationAsset* Animation)
+{
+	if (TurtleMesh && Animation)
+	{
+		TurtleMesh->PlayAnimation(Animation, false);
+	}
+}
+
+void APBTurtleBoss::RestoreTurtleAnimationMode()
+{
+	if (TurtleMesh)
+	{
+		TurtleMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	}
+}
+
 void APBTurtleBoss::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
