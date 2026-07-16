@@ -35,6 +35,7 @@ void APBBetActor::OpenAbility()
 	PC->bEnableClickEvents = true;
 	PC->bEnableMouseOverEvents = true;
 	
+	BetWidget->PlayIntroAnimation();
 }
 
 void APBBetActor::HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message)

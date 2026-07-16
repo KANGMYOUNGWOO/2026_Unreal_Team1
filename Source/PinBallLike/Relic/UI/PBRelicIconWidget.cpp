@@ -10,9 +10,12 @@ void UPBRelicIconWidget::SetRelicId(FName InRelicId)
 {
 	RelicId = InRelicId;
 
-	UGameInstance* GameInstance =
-		GetGameInstance();
+	if (RelicId.IsNone())
+	{
+		return;
+	}
 
+	UGameInstance* GameInstance = GetGameInstance();
 	if (!GameInstance)
 	{
 		return;
@@ -32,11 +35,23 @@ void UPBRelicIconWidget::SetRelicId(FName InRelicId)
 		RelicId,
 		RelicRow))
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[RelicIcon] Relic row not found. RelicId=%s"),
+			*RelicId.ToString());
+
 		return;
 	}
 
 	if (!RelicTooltipWidgetClass)
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[RelicIcon] Tooltip class is null. RelicId=%s"),
+			*RelicId.ToString());
+
 		return;
 	}
 
@@ -54,8 +69,14 @@ void UPBRelicIconWidget::SetRelicId(FName InRelicId)
 		RelicRow.DisplayName,
 		RelicRow.Description);
 
-	SetToolTip(
-		TooltipWidget);
+	SetToolTip(TooltipWidget);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[RelicIcon] Tooltip assigned. RelicId=%s Tooltip=%s"),
+		*RelicId.ToString(),
+		*GetNameSafe(GetToolTip()));
 }
 
 void UPBRelicIconWidget::NativeOnMouseEnter(
