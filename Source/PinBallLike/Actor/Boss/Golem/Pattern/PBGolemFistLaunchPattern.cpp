@@ -48,6 +48,7 @@ void UPBGolemFistLaunchPattern::StartPattern_Implementation(APBBossBase* Boss)
 		if (APBGolemBossHand* GolemHand = GolemBoss->GetGolemHand(HandType))
 		{
 			GolemHand->StopAutonomousMove();
+			GolemHand->SetIsPunching(true);
 			StartHandTransform = GolemHand->GetActorTransform();
 		}
 	}
@@ -111,6 +112,11 @@ void UPBGolemFistLaunchPattern::CancelPatternInternal_Implementation(APBBossBase
 
 	if (APBGolemBoss* GolemBoss = GetGolemBoss(Boss))
 	{
+		if (APBGolemBossHand* GolemHand = GolemBoss->GetGolemHand(HandType))
+		{
+			GolemHand->SetIsPunching(false);
+		}
+
 		ReturnHandToStartTransform(GolemBoss);
 		UnlockPatternHand();
 		UE_LOG(LogTemp, Log, TEXT("[GolemFistLaunchPattern] CancelPatternInternal return requested. HandType=%d ReturnDuration=%.2f"),
@@ -247,6 +253,11 @@ void UPBGolemFistLaunchPattern::HandleHandMoveFinished()
 	switch (FistLaunchPhase)
 	{
 	case EPBGolemFistLaunchPhase::Launching:
+		if (APBGolemBossHand* GolemHand = GolemBoss->GetGolemHand(HandType))
+		{
+			GolemHand->SetIsPunching(false);
+		}
+
 		FistLaunchPhase = EPBGolemFistLaunchPhase::Returning;
 		ReturnHandToStartTransform(GolemBoss);
 		UE_LOG(LogTemp, Log, TEXT("[GolemFistLaunchPattern] Launch phase finished. Return requested. HandType=%d ReturnDuration=%.2f"),
@@ -329,6 +340,14 @@ void UPBGolemFistLaunchPattern::FinishFistLaunchPattern()
 {
 	UE_LOG(LogTemp, Log, TEXT("[GolemFistLaunchPattern] FinishFistLaunchPattern. Pattern=%s"),
 		*GetNameSafe(this));
+
+	if (APBGolemBoss* GolemBoss = GetGolemBoss())
+	{
+		if (APBGolemBossHand* GolemHand = GolemBoss->GetGolemHand(HandType))
+		{
+			GolemHand->SetIsPunching(false);
+		}
+	}
 
 	ClearFistTelegraphs();
 	UnbindHandMoveFinished();
