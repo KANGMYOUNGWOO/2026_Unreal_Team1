@@ -46,6 +46,7 @@ void APBGateAccelerationField::StartActionForActor(
 	}
 
 	OverlappingActorCounts.Reset();
+	AcceleratedActors.Reset();
 	SetFieldActive(true);
 	Super::StartActionForActor(Bumper, InteractionActor);
 
@@ -68,6 +69,7 @@ void APBGateAccelerationField::DeactivateSummon()
 	}
 
 	OverlappingActorCounts.Reset();
+	AcceleratedActors.Reset();
 	SetFieldActive(false);
 	Super::DeactivateSummon();
 }
@@ -92,6 +94,7 @@ void APBGateAccelerationField::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 	OverlappingActorCounts.Reset();
+	AcceleratedActors.Reset();
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -102,11 +105,11 @@ void APBGateAccelerationField::SetFieldActive(const bool bIsActive)
 	FieldVisual->SetVisibility(bIsActive, true);
 }
 
-void APBGateAccelerationField::ApplyAcceleration(AActor* InteractionActor) const
+bool APBGateAccelerationField::ApplyAcceleration(AActor* InteractionActor) const
 {
 	if (!IsValid(InteractionActor) || SpeedBoostPercent <= 0.0f)
 	{
-		return;
+		return false;
 	}
 
 	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(InteractionActor);
@@ -115,7 +118,7 @@ void APBGateAccelerationField::ApplyAcceleration(AActor* InteractionActor) const
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Bumper] Gate acceleration skipped because the target has no movement interface. Target=%s"),
 			*GetNameSafe(InteractionActor));
-		return;
+		return false;
 	}
 
 	FVector CurrentVelocity = Movable->GetVelocity();
@@ -124,7 +127,7 @@ void APBGateAccelerationField::ApplyAcceleration(AActor* InteractionActor) const
 		|| !FMath::IsFinite(CurrentVelocity.Y)
 		|| CurrentVelocity.IsNearlyZero())
 	{
-		return;
+		return false;
 	}
 
 	const FVector AddedVelocity = CurrentVelocity * (SpeedBoostPercent / 100.0f);
@@ -139,6 +142,7 @@ void APBGateAccelerationField::ApplyAcceleration(AActor* InteractionActor) const
 		SpeedBoostPercent,
 		BeforeSpeed,
 		AfterSpeed);
+	return AfterSpeed > BeforeSpeed + KINDA_SMALL_NUMBER;
 }
 
 void APBGateAccelerationField::HandleActiveDurationFinished()
@@ -162,9 +166,12 @@ void APBGateAccelerationField::HandleFieldBeginOverlap(
 
 	const TWeakObjectPtr<AActor> ActorKey = OtherActor;
 	int32& OverlapCount = OverlappingActorCounts.FindOrAdd(ActorKey);
-	if (OverlapCount == 0)
+	if (OverlapCount == 0 && !AcceleratedActors.Contains(ActorKey))
 	{
-		ApplyAcceleration(OtherActor);
+		if (ApplyAcceleration(OtherActor))
+		{
+			AcceleratedActors.Add(ActorKey);
+		}
 	}
 	++OverlapCount;
 }

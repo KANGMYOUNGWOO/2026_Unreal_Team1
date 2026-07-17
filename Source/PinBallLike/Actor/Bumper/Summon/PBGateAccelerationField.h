@@ -47,10 +47,12 @@ protected:
 
 private:
 	TMap<TWeakObjectPtr<AActor>, int32> OverlappingActorCounts;
+	/** 같은 활성화 중 영역을 나갔다 들어와도 한 Actor에는 한 번만 가속합니다. */
+	TSet<TWeakObjectPtr<AActor>> AcceleratedActors;
 	FTimerHandle ActiveDurationTimerHandle;
 
 	void SetFieldActive(bool bIsActive);
-	void ApplyAcceleration(AActor* InteractionActor) const;
+	bool ApplyAcceleration(AActor* InteractionActor) const;
 	void HandleActiveDurationFinished();
 
 	UFUNCTION()

@@ -33,13 +33,15 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	}
 
 	TArray<FSoftObjectPath> TablePaths;
-	TablePaths.Reserve(13);
+	TablePaths.Reserve(24);
 
 	// 테이블 경로는 DeveloperSettings에서 관리한다.
 	const FSoftObjectPath CollectionTablePath = Settings->CollectionTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperTablePath = Settings->BumperTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperTriggerTablePath = Settings->BumperTriggerTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperEffectTablePath = Settings->BumperEffectTable.ToSoftObjectPath();
+	const FSoftObjectPath GameplayEffectTablePath = Settings->GameplayEffectTable.ToSoftObjectPath();
+	const FSoftObjectPath GameplayEffectParamTablePath = Settings->GameplayEffectParamTable.ToSoftObjectPath();
 	const FSoftObjectPath BallTablePath = Settings->BallTable.ToSoftObjectPath();
 	const FSoftObjectPath BallStarLevelTablePath = Settings->BallStarLevelTable.ToSoftObjectPath();
 	const FSoftObjectPath SkillTablePath = Settings->SkillTable.ToSoftObjectPath();
@@ -76,6 +78,16 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	if (BumperEffectTablePath.IsValid())
 	{
 		TablePaths.Add(BumperEffectTablePath);
+	}
+
+	if (GameplayEffectTablePath.IsValid())
+	{
+		TablePaths.Add(GameplayEffectTablePath);
+	}
+
+	if (GameplayEffectParamTablePath.IsValid())
+	{
+		TablePaths.Add(GameplayEffectParamTablePath);
 	}
 
 	if (BallTablePath.IsValid())
@@ -183,6 +195,7 @@ void UPBTableDataSubsystem::UnloadStartupGameData()
 
 	SetCollectionTable(nullptr);
 	SetBumperTables(nullptr, nullptr, nullptr);
+	SetGameplayEffectTables(nullptr, nullptr);
 	SetBallTables(nullptr, nullptr);
 	SetSkillTable(nullptr);
 	SetBossTables(nullptr, nullptr, nullptr);
@@ -207,6 +220,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedBumperTable = nullptr;
 	UDataTable* LoadedBumperTriggerTable = nullptr;
 	UDataTable* LoadedBumperEffectTable = nullptr;
+	UDataTable* LoadedGameplayEffectTable = nullptr;
+	UDataTable* LoadedGameplayEffectParamTable = nullptr;
 	UDataTable* LoadedBallTable = nullptr;
 	UDataTable* LoadedBallStarLevelTable = nullptr;
 	UDataTable* LoadedSkillTable = nullptr;
@@ -235,6 +250,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedBumperTable = Cast<UDataTable>(Settings->BumperTable.Get());
 		LoadedBumperTriggerTable = Cast<UDataTable>(Settings->BumperTriggerTable.Get());
 		LoadedBumperEffectTable = Cast<UDataTable>(Settings->BumperEffectTable.Get());
+		LoadedGameplayEffectTable = Cast<UDataTable>(Settings->GameplayEffectTable.Get());
+		LoadedGameplayEffectParamTable = Cast<UDataTable>(Settings->GameplayEffectParamTable.Get());
 		LoadedBallTable = Cast<UDataTable>(Settings->BallTable.Get());
 		LoadedBallStarLevelTable = Cast<UDataTable>(Settings->BallStarLevelTable.Get());
 		LoadedSkillTable = Cast<UDataTable>(Settings->SkillTable.Get());
@@ -264,6 +281,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 
 	SetCollectionTable(LoadedCollectionTable);
 	SetBumperTables(LoadedBumperTable, LoadedBumperTriggerTable, LoadedBumperEffectTable);
+	SetGameplayEffectTables(LoadedGameplayEffectTable, LoadedGameplayEffectParamTable);
 	SetBallTables(LoadedBallTable, LoadedBallStarLevelTable);
 	SetSkillTable(LoadedSkillTable);
 	SetBossTables(LoadedBossTable, LoadedBossHitPointTable, LoadedBossPatternTable);
@@ -291,6 +309,8 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 	return IsValid(BumperTable)
 		&& IsValid(BumperTriggerTable)
 		&& IsValid(BumperEffectTable)
+		&& IsValid(GameplayEffectTable)
+		&& IsValid(GameplayEffectParamTable)
 		&& IsValid(BallTable)
 		&& IsValid(BallStarLevelTable)
 		&& IsValid(SkillTable)
@@ -349,6 +369,19 @@ void UPBTableDataSubsystem::SetBumperTables(
 		*GetNameSafe(BumperTable),
 		*GetNameSafe(BumperTriggerTable),
 		*GetNameSafe(BumperEffectTable));
+}
+
+void UPBTableDataSubsystem::SetGameplayEffectTables(
+	UDataTable* InGameplayEffectTable,
+	UDataTable* InGameplayEffectParamTable)
+{
+	GameplayEffectTable = InGameplayEffectTable;
+	GameplayEffectParamTable = InGameplayEffectParamTable;
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[TableData] Gameplay effect tables assigned. Effect=%s Param=%s"),
+		*GetNameSafe(GameplayEffectTable),
+		*GetNameSafe(GameplayEffectParamTable));
 }
 
 void UPBTableDataSubsystem::SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable)
@@ -483,6 +516,42 @@ bool UPBTableDataSubsystem::FindLinkedBumperEffectRow(
 	}
 
 	return FindBumperEffectRow(BumperRow.EffectID, OutRow);
+}
+
+bool UPBTableDataSubsystem::FindGameplayEffectRow(
+	const FName RowName,
+	FPBGameplayEffectRow& OutRow) const
+{
+	return FindTableRow(
+		GameplayEffectTable,
+		RowName,
+		OutRow,
+		TEXT("FindGameplayEffectRow"));
+}
+
+bool UPBTableDataSubsystem::GetGameplayEffectParamRows(
+	const FName EffectId,
+	TArray<FPBGameplayEffectParamRow>& OutRows) const
+{
+	OutRows.Reset();
+	if (!IsValid(GameplayEffectParamTable) || EffectId.IsNone())
+	{
+		return false;
+	}
+
+	TArray<FPBGameplayEffectParamRow*> Rows;
+	GameplayEffectParamTable->GetAllRows<FPBGameplayEffectParamRow>(
+		TEXT("GetGameplayEffectParamRows"),
+		Rows);
+	for (const FPBGameplayEffectParamRow* Row : Rows)
+	{
+		if (Row && Row->EffectId == EffectId && !Row->ParamKey.IsNone())
+		{
+			OutRows.Add(*Row);
+		}
+	}
+
+	return !OutRows.IsEmpty();
 }
 
 #pragma endregion

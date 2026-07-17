@@ -8,6 +8,8 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
+#include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossGroggyComponent.h"
@@ -24,6 +26,164 @@ namespace
 {
 const FName LeftGolemHandName = TEXT("Left");
 const FName RightGolemHandName = TEXT("Right");
+constexpr int32 MaxBumperCheatChargeCount = 100;
+
+FString GetBumperPositionName(const EPBBumperPositionId PositionId)
+{
+	const UEnum* PositionEnum = StaticEnum<EPBBumperPositionId>();
+	return PositionEnum
+		? PositionEnum->GetNameStringByValue(static_cast<int64>(PositionId))
+		: TEXT("Unknown");
+}
+
+FString GetBumperPositionUsage()
+{
+	const UEnum* PositionEnum = StaticEnum<EPBBumperPositionId>();
+	if (!PositionEnum)
+	{
+		return TEXT("Bumper position enum is unavailable.");
+	}
+
+	TArray<FString> PositionNames;
+	for (int32 EnumIndex = 0; EnumIndex < PositionEnum->NumEnums(); ++EnumIndex)
+	{
+		const FString PositionName = PositionEnum->GetNameStringByIndex(EnumIndex);
+		if (PositionName.IsEmpty()
+			|| PositionName.Equals(TEXT("MAX"), ESearchCase::IgnoreCase)
+			|| PositionName.EndsWith(TEXT("_MAX"), ESearchCase::IgnoreCase))
+		{
+			continue;
+		}
+
+		const int64 EnumValue = PositionEnum->GetValueByIndex(EnumIndex);
+		if (EnumValue == static_cast<int64>(EPBBumperPositionId::None))
+		{
+			continue;
+		}
+
+		PositionNames.Add(PositionName);
+	}
+
+	return FString::Join(PositionNames, TEXT(", "));
+}
+
+bool TryParseBumperPositionName(
+	const FName PositionName,
+	EPBBumperPositionId& OutPositionId)
+{
+	OutPositionId = EPBBumperPositionId::None;
+	if (PositionName.IsNone())
+	{
+		return false;
+	}
+
+	const UEnum* PositionEnum = StaticEnum<EPBBumperPositionId>();
+	if (!PositionEnum)
+	{
+		return false;
+	}
+
+	const int64 EnumValue = PositionEnum->GetValueByNameString(PositionName.ToString());
+	if (EnumValue == INDEX_NONE
+		|| EnumValue == static_cast<int64>(EPBBumperPositionId::None))
+	{
+		return false;
+	}
+
+	const FString ResolvedName = PositionEnum->GetNameStringByValue(EnumValue);
+	if (ResolvedName.IsEmpty()
+		|| ResolvedName.Equals(TEXT("MAX"), ESearchCase::IgnoreCase)
+		|| ResolvedName.EndsWith(TEXT("_MAX"), ESearchCase::IgnoreCase))
+	{
+		return false;
+	}
+
+	OutPositionId = static_cast<EPBBumperPositionId>(EnumValue);
+	return true;
+}
+
+bool TryFindUniqueBumperTrigger(
+	UWorld* World,
+	const EPBBumperPositionId PositionId,
+	APBBumperTriggerActorBase*& OutTriggerActor,
+	int32& OutMatchCount)
+{
+	OutTriggerActor = nullptr;
+	OutMatchCount = 0;
+	if (!IsValid(World) || PositionId == EPBBumperPositionId::None)
+	{
+		return false;
+	}
+
+	for (TActorIterator<APBBumperTriggerActorBase> It(World); It; ++It)
+	{
+		APBBumperTriggerActorBase* TriggerActor = *It;
+		if (!IsValid(TriggerActor) || TriggerActor->GetPositionId() != PositionId)
+		{
+			continue;
+		}
+
+		++OutMatchCount;
+		if (!OutTriggerActor)
+		{
+			OutTriggerActor = TriggerActor;
+		}
+	}
+
+	return OutMatchCount == 1;
+}
+
+bool IsUsableBumperCheatBall(APBBallBase* Ball)
+{
+	if (!IsValid(Ball) || Ball->IsActorBeingDestroyed())
+	{
+		return false;
+	}
+
+	const UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
+	return !ResourceComponent || !ResourceComponent->IsDead();
+}
+
+APBBallBase* FindBumperCheatInteractionBall(UWorld* World)
+{
+	if (!IsValid(World))
+	{
+		return nullptr;
+	}
+
+	for (TActorIterator<APBCombatPartyController> It(World); It; ++It)
+	{
+		APBCombatPartyController* PartyController = *It;
+		if (!IsValid(PartyController))
+		{
+			continue;
+		}
+
+		if (APBBallBase* LeaderBall = PartyController->GetLeaderBall();
+			IsUsableBumperCheatBall(LeaderBall))
+		{
+			return LeaderBall;
+		}
+
+		for (APBBallBase* PartyBall : PartyController->GetValidPartyBalls())
+		{
+			if (IsUsableBumperCheatBall(PartyBall))
+			{
+				return PartyBall;
+			}
+		}
+	}
+
+	for (TActorIterator<APBBallBase> It(World); It; ++It)
+	{
+		if (APBBallBase* Ball = *It; IsUsableBumperCheatBall(Ball))
+		{
+			return Ball;
+		}
+	}
+
+	return nullptr;
+}
 
 FName GetCheatSceneMapPath(const int32 SceneIndex)
 {
@@ -320,6 +480,223 @@ void UPBCheatManager::RegenMana()
 		TEXT("[Cheat] RestoreBallMana finished. Mana=%.0f RestoredBalls=%d"),
 		ManaAmount,
 		RestoredBallCount);
+}
+
+void UPBCheatManager::BumperStatus() const
+{
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat][Bumper] Status failed. World is invalid."));
+		return;
+	}
+
+	TArray<APBBumperTriggerActorBase*> TriggerActors;
+	for (TActorIterator<APBBumperTriggerActorBase> It(World); It; ++It)
+	{
+		if (APBBumperTriggerActorBase* TriggerActor = *It; IsValid(TriggerActor))
+		{
+			TriggerActors.Add(TriggerActor);
+		}
+	}
+
+	TriggerActors.Sort(
+		[](const APBBumperTriggerActorBase& Left, const APBBumperTriggerActorBase& Right)
+		{
+			return static_cast<uint8>(Left.GetPositionId())
+				< static_cast<uint8>(Right.GetPositionId());
+		});
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[Cheat][Bumper] Status begin. TriggerCount=%d"),
+		TriggerActors.Num());
+
+	for (const APBBumperTriggerActorBase* TriggerActor : TriggerActors)
+	{
+		const APBModularBumperBase* OwnerBumper = TriggerActor->GetOwnerBumper();
+		UE_LOG(LogTemp, Log,
+			TEXT("[Cheat][Bumper] Position=%s Count=%d/%d Progress=%s TriggerState=%s BumperState=%s Active=%s Pending=%d Trigger=%s Bumper=%s"),
+			*GetBumperPositionName(TriggerActor->GetPositionId()),
+			TriggerActor->GetCurrentTriggerCount(),
+			TriggerActor->GetRequiredTriggerCount(),
+			*UEnum::GetValueAsString(TriggerActor->GetTriggerProgressState()),
+			*UEnum::GetValueAsString(TriggerActor->GetTriggerState()),
+			IsValid(OwnerBumper)
+				? *UEnum::GetValueAsString(OwnerBumper->GetBumperState())
+				: TEXT("Invalid"),
+			IsValid(OwnerBumper) && OwnerBumper->GetActiveTriggerActor() == TriggerActor
+				? TEXT("true")
+				: TEXT("false"),
+			IsValid(OwnerBumper) ? OwnerBumper->GetPendingActivationCount() : 0,
+			*GetNameSafe(TriggerActor),
+			*GetNameSafe(OwnerBumper));
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Cheat][Bumper] Status end."));
+}
+
+void UPBCheatManager::BumperCharge(const FName PositionName, const int32 Count)
+{
+	if (Count <= 0 || Count > MaxBumperCheatChargeCount)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Charge failed. Count must be in range 1..%d. Count=%d"),
+			MaxBumperCheatChargeCount,
+			Count);
+		return;
+	}
+
+	EPBBumperPositionId PositionId;
+	if (!TryParseBumperPositionName(PositionName, PositionId))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Charge failed. Unknown Position=%s. Use one of: %s"),
+			*PositionName.ToString(),
+			*GetBumperPositionUsage());
+		return;
+	}
+
+	APBBumperTriggerActorBase* TriggerActor = nullptr;
+	int32 MatchCount = 0;
+	if (!TryFindUniqueBumperTrigger(GetWorld(), PositionId, TriggerActor, MatchCount))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Charge failed. Position=%s requires exactly one Trigger but found %d."),
+			*GetBumperPositionName(PositionId),
+			MatchCount);
+		return;
+	}
+
+	APBModularBumperBase* OwnerBumper = TriggerActor->GetOwnerBumper();
+	if (!IsValid(OwnerBumper))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Charge failed. Position=%s OwnerBumper is invalid."),
+			*GetBumperPositionName(PositionId));
+		return;
+	}
+
+	APBBallBase* InteractionBall = FindBumperCheatInteractionBall(GetWorld());
+	if (!IsValid(InteractionBall))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Charge failed. No living Ball exists. Prepare or launch the party first."));
+		return;
+	}
+
+	int32 RequestedHitCount = 0;
+	const FHitResult EmptyTriggerHit;
+	for (int32 HitIndex = 0; HitIndex < Count; ++HitIndex)
+	{
+		if (!TriggerActor->CanIncreaseTrigger())
+		{
+			break;
+		}
+
+		OwnerBumper->HandleTriggerActorActivated(
+			TriggerActor,
+			InteractionBall,
+			EmptyTriggerHit);
+		++RequestedHitCount;
+	}
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[Cheat][Bumper] Charge finished. Position=%s Requested=%d AppliedRequests=%d Count=%d/%d Progress=%s BumperState=%s Pending=%d Ball=%s"),
+		*GetBumperPositionName(PositionId),
+		Count,
+		RequestedHitCount,
+		TriggerActor->GetCurrentTriggerCount(),
+		TriggerActor->GetRequiredTriggerCount(),
+		*UEnum::GetValueAsString(TriggerActor->GetTriggerProgressState()),
+		*UEnum::GetValueAsString(OwnerBumper->GetBumperState()),
+		OwnerBumper->GetPendingActivationCount(),
+		*GetNameSafe(InteractionBall));
+}
+
+void UPBCheatManager::BumperComplete(const FName PositionName)
+{
+	EPBBumperPositionId PositionId;
+	if (!TryParseBumperPositionName(PositionName, PositionId))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Complete failed. Unknown Position=%s. Use one of: %s"),
+			*PositionName.ToString(),
+			*GetBumperPositionUsage());
+		return;
+	}
+
+	APBBumperTriggerActorBase* TriggerActor = nullptr;
+	int32 MatchCount = 0;
+	if (!TryFindUniqueBumperTrigger(GetWorld(), PositionId, TriggerActor, MatchCount))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Complete failed. Position=%s requires exactly one Trigger but found %d."),
+			*GetBumperPositionName(PositionId),
+			MatchCount);
+		return;
+	}
+
+	const int32 RemainingCount = FMath::Max(
+		TriggerActor->GetRequiredTriggerCount() - TriggerActor->GetCurrentTriggerCount(),
+		0);
+	if (RemainingCount <= 0 || !TriggerActor->CanIncreaseTrigger())
+	{
+		UE_LOG(LogTemp, Log,
+			TEXT("[Cheat][Bumper] Complete skipped. Position=%s Count=%d/%d Progress=%s TriggerState=%s"),
+			*GetBumperPositionName(PositionId),
+			TriggerActor->GetCurrentTriggerCount(),
+			TriggerActor->GetRequiredTriggerCount(),
+			*UEnum::GetValueAsString(TriggerActor->GetTriggerProgressState()),
+			*UEnum::GetValueAsString(TriggerActor->GetTriggerState()));
+		return;
+	}
+
+	BumperCharge(PositionName, RemainingCount);
+}
+
+void UPBCheatManager::BumperReset(const FName PositionName)
+{
+	EPBBumperPositionId PositionId;
+	if (!TryParseBumperPositionName(PositionName, PositionId))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Reset failed. Unknown Position=%s. Use one of: %s"),
+			*PositionName.ToString(),
+			*GetBumperPositionUsage());
+		return;
+	}
+
+	APBBumperTriggerActorBase* TriggerActor = nullptr;
+	int32 MatchCount = 0;
+	if (!TryFindUniqueBumperTrigger(GetWorld(), PositionId, TriggerActor, MatchCount))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Reset failed. Position=%s requires exactly one Trigger but found %d."),
+			*GetBumperPositionName(PositionId),
+			MatchCount);
+		return;
+	}
+
+	APBModularBumperBase* OwnerBumper = TriggerActor->GetOwnerBumper();
+	if (!IsValid(OwnerBumper))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat][Bumper] Reset failed. Position=%s OwnerBumper is invalid."),
+			*GetBumperPositionName(PositionId));
+		return;
+	}
+
+	const bool bActiveEffectContinues = OwnerBumper->GetActiveTriggerActor() == TriggerActor;
+	OwnerBumper->ResetTriggerCount();
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[Cheat][Bumper] Reset finished. Position=%s Count=%d/%d Progress=%s ActiveEffectContinues=%s Pending=%d"),
+		*GetBumperPositionName(PositionId),
+		TriggerActor->GetCurrentTriggerCount(),
+		TriggerActor->GetRequiredTriggerCount(),
+		*UEnum::GetValueAsString(TriggerActor->GetTriggerProgressState()),
+		bActiveEffectContinues ? TEXT("true") : TEXT("false"),
+		OwnerBumper->GetPendingActivationCount());
 }
 
 UGameInstance* UPBCheatManager::GetCheatGameInstance() const

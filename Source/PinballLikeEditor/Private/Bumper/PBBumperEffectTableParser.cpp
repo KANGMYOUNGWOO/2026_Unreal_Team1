@@ -42,6 +42,10 @@ bool UPBBumperEffectTableParser::ParseRow(const FName RowName, const TMap<FStrin
 		RowData.FindRef(TEXT("ExecutionPolicy")),
 		EPBBumperEffectExecutionPolicy::Immediate);
 	NewRow.Power = ParseFloatValue(RowData.FindRef(TEXT("Power")), 0.0f);
+	NewRow.SecondaryPower = ParseFloatValue(RowData.FindRef(TEXT("SecondaryPower")), 0.0f);
+	NewRow.Duration = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("Duration")), 0.0f), 0.0f);
+	NewRow.Count = FMath::Max(ParseIntValue(RowData.FindRef(TEXT("Count")), 0), 0);
+	NewRow.SharedEffectId = ParseNameValue(RowData.FindRef(TEXT("SharedEffectId")));
 	NewRow.ActivationVfxId = ParseNameValue(RowData.FindRef(TEXT("ActivationVfxId")));
 	NewRow.Description = FText::FromString(RowData.FindRef(TEXT("Description")));
 

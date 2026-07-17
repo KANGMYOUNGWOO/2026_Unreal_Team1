@@ -59,7 +59,9 @@ AActor* UPBTurretFireComponent::FireOnce()
 	if (ProjectileClass->IsChildOf(APBBumperProjectile::StaticClass())
 		&& (!AttackTarget.IsValid()
 			|| AttackPayload == EPBBumperProjectilePayload::None
-			|| AttackPower <= 0))
+			|| AttackPower <= 0
+			|| (MaxAttackShotCount > 0
+				&& FiredAttackShotCount >= MaxAttackShotCount)))
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Bumper] Turret projectile skipped because attack payload is incomplete. Owner=%s Target=%s Power=%d"),
@@ -76,6 +78,10 @@ AActor* UPBTurretFireComponent::FireOnce()
 	}
 
 	ActivateProjectile(Projectile, GetMuzzleTransform());
+	if (MaxAttackShotCount > 0)
+	{
+		++FiredAttackShotCount;
+	}
 
 	OnTurretProjectileFired.Broadcast(Projectile);
 	return Projectile;
@@ -84,11 +90,14 @@ AActor* UPBTurretFireComponent::FireOnce()
 void UPBTurretFireComponent::ConfigureAttack(
 	AActor* InTargetActor,
 	const EPBBumperProjectilePayload InPayload,
-	const int32 InPower)
+	const int32 InPower,
+	const int32 InMaxShotCount)
 {
 	AttackTarget = InTargetActor;
 	AttackPayload = InPayload;
 	AttackPower = FMath::Max(InPower, 0);
+	MaxAttackShotCount = FMath::Max(InMaxShotCount, 0);
+	FiredAttackShotCount = 0;
 }
 
 void UPBTurretFireComponent::ReleaseProjectile(AActor* Projectile)

@@ -74,6 +74,7 @@ void APBBumperSpawner::OnConstruction(const FTransform& Transform)
 
 void APBBumperSpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	LogBattleTelemetrySummary();
 	ClearSpawnedBumpers();
 
 	Super::EndPlay(EndPlayReason);
@@ -134,6 +135,7 @@ void APBBumperSpawner::SpawnLoadedBumpers()
 	}
 
 	ClearSpawnedBumpers();
+	bBattleTelemetrySummaryLogged = false;
 	CollectBumperAnchors();
 
 	// 로드된 DataAsset과 테이블 row를 실제 스폰용 데이터로 변환한다.
@@ -148,6 +150,8 @@ void APBBumperSpawner::SpawnLoadedBumpers()
 
 void APBBumperSpawner::ClearSpawnedBumpers()
 {
+	LogBattleTelemetrySummary();
+
 	for (APBModularBumperBase* Bumper : SpawnedBumpers)
 	{
 		if (IsValid(Bumper))
@@ -171,6 +175,45 @@ void APBBumperSpawner::GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpe
 			OutBumpers.Add(Bumper);
 		}
 	}
+}
+
+void APBBumperSpawner::LogBattleTelemetrySummary()
+{
+	if (bBattleTelemetrySummaryLogged || SpawnedBumpers.IsEmpty())
+	{
+		return;
+	}
+
+	int32 ValidBumperCount = 0;
+	int32 TotalMeaningfulContacts = 0;
+	int32 TotalActivations = 0;
+	for (const APBModularBumperBase* Bumper : SpawnedBumpers)
+	{
+		if (!IsValid(Bumper))
+		{
+			continue;
+		}
+
+		++ValidBumperCount;
+		TotalMeaningfulContacts += Bumper->GetMeaningfulContactCount();
+		TotalActivations += Bumper->GetActivationCount();
+		UE_LOG(LogTemp, Log,
+			TEXT("[BumperTelemetry] BattleSummary RowName=%s Position=%s MeaningfulContacts=%d Activations=%d Progress=%d/%d Pending=%d"),
+			*Bumper->GetBumperRowId().ToString(),
+			*UEnum::GetValueAsString(Bumper->GetPrimaryPositionId()),
+			Bumper->GetMeaningfulContactCount(),
+			Bumper->GetActivationCount(),
+			Bumper->GetCurrentTriggerCount(),
+			Bumper->GetRequiredTriggerCount(),
+			Bumper->GetPendingActivationCount());
+	}
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[BumperTelemetry] BattleSummaryTotal Bumpers=%d MeaningfulContacts=%d Activations=%d"),
+		ValidBumperCount,
+		TotalMeaningfulContacts,
+		TotalActivations);
+	bBattleTelemetrySummaryLogged = true;
 }
 
 void APBBumperSpawner::BuildPendingBumperAssetIds(TArray<FPrimaryAssetId>& OutAssetIds) const
@@ -221,6 +264,7 @@ bool APBBumperSpawner::TryBuildBumperSpawnData(
 	{
 		return false;
 	}
+	OutSpawnData.BumperRowId = BumperRowId;
 
 	if (!DoesBumperTypeMatchEquipSlot(OutSpawnData.BumperRow.BumperType, EquippedSlot.EquipSlot))
 	{
@@ -313,7 +357,7 @@ bool APBBumperSpawner::TryBuildTriggerSpawnInfos(
 		return false;
 	}
 
-	// 같은 Row가 좌우에 장착돼도 각 Modular Bumper는 자기 위치의 Trigger 하나만 생성한다.
+	// 각 장착 Row는 자기 물리 슬롯의 Trigger 하나만 생성한다.
 	FPBBumperTriggerSpawnInfo TriggerSpawnInfo;
 	TriggerSpawnInfo.TriggerClass =
 		TSubclassOf<APBBumperTriggerActorBase>(BumperDataAsset->TriggerClass.Get());
@@ -361,6 +405,7 @@ APBModularBumperBase* APBBumperSpawner::PlaceBumperActor(const FPBPreparedBumper
 	}
 
 	Bumper->InitializeBumper(
+		SpawnData.BumperRowId,
 		SpawnData.BumperRow,
 		SpawnData.TriggerSpawnInfos,
 		SpawnData.EffectRow,

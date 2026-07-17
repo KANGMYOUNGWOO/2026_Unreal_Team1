@@ -12,7 +12,8 @@ enum class EPBBumperProjectilePayload : uint8
 {
 	None,
 	BossDamage,
-	BossGroggy
+	BossGroggy,
+	BossVulnerability
 };
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(
@@ -32,11 +33,25 @@ class PINBALLLIKE_API APBBumperProjectile : public AProjectileBase
 public:
 	APBBumperProjectile();
 
+	/** 범퍼와 지연 효과가 같은 생성/설정 절차를 공유하도록 유도탄을 한 번에 생성합니다. */
+	static APBBumperProjectile* SpawnForTarget(
+		UObject* WorldContext,
+		TSubclassOf<APBBumperProjectile> InProjectileClass,
+		AActor* OwnerActor,
+		const FVector& SpawnLocation,
+		const FRotator& SpawnRotation,
+		AActor* InTargetActor,
+		EPBBumperProjectilePayload InPayload,
+		int32 InPower,
+		float InPayloadDuration,
+		float InLifetime);
+
 	void ConfigureForTarget(
 		AActor* InTargetActor,
 		EPBBumperProjectilePayload InPayload,
 		int32 InPower,
-		bool bInDestroyOnResolved);
+		bool bInDestroyOnResolved,
+		float InPayloadDuration = 0.0f);
 	void ResetForPool();
 
 	FPBBumperProjectileResolvedSignature OnProjectileResolved;
@@ -60,6 +75,7 @@ private:
 	TWeakObjectPtr<AActor> TargetActor;
 	EPBBumperProjectilePayload Payload = EPBBumperProjectilePayload::None;
 	int32 PayloadPower = 0;
+	float PayloadDuration = 0.0f;
 	bool bDestroyOnResolved = true;
 	bool bHasResolved = false;
 };

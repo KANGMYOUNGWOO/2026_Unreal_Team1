@@ -11,6 +11,7 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
+#include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicModifierRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectModifierRow.h"
@@ -94,6 +95,29 @@ void AddIssue(
 	Issue.Topic = Topic;
 	Issue.SourceRowName = SourceRowName;
 	Issue.Message = Message;
+}
+
+bool ContainsIndexedPlaceholder(const FText& Text)
+{
+	const FString Value = Text.ToString();
+	for (int32 Index = 0; Index < 10; ++Index)
+	{
+		if (Value.Contains(FString::Printf(TEXT("{%d}"), Index)))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool IsCurrentCatalogCategory(const EPBCollectionCategory Category)
+{
+	return Category == EPBCollectionCategory::Ball
+		|| Category == EPBCollectionCategory::Synergy
+		|| Category == EPBCollectionCategory::Relic
+		|| Category == EPBCollectionCategory::Bumper
+		|| Category == EPBCollectionCategory::Boss;
 }
 }
 
@@ -566,8 +590,51 @@ TArray<FPBCollectionValidationIssue> UPBCollectionSubsystem::GetCatalogValidatio
 		return Issues;
 	}
 
+	TArray<FPBCollectionTableRow> CollectionRows;
+	TableData->GetAllCollectionRows(CollectionRows);
+
+	TSet<FName> CollectionIds;
+	for (const FPBCollectionTableRow& CollectionRow : CollectionRows)
+	{
+		const FPBCollectionEntryData Metadata = CollectionRow.ToEntryData();
+		if (Metadata.CollectionId.IsNone())
+		{
+			AddIssue(
+				Issues,
+				EPBCollectionValidationSeverity::Error,
+				TEXT("CollectionMetadata"),
+				Metadata.SourceRowName,
+				LOCTEXT("MissingCollectionId", "도감 메타데이터의 CollectionId가 비어 있습니다."));
+			continue;
+		}
+
+		if (CollectionIds.Contains(Metadata.CollectionId))
+		{
+			AddIssue(
+				Issues,
+				EPBCollectionValidationSeverity::Error,
+				TEXT("CollectionMetadata"),
+				Metadata.SourceRowName,
+				FText::Format(
+					LOCTEXT("DuplicateCollectionId", "CollectionId {0}이(가) 중복되었습니다."),
+					FText::FromName(Metadata.CollectionId)));
+		}
+		CollectionIds.Add(Metadata.CollectionId);
+	}
+
+	TSet<FString> MetadataSourceKeys;
 	for (const FPBCollectionEntryData& Metadata : Entries)
 	{
+		if (!IsCurrentCatalogCategory(Metadata.Category))
+		{
+			AddIssue(
+				Issues,
+				EPBCollectionValidationSeverity::Warning,
+				TEXT("CollectionMetadata"),
+				Metadata.SourceRowName,
+				LOCTEXT("UnsupportedCollectionCategory", "현재 5개 도감 탭에서 사용하지 않는 카테고리입니다."));
+		}
+
 		if (Metadata.SourceRowName.IsNone())
 		{
 			AddIssue(
@@ -580,6 +647,21 @@ TArray<FPBCollectionValidationIssue> UPBCollectionSubsystem::GetCatalogValidatio
 					FText::FromName(Metadata.CollectionId)));
 			continue;
 		}
+
+		const FString MetadataSourceKey = FString::Printf(
+			TEXT("%d:%s"),
+			static_cast<int32>(Metadata.Category),
+			*Metadata.SourceRowName.ToString());
+		if (MetadataSourceKeys.Contains(MetadataSourceKey))
+		{
+			AddIssue(
+				Issues,
+				EPBCollectionValidationSeverity::Warning,
+				TEXT("CollectionMetadata"),
+				Metadata.SourceRowName,
+				LOCTEXT("DuplicateMetadataSource", "같은 카테고리와 원본 RowName을 가리키는 메타데이터가 중복되었습니다."));
+		}
+		MetadataSourceKeys.Add(MetadataSourceKey);
 
 		bool bHasSourceRow = true;
 		switch (Metadata.Category)
@@ -644,6 +726,17 @@ TArray<FPBCollectionValidationIssue> UPBCollectionSubsystem::GetCatalogValidatio
 				Ball.ValidationText.IsEmpty()
 					? LOCTEXT("InvalidBallSkill", "유효한 단일 스킬 참조가 없습니다.")
 					: Ball.ValidationText);
+		}
+		else if (ContainsIndexedPlaceholder(Ball.SkillDescription))
+		{
+			AddIssue(
+				Issues,
+				EPBCollectionValidationSeverity::Warning,
+				TEXT("BallSkillDescription"),
+				Ball.Summary.SourceRowName,
+				FText::Format(
+					LOCTEXT("UnresolvedSkillPlaceholder", "스킬 {0} 설명에 치환 규칙이 없는 숫자 자리표시자가 남아 있습니다."),
+					FText::FromName(Ball.SkillId)));
 		}
 	}
 
@@ -710,6 +803,75 @@ TArray<FPBCollectionValidationIssue> UPBCollectionSubsystem::GetCatalogValidatio
 				Bumper.Summary.SourceRowName,
 				LOCTEXT("MissingBumperEffect", "연결된 Effect Row를 찾을 수 없습니다."));
 		}
+		if (ContainsIndexedPlaceholder(Bumper.Summary.Description)
+			|| ContainsIndexedPlaceholder(Bumper.TriggerDescription)
+			|| ContainsIndexedPlaceholder(Bumper.EffectDescription))
+		{
+			AddIssue(
+				Issues,
+				EPBCollectionValidationSeverity::Warning,
+				TEXT("BumperDescription"),
+				Bumper.Summary.SourceRowName,
+				LOCTEXT("UnresolvedBumperPlaceholder", "범퍼 설명에 치환되지 않은 {n} 자리표시자가 남아 있습니다."));
+		}
+		if (Bumper.RequiredTriggerCount <= 0)
+		{
+			AddIssue(
+				Issues,
+				EPBCollectionValidationSeverity::Error,
+				TEXT("BumperTrigger"),
+				Bumper.Summary.SourceRowName,
+				LOCTEXT("InvalidBumperTriggerCount", "범퍼의 필요 충돌 횟수는 1 이상이어야 합니다."));
+		}
+		if (Bumper.bHasValidEffect && (!FMath::IsFinite(Bumper.EffectPower) || Bumper.EffectPower <= 0.0f))
+		{
+			AddIssue(
+				Issues,
+				EPBCollectionValidationSeverity::Error,
+				TEXT("BumperEffect"),
+				Bumper.Summary.SourceRowName,
+				LOCTEXT("InvalidBumperEffectPower", "범퍼 Effect Power는 유한한 양수여야 합니다."));
+		}
+	}
+
+	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
+	if (const UDataTable* RelicModifierTable = Settings ? Settings->RelicModifierTable.Get() : nullptr)
+	{
+		RelicModifierTable->ForeachRow<FPBRelicModifierRow>(
+			TEXT("CollectionRelicValidation"),
+			[&Issues, TableData](const FName& RowName, const FPBRelicModifierRow& ModifierRow)
+			{
+				FPBRelicTableRow RelicRow;
+				if (ModifierRow.RelicId.IsNone() || !TableData->FindRelicRow(ModifierRow.RelicId, RelicRow))
+				{
+					AddIssue(
+						Issues,
+						EPBCollectionValidationSeverity::Error,
+						TEXT("RelicModifier"),
+						RowName,
+						FText::Format(
+							LOCTEXT("MissingRelicForModifier", "Modifier가 존재하지 않는 Relic {0}을(를) 참조합니다."),
+							FText::FromName(ModifierRow.RelicId)));
+				}
+				if (ModifierRow.TargetStat.IsNone())
+				{
+					AddIssue(
+						Issues,
+						EPBCollectionValidationSeverity::Warning,
+						TEXT("RelicModifier"),
+						RowName,
+						LOCTEXT("MissingRelicTargetStat", "Relic Modifier의 TargetStat이 비어 있습니다."));
+				}
+				if (!FMath::IsFinite(ModifierRow.Value))
+				{
+					AddIssue(
+						Issues,
+						EPBCollectionValidationSeverity::Error,
+						TEXT("RelicModifier"),
+						RowName,
+						LOCTEXT("InvalidRelicModifierValue", "Relic Modifier Value가 유효한 숫자가 아닙니다."));
+				}
+			});
 	}
 
 	for (const FPBCollectionBossDisplayData& Boss : GetBossCatalogEntries())
@@ -732,6 +894,75 @@ TArray<FPBCollectionValidationIssue> UPBCollectionSubsystem::GetCatalogValidatio
 				Boss.Summary.SourceRowName,
 				LOCTEXT("MissingBossPatterns", "표시할 활성 보스 패턴이 없습니다."));
 		}
+	}
+
+	if (const UDataTable* HitPointTable = Settings ? Settings->BossHitPoint.Get() : nullptr)
+	{
+		HitPointTable->ForeachRow<FPBBossHitPointTableRow>(
+			TEXT("CollectionBossHitPointValidation"),
+			[&Issues, TableData](const FName& RowName, const FPBBossHitPointTableRow& HitPointRow)
+			{
+				FPBBossTableRow BossRow;
+				if (HitPointRow.BossRowName.IsNone() || !TableData->FindBossRow(HitPointRow.BossRowName, BossRow))
+				{
+					AddIssue(
+						Issues,
+						EPBCollectionValidationSeverity::Error,
+						TEXT("BossHitPoint"),
+						RowName,
+						FText::Format(
+							LOCTEXT("MissingBossForHitPoint", "부위가 존재하지 않는 Boss {0}을(를) 참조합니다."),
+							FText::FromName(HitPointRow.BossRowName)));
+				}
+				if (HitPointRow.HitPointName.IsNone())
+				{
+					AddIssue(
+						Issues,
+						EPBCollectionValidationSeverity::Error,
+						TEXT("BossHitPoint"),
+						RowName,
+						LOCTEXT("MissingBossHitPointName", "보스 부위의 HitPointName이 비어 있습니다."));
+				}
+			});
+	}
+
+	if (const UDataTable* PatternTable = Settings ? Settings->BossPattern.Get() : nullptr)
+	{
+		PatternTable->ForeachRow<FPBBossPatternTableRow>(
+			TEXT("CollectionBossPatternValidation"),
+			[&Issues, TableData](const FName& RowName, const FPBBossPatternTableRow& PatternRow)
+			{
+				FPBBossTableRow BossRow;
+				if (PatternRow.BossRowName.IsNone() || !TableData->FindBossRow(PatternRow.BossRowName, BossRow))
+				{
+					AddIssue(
+						Issues,
+						EPBCollectionValidationSeverity::Error,
+						TEXT("BossPattern"),
+						RowName,
+						FText::Format(
+							LOCTEXT("MissingBossForPattern", "패턴이 존재하지 않는 Boss {0}을(를) 참조합니다."),
+							FText::FromName(PatternRow.BossRowName)));
+				}
+				if (PatternRow.IsEnabled && (PatternRow.PatternName.IsNone() || PatternRow.PatternClassID.IsNone()))
+				{
+					AddIssue(
+						Issues,
+						EPBCollectionValidationSeverity::Error,
+						TEXT("BossPattern"),
+						RowName,
+						LOCTEXT("IncompleteEnabledBossPattern", "활성 보스 패턴에는 PatternName과 PatternClassID가 모두 필요합니다."));
+				}
+				if (!FMath::IsFinite(PatternRow.CooldownSeconds) || PatternRow.CooldownSeconds < 0.0f)
+				{
+					AddIssue(
+						Issues,
+						EPBCollectionValidationSeverity::Error,
+						TEXT("BossPattern"),
+						RowName,
+						LOCTEXT("InvalidBossPatternCooldown", "보스 패턴 CooldownSeconds는 0 이상의 유한한 값이어야 합니다."));
+				}
+			});
 	}
 
 	return Issues;

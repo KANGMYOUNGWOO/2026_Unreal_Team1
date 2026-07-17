@@ -21,5 +21,9 @@ namespace PBBumperRewardUtils
 		EPBBumperRewardType RewardType,
 		FName ResourceName,
 		FName StatusEffectId,
-		float RequestedPower);
+		float RequestedPower,
+		FName TimedEffectSourceId = NAME_None,
+		float TimedEffectDuration = 0.0f,
+		FName TimedStatName = NAME_None,
+		int32 TriggerCount = 0);
 }

@@ -43,7 +43,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Bumper")
 	TArray<FPBEquippedBumperSlot> GetEquippedBumperSlots() const;
 
-	/** 기존 카테고리 기반 호출을 보존합니다. 좌우 카테고리는 두 위치를 함께 변경합니다. */
+	/** 같은 Row가 대상 슬롯 외의 위치에 이미 장착되어 있는지 확인합니다. */
+	UFUNCTION(BlueprintPure, Category = "PlayerData|Bumper")
+	bool IsBumperEquippedInAnotherSlot(FName BumperRowId, EPBBumperEquipSlot TargetSlot) const;
+
+	/** 기존 카테고리 기반 호출을 보존합니다. 중복 방지를 위해 카테고리의 대표 위치 하나만 변경합니다. */
 	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
 	bool EquipBumper(EPBBumperSlotType SlotType, FName BumperRowId);
 

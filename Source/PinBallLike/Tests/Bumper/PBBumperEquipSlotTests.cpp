@@ -4,6 +4,7 @@
 #include "Misc/AutomationTest.h"
 #include "PinBallLike/Struct/Bumper/PBBumperEquipSlot.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
+#include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FPBBumperEquipSlotMappingTest,
@@ -73,6 +74,14 @@ bool FPBBumperIndependentEquipmentTest::RunTest(const FString& Parameters)
 		PlayerData->EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, LeftRow));
 	TestTrue(TEXT("Right slot accepts a different row"),
 		PlayerData->EquipBumperAtSlot(EPBBumperEquipSlot::ReboundRight, RightRow));
+	TestTrue(TEXT("Equipping the same row to its current slot is idempotent"),
+		PlayerData->EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, LeftRow));
+	TestFalse(TEXT("The current slot is not considered another slot"),
+		PlayerData->IsBumperEquippedInAnotherSlot(LeftRow, EPBBumperEquipSlot::ReboundLeft));
+	TestTrue(TEXT("The same row is detected from another target slot"),
+		PlayerData->IsBumperEquippedInAnotherSlot(LeftRow, EPBBumperEquipSlot::ReboundRight));
+	TestFalse(TEXT("The same row is rejected in another physical slot"),
+		PlayerData->EquipBumperAtSlot(EPBBumperEquipSlot::ReboundRight, LeftRow));
 
 	FName ActualRow = NAME_None;
 	TestTrue(TEXT("Left slot can be queried"),
@@ -101,22 +110,68 @@ bool FPBBumperIndependentEquipmentTest::RunTest(const FString& Parameters)
 	const FName SharedSideRow(TEXT("Test_Side_Shared"));
 	TestTrue(TEXT("Legacy category equip remains supported"),
 		PlayerData->EquipBumper(EPBBumperSlotType::Side, SharedSideRow));
-	TestTrue(TEXT("Legacy equip populated SideLeft"),
+	TestTrue(TEXT("Legacy equip populated the category default slot"),
 		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::SideLeft, ActualRow));
 	TestEqual(TEXT("SideLeft has the shared row"), ActualRow, SharedSideRow);
-	TestTrue(TEXT("Legacy equip populated SideRight"),
+	TestFalse(TEXT("Legacy equip does not create a duplicate in SideRight"),
 		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::SideRight, ActualRow));
-	TestEqual(TEXT("SideRight has the shared row"), ActualRow, SharedSideRow);
 
 	const TArray<FPBEquippedBumperSlot> EquippedSlots = PlayerData->GetEquippedBumperSlots();
-	TestEqual(TEXT("Three physical slots are currently equipped"), EquippedSlots.Num(), 3);
+	TestEqual(TEXT("Two physical slots are currently equipped"), EquippedSlots.Num(), 2);
 	const TArray<FName> UniqueRows = PlayerData->GetEquippedBumperRowIds();
-	TestEqual(TEXT("Repeated rows are unique in the asset load list"), UniqueRows.Num(), 2);
+	TestEqual(TEXT("Every equipped row is unique"), UniqueRows.Num(), 2);
 
 	const EPBBumperSlotType InvalidSlotType = static_cast<EPBBumperSlotType>(255);
 	TestFalse(TEXT("Invalid legacy category is rejected"),
 		PlayerData->GetEquippedBumper(InvalidSlotType, ActualRow));
 	TestTrue(TEXT("Invalid query clears the output row"), ActualRow.IsNone());
+
+	struct FLegacyIdMigration
+	{
+		FName LegacyId;
+		FName CurrentId;
+	};
+	const FLegacyIdMigration LegacyMigrations[] =
+	{
+		{PBBumperAssetIds::LegacyBumper::Rebound_CounterShell,
+			PBBumperAssetIds::Bumper::Rebound_KineticShell},
+		{PBBumperAssetIds::LegacyBumper::Rebound_ManaOrb,
+			PBBumperAssetIds::Bumper::Rebound_BloodOverdrive},
+		{PBBumperAssetIds::LegacyBumper::Side_LaunchCharge,
+			PBBumperAssetIds::Bumper::Side_CounterShield},
+		{PBBumperAssetIds::LegacyBumper::Top_ComboUp,
+			PBBumperAssetIds::Bumper::Top_ComboArc},
+		{PBBumperAssetIds::LegacyBumper::Top_ComboPickup,
+			PBBumperAssetIds::Bumper::Top_VulnerabilityShell},
+		{PBBumperAssetIds::LegacyBumper::Gate_ManaField,
+			PBBumperAssetIds::Bumper::Gate_ReactiveRepair},
+		{PBBumperAssetIds::LegacyBumper::Gate_StrengthField,
+			PBBumperAssetIds::Bumper::Gate_ManaReactor}
+	};
+	for (const FLegacyIdMigration& Migration : LegacyMigrations)
+	{
+		TestEqual(
+			*FString::Printf(TEXT("Legacy Bumper ID migrates: %s"), *Migration.LegacyId.ToString()),
+			PBBumperAssetIds::NormalizeBumperRowId(Migration.LegacyId),
+			Migration.CurrentId);
+	}
+
+	UPBPlayerDataSubsystem* MigrationPlayerData = NewObject<UPBPlayerDataSubsystem>(GameInstance);
+	TestTrue(TEXT("Legacy equipment input is accepted"),
+		MigrationPlayerData->EquipBumperAtSlot(
+			EPBBumperEquipSlot::TopLeft,
+			PBBumperAssetIds::LegacyBumper::Top_ComboUp));
+	TestTrue(TEXT("Migrated equipment can be queried"),
+		MigrationPlayerData->GetEquippedBumperAtSlot(
+			EPBBumperEquipSlot::TopLeft,
+			ActualRow));
+	TestEqual(TEXT("Stored equipment uses the current RowName"),
+		ActualRow,
+		PBBumperAssetIds::Bumper::Top_ComboArc);
+	TestFalse(TEXT("Legacy and current IDs cannot bypass duplicate equipment prevention"),
+		MigrationPlayerData->EquipBumperAtSlot(
+			EPBBumperEquipSlot::TopRight,
+			PBBumperAssetIds::Bumper::Top_ComboArc));
 
 	return true;
 }

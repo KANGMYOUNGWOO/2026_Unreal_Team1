@@ -30,16 +30,10 @@ bool UPBPlayerDataSubsystem::EquipBumper(const EPBBumperSlotType SlotType, const
 	switch (SlotType)
 	{
 	case EPBBumperSlotType::Top:
-		return EquipBumperAtSlot(EPBBumperEquipSlot::TopLeft, BumperRowId)
-			&& EquipBumperAtSlot(EPBBumperEquipSlot::TopRight, BumperRowId);
 	case EPBBumperSlotType::Side:
-		return EquipBumperAtSlot(EPBBumperEquipSlot::SideLeft, BumperRowId)
-			&& EquipBumperAtSlot(EPBBumperEquipSlot::SideRight, BumperRowId);
 	case EPBBumperSlotType::Rebound:
-		return EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, BumperRowId)
-			&& EquipBumperAtSlot(EPBBumperEquipSlot::ReboundRight, BumperRowId);
 	case EPBBumperSlotType::Special:
-		return EquipBumperAtSlot(EPBBumperEquipSlot::Special, BumperRowId);
+		return EquipBumperAtSlot(PBBumperEquipSlotUtils::GetDefaultEquipSlot(SlotType), BumperRowId);
 	default:
 		return false;
 	}
@@ -118,13 +112,24 @@ bool UPBPlayerDataSubsystem::EquipBumperAtSlot(
 	const EPBBumperEquipSlot EquipSlot,
 	const FName BumperRowId)
 {
+	const FName NormalizedBumperRowId = PBBumperAssetIds::NormalizeBumperRowId(BumperRowId);
 	EPBBumperSlotType SlotType;
-	if (BumperRowId.IsNone() || !PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, SlotType))
+	if (NormalizedBumperRowId.IsNone()
+		|| !PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, SlotType))
 	{
 		return false;
 	}
 
-	EquippedBumperRowIds.Add(EquipSlot, BumperRowId);
+	if (IsBumperEquippedInAnotherSlot(NormalizedBumperRowId, EquipSlot))
+	{
+		UE_LOG(LogTemp, Log,
+			TEXT("[BumperEquip] Duplicate row rejected. TargetSlot=%s RowName=%s"),
+			*UEnum::GetValueAsString(EquipSlot),
+			*NormalizedBumperRowId.ToString());
+		return false;
+	}
+
+	EquippedBumperRowIds.Add(EquipSlot, NormalizedBumperRowId);
 	return true;
 }
 
@@ -177,6 +182,29 @@ TArray<FPBEquippedBumperSlot> UPBPlayerDataSubsystem::GetEquippedBumperSlots() c
 	return EquippedSlots;
 }
 
+bool UPBPlayerDataSubsystem::IsBumperEquippedInAnotherSlot(
+	const FName BumperRowId,
+	const EPBBumperEquipSlot TargetSlot) const
+{
+	const FName NormalizedBumperRowId = PBBumperAssetIds::NormalizeBumperRowId(BumperRowId);
+	if (NormalizedBumperRowId.IsNone())
+	{
+		return false;
+	}
+
+	for (const TPair<EPBBumperEquipSlot, FName>& EquippedBumper : EquippedBumperRowIds)
+	{
+		if (EquippedBumper.Key != TargetSlot
+			&& PBBumperAssetIds::NormalizeBumperRowId(EquippedBumper.Value)
+				== NormalizedBumperRowId)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 TArray<FName> UPBPlayerDataSubsystem::GetEquippedBumperRowIds() const
 {
 	TArray<FName> BumperRowIds;
@@ -191,10 +219,10 @@ TArray<FName> UPBPlayerDataSubsystem::GetEquippedBumperRowIds() const
 void UPBPlayerDataSubsystem::InitializeDefaultBumpersForTest()
 {
 	EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, PBBumperAssetIds::Bumper::Rebound_PowerPush);
-	EquipBumperAtSlot(EPBBumperEquipSlot::ReboundRight, PBBumperAssetIds::Bumper::Rebound_CounterShell);
+	EquipBumperAtSlot(EPBBumperEquipSlot::ReboundRight, PBBumperAssetIds::Bumper::Rebound_KineticShell);
 	EquipBumperAtSlot(EPBBumperEquipSlot::SideLeft, PBBumperAssetIds::Bumper::Side_ShieldCharge);
 	EquipBumperAtSlot(EPBBumperEquipSlot::SideRight, PBBumperAssetIds::Bumper::Side_ManaCharge);
-	EquipBumperAtSlot(EPBBumperEquipSlot::TopLeft, PBBumperAssetIds::Bumper::Top_ComboUp);
+	EquipBumperAtSlot(EPBBumperEquipSlot::TopLeft, PBBumperAssetIds::Bumper::Top_ComboArc);
 	EquipBumperAtSlot(EPBBumperEquipSlot::TopRight, PBBumperAssetIds::Bumper::Top_GroggyStrike);
 	EquipBumperAtSlot(EPBBumperEquipSlot::Special, PBBumperAssetIds::Bumper::Gate_SpeedUp);
 }

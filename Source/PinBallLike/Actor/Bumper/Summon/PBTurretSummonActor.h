@@ -19,7 +19,14 @@ public:
 	APBTurretSummonActor();
 
 	/** Effect 시트의 Power를 각 포탑 탄환에 전달합니다. */
-	void SetAttackPayload(EPBBumperProjectilePayload InPayload, int32 InPower);
+	void SetAttackPayload(
+		EPBBumperProjectilePayload InPayload,
+		int32 InPower,
+		int32 InShotCount);
+
+	/** Blueprint 연출이 시트의 발사 횟수를 조회할 때 사용합니다. */
+	UFUNCTION(BlueprintPure, Category = "Bumper|Summon|Turret")
+	int32 GetAttackShotCount() const { return AttackShotCount; }
 
 	virtual void StartActionForActor(
 		APBModularBumperBase* Bumper,
@@ -42,4 +49,5 @@ private:
 
 	EPBBumperProjectilePayload AttackPayload = EPBBumperProjectilePayload::None;
 	int32 AttackPower = 0;
+	int32 AttackShotCount = 0;
 };

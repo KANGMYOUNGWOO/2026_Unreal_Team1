@@ -208,6 +208,22 @@ APBBumperTriggerActorBase* APBModularBumperBase::GetActiveTriggerActor() const
 	return ActiveTriggerActor.Get();
 }
 
+EPBBumperPositionId APBModularBumperBase::GetPrimaryPositionId() const
+{
+	for (const FPBBumperTriggerSpawnInfo& SpawnInfo : TriggerSpawnInfos)
+	{
+		for (const EPBBumperPositionId PositionId : SpawnInfo.PositionIds)
+		{
+			if (PositionId != EPBBumperPositionId::None)
+			{
+				return PositionId;
+			}
+		}
+	}
+
+	return EPBBumperPositionId::None;
+}
+
 int32 APBModularBumperBase::GetPendingActivationCount() const
 {
 	return PendingActivations.Num();
@@ -241,6 +257,7 @@ void APBModularBumperBase::CreateBumperEffect()
 }
 
 void APBModularBumperBase::InitializeBumper(
+	const FName InBumperRowId,
 	const FPBBumperTableRow& InBumperData,
 	const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
 	const FPBBumperEffectRow& InEffectData,
@@ -248,7 +265,10 @@ void APBModularBumperBase::InitializeBumper(
 	UNiagaraSystem* InActivationVfx,
 	const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms)
 {
+	BumperRowId = InBumperRowId;
 	BumperData = InBumperData;
+	RuntimeState.MeaningfulContactCount = 0;
+	RuntimeState.ActivationCount = 0;
 	TriggerSpawnInfos = InTriggerSpawnInfos;
 	EffectData = InEffectData;
 	EffectClass = InEffectClass;
@@ -270,7 +290,19 @@ void APBModularBumperBase::AddTriggerCount(
 		return;
 	}
 
+	const int32 PreviousTriggerCount = TriggerActor->GetCurrentTriggerCount();
 	const bool bBecameReady = TriggerActor->AddTriggerProgress(Amount);
+	if (TriggerActor->GetCurrentTriggerCount() > PreviousTriggerCount)
+	{
+		++RuntimeState.MeaningfulContactCount;
+		UE_LOG(LogTemp, Log,
+			TEXT("[BumperTelemetry] MeaningfulContact RowName=%s Position=%s Contacts=%d Progress=%d/%d"),
+			*BumperRowId.ToString(),
+			*UEnum::GetValueAsString(TriggerActor->GetPositionId()),
+			RuntimeState.MeaningfulContactCount,
+			TriggerActor->GetCurrentTriggerCount(),
+			TriggerActor->GetRequiredTriggerCount());
+	}
 	NotifyTriggerCountChanged();
 
 	UE_LOG(LogTemp, Verbose,
@@ -462,7 +494,15 @@ void APBModularBumperBase::ExecuteActivation(AActor* InteractionActor)
 		return;
 	}
 
+	const EPBBumperPositionId ActivationPositionId = ActiveTriggerActor->GetPositionId();
 	SetBumperState(EPBBumperState::Activated);
+	++RuntimeState.ActivationCount;
+	UE_LOG(LogTemp, Log,
+		TEXT("[BumperTelemetry] Activation RowName=%s Position=%s Activations=%d Contacts=%d"),
+		*BumperRowId.ToString(),
+		*UEnum::GetValueAsString(ActivationPositionId),
+		RuntimeState.ActivationCount,
+		RuntimeState.MeaningfulContactCount);
 	SpawnActivationVfx();
 	OnMovableActorActivated(InteractionActor);
 	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))

@@ -14,5 +14,14 @@ enum class EPBBumperRewardType : uint8
 	Combo,
 
 	/** 충돌한 Ball의 StatusEffectComponent에 상태효과를 적용합니다. */
-	StatusEffect
+	StatusEffect,
+
+	/** 대상 Ball의 현재 공격력을 기준으로 일정 시간 비율 보정을 적용합니다. */
+	TimedAttackPercent,
+
+	/** 지정한 런타임 스탯에 일정 시간 비율 보정을 적용합니다. */
+	TimedStatPercent,
+
+	/** 실제 Resource 감소 뒤 제한된 횟수만큼 회복합니다. */
+	PostDamageHeal
 };

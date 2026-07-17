@@ -14,6 +14,8 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectParamRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectRow.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectModifierRow.h"
@@ -53,6 +55,7 @@ public:
 	void GetAllCollectionRows(TArray<FPBCollectionTableRow>& OutRows) const;
 
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
+	void SetGameplayEffectTables(UDataTable* InGameplayEffectTable, UDataTable* InGameplayEffectParamTable);
 	void SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable);
 	void SetSkillTable(UDataTable* InSkillTable);
 	void SetBossTables(UDataTable* InBossTable, UDataTable* InBossHitPointTable, UDataTable* InBossPatternTable);
@@ -104,6 +107,8 @@ public:
 	bool FindBumperEffectRow(FName RowName, FPBBumperEffectRow& OutRow) const;
 	bool FindLinkedBumperTriggerRow(FName BumperRowName, FPBBumperTriggerRow& OutRow) const;
 	bool FindLinkedBumperEffectRow(FName BumperRowName, FPBBumperEffectRow& OutRow) const;
+	bool FindGameplayEffectRow(FName RowName, FPBGameplayEffectRow& OutRow) const;
+	bool GetGameplayEffectParamRows(FName EffectId, TArray<FPBGameplayEffectParamRow>& OutRows) const;
 private:
 
 	UPROPERTY()
@@ -114,6 +119,12 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> BumperEffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> GameplayEffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> GameplayEffectParamTable;
 
 #pragma endregion
 

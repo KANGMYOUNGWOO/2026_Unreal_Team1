@@ -6,10 +6,21 @@
 #include "NiagaraSystem.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBossDamageBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBossGroggyBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBBossVulnerabilityBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBBloodOverdriveBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBComboArcBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBComboCashoutBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBCounterShieldBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBDirectRewardBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBGateSupportFieldBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBKineticShellBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBPercentShieldBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBSummonBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBTimedAttackBoostBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBTurretSummonBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBVelocityBoostBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBBumperSummonAnchor.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
 #include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
@@ -17,6 +28,8 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectParamRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectRow.h"
 #include "PinBallLike/Utils/PBTextFormatUtils.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -28,42 +41,123 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 {
 	static_cast<void>(Parameters);
 
+	const UPBSummonBumperEffect* GenericSummonEffect = GetDefault<UPBSummonBumperEffect>();
+	const UPBTurretSummonBumperEffect* TurretSummonEffect = GetDefault<UPBTurretSummonBumperEffect>();
+	TestEqual(
+		TEXT("Generic summon effects preserve Bumper-relative placement"),
+		static_cast<uint8>(GenericSummonEffect->GetSpawnAnchorType()),
+		static_cast<uint8>(EPBBumperSummonAnchorType::None));
+	TestEqual(
+		TEXT("Turret summon effects opt into Turret Anchors"),
+		static_cast<uint8>(TurretSummonEffect->GetSpawnAnchorType()),
+		static_cast<uint8>(EPBBumperSummonAnchorType::Turret));
+
 	const FName ExpectedRows[] =
 	{
 		PBBumperAssetIds::Bumper::Rebound_PowerPush,
-		PBBumperAssetIds::Bumper::Rebound_CounterShell,
+		PBBumperAssetIds::Bumper::Rebound_KineticShell,
 		PBBumperAssetIds::Bumper::Rebound_ComboPulse,
-		PBBumperAssetIds::Bumper::Rebound_ManaOrb,
+		PBBumperAssetIds::Bumper::Rebound_BloodOverdrive,
 		PBBumperAssetIds::Bumper::Rebound_GroggyHammer,
 		PBBumperAssetIds::Bumper::Side_ShieldCharge,
 		PBBumperAssetIds::Bumper::Side_ManaCharge,
 		PBBumperAssetIds::Bumper::Side_RepairPickup,
-		PBBumperAssetIds::Bumper::Side_LaunchCharge,
+		PBBumperAssetIds::Bumper::Side_CounterShield,
 		PBBumperAssetIds::Bumper::Side_StrengthCharge,
-		PBBumperAssetIds::Bumper::Top_ComboUp,
+		PBBumperAssetIds::Bumper::Top_ComboArc,
 		PBBumperAssetIds::Bumper::Top_GroggyStrike,
 		PBBumperAssetIds::Bumper::Top_DirectStrike,
 		PBBumperAssetIds::Bumper::Top_ComboCashout,
-		PBBumperAssetIds::Bumper::Top_ComboPickup,
+		PBBumperAssetIds::Bumper::Top_VulnerabilityShell,
 		PBBumperAssetIds::Bumper::Gate_SpeedUp,
 		PBBumperAssetIds::Bumper::Gate_RecoveryField,
-		PBBumperAssetIds::Bumper::Gate_ManaField,
-		PBBumperAssetIds::Bumper::Gate_StrengthField,
+		PBBumperAssetIds::Bumper::Gate_ReactiveRepair,
+		PBBumperAssetIds::Bumper::Gate_ManaReactor,
 		PBBumperAssetIds::Bumper::Gate_LaunchCharge
+	};
+
+	const TMap<FName, int32> ExpectedTriggerCounts =
+	{
+		{PBBumperAssetIds::Bumper::Rebound_PowerPush, 6},
+		{PBBumperAssetIds::Bumper::Rebound_KineticShell, 7},
+		{PBBumperAssetIds::Bumper::Rebound_ComboPulse, 7},
+		{PBBumperAssetIds::Bumper::Rebound_BloodOverdrive, 8},
+		{PBBumperAssetIds::Bumper::Rebound_GroggyHammer, 8},
+		{PBBumperAssetIds::Bumper::Side_ShieldCharge, 6},
+		{PBBumperAssetIds::Bumper::Side_ManaCharge, 7},
+		{PBBumperAssetIds::Bumper::Side_RepairPickup, 6},
+		{PBBumperAssetIds::Bumper::Side_CounterShield, 7},
+		{PBBumperAssetIds::Bumper::Side_StrengthCharge, 7},
+		{PBBumperAssetIds::Bumper::Top_ComboArc, 4},
+		{PBBumperAssetIds::Bumper::Top_GroggyStrike, 5},
+		{PBBumperAssetIds::Bumper::Top_DirectStrike, 5},
+		{PBBumperAssetIds::Bumper::Top_ComboCashout, 5},
+		{PBBumperAssetIds::Bumper::Top_VulnerabilityShell, 4},
+		{PBBumperAssetIds::Bumper::Gate_SpeedUp, 3},
+		{PBBumperAssetIds::Bumper::Gate_RecoveryField, 3},
+		{PBBumperAssetIds::Bumper::Gate_ReactiveRepair, 3},
+		{PBBumperAssetIds::Bumper::Gate_ManaReactor, 3},
+		{PBBumperAssetIds::Bumper::Gate_LaunchCharge, 4}
+	};
+
+	struct FEffectBalanceExpectation
+	{
+		float Power = 0.0f;
+		float SecondaryPower = 0.0f;
+		float Duration = 0.0f;
+		int32 Count = 0;
+		FName SharedEffectId = NAME_None;
+	};
+
+	const TMap<FName, FEffectBalanceExpectation> ExpectedEffectBalance =
+	{
+		{PBBumperAssetIds::Effect::Effect_VelocityBoost_01, {3000.0f, 0.0f, 0.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_KineticShell_01,
+			{3.0f, 1000.0f, 0.0f, 8, TEXT("E_Bumper_Rebound_KineticShell")}},
+		{PBBumperAssetIds::Effect::Effect_ComboPulse_01, {5.0f, 0.0f, 0.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_BloodOverdrive_01,
+			{25.0f, 1.0f, 5.0f, 1, TEXT("E_Bumper_Rebound_BloodOverdrive")}},
+		{PBBumperAssetIds::Effect::Effect_GroggyHammer_02, {10.0f, 0.0f, 0.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_Shield_02, {1.0f, 0.0f, 0.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_PartyMana_02, {5.0f, 0.0f, 0.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_RepairPickup_02, {5.0f, 0.0f, 0.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_CounterShield_01, {1.0f, 5.0f, 10.0f, 1, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_StrengthCharge_02, {15.0f, 0.0f, 5.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_ComboArc_01,
+			{2.0f, 10.0f, 10.0f, 0, TEXT("E_Bumper_Top_ComboArc")}},
+		{PBBumperAssetIds::Effect::Effect_BossGroggy_02, {20.0f, 0.0f, 0.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_DirectStrike_02, {10.0f, 0.0f, 0.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_ComboCashout_02, {1.0f, 0.0f, 0.0f, 20, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_VulnerabilityShell_01, {20.0f, 0.0f, 6.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_SpeedUp_01, {25.0f, 0.0f, 5.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_RecoveryField_02, {5.0f, 0.0f, 5.0f, 0, NAME_None}},
+		{PBBumperAssetIds::Effect::Effect_ReactiveRepair_01,
+			{1.0f, 0.0f, 10.0f, 2, TEXT("E_Bumper_Gate_ReactiveRepair")}},
+		{PBBumperAssetIds::Effect::Effect_ManaReactor_01,
+			{25.0f, 0.0f, 8.0f, 0, TEXT("E_Bumper_Gate_ManaReactor")}},
+		{PBBumperAssetIds::Effect::Effect_LaunchCharge_02, {5.0f, 0.0f, 0.0f, 3, NAME_None}}
 	};
 
 	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
 	UDataTable* BumperTable = Settings ? Settings->BumperTable.LoadSynchronous() : nullptr;
 	UDataTable* TriggerTable = Settings ? Settings->BumperTriggerTable.LoadSynchronous() : nullptr;
 	UDataTable* EffectTable = Settings ? Settings->BumperEffectTable.LoadSynchronous() : nullptr;
+	UDataTable* GameplayEffectTable = Settings ? Settings->GameplayEffectTable.LoadSynchronous() : nullptr;
+	UDataTable* GameplayEffectParamTable = Settings
+		? Settings->GameplayEffectParamTable.LoadSynchronous()
+		: nullptr;
 	if (!TestNotNull(TEXT("Bumper DataTable is configured"), BumperTable)
 		|| !TestNotNull(TEXT("Bumper Trigger DataTable is configured"), TriggerTable)
-		|| !TestNotNull(TEXT("Bumper Effect DataTable is configured"), EffectTable))
+		|| !TestNotNull(TEXT("Bumper Effect DataTable is configured"), EffectTable)
+		|| !TestNotNull(TEXT("Gameplay Effect DataTable is configured"), GameplayEffectTable)
+		|| !TestNotNull(TEXT("Gameplay Effect Param DataTable is configured"), GameplayEffectParamTable))
 	{
 		return false;
 	}
 
 	TestEqual(TEXT("Bumper catalog contains exactly 20 rows"), BumperTable->GetRowMap().Num(), 20);
+	TestEqual(TEXT("Bumper Trigger table contains exactly 20 rows"), TriggerTable->GetRowMap().Num(), 20);
+	TestEqual(TEXT("Bumper Effect table contains exactly 20 rows"), EffectTable->GetRowMap().Num(), 20);
 
 	TMap<EPBBumperType, int32> TypeCounts;
 	TSet<FName> ReferencedTriggerIds;
@@ -83,6 +177,16 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 			Row->EffectID.IsNone());
 		TestTrue(*FString::Printf(TEXT("RequiredTriggerCount is positive: %s"), *RowPair.Key.ToString()),
 			Row->RequiredTriggerCount > 0);
+		const int32* ExpectedTriggerCount = ExpectedTriggerCounts.Find(RowPair.Key);
+		if (TestNotNull(
+			*FString::Printf(TEXT("Balance trigger count is registered: %s"), *RowPair.Key.ToString()),
+			ExpectedTriggerCount))
+		{
+			TestEqual(
+				*FString::Printf(TEXT("Balance trigger count matches: %s"), *RowPair.Key.ToString()),
+				Row->RequiredTriggerCount,
+				*ExpectedTriggerCount);
+		}
 
 		ReferencedTriggerIds.Add(Row->TriggerID);
 		ReferencedEffectIds.Add(Row->EffectID);
@@ -221,33 +325,51 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 
 	const FDeliveryExpectation DeliveryExpectations[] =
 	{
-		{PBBumperAssetIds::Bumper::Rebound_CounterShell, EPBBumperRoleType::Attack,
+		{PBBumperAssetIds::Bumper::Rebound_PowerPush, EPBBumperRoleType::Support,
+			EPBBumperEffectType::Instant, EPBBumperEffectExecutionPolicy::Immediate,
+			3000.0f, UPBVelocityBoostBumperEffect::StaticClass(), TEXT("보정")},
+		{PBBumperAssetIds::Bumper::Rebound_KineticShell, EPBBumperRoleType::Attack,
 			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::Immediate,
-			10.0f, UPBBossDamageBumperEffect::StaticClass(), TEXT("명중")},
+			3.0f, UPBKineticShellBumperEffect::StaticClass(), TEXT("속도")},
 		{PBBumperAssetIds::Bumper::Rebound_GroggyHammer, EPBBumperRoleType::Attack,
 			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::Immediate,
-			12.0f, UPBBossGroggyBumperEffect::StaticClass(), TEXT("명중")},
+			10.0f, UPBBossGroggyBumperEffect::StaticClass(), TEXT("명중")},
+		{PBBumperAssetIds::Bumper::Side_ShieldCharge, EPBBumperRoleType::Support,
+			EPBBumperEffectType::Buff, EPBBumperEffectExecutionPolicy::Immediate,
+			1.0f, UPBPercentShieldBumperEffect::StaticClass(), TEXT("최대 체력")},
+		{PBBumperAssetIds::Bumper::Side_StrengthCharge, EPBBumperRoleType::Support,
+			EPBBumperEffectType::Buff, EPBBumperEffectExecutionPolicy::Immediate,
+			15.0f, UPBTimedAttackBoostBumperEffect::StaticClass(), TEXT("5초")},
 		{PBBumperAssetIds::Bumper::Top_GroggyStrike, EPBBumperRoleType::Attack,
 			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::Immediate,
 			20.0f, UPBBossGroggyBumperEffect::StaticClass(), TEXT("명중")},
 		{PBBumperAssetIds::Bumper::Top_DirectStrike, EPBBumperRoleType::Attack,
 			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::Immediate,
-			20.0f, UPBBossDamageBumperEffect::StaticClass(), TEXT("명중")},
+			10.0f, UPBBossDamageBumperEffect::StaticClass(), TEXT("명중")},
 		{PBBumperAssetIds::Bumper::Top_ComboCashout, EPBBumperRoleType::Attack,
 			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::Immediate,
-			2.0f, UPBComboCashoutBumperEffect::StaticClass(), TEXT("명중")},
-		{PBBumperAssetIds::Bumper::Rebound_ManaOrb, EPBBumperRoleType::Support,
-			EPBBumperEffectType::Instant, EPBBumperEffectExecutionPolicy::Immediate,
-			15.0f, UPBDirectRewardBumperEffect::StaticClass(), TEXT("즉시")},
+			1.0f, UPBComboCashoutBumperEffect::StaticClass(), TEXT("명중")},
+		{PBBumperAssetIds::Bumper::Rebound_BloodOverdrive, EPBBumperRoleType::Support,
+			EPBBumperEffectType::Buff, EPBBumperEffectExecutionPolicy::Immediate,
+			25.0f, UPBBloodOverdriveBumperEffect::StaticClass(), TEXT("HP")},
 		{PBBumperAssetIds::Bumper::Side_RepairPickup, EPBBumperRoleType::Support,
 			EPBBumperEffectType::Instant, EPBBumperEffectExecutionPolicy::Immediate,
-			20.0f, UPBDirectRewardBumperEffect::StaticClass(), TEXT("즉시")},
-		{PBBumperAssetIds::Bumper::Top_ComboPickup, EPBBumperRoleType::Support,
-			EPBBumperEffectType::Instant, EPBBumperEffectExecutionPolicy::Immediate,
-			10.0f, UPBDirectRewardBumperEffect::StaticClass(), TEXT("즉시")},
-		{PBBumperAssetIds::Bumper::Side_LaunchCharge, EPBBumperRoleType::Attack,
-			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::QueueIfBusy,
-			5.0f, UPBTurretSummonBumperEffect::StaticClass(), TEXT("포탑")},
+			5.0f, UPBDirectRewardBumperEffect::StaticClass(), TEXT("회복")},
+		{PBBumperAssetIds::Bumper::Top_VulnerabilityShell, EPBBumperRoleType::Attack,
+			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::Immediate,
+			20.0f, UPBBossVulnerabilityBumperEffect::StaticClass(), TEXT("명중")},
+		{PBBumperAssetIds::Bumper::Side_CounterShield, EPBBumperRoleType::Support,
+			EPBBumperEffectType::Buff, EPBBumperEffectExecutionPolicy::Immediate,
+			1.0f, UPBCounterShieldBumperEffect::StaticClass(), TEXT("보호막")},
+		{PBBumperAssetIds::Bumper::Top_ComboArc, EPBBumperRoleType::Attack,
+			EPBBumperEffectType::Buff, EPBBumperEffectExecutionPolicy::Immediate,
+			2.0f, UPBComboArcBumperEffect::StaticClass(), TEXT("콤보")},
+		{PBBumperAssetIds::Bumper::Gate_ReactiveRepair, EPBBumperRoleType::Zone,
+			EPBBumperEffectType::Area, EPBBumperEffectExecutionPolicy::QueueIfBusy,
+			1.0f, UPBGateSupportFieldBumperEffect::StaticClass(), TEXT("피격")},
+		{PBBumperAssetIds::Bumper::Gate_ManaReactor, EPBBumperRoleType::Zone,
+			EPBBumperEffectType::Area, EPBBumperEffectExecutionPolicy::QueueIfBusy,
+			25.0f, UPBGateSupportFieldBumperEffect::StaticClass(), TEXT("마나")},
 		{PBBumperAssetIds::Bumper::Gate_LaunchCharge, EPBBumperRoleType::Attack,
 			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::QueueIfBusy,
 			5.0f, UPBTurretSummonBumperEffect::StaticClass(), TEXT("포탑")}
@@ -288,7 +410,7 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 				*FString::Printf(TEXT("Delivery Power matches: %s"), *Context),
 				FMath::IsNearlyEqual(EffectRow->Power, Expectation.Power));
 			TestTrue(
-				*FString::Printf(TEXT("Delivery description communicates its timing: %s"), *Context),
+				*FString::Printf(TEXT("Delivery description communicates its behavior: %s"), *Context),
 				EffectRow->Description.ToString().Contains(Expectation.DescriptionKeyword));
 		}
 
@@ -299,6 +421,22 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 		TestTrue(
 			*FString::Printf(TEXT("Delivery Effect class matches responsibility: %s"), *Context),
 			IsValid(EffectClass) && EffectClass->IsChildOf(Expectation.EffectBaseClass));
+
+		if (Expectation.EffectBaseClass == UPBTurretSummonBumperEffect::StaticClass()
+			&& IsValid(EffectClass))
+		{
+			const UPBSummonBumperEffect* SummonEffectDefault =
+				Cast<UPBSummonBumperEffect>(EffectClass->GetDefaultObject());
+			if (TestNotNull(
+				*FString::Printf(TEXT("Turret Effect CDO resolves: %s"), *Context),
+				SummonEffectDefault))
+			{
+				TestEqual(
+					*FString::Printf(TEXT("Turret Effect uses Turret Anchors: %s"), *Context),
+					static_cast<uint8>(SummonEffectDefault->GetSpawnAnchorType()),
+					static_cast<uint8>(EPBBumperSummonAnchorType::Turret));
+			}
+		}
 	}
 
 	for (const TPair<FName, uint8*>& TriggerPair : TriggerTable->GetRowMap())
@@ -312,6 +450,157 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 		TestTrue(
 			*FString::Printf(TEXT("Effect row is referenced by a Bumper: %s"), *EffectPair.Key.ToString()),
 			ReferencedEffectIds.Contains(EffectPair.Key));
+		const FPBBumperEffectRow* EffectRow =
+			reinterpret_cast<const FPBBumperEffectRow*>(EffectPair.Value);
+		const FEffectBalanceExpectation* ExpectedBalance = ExpectedEffectBalance.Find(EffectPair.Key);
+		if (TestNotNull(
+			*FString::Printf(TEXT("Balance Effect contract is registered: %s"), *EffectPair.Key.ToString()),
+			ExpectedBalance)
+			&& TestNotNull(
+				*FString::Printf(TEXT("Balance Effect row exists: %s"), *EffectPair.Key.ToString()),
+				EffectRow))
+		{
+			TestTrue(
+				*FString::Printf(TEXT("Balance Effect Power matches: %s"), *EffectPair.Key.ToString()),
+				FMath::IsNearlyEqual(EffectRow->Power, ExpectedBalance->Power));
+			TestTrue(
+				*FString::Printf(TEXT("Balance Effect SecondaryPower matches: %s"), *EffectPair.Key.ToString()),
+				FMath::IsNearlyEqual(EffectRow->SecondaryPower, ExpectedBalance->SecondaryPower));
+			TestTrue(
+				*FString::Printf(TEXT("Balance Effect Duration matches: %s"), *EffectPair.Key.ToString()),
+				FMath::IsNearlyEqual(EffectRow->Duration, ExpectedBalance->Duration));
+			TestEqual(
+				*FString::Printf(TEXT("Balance Effect Count matches: %s"), *EffectPair.Key.ToString()),
+				EffectRow->Count,
+				ExpectedBalance->Count);
+			TestEqual(
+				*FString::Printf(TEXT("Balance Effect SharedEffectId matches: %s"), *EffectPair.Key.ToString()),
+				EffectRow->SharedEffectId,
+				ExpectedBalance->SharedEffectId);
+
+			if (!EffectRow->SharedEffectId.IsNone())
+			{
+				TestNotNull(
+					*FString::Printf(TEXT("Shared Effect row resolves: %s"), *EffectPair.Key.ToString()),
+					GameplayEffectTable->FindRow<FPBGameplayEffectRow>(
+						EffectRow->SharedEffectId,
+						EffectPair.Key.ToString(),
+						false));
+			}
+		}
+	}
+
+	struct FSharedEffectExpectation
+	{
+		FName EffectType = NAME_None;
+		FName TargetType = NAME_None;
+		FName TargetFilter = NAME_None;
+	};
+
+	const TMap<FName, FSharedEffectExpectation> ExpectedSharedEffects =
+	{
+		{TEXT("E_Bumper_Rebound_KineticShell"), {TEXT("VelocityScaledDamage"), TEXT("Battle"), TEXT("All")}},
+		{TEXT("E_Bumper_Rebound_BloodOverdrive"), {TEXT("ResourceCostStatBuff"), TEXT("Ball"), TEXT("All")}},
+		{TEXT("E_Bumper_Top_ComboArc"), {TEXT("ComboExtraDamage"), TEXT("Battle"), TEXT("All")}},
+		{TEXT("E_Bumper_Gate_ReactiveRepair"), {TEXT("PostDamageHeal"), TEXT("Ball"), TEXT("All")}},
+		{TEXT("E_Bumper_Gate_ManaReactor"), {TEXT("StatBuff"), TEXT("Ball"), TEXT("All")}}
+	};
+
+	TMap<FName, TMap<FName, FString>> ExpectedSharedParameters;
+	ExpectedSharedParameters.Add(TEXT("E_Bumper_Rebound_KineticShell"),
+		{{TEXT("BaseDamage"), TEXT("3")}, {TEXT("SpeedPerBonus"), TEXT("1000")},
+			{TEXT("MaxDamage"), TEXT("8")}});
+	ExpectedSharedParameters.Add(TEXT("E_Bumper_Rebound_BloodOverdrive"),
+		{{TEXT("ResourceName"), TEXT("Health")}, {TEXT("ResourceCost"), TEXT("1")},
+			{TEXT("StatName"), TEXT("Attack")}, {TEXT("ModifyType"), TEXT("PercentAdd")},
+			{TEXT("Value"), TEXT("25")}, {TEXT("Duration"), TEXT("5")},
+			{TEXT("MinRemainingResource"), TEXT("1")}});
+	ExpectedSharedParameters.Add(TEXT("E_Bumper_Top_ComboArc"),
+		{{TEXT("ComboInterval"), TEXT("10")}, {TEXT("DamageAmount"), TEXT("2")},
+			{TEXT("Duration"), TEXT("10")}});
+	ExpectedSharedParameters.Add(TEXT("E_Bumper_Gate_ReactiveRepair"),
+		{{TEXT("ResourceName"), TEXT("Health")}, {TEXT("Count"), TEXT("2")},
+			{TEXT("Value"), TEXT("1")}, {TEXT("Duration"), TEXT("10")}});
+	ExpectedSharedParameters.Add(TEXT("E_Bumper_Gate_ManaReactor"),
+		{{TEXT("StatName"), TEXT("ManaRecovery")}, {TEXT("ModifyType"), TEXT("PercentAdd")},
+			{TEXT("Value"), TEXT("25")}, {TEXT("Duration"), TEXT("8")}});
+
+	TMap<FName, TMap<FName, FString>> ActualSharedParameters;
+	for (const TPair<FName, uint8*>& ParamPair : GameplayEffectParamTable->GetRowMap())
+	{
+		const FPBGameplayEffectParamRow* ParamRow =
+			reinterpret_cast<const FPBGameplayEffectParamRow*>(ParamPair.Value);
+		if (!ParamRow || !ExpectedSharedEffects.Contains(ParamRow->EffectId))
+		{
+			continue;
+		}
+
+		TMap<FName, FString>& EffectParameters = ActualSharedParameters.FindOrAdd(ParamRow->EffectId);
+		TestFalse(
+			*FString::Printf(TEXT("Shared Effect parameter is unique: %s.%s"),
+				*ParamRow->EffectId.ToString(),
+				*ParamRow->ParamKey.ToString()),
+			EffectParameters.Contains(ParamRow->ParamKey));
+		EffectParameters.Add(ParamRow->ParamKey, ParamRow->ParamValue.TrimStartAndEnd());
+	}
+
+	for (const TPair<FName, FSharedEffectExpectation>& SharedEffectExpectation : ExpectedSharedEffects)
+	{
+		const FString Context = SharedEffectExpectation.Key.ToString();
+		const FPBGameplayEffectRow* SharedEffectRow = GameplayEffectTable->FindRow<FPBGameplayEffectRow>(
+			SharedEffectExpectation.Key,
+			Context,
+			false);
+		if (TestNotNull(*FString::Printf(TEXT("Approved Shared Effect row exists: %s"), *Context),
+			SharedEffectRow))
+		{
+			TestEqual(
+				*FString::Printf(TEXT("Approved Shared Effect type matches: %s"), *Context),
+				SharedEffectRow->EffectType,
+				SharedEffectExpectation.Value.EffectType);
+			TestEqual(
+				*FString::Printf(TEXT("Approved Shared Effect target type matches: %s"), *Context),
+				SharedEffectRow->TargetType,
+				SharedEffectExpectation.Value.TargetType);
+			TestEqual(
+				*FString::Printf(TEXT("Approved Shared Effect target filter matches: %s"), *Context),
+				SharedEffectRow->TargetFilter,
+				SharedEffectExpectation.Value.TargetFilter);
+		}
+
+		const TMap<FName, FString>* ExpectedParameters =
+			ExpectedSharedParameters.Find(SharedEffectExpectation.Key);
+		const TMap<FName, FString>* ActualParameters =
+			ActualSharedParameters.Find(SharedEffectExpectation.Key);
+		if (!TestNotNull(*FString::Printf(TEXT("Approved Shared Effect parameters exist: %s"), *Context),
+			ExpectedParameters)
+			|| !TestNotNull(*FString::Printf(TEXT("Parsed Shared Effect parameters exist: %s"), *Context),
+				ActualParameters))
+		{
+			continue;
+		}
+
+		TestEqual(
+			*FString::Printf(TEXT("Approved Shared Effect parameter count matches: %s"), *Context),
+			ActualParameters->Num(),
+			ExpectedParameters->Num());
+		for (const TPair<FName, FString>& ExpectedParameter : *ExpectedParameters)
+		{
+			const FString* ActualValue = ActualParameters->Find(ExpectedParameter.Key);
+			if (TestNotNull(
+				*FString::Printf(TEXT("Approved Shared Effect parameter exists: %s.%s"),
+					*Context,
+					*ExpectedParameter.Key.ToString()),
+				ActualValue))
+			{
+				TestEqual(
+					*FString::Printf(TEXT("Approved Shared Effect parameter value matches: %s.%s"),
+						*Context,
+						*ExpectedParameter.Key.ToString()),
+					*ActualValue,
+					ExpectedParameter.Value);
+			}
+		}
 	}
 
 	UAssetManager& AssetManager = UAssetManager::Get();

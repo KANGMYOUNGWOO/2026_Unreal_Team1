@@ -22,6 +22,10 @@ public class PinballLikeEditor : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "UnrealEd",
+                "AssetTools",
+                "BlueprintEditorLibrary",
+                "HTTP",
+                "KismetCompiler",
                 "Slate",
                 "SlateCore"
             }

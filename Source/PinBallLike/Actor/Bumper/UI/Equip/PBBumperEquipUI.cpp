@@ -271,12 +271,13 @@ bool UPBBumperEquipUI::EquipBumperRowAtSlot(
 		return false;
 	}
 
-	SelectedBumperEquipSlot = EquipSlot;
-	SelectedBumperRowName = RowName;
 	if (!PlayerDataSubsystem->EquipBumperAtSlot(EquipSlot, RowName))
 	{
 		return false;
 	}
+
+	SelectedBumperEquipSlot = EquipSlot;
+	SelectedBumperRowName = RowName;
 
 	RefreshBumperEquipState(RowName);
 	return true;
@@ -889,15 +890,20 @@ void UPBBumperEquipUI::UpdateDetailPresentation(const FName RowName)
 	}
 
 	const bool bIsEquippedInCurrentSlot = IsSelectedBumperEquippedInCurrentSlot();
+	const bool bIsEquippedInAnotherSlot = IsValid(PlayerDataSubsystem)
+		&& PlayerDataSubsystem->IsBumperEquippedInAnotherSlot(RowName, SelectedBumperEquipSlot);
 	if (IsValid(EquipActionLabel))
 	{
 		EquipActionLabel->SetText(bIsEquippedInCurrentSlot
 			? NSLOCTEXT("PBBumperEquipUI", "UnequipAction", "해제")
-			: NSLOCTEXT("PBBumperEquipUI", "EquipSelectedAction", "장착"));
+			: bIsEquippedInAnotherSlot
+				? NSLOCTEXT("PBBumperEquipUI", "EquippedElsewhereAction", "다른 위치에 장착됨")
+				: NSLOCTEXT("PBBumperEquipUI", "EquipSelectedAction", "장착"));
 	}
 	if (IsValid(EquipActionButton))
 	{
-		EquipActionButton->SetIsEnabled(true);
+		// 이전 세션 데이터에 중복이 남아 있어도 현재 슬롯의 해제 동작은 막지 않는다.
+		EquipActionButton->SetIsEnabled(bIsEquippedInCurrentSlot || !bIsEquippedInAnotherSlot);
 		EquipActionButton->SetBackgroundColor(bIsEquippedInCurrentSlot
 			? UnequipActionColor
 			: GetSlotColor(GetSelectedBumperSlotType()));
@@ -1036,7 +1042,9 @@ bool UPBBumperEquipUI::CanEquipBumperRowAtSlot(
 			RowName,
 			BumperSlotType)
 		&& PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, TargetSlotType)
-		&& BumperSlotType == TargetSlotType;
+		&& BumperSlotType == TargetSlotType
+		&& (!IsValid(PlayerDataSubsystem)
+			|| !PlayerDataSubsystem->IsBumperEquippedInAnotherSlot(RowName, EquipSlot));
 }
 
 bool UPBBumperEquipUI::FindBoardSlotAtScreenPosition(

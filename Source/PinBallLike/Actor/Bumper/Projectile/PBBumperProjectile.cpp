@@ -5,6 +5,7 @@
 
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "PinBallLike/Actor/Bumper/Component/PBBumperVulnerabilityComponent.h"
 #include "PinBallLike/Interface/BossInterface.h"
 
 APBBumperProjectile::APBBumperProjectile()
@@ -30,15 +31,65 @@ APBBumperProjectile::APBBumperProjectile()
 	}
 }
 
+APBBumperProjectile* APBBumperProjectile::SpawnForTarget(
+	UObject* WorldContext,
+	TSubclassOf<APBBumperProjectile> InProjectileClass,
+	AActor* OwnerActor,
+	const FVector& SpawnLocation,
+	const FRotator& SpawnRotation,
+	AActor* InTargetActor,
+	const EPBBumperProjectilePayload InPayload,
+	const int32 InPower,
+	const float InPayloadDuration,
+	const float InLifetime)
+{
+	UWorld* World = IsValid(WorldContext) ? WorldContext->GetWorld() : nullptr;
+	if (!IsValid(World)
+		|| !InProjectileClass
+		|| !IsValid(InTargetActor)
+		|| InPayload == EPBBumperProjectilePayload::None
+		|| InPower <= 0)
+	{
+		return nullptr;
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = OwnerActor;
+	SpawnParameters.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	APBBumperProjectile* Projectile = World->SpawnActor<APBBumperProjectile>(
+		InProjectileClass,
+		SpawnLocation,
+		SpawnRotation,
+		SpawnParameters);
+	if (!IsValid(Projectile))
+	{
+		return nullptr;
+	}
+
+	Projectile->ConfigureForTarget(
+		InTargetActor,
+		InPayload,
+		InPower,
+		true,
+		InPayloadDuration);
+	Projectile->SetLifeSpan(FMath::Max(InLifetime, 0.1f));
+	Projectile->ActivateProjectile();
+	return Projectile;
+}
+
 void APBBumperProjectile::ConfigureForTarget(
 	AActor* InTargetActor,
 	const EPBBumperProjectilePayload InPayload,
 	const int32 InPower,
-	const bool bInDestroyOnResolved)
+	const bool bInDestroyOnResolved,
+	const float InPayloadDuration)
 {
 	TargetActor = InTargetActor;
 	Payload = InPayload;
 	PayloadPower = FMath::Max(InPower, 0);
+	PayloadDuration = FMath::Max(InPayloadDuration, 0.0f);
 	bDestroyOnResolved = bInDestroyOnResolved;
 	bHasResolved = false;
 
@@ -70,6 +121,7 @@ void APBBumperProjectile::ResetForPool()
 	TargetActor.Reset();
 	Payload = EPBBumperProjectilePayload::None;
 	PayloadPower = 0;
+	PayloadDuration = 0.0f;
 	bDestroyOnResolved = false;
 	bHasResolved = false;
 
@@ -125,11 +177,28 @@ bool APBBumperProjectile::ApplyPayload(AActor* Target) const
 	switch (Payload)
 	{
 	case EPBBumperProjectilePayload::BossDamage:
-		return IBossInterface::Execute_DamageToBoss(Target, PayloadPower);
+	{
+		const UPBBumperVulnerabilityComponent* VulnerabilityComponent =
+			Target->FindComponentByClass<UPBBumperVulnerabilityComponent>();
+		const int32 FinalDamage = IsValid(VulnerabilityComponent)
+			? VulnerabilityComponent->CalculateBumperProjectileDamage(PayloadPower)
+			: PayloadPower;
+		return IBossInterface::Execute_DamageToBoss(Target, FinalDamage);
+	}
 
 	case EPBBumperProjectilePayload::BossGroggy:
 		IBossInterface::Execute_IncreaseGroggy(Target, PayloadPower);
 		return true;
+
+	case EPBBumperProjectilePayload::BossVulnerability:
+	{
+		UPBBumperVulnerabilityComponent* VulnerabilityComponent =
+			UPBBumperVulnerabilityComponent::FindOrAddToActor(Target);
+		return IsValid(VulnerabilityComponent)
+			&& VulnerabilityComponent->ApplyVulnerability(
+				static_cast<float>(PayloadPower),
+				PayloadDuration);
+	}
 
 	default:
 		return false;

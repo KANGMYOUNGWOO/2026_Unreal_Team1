@@ -24,6 +24,7 @@ class UNiagaraSystem;
 struct FPBPreparedBumperSpawnData
 {
 	// 비동기 로드가 끝난 뒤 Modular Bumper 생성에 필요한 값만 모아둔다.
+	FName BumperRowId = NAME_None;
 	FPBBumperTableRow BumperRow;
 	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
 	FPBBumperEffectRow EffectRow;
@@ -60,6 +61,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|Spawn")
 	void GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpers) const;
+
+	/** 현재 전투의 슬롯별 유효 접촉·발동 누계를 로그에 한 번만 기록합니다. */
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Telemetry")
+	void LogBattleTelemetrySummary();
 
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Spawn")
 	FPBSpawnedBumpersReadySignature OnSpawnedBumpersReady;
@@ -103,6 +108,8 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<APBModularBumperBase>> SpawnedBumpers;
+
+	bool bBattleTelemetrySummaryLogged = false;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBGameDataLoadSubsystem> CachedGameDataLoadSubsystem;

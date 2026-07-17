@@ -4,12 +4,18 @@
 #include "PinBallLike/Actor/Bumper/Projectile/PBBumperProjectile.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBTurretSummonActor.h"
 
+UPBTurretSummonBumperEffect::UPBTurretSummonBumperEffect()
+{
+	SpawnAnchorType = EPBBumperSummonAnchorType::Turret;
+}
+
 void UPBTurretSummonBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
 	AActor* InteractionActor)
 {
 	APBModularBumperBase* TargetBumper = IsValid(Bumper) ? Bumper : OwnerBumper.Get();
 	const int32 ProjectileDamage = FMath::RoundToInt(EffectData.Power);
+	const int32 ShotCount = EffectData.Count > 0 ? EffectData.Count : 3;
 	if (!IsValid(TargetBumper)
 		|| !IsValid(InteractionActor)
 		|| ProjectileDamage <= 0
@@ -36,6 +42,7 @@ void UPBTurretSummonBumperEffect::ActivateEffectForActor(
 
 	TurretActor->SetAttackPayload(
 		EPBBumperProjectilePayload::BossDamage,
-		ProjectileDamage);
+		ProjectileDamage,
+		ShotCount);
 	Super::ActivateEffectForActor(TargetBumper, InteractionActor);
 }

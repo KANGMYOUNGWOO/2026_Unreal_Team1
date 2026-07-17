@@ -20,7 +20,8 @@ protected:
 		APBModularBumperBase* Bumper,
 		AActor* BossTarget,
 		EPBBumperProjectilePayload Payload,
-		int32 Power) const;
+		int32 Power,
+		float PayloadDuration = 0.0f) const;
 
 	/** 시각 자산은 Blueprint가 지정하고, 명중 판정과 payload 적용은 C++이 담당합니다. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Projectile")

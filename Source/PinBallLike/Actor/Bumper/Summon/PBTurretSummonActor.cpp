@@ -15,10 +15,12 @@ APBTurretSummonActor::APBTurretSummonActor()
 
 void APBTurretSummonActor::SetAttackPayload(
 	const EPBBumperProjectilePayload InPayload,
-	const int32 InPower)
+	const int32 InPower,
+	const int32 InShotCount)
 {
 	AttackPayload = InPayload;
 	AttackPower = FMath::Max(InPower, 0);
+	AttackShotCount = FMath::Max(InShotCount, 0);
 }
 
 void APBTurretSummonActor::StartActionForActor(
@@ -42,7 +44,11 @@ void APBTurretSummonActor::StartActionForActor(
 		return;
 	}
 
-	FireComponent->ConfigureAttack(BossTarget, AttackPayload, AttackPower);
+	FireComponent->ConfigureAttack(
+		BossTarget,
+		AttackPayload,
+		AttackPower,
+		AttackShotCount);
 	Super::StartActionForActor(Bumper, InteractionActor);
 	OnTurretActivatedForActor(Bumper, InteractionActor);
 
@@ -56,8 +62,13 @@ void APBTurretSummonActor::DeactivateSummon()
 {
 	if (UPBTurretFireComponent* FireComponent = FindComponentByClass<UPBTurretFireComponent>())
 	{
-		FireComponent->ConfigureAttack(nullptr, EPBBumperProjectilePayload::None, 0);
+		FireComponent->ConfigureAttack(
+			nullptr,
+			EPBBumperProjectilePayload::None,
+			0,
+			0);
 	}
+	AttackShotCount = 0;
 	Super::DeactivateSummon();
 }
 

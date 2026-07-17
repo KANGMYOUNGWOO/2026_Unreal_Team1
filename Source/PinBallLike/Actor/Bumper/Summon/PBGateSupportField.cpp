@@ -90,14 +90,20 @@ void APBGateSupportField::ConfigureField(
 	const EPBBumperRewardType InRewardType,
 	const FName InResourceName,
 	const FName InStatusEffectId,
+	const FName InTimedEffectSourceId,
+	const FName InTimedStatName,
 	const float InRewardPower,
+	const int32 InTriggerCount,
 	const float InActiveDuration,
 	const FLinearColor& InFieldColor)
 {
 	RewardType = InRewardType;
 	ResourceName = InResourceName;
 	StatusEffectId = InStatusEffectId;
+	TimedEffectSourceId = InTimedEffectSourceId;
+	TimedStatName = InTimedStatName;
 	RewardPower = FMath::IsFinite(InRewardPower) ? FMath::Max(InRewardPower, 0.0f) : 0.0f;
+	TriggerCount = FMath::Max(InTriggerCount, 0);
 	ActiveDuration = FMath::IsFinite(InActiveDuration)
 		? FMath::Clamp(InActiveDuration, 0.5f, 60.0f)
 		: 5.0f;
@@ -135,7 +141,11 @@ bool APBGateSupportField::TryApplyReward(AActor* TargetActor)
 		RewardType,
 		ResourceName,
 		StatusEffectId,
-		RewardPower);
+		RewardPower,
+		TimedEffectSourceId,
+		ActiveDuration,
+		TimedStatName,
+		TriggerCount);
 	if (!Result.bApplied)
 	{
 		return false;

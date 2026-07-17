@@ -31,7 +31,10 @@ public:
 		EPBBumperRewardType InRewardType,
 		FName InResourceName,
 		FName InStatusEffectId,
+		FName InTimedEffectSourceId,
+		FName InTimedStatName,
 		float InRewardPower,
+		int32 InTriggerCount,
 		float InActiveDuration,
 		const FLinearColor& InFieldColor);
 
@@ -57,7 +60,16 @@ protected:
 	FName StatusEffectId = NAME_None;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Support Field")
+	FName TimedEffectSourceId = NAME_None;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Support Field")
+	FName TimedStatName = NAME_None;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Support Field")
 	float RewardPower = 0.0f;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Support Field")
+	int32 TriggerCount = 0;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Support Field")
 	float ActiveDuration = 5.0f;

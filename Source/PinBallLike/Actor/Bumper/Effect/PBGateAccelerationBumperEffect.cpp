@@ -75,6 +75,9 @@ bool UPBGateAccelerationBumperEffect::ConfigureAccelerationField() const
 		return false;
 	}
 
-	AccelerationField->ConfigureField(EffectData.Power, FieldDuration);
+	const float ResolvedDuration = EffectData.Duration > 0.0f
+		? EffectData.Duration
+		: FieldDuration;
+	AccelerationField->ConfigureField(EffectData.Power, ResolvedDuration);
 	return true;
 }

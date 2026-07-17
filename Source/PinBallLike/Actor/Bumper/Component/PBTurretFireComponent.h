@@ -31,7 +31,8 @@ public:
 	void ConfigureAttack(
 		AActor* InTargetActor,
 		EPBBumperProjectilePayload InPayload,
-		int32 InPower);
+		int32 InPower,
+		int32 InMaxShotCount);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Pool")
 	void ReleaseProjectile(AActor* Projectile);
@@ -84,4 +85,6 @@ private:
 	TWeakObjectPtr<AActor> AttackTarget;
 	EPBBumperProjectilePayload AttackPayload = EPBBumperProjectilePayload::None;
 	int32 AttackPower = 0;
+	int32 MaxAttackShotCount = 0;
+	int32 FiredAttackShotCount = 0;
 };
