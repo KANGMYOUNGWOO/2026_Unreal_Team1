@@ -88,6 +88,7 @@ private:
 
 	void PlacePreparedBumperActors();
 	APBModularBumperBase* PlaceBumperActor(const FPBPreparedBumperSpawnData& SpawnData);
+	void HandleBumperAssetsLoaded(FStreamableDelegate OnLoaded);
 
 	// 준비 결과를 delegate와 Gameplay Message로 알린다.
 	void CompleteBumperPreparation(bool bSuccess);
@@ -111,6 +112,8 @@ private:
 	TArray<TObjectPtr<APBModularBumperBase>> SpawnedBumpers;
 
 	bool bBattleTelemetrySummaryLogged = false;
+	bool bBumperAssetLoadInProgress = false;
+	FGuid ActiveBumperAssetLoadRequestId;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBGameDataLoadSubsystem> CachedGameDataLoadSubsystem;

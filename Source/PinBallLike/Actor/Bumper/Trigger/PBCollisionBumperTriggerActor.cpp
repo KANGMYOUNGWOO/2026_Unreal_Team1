@@ -6,6 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
+#include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Interface/StatProvider.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
@@ -79,6 +80,21 @@ void APBCollisionBumperTriggerActor::RegisterCollisionAreas()
 	for (UActorComponent* TaggedComponent : TaggedTriggerComponents)
 	{
 		SetupTriggerArea(Cast<UPrimitiveComponent>(TaggedComponent));
+	}
+
+	if (CollisionAreas.IsEmpty() || TriggerAreas.IsEmpty())
+	{
+		const APBModularBumperBase* Bumper = GetOwnerBumper();
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Collision trigger setup incomplete. Trigger=%s Class=%s BumperRow=%s Position=%s CollisionTag=%s CollisionAreas=%d TriggerTag=%s TriggerAreas=%d"),
+			*GetNameSafe(this),
+			*GetPathNameSafe(GetClass()),
+			IsValid(Bumper) ? *Bumper->GetBumperRowId().ToString() : TEXT("None"),
+			*UEnum::GetValueAsString(GetPositionId()),
+			*CollisionAreaTag.ToString(),
+			CollisionAreas.Num(),
+			*TriggerAreaTag.ToString(),
+			TriggerAreas.Num());
 	}
 }
 

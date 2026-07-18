@@ -46,7 +46,14 @@ UNiagaraComponent* UPBBumperVfxRuntimeComponent::PlayAttached(
 {
 	AActor* OwnerActor = GetOwner();
 	USceneComponent* AttachComponent = IsValid(OwnerActor) ? OwnerActor->GetRootComponent() : nullptr;
-	if (Channel.IsNone() || !IsValid(System) || !IsValid(AttachComponent))
+	UWorld* World = GetWorld();
+	if (Channel.IsNone()
+		|| !IsValid(System)
+		|| !IsValid(AttachComponent)
+		|| !IsValid(World)
+		|| !FMath::IsFinite(Duration)
+		|| RelativeLocation.ContainsNaN()
+		|| Scale.ContainsNaN())
 	{
 		return nullptr;
 	}
@@ -73,7 +80,7 @@ UNiagaraComponent* UPBBumperVfxRuntimeComponent::PlayAttached(
 	if (Duration > 0.0f)
 	{
 		FTimerHandle& Timer = ExpirationTimers.FindOrAdd(Channel);
-		GetWorld()->GetTimerManager().SetTimer(
+		World->GetTimerManager().SetTimer(
 			Timer,
 			FTimerDelegate::CreateWeakLambda(this, [this, Channel]()
 			{

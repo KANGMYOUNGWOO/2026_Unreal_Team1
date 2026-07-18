@@ -78,6 +78,14 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	{
 		return FGuid();
 	}
+	if (bBumperAssetLoadInProgress)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Rejected overlapping asset preparation. Spawner=%s ActiveRequestId=%s"),
+			*GetNameSafe(this),
+			*ActiveBumperAssetLoadRequestId.ToString());
+		return FGuid();
+	}
 
 	PendingEquippedSlots = CachedPlayerDataSubsystem->GetEquippedBumperSlots();
 
@@ -94,10 +102,26 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	TArray<FName> BundleNames;
 	BundleNames.Add(PBAssetBundleNames::Gameplay);
 
-	return CachedGameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
+	bBumperAssetLoadInProgress = true;
+	const FGuid RequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
 		BumperAssetIds,
 		BundleNames,
-		OnLoaded);
+		FStreamableDelegate::CreateUObject(
+			this,
+			&ThisClass::HandleBumperAssetsLoaded,
+			OnLoaded));
+	if (bBumperAssetLoadInProgress)
+	{
+		if (!RequestId.IsValid())
+		{
+			bBumperAssetLoadInProgress = false;
+		}
+		else
+		{
+			ActiveBumperAssetLoadRequestId = RequestId;
+		}
+	}
+	return RequestId;
 }
 
 void APBBumperSpawner::SpawnLoadedBumpers()
@@ -154,6 +178,13 @@ void APBBumperSpawner::GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpe
 			OutBumpers.Add(Bumper);
 		}
 	}
+}
+
+void APBBumperSpawner::HandleBumperAssetsLoaded(FStreamableDelegate OnLoaded)
+{
+	bBumperAssetLoadInProgress = false;
+	ActiveBumperAssetLoadRequestId = FGuid();
+	OnLoaded.ExecuteIfBound();
 }
 
 void APBBumperSpawner::LogBattleTelemetrySummary()

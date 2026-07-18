@@ -3,6 +3,7 @@
 #include "PinBallLike/Actor/Bumper/Component/PBBumperCounterShieldComponent.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/Projectile/PBBumperProjectile.h"
+#include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 
@@ -14,6 +15,9 @@ void UPBCounterShieldBumperEffect::ActivateEffectForActor(
 		? InteractionActor->FindComponentByClass<UPBBaseResourceComponent>()
 		: nullptr;
 	AActor* BossTarget = FindBossTarget(Bumper);
+	const APBBumperTriggerActorBase* SourceTrigger = IsValid(Bumper)
+		? Bumper->GetActiveTriggerActor()
+		: nullptr;
 	const float ShieldAmount = EffectData.Power;
 	const int32 CounterDamage = FMath::RoundToInt(EffectData.SecondaryPower);
 	const float CounterDuration = EffectData.Duration;
@@ -21,6 +25,7 @@ void UPBCounterShieldBumperEffect::ActivateEffectForActor(
 		|| !IsValid(ResourceComponent)
 		|| ResourceComponent->IsDead()
 		|| !ResourceComponent->HasResource(PBResourceNames::Health)
+		|| !IsValid(SourceTrigger)
 		|| !IsValid(BossTarget)
 		|| !ProjectileClass
 		|| !FMath::IsFinite(ShieldAmount)
@@ -71,11 +76,13 @@ void UPBCounterShieldBumperEffect::ActivateEffectForActor(
 			CounterComponent->RegisterComponent();
 		}
 	}
+	const FTransform SourceTransform = SourceTrigger->GetActorTransform();
 
 	const bool bArmed = AppliedShield > KINDA_SMALL_NUMBER
 		&& IsValid(CounterComponent)
 		&& CounterComponent->Arm(
 			Bumper,
+			SourceTransform,
 			BossTarget,
 			ProjectileClass,
 			CounterDamage,
