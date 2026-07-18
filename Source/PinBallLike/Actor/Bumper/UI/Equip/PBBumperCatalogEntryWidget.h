@@ -8,10 +8,6 @@
 class UDragDropOperation;
 class UPBBumperListItemObject;
 
-/**
- * 범퍼 ListView 엔트리에 클릭 선택과 드래그 시작 책임을 부여합니다.
- * 외형과 MVVM 바인딩은 자식 Widget Blueprint가 계속 담당합니다.
- */
 UCLASS(Abstract, BlueprintType, Blueprintable)
 class PINBALLLIKE_API UPBBumperCatalogEntryWidget
 	: public UUserWidget

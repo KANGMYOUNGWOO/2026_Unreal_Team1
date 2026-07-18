@@ -3,10 +3,6 @@
 #include "CoreMinimal.h"
 #include "PBCollectionTabTypes.generated.h"
 
-/**
- * 다섯 도감 탭이 공통으로 사용하는 목록/식별 정보입니다.
- * 원본 게임 데이터는 복제하지 않고, 화면 표시와 선택에 필요한 값만 보관합니다.
- */
 USTRUCT(BlueprintType)
 struct FPBCollectionItemSummary
 {

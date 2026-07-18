@@ -80,7 +80,6 @@ void UPBBloodOverdriveBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
-	// 반응형 수리는 피격 후 회복 효과이므로, 이 효과가 스스로 지불하는 HP는 피격 횟수로 세지 않는다.
 	if (UPBBumperReactiveRepairComponent* RepairComponent =
 		InteractionActor->FindComponentByClass<UPBBumperReactiveRepairComponent>())
 	{

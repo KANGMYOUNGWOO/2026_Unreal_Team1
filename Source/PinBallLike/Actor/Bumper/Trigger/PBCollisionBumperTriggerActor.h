@@ -9,7 +9,6 @@
 class UPrimitiveComponent;
 class UPBBumperReactionComponent;
 
-/** 충돌 면과 유효 Trigger 면을 분리해 반발 및 카운트 접촉을 판정하는 범퍼 Trigger입니다. */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBCollisionBumperTriggerActor : public APBBumperTriggerActorBase
 {
@@ -40,11 +39,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Collision", meta = (ClampMin = "0.0", Units = "cm/s"))
 	float BounceVelocityStrength = 1200.0f;
 
-	/** true면 Ball Overlap 기록 대신 충돌 지점이 Trigger Area 내부인지 검사한다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Collision")
 	bool bUseHitPointTriggerAreaValidation = false;
 
-	/** Trigger Area 경계에서 부동소수점 오차로 유효 Hit가 빠지지 않게 하는 월드 단위 여유값이다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Collision", meta = (ClampMin = "0.0", Units = "cm"))
 	float TriggerAreaHitPointTolerance = 0.5f;
 

@@ -17,10 +17,6 @@ class UPBTableDataSubsystem;
 DECLARE_MULTICAST_DELEGATE(FPBBumperEquipCatalogReadyNative);
 DECLARE_MULTICAST_DELEGATE(FPBBumperEquipSelectionChangedNative);
 
-/**
- * 범퍼 장착 화면의 데이터 로드, 선택 상태, 장착 명령을 조정합니다.
- * 화면 위젯이나 레이아웃에는 접근하지 않으며 PlayerData와 DataSubsystem만 원본으로 사용합니다.
- */
 UCLASS()
 class PINBALLLIKE_API UPBBumperEquipController : public UObject
 {

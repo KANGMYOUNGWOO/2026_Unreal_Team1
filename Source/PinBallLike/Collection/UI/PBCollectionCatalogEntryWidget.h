@@ -8,7 +8,6 @@
 class UBorder;
 class UTextBlock;
 
-/** 다섯 탭이 공통으로 재사용하는 목록 카드의 데이터 바인딩만 담당합니다. */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionCatalogEntryWidget : public UUserWidget, public IUserObjectListEntry
 {

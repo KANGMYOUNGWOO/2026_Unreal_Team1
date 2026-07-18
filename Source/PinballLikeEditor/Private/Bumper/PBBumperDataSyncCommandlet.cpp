@@ -134,7 +134,6 @@ namespace
 	{
 		static const TArray<FApprovedAssetRename> Renames =
 		{
-			// Effect Blueprints: semantic replacements.
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_BossDamage_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_KineticShell_01")},
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_ManaPickup_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_BloodOverdrive_01")},
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_ComboUp_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_ComboArc_01")},
@@ -142,7 +141,6 @@ namespace
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_ManaField_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_ReactiveRepair_01")},
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_StrengthField_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_ManaReactor_01")},
 
-			// Effect Blueprints: numeric generation bumps.
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_GroggyHammer_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_GroggyHammer_02")},
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_Shield_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_Shield_02")},
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_PartyMana_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_PartyMana_02")},
@@ -154,7 +152,6 @@ namespace
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_RecoveryField_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_RecoveryField_02")},
 			{TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_LaunchCharge_01"), TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_LaunchCharge_02")},
 
-			// Trigger Blueprints.
 			{TEXT("/Game/Blueprints/Bumper/Trigger/BP_Rebound_Trigger_CounterShell"), TEXT("/Game/Blueprints/Bumper/Trigger/BP_Rebound_Trigger_KineticShell")},
 			{TEXT("/Game/Blueprints/Bumper/Trigger/BP_Rebound_Trigger_ManaOrb"), TEXT("/Game/Blueprints/Bumper/Trigger/BP_Rebound_Trigger_BloodOverdrive")},
 			{TEXT("/Game/Blueprints/Bumper/Trigger/BP_Side_Trigger_LaunchCharge"), TEXT("/Game/Blueprints/Bumper/Trigger/BP_Side_Trigger_CounterShield")},
@@ -163,7 +160,6 @@ namespace
 			{TEXT("/Game/Blueprints/Bumper/Trigger/BP_Gate_Trigger_ManaField"), TEXT("/Game/Blueprints/Bumper/Trigger/BP_Gate_Trigger_ReactiveRepair")},
 			{TEXT("/Game/Blueprints/Bumper/Trigger/BP_Gate_Trigger_StrengthField"), TEXT("/Game/Blueprints/Bumper/Trigger/BP_Gate_Trigger_ManaReactor")},
 
-			// Bumper DataAssets.
 			{TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Rebound_CounterShell"), TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Rebound_KineticShell")},
 			{TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Rebound_ManaOrb"), TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Rebound_BloodOverdrive")},
 			{TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Side_LaunchCharge"), TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Side_CounterShield")},
@@ -172,7 +168,6 @@ namespace
 			{TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Gate_ManaField"), TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Gate_ReactiveRepair")},
 			{TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Gate_StrengthField"), TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Gate_ManaReactor")},
 
-			// RowName-based icons.
 			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Rebound_CounterShell"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Rebound_KineticShell")},
 			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Rebound_ManaOrb"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Rebound_BloodOverdrive")},
 			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Side_LaunchCharge"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Side_CounterShield")},
@@ -695,7 +690,6 @@ int32 UPBBumperDataSyncCommandlet::Main(const FString& Params)
 		return 1;
 	}
 
-	// Shared definitions are prerequisites for any Bumper Effect that carries SharedEffectId.
 	if (!FetchAndWait(GameplayEffectConfig)
 		|| !FetchAndWait(GameplayEffectParamConfig)
 		|| !FetchAndWait(TriggerConfig)

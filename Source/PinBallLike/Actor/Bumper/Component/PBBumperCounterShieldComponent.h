@@ -8,7 +8,6 @@ class APBBumperProjectile;
 class APBModularBumperBase;
 class UPBBaseResourceComponent;
 
-/** 보호막의 첫 실제 감소를 감지해 보스 추적 반격탄을 한 번 발사합니다. */
 UCLASS(Transient)
 class PINBALLLIKE_API UPBBumperCounterShieldComponent : public UActorComponent
 {

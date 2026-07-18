@@ -98,7 +98,6 @@ void APBGateSupportField::StartActionForActor(
 	SetFieldActive(true);
 	Super::StartActionForActor(Bumper, InteractionActor);
 
-	// 영역이 켜지는 순간 이미 안에 있던 발동 Actor도 첫 혜택을 받도록 명시적으로 처리합니다.
 	TryApplyReward(InteractionActor);
 
 	if (UWorld* World = GetWorld())

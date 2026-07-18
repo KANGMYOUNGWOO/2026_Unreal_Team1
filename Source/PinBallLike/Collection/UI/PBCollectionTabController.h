@@ -12,10 +12,6 @@ class UPBCollectionSubsystem;
 
 DECLARE_MULTICAST_DELEGATE(FPBCollectionTabRefreshRequestedNative);
 
-/**
- * 도감 탭의 검색어, 선택 행, 목록 객체 수명과 데이터 변경 구독을 담당합니다.
- * 실제 위젯 배치와 카테고리별 상세 표현은 소유하지 않습니다.
- */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionTabController : public UObject
 {

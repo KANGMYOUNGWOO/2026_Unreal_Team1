@@ -8,7 +8,6 @@ class APBBumperProjectile;
 class APBModularBumperBase;
 class UPBBallComboComponent;
 
-/** 활성 시간 동안 증가한 콤보를 누적하고 일정 구간마다 보스 추적 번개탄을 발사합니다. */
 UCLASS(Transient)
 class PINBALLLIKE_API UPBBumperComboArcComponent : public UActorComponent
 {

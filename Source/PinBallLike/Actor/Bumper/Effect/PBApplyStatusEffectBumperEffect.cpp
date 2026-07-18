@@ -103,6 +103,5 @@ void UPBApplyStatusEffectBumperEffect::ActivateEffectForActor(
 			StatusEffectComponent->GetStatusEffectStackCount(StatusEffectId));
 	}
 
-	// 상태이상의 수명은 Ball의 StatusEffectComponent가 관리하므로 범퍼 효과는 즉시 종료한다.
 	FinishEffect();
 }

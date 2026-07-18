@@ -7,7 +7,6 @@
 #include "PBTableParserBase.h"
 #include "PBBumperEffectTableParser.generated.h"
 
-/** Effect 시트 행을 파싱하고 연결된 범퍼 DataAsset의 클래스와 VFX 참조를 갱신합니다. */
 UCLASS()
 class PINBALLLIKEEDITOR_API UPBBumperEffectTableParser : public UPBTableParserBase
 {

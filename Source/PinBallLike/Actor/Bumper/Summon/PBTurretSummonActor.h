@@ -11,7 +11,6 @@ class APBBallBase;
 class APBModularBumperBase;
 class UNiagaraSystem;
 
-/** 보스를 추적하는 범퍼 투사체 공격을 FireComponent에 위임하는 포탑 소환 Actor입니다. */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBTurretSummonActor : public APBBumperSummonActor
 {
@@ -20,7 +19,6 @@ class PINBALLLIKE_API APBTurretSummonActor : public APBBumperSummonActor
 public:
 	APBTurretSummonActor();
 
-	/** Effect 시트의 Power를 각 포탑 탄환에 전달합니다. */
 	void SetAttackPayload(
 		EPBBumperProjectilePayload InPayload,
 		int32 InPower,
@@ -28,7 +26,6 @@ public:
 		UNiagaraSystem* InDeliveryVfx = nullptr,
 		UNiagaraSystem* InImpactVfx = nullptr);
 
-	/** Blueprint 연출이 시트의 발사 횟수를 조회할 때 사용합니다. */
 	UFUNCTION(BlueprintPure, Category = "Bumper|Summon|Turret")
 	int32 GetAttackShotCount() const { return AttackShotCount; }
 
@@ -42,7 +39,6 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Summon|Turret")
 	void OnTurretActivatedForActor(APBModularBumperBase* Bumper, AActor* InteractionActor);
 
-	/** 기존 Ball 타입 Blueprint 이벤트 핀 호환을 위해 유지한다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Summon|Turret")
 	void OnTurretActivated(APBModularBumperBase* Bumper, APBBallBase* Ball);
 

@@ -31,7 +31,6 @@ AActor* UPBBossTargetBumperEffectBase::FindBossTarget(const UObject* WorldContex
 		}
 	}
 
-	// 에디터 단독 테스트처럼 Spawner 없이 배치된 보스 본체도 지원한다.
 	for (TActorIterator<APBBossBase> It(World); It; ++It)
 	{
 		if (IsValid(*It))

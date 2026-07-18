@@ -8,7 +8,6 @@
 class UPBBumperViewModel;
 class UUserWidget;
 
-/** 런타임 범퍼 이벤트를 MVVM ViewModel에 전달하고 위젯 생명주기에 맞춰 해제합니다. */
 UCLASS(BlueprintType)
 class PINBALLLIKE_API UPBBumperUIBinder : public UObject
 {

@@ -8,7 +8,6 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBPlayerDataSubsystem.generated.h"
 
-/** 전투 진행값과 플레이어의 범퍼 장착 구성을 소유하고 저장하는 게임 인스턴스 서비스입니다. */
 UCLASS()
 class PINBALLLIKE_API UPBPlayerDataSubsystem : public UGameInstanceSubsystem
 {
@@ -32,7 +31,6 @@ public:
 #pragma endregion
 
 #pragma region Bumper
-	/** 지정한 좌우 물리 슬롯 하나에 범퍼를 장착합니다. */
 	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
 	bool EquipBumperAtSlot(EPBBumperEquipSlot EquipSlot, FName BumperRowId);
 
@@ -45,11 +43,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Bumper")
 	TArray<FPBEquippedBumperSlot> GetEquippedBumperSlots() const;
 
-	/** 같은 Row가 대상 슬롯 외의 위치에 이미 장착되어 있는지 확인합니다. */
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Bumper")
 	bool IsBumperEquippedInAnotherSlot(FName BumperRowId, EPBBumperEquipSlot TargetSlot) const;
 
-	/** 기존 카테고리 기반 호출을 보존합니다. 중복 방지를 위해 카테고리의 대표 위치 하나만 변경합니다. */
 	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
 	bool EquipBumper(EPBBumperSlotType SlotType, FName BumperRowId);
 

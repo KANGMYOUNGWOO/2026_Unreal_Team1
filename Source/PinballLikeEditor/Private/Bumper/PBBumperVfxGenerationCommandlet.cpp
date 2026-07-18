@@ -404,7 +404,6 @@ namespace
 			break;
 		}
 
-		// 탑다운 전투 카메라에서도 효과가 읽히도록 모든 단계의 기본 면적을 한 단계 키웁니다.
 		Recipe.SizeMin *= GeneralSpriteScale;
 		Recipe.SizeMax *= GeneralSpriteScale;
 		Recipe.ShapeRadius *= GeneralSpawnRadiusScale;
@@ -414,7 +413,6 @@ namespace
 			Recipe.SpeedMax *= BurstSpreadScale;
 		}
 
-		// 관문 영역 Status VFX는 실제 원형 판정 반경과 같은 월드 크기를 사용합니다.
 		if (Stage == EPBVfxStage::Status && IsGateAreaProfile(Profile))
 		{
 			Recipe.ShapeRadius = PBGateFieldTuning::DefaultRadius;
@@ -512,7 +510,6 @@ namespace
 			return nullptr;
 		}
 
-		// 전달 연출은 속도 기반 스트레치가 있는 템플릿을, 나머지는 링/구/평면 배치가 가능한 템플릿을 사용한다.
 		const TCHAR* TemplatePath = Recipe.Stage == EPBVfxStage::Delivery
 			? BurstTemplatePath
 			: LoopTemplatePath;
@@ -592,7 +589,6 @@ namespace
 			{
 				return false;
 			}
-			// 템플릿/복제 상태와 관계없이 세 레이어 모두 런타임에 실행되도록 명시한다.
 			Handle.SetIsEnabled(true, *System, false);
 		}
 		return true;
@@ -726,7 +722,6 @@ namespace
 			MaxAlpha = FMath::Max(MaxAlpha, Pixels[PixelIndex].A);
 		}
 
-		// 불투명 알파는 정보가 없으므로 RGB 밝기를 사용하고, 변화가 있는 알파만 문양 마스크로 사용한다.
 		return int32(MaxAlpha) - int32(MinAlpha) >= 16;
 	}
 
@@ -833,8 +828,6 @@ namespace
 		UseAlphaMask->SliderMin = 0.0f;
 		UseAlphaMask->SliderMax = 1.0f;
 		EmissiveBoost->ConstB = 3.5f;
-		// 기본 출력 인덱스는 0, Texture/Particle Color의 Alpha 출력 인덱스는 4이다.
-		// 핀 표시명이 엔진 버전에 따라 달라져도 생성기가 깨지지 않도록 입력을 직접 연결한다.
 		RgbMask->Input.Connect(0, TextureSample);
 		SelectMask->A.Connect(0, RgbMask);
 		SelectMask->B.Connect(4, TextureSample);

@@ -60,7 +60,6 @@ bool UPBCollectionSubsystem::ReloadCollectionData()
 {
 	TArray<FPBCollectionEntryData> LoadedEntries;
 	const bool bMetadataLoaded = BuildEntriesFromCollectionTable(LoadedEntries);
-	// 실패한 재로드에서도 이전 메타데이터를 남기지 않아 삭제된 시트 행이 계속 보이는 일을 막습니다.
 	Entries = MoveTemp(LoadedEntries);
 	RebuildLookupIndexes();
 
@@ -579,7 +578,6 @@ FPBCollectionDisplayData UPBCollectionSubsystem::MakeDisplayData(
 	DisplayData.SourceId = EntryData.SourceId;
 	DisplayData.SourceTableName = EntryData.SourceTableName;
 	DisplayData.SourceRowName = EntryData.SourceRowName;
-	// State 필드는 기존 Widget Blueprint 직렬화 호환용입니다. 카탈로그 항목은 항상 전체 공개 상태입니다.
 	DisplayData.State = EPBCollectionState::Unlocked;
 	DisplayData.CategoryText = GetCategoryDisplayText(EntryData.Category);
 	DisplayData.StateText = FText::GetEmpty();

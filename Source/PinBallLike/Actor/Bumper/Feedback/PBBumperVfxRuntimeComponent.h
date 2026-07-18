@@ -7,10 +7,6 @@
 class UNiagaraComponent;
 class UNiagaraSystem;
 
-/**
- * 대상 Actor에 부착되는 범퍼 지속 VFX의 생성·교체·종료만 담당합니다.
- * 실제 효과 수치와 판정은 기존 Effect/Component가 소유하고, 이 컴포넌트는 시각 수명만 따라갑니다.
- */
 UCLASS(Transient)
 class PINBALLLIKE_API UPBBumperVfxRuntimeComponent : public UActorComponent
 {
@@ -21,7 +17,6 @@ public:
 
 	static UPBBumperVfxRuntimeComponent* FindOrAddToActor(AActor* TargetActor);
 
-	/** 같은 Channel의 연출은 교체하며, Duration이 0이면 대상 Actor가 제거될 때까지 유지합니다. */
 	UNiagaraComponent* PlayAttached(
 		FName Channel,
 		UNiagaraSystem* System,

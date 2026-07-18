@@ -5,10 +5,6 @@
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "PBCollectionTableRow.generated.h"
 
-/**
- * Collection DataTable의 한 행입니다.
- * 도감 고정 데이터만 담당하며 모든 항목은 처음부터 공개됩니다.
- */
 USTRUCT(BlueprintType)
 struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 {
@@ -32,7 +28,6 @@ struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Text")
 	FText DisplayName;
 
-	/** 이전 시트/에셋 호환용 열입니다. ToEntryData에서는 DisplayName으로 정규화합니다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Text")
 	FText LockedName;
 
@@ -42,7 +37,6 @@ struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Text")
 	FText DetailDescription;
 
-	/** 이전 시트/에셋 호환용 열입니다. 항상 공개형 도감에서는 사용하지 않습니다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Text")
 	FText UnlockConditionText;
 
@@ -58,7 +52,6 @@ struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Filter", meta = (ClampMin = "0"))
 	int32 StarGrade = 0;
 
-	/** 세미콜론으로 구분한 태그 문자열입니다. 예: Bumper;Support;UI */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Filter")
 	FString Tags;
 
@@ -74,7 +67,6 @@ struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Asset")
 	FName AssetBundleName = NAME_None;
 
-	/** 이전 시트/에셋 호환용 열입니다. 항상 공개형 도감에서는 사용하지 않습니다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Visibility")
 	bool bHiddenUntilDiscovered = false;
 

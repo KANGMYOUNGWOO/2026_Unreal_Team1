@@ -9,7 +9,6 @@
 
 class USceneComponent;
 
-/** 전투 맵에서 장착 슬롯별 범퍼 생성 위치를 식별하는 레벨 Anchor입니다. */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBumperPositionAnchor : public AActor
 {

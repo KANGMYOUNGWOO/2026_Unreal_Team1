@@ -9,7 +9,6 @@
 class UNiagaraComponent;
 class UNiagaraSystem;
 
-/** 범퍼 투사체가 보스에게 전달할 실제 명중 효과입니다. */
 UENUM(BlueprintType)
 enum class EPBBumperProjectilePayload : uint8
 {
@@ -24,10 +23,6 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(
 	class APBBumperProjectile*,
 	bool);
 
-/**
- * 범퍼와 소환 포탑이 함께 사용하는 보스 표적 유도탄입니다.
- * 시트 Power는 발사 시 payload로 보관되고, 보스와 실제로 겹쳤을 때만 적용됩니다.
- */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBumperProjectile : public AProjectileBase
 {
@@ -36,7 +31,6 @@ class PINBALLLIKE_API APBBumperProjectile : public AProjectileBase
 public:
 	APBBumperProjectile();
 
-	/** 범퍼와 지연 효과가 같은 생성/설정 절차를 공유하도록 유도탄을 한 번에 생성합니다. */
 	static APBBumperProjectile* SpawnForTarget(
 		UObject* WorldContext,
 		TSubclassOf<APBBumperProjectile> InProjectileClass,

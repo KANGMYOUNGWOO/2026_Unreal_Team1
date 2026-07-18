@@ -33,7 +33,6 @@ void UPBCollectionWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	// 메인 메뉴에 남은 C++ 원본 클래스 참조는 OnPushed에서 실제 WBP로 교체합니다.
 	if (GetClass() == StaticClass())
 	{
 		return;

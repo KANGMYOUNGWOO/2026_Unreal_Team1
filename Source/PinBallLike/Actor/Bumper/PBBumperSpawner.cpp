@@ -347,7 +347,6 @@ bool APBBumperSpawner::TryBuildTriggerSpawnInfos(
 		return false;
 	}
 
-	// 각 장착 Row는 자기 물리 슬롯의 Trigger 하나만 생성한다.
 	FPBBumperTriggerSpawnInfo TriggerSpawnInfo;
 	TriggerSpawnInfo.TriggerClass =
 		TSubclassOf<APBBumperTriggerActorBase>(BumperDataAsset->TriggerClass.Get());

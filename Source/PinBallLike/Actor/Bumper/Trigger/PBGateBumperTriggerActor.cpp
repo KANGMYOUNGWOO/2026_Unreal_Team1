@@ -117,7 +117,6 @@ void APBGateBumperTriggerActor::InitializeGaugeVisual()
 		}
 	}
 
-	// Skeletal Mesh 전환 과정에서 기존 BumperVisual 태그가 빠져도 Flag Mesh의 게이지를 복구한다.
 	if (TryCreateGaugeMaterial(FlagVisualMesh))
 	{
 		return;
@@ -160,7 +159,6 @@ void APBGateBumperTriggerActor::InitializeFlagSpinReaction()
 		return;
 	}
 
-	// 시각 관절만 시뮬레이션하며 게임의 Ball 충돌 판정은 기존 Box가 계속 담당한다.
 	const ECollisionEnabled::Type PreviousCollisionEnabled =
 		FlagVisualMesh->GetCollisionEnabled();
 	const FCollisionResponseContainer PreviousCollisionResponses =
@@ -231,14 +229,12 @@ void APBGateBumperTriggerActor::InitializeFlagSpinReaction()
 			*ConstraintTwistAxis.ToCompactString());
 	}
 
-	// 눕는 두 Swing 축은 잠그고 Flag 세로축인 Twist만 자유 회전시킨다.
 	FlagConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0.0f);
 	FlagConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0.0f);
 	FlagConstraint->SetAngularTwistLimit(
 		EAngularConstraintMotion::ACM_Free,
 		0.0f);
 
-	// 위치 복귀 모터는 사용하지 않고 Twist 각속도에만 약한 감쇠를 건다.
 	FlagConstraint->SetDriveParams(
 		FVector::ZeroVector,
 		FVector::ZeroVector,
@@ -270,7 +266,6 @@ USkeletalMeshComponent* APBGateBumperTriggerActor::FindFlagVisualMesh() const
 	TInlineComponentArray<USkeletalMeshComponent*> SkeletalMeshes;
 	GetComponents(SkeletalMeshes);
 
-	// 명시적 태그를 먼저 존중하고, 이전 BP 호환을 위해 Flag 본이 있는 Mesh를 예비 경로로 찾는다.
 	for (const bool bRequireTag : {true, false})
 	{
 		for (USkeletalMeshComponent* SkeletalMesh : SkeletalMeshes)
@@ -391,7 +386,6 @@ void APBGateBumperTriggerActor::ApplyFlagSpinReaction(
 		return;
 	}
 
-	// 볼 궤적의 좌우 오프셋만 Twist에 사용해 Swing 축이 섞이는 현상을 막는다.
 	const float SignedSpinOffset = FVector::DotProduct(PlanarLever, SpinSideAxis);
 	float GateHalfWidth = PlanarLever.Size();
 	if (IsValid(GateArea))

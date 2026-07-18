@@ -140,7 +140,6 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 
 		if (const UBoxComponent* BoxArea = Cast<UBoxComponent>(TriggerArea))
 		{
-			// 회전과 음수 Scale을 포함한 월드 Transform으로 충돌 지점을 Box 로컬 공간에 옮긴다.
 			const FTransform& AreaTransform = BoxArea->GetComponentTransform();
 			const FVector LocalHitPoint = AreaTransform.InverseTransformPosition(HitPoint);
 			const FVector BoxExtent = BoxArea->GetUnscaledBoxExtent();
@@ -159,7 +158,6 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 			continue;
 		}
 
-		// Box 외 Primitive를 쓰는 파생 BP도 Trigger Area를 교체할 수 있도록 일반 경로를 남긴다.
 		FVector ClosestPoint;
 		const float Distance = TriggerArea->GetClosestPointOnCollision(HitPoint, ClosestPoint);
 		if (Distance >= 0.0f && Distance <= TriggerAreaHitPointTolerance)
@@ -237,7 +235,6 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 	{
 		PlayImpactCameraShake();
 	}
-	// 판정과 반발에 사용한 동일한 IMovable Actor를 전달해 BallBase 비상속 구현도 충전되게 한다.
 	IncreaseTrigger(OtherActor, Hit);
 }
 

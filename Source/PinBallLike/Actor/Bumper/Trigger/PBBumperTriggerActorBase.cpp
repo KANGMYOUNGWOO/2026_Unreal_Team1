@@ -135,7 +135,6 @@ void APBBumperTriggerActorBase::IncreaseTrigger(
 	OwnerBumper->HandleTriggerActorActivated(this, InteractionActor, TriggerHit);
 	OnMovableActorTriggered(InteractionActor, TriggerHit);
 
-	// 이미 제작된 Blueprint의 Ball 타입 이벤트는 실제 Ball일 때 계속 호출한다.
 	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
 	{
 		OnTriggerActivated(Ball, TriggerHit);

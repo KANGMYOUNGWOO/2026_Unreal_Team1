@@ -29,7 +29,6 @@ APBBumperProjectile::APBBumperProjectile()
 
 	if (IsValid(ProjectileMovementComponent))
 	{
-		// 빠른 탄환이 보스 충돌을 건너뛰지 않도록 이동 중 sweep을 사용합니다.
 		ProjectileMovementComponent->bSweepCollision = true;
 	}
 }

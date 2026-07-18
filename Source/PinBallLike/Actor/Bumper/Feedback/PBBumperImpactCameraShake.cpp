@@ -28,7 +28,6 @@ UPBBumperImpactCameraShake::UPBBumperImpactCameraShake(const FObjectInitializer&
 	Pattern->Roll.Amplitude = 0.26f;
 	Pattern->Roll.Frequency = 20.0f;
 
-	// 짧은 충돌 피드백에서 화면 확대까지 흔들리면 답답할 수 있어 FOV 변화는 사용하지 않는다.
 	Pattern->FOV.Amplitude = 0.0f;
 	Pattern->FOV.Frequency = 0.0f;
 }
