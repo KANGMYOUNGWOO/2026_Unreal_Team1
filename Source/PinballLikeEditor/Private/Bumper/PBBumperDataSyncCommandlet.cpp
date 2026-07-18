@@ -16,6 +16,7 @@
 #include "HttpModule.h"
 #include "IAssetTools.h"
 #include "Misc/PackageName.h"
+#include "Misc/Parse.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBloodOverdriveBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBossDamageBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBossVulnerabilityBumperEffect.h"
@@ -536,7 +537,37 @@ namespace
 		return true;
 	}
 
-	bool SaveApprovedDirtyPackages()
+	bool IsApprovedDirtyPackage(
+		const FString& PackageName,
+		const bool bIncludeLegacyMigrationAssets)
+	{
+		static const TSet<FString> ExactPackages =
+		{
+			TEXT("/Game/Data/Tables/Effect/DT_GameplayEffect"),
+			TEXT("/Game/Data/Tables/Effect/DT_GameplayEffectParam"),
+			TEXT("/Game/Data/Tables/DT_Trigger"),
+			TEXT("/Game/Data/Tables/DT_Effect"),
+			TEXT("/Game/Data/Tables/DT_Bumper"),
+			TEXT("/Game/Data/Tables/DT_Collection"),
+			TEXT("/Game/Data/Loaders/GSC_GameplayEffect"),
+			TEXT("/Game/Data/Loaders/GSC_GameplayEffectParam"),
+			TEXT("/Game/Data/Loaders/GSC_Trigger"),
+			TEXT("/Game/Data/Loaders/GSC_Effect"),
+			TEXT("/Game/Data/Loaders/GSC_Bumper")
+		};
+		if (ExactPackages.Contains(PackageName)
+			|| PackageName.StartsWith(TEXT("/Game/Data/DataAssets/Bumper/")))
+		{
+			return true;
+		}
+
+		return bIncludeLegacyMigrationAssets
+			&& (PackageName.StartsWith(TEXT("/Game/Blueprints/Bumper/Effect/"))
+				|| PackageName.StartsWith(TEXT("/Game/Blueprints/Bumper/Trigger/"))
+				|| PackageName.StartsWith(TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/")));
+	}
+
+	bool SaveApprovedDirtyPackages(const bool bIncludeLegacyMigrationAssets)
 	{
 		TArray<UPackage*> PackagesToSave;
 		for (TObjectIterator<UPackage> It; It; ++It)
@@ -548,11 +579,7 @@ namespace
 			}
 
 			const FString PackageName = Package->GetName();
-			const bool bApprovedPath = PackageName.StartsWith(TEXT("/Game/Data/"))
-				|| PackageName.StartsWith(TEXT("/Game/Blueprints/Bumper/Effect/"))
-				|| PackageName.StartsWith(TEXT("/Game/Blueprints/Bumper/Trigger/"))
-				|| PackageName.StartsWith(TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/"));
-			if (bApprovedPath)
+			if (IsApprovedDirtyPackage(PackageName, bIncludeLegacyMigrationAssets))
 			{
 				PackagesToSave.Add(Package);
 			}
@@ -607,15 +634,21 @@ UPBBumperDataSyncCommandlet::UPBBumperDataSyncCommandlet()
 
 int32 UPBBumperDataSyncCommandlet::Main(const FString& Params)
 {
-	static_cast<void>(Params);
+	const bool bMigrateLegacyAssets = FParse::Param(*Params, TEXT("MigrateLegacyAssets"));
 	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>(
 		TEXT("AssetTools")).Get();
 
-	if (!DuplicateCounterShieldBlueprint(AssetTools)
-		|| !RenameApprovedAssets(AssetTools)
-		|| !ReparentApprovedEffectBlueprints())
+	if (bMigrateLegacyAssets
+		&& (!DuplicateCounterShieldBlueprint(AssetTools)
+			|| !RenameApprovedAssets(AssetTools)
+			|| !ReparentApprovedEffectBlueprints()))
 	{
 		return 1;
+	}
+	if (!bMigrateLegacyAssets)
+	{
+		UE_LOG(LogTemp, Display,
+			TEXT("[BumperSync] Legacy Blueprint rename/reparent migration skipped. Use -MigrateLegacyAssets only for the approved one-time migration."));
 	}
 
 	UDataTable* GameplayEffectTable = EnsureDataTable(
@@ -653,7 +686,7 @@ int32 UPBBumperDataSyncCommandlet::Main(const FString& Params)
 		TEXT("F1000"));
 	UGoogleSheetConfig* EffectConfig = ConfigureExistingSheetConfig(
 		TEXT("/Game/Data/Loaders/GSC_Effect"),
-		TEXT("L1000"));
+		TEXT("O1000"));
 	UGoogleSheetConfig* BumperConfig = ConfigureExistingSheetConfig(
 		TEXT("/Game/Data/Loaders/GSC_Bumper"),
 		TEXT("K1000"));
@@ -673,7 +706,7 @@ int32 UPBBumperDataSyncCommandlet::Main(const FString& Params)
 		return 1;
 	}
 
-	if (!SaveApprovedDirtyPackages())
+	if (!SaveApprovedDirtyPackages(bMigrateLegacyAssets))
 	{
 		return 1;
 	}

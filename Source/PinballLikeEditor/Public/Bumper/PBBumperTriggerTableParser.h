@@ -7,6 +7,7 @@
 #include "PBTableParserBase.h"
 #include "PBBumperTriggerTableParser.generated.h"
 
+/** Trigger 시트 행을 파싱하고 연결된 범퍼 DataAsset의 Trigger 클래스 참조를 갱신합니다. */
 UCLASS()
 class PINBALLLIKEEDITOR_API UPBBumperTriggerTableParser : public UPBTableParserBase
 {
