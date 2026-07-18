@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 #include "Engine/GameInstance.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperCounterShieldComponent.h"
+#include "PinBallLike/Actor/Bumper/PBBumperSpawner.h"
 #include "PinBallLike/Actor/Bumper/UI/Equip/PBBumperEquipController.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 
@@ -31,6 +32,30 @@ bool FPBBumperCounterShieldSourceTransformTest::RunTest(const FString& Parameter
 	TestTrue(
 		TEXT("Counter projectile location is resolved from the transform captured at activation"),
 		Component->ResolveProjectileSpawnLocation().Equals(ExpectedLocation, KINDA_SMALL_NUMBER));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBBumperAssetPreparationStateTest,
+	"PinBallLike.Bumper.Runtime.AssetPreparationProtectsSnapshot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBBumperAssetPreparationStateTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	FPBBumperAssetPreparationState State;
+	TestTrue(TEXT("An idle preparation can begin loading"), State.TryBeginLoading());
+	TestTrue(TEXT("The preparation reports an active snapshot while loading"), State.HasPendingSnapshot());
+	TestFalse(TEXT("A second request cannot replace a loading snapshot"), State.TryBeginLoading());
+
+	State.MarkAssetsLoaded();
+	TestTrue(TEXT("A loaded snapshot remains reserved until spawning"), State.IsReadyToSpawn());
+	TestFalse(TEXT("A second request cannot replace a ready-to-spawn snapshot"), State.TryBeginLoading());
+
+	State.Reset();
+	TestFalse(TEXT("Reset releases the consumed snapshot"), State.HasPendingSnapshot());
+	TestTrue(TEXT("A new request can start after reset"), State.TryBeginLoading());
 	return true;
 }
 
