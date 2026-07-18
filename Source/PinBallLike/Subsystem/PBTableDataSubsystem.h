@@ -34,6 +34,7 @@ class UDataTable;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBTableDataLoadEvent);
 
+/** 비동기로 준비된 프로젝트 DataTable들을 소유하고 타입 안전한 조회 API를 제공합니다. */
 UCLASS()
 class PINBALLLIKE_API UPBTableDataSubsystem : public UGameInstanceSubsystem
 {
@@ -46,7 +47,10 @@ public:
 	// DeveloperSettings에 등록된 테이블을 비동기로 준비한다.
 	void LoadStartupGameDataAsync();
 	void UnloadStartupGameData();
+	bool HasStartupGameDataLoadCompleted() const { return bStartupGameDataLoadCompleted; }
 	bool IsTableDataReady() const;
+	bool IsBumperTableReady() const;
+	bool IsCollectionCatalogDataReady() const;
 
 	// 로딩 Subsystem이 준비한 테이블을 주입한다. 이 Subsystem은 조회 책임만 가진다.
 	void SetCollectionTable(UDataTable* InCollectionTable);
@@ -83,6 +87,7 @@ private:
 	TObjectPtr<UDataTable> CollectionTable;
 
 	TSharedPtr<FStreamableHandle> StartupGameDataLoadHandle;
+	bool bStartupGameDataLoadCompleted = false;
 
 	UPROPERTY()
 	TArray<TObjectPtr<UDataTable>> LoadedStartupTables;

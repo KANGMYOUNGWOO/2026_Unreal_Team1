@@ -51,6 +51,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Collection|Data")
 	bool IsDataReady() const { return bIsDataReady; }
 
+	/** 초기 테이블 로드 요청이 성공 또는 실패로 끝났는지 반환합니다. */
+	UFUNCTION(BlueprintPure, Category = "Collection|Data")
+	bool HasDataLoadCompleted() const;
+
 	UFUNCTION(BlueprintPure, Category = "Collection|Query")
 	TArray<FPBCollectionDisplayData> GetDisplayEntries(EPBCollectionCategory Category) const;
 

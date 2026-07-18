@@ -29,6 +29,8 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	if (!IsValid(Settings))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[TableData] Missing PBGameDataSettings."));
+		bStartupGameDataLoadCompleted = true;
+		OnStartupGameDataLoaded.Broadcast();
 		return;
 	}
 
@@ -178,6 +180,8 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	if (TablePaths.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[TableData] No startup table paths are configured."));
+		bStartupGameDataLoadCompleted = true;
+		OnStartupGameDataLoaded.Broadcast();
 		return;
 	}
 
@@ -187,10 +191,17 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 			this,
 			&UPBTableDataSubsystem::OnStartupGameDataLoadedInternal,
 			TablePaths));
+	if (!StartupGameDataLoadHandle.IsValid() && !bStartupGameDataLoadCompleted)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[TableData] Failed to create the startup table load request."));
+		bStartupGameDataLoadCompleted = true;
+		OnStartupGameDataLoaded.Broadcast();
+	}
 }
 
 void UPBTableDataSubsystem::UnloadStartupGameData()
 {
+	bStartupGameDataLoadCompleted = false;
 	LoadedStartupTables.Empty();
 
 	SetCollectionTable(nullptr);
@@ -301,6 +312,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		IsTableDataReady() ? TEXT("true") : TEXT("false"),
 		LoadedStartupTables.Num());
 
+	bStartupGameDataLoadCompleted = true;
 	OnStartupGameDataLoaded.Broadcast();
 }
 
@@ -317,6 +329,31 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 		&& IsValid(BossTable)
 		&& IsValid(BossHitPointTable)
 		&& IsValid(BossPatternTable);
+}
+
+bool UPBTableDataSubsystem::IsBumperTableReady() const
+{
+	return IsValid(BumperTable);
+}
+
+bool UPBTableDataSubsystem::IsCollectionCatalogDataReady() const
+{
+	return IsValid(BumperTable)
+		&& IsValid(BumperTriggerTable)
+		&& IsValid(BumperEffectTable)
+		&& IsValid(BallTable)
+		&& IsValid(BallStarLevelTable)
+		&& IsValid(SkillTable)
+		&& IsValid(BossTable)
+		&& IsValid(BossHitPointTable)
+		&& IsValid(BossPatternTable)
+		&& IsValid(RelicTable)
+		&& IsValid(RelicModifierTable)
+		&& IsValid(SynergyTable)
+		&& IsValid(SynergyTierTable)
+		&& IsValid(SynergyEffectTable)
+		&& IsValid(SynergyEffectModifierTable)
+		&& IsValid(SynergyEffectTriggerTable);
 }
 
 void UPBTableDataSubsystem::SetCollectionTable(UDataTable* InCollectionTable)
