@@ -4,6 +4,7 @@
 #include "MVVMViewModelBase.h"
 #include "PBBumperViewModel.generated.h"
 
+/** 범퍼별 현재 카운트와 요구 카운트를 FieldNotify 값으로 노출합니다. */
 UCLASS(BlueprintType, meta = (MVVMAllowedContextCreationType = "Manual"))
 class PINBALLLIKE_API UPBBumperViewModel : public UMVVMViewModelBase
 {

@@ -13,6 +13,7 @@ class UTexture2D;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBBumperListItemClickedSignature, FName, RowName);
 
+/** 범퍼 목록 카드 한 개의 표시값과 선택 이벤트를 보관하는 ViewModel입니다. */
 UCLASS(BlueprintType, meta = (MVVMAllowedContextCreationType = "Manual"))
 class PINBALLLIKE_API UPBBumperListItemObject : public UMVVMViewModelBase
 {

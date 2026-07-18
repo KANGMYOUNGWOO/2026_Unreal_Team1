@@ -5,24 +5,35 @@
 #include "Components/TextBlock.h"
 #include "PinBallLike/Collection/PBCollectionSubsystem.h"
 #include "PBCollectionCatalogItemObject.h"
+#include "PBCollectionTabController.h"
 
 void UPBCollectionTabWidgetBase::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	if (UGameInstance* GameInstance = GetGameInstance())
+	TabController = NewObject<UPBCollectionTabController>(this);
+}
+
+void UPBCollectionTabWidgetBase::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	if (!TabController)
 	{
-		CollectionSubsystem = GameInstance->GetSubsystem<UPBCollectionSubsystem>();
+		TabController = NewObject<UPBCollectionTabController>(this);
 	}
+	if (!IsValid(TabController))
+	{
+		return;
+	}
+	TabController->OnRefreshRequested.RemoveAll(this);
+	TabController->OnRefreshRequested.AddUObject(this, &ThisClass::HandleRefreshRequested);
+	TabController->Initialize(GetGameInstance());
 
 	if (SearchTextBox)
 	{
 		SearchTextBox->OnTextChanged.AddUniqueDynamic(this, &ThisClass::HandleSearchTextChanged);
-	}
-	if (CollectionSubsystem)
-	{
-		CollectionSubsystem->OnCollectionDataReady.AddUniqueDynamic(this, &ThisClass::HandleCollectionDataReady);
-		CollectionSubsystem->OnCollectionEntryChanged.AddUniqueDynamic(this, &ThisClass::HandleCollectionEntryChanged);
+		TabController->SetSearchText(SearchTextBox->GetText());
 	}
 }
 
@@ -32,10 +43,10 @@ void UPBCollectionTabWidgetBase::NativeDestruct()
 	{
 		SearchTextBox->OnTextChanged.RemoveDynamic(this, &ThisClass::HandleSearchTextChanged);
 	}
-	if (CollectionSubsystem)
+	if (TabController)
 	{
-		CollectionSubsystem->OnCollectionDataReady.RemoveDynamic(this, &ThisClass::HandleCollectionDataReady);
-		CollectionSubsystem->OnCollectionEntryChanged.RemoveDynamic(this, &ThisClass::HandleCollectionEntryChanged);
+		TabController->OnRefreshRequested.RemoveAll(this);
+		TabController->Shutdown();
 	}
 
 	Super::NativeDestruct();
@@ -43,14 +54,20 @@ void UPBCollectionTabWidgetBase::NativeDestruct()
 
 void UPBCollectionTabWidgetBase::ActivateTab()
 {
-	bIsActiveTab = true;
+	if (TabController)
+	{
+		TabController->Activate();
+	}
 	RefreshTab();
 	BP_OnTabActivated();
 }
 
 void UPBCollectionTabWidgetBase::DeactivateTab()
 {
-	bIsActiveTab = false;
+	if (TabController)
+	{
+		TabController->Deactivate();
+	}
 	BP_OnTabDeactivated();
 }
 
@@ -60,43 +77,22 @@ void UPBCollectionTabWidgetBase::RefreshTab()
 
 bool UPBCollectionTabWidgetBase::IsCatalogDataReady(const FText& LoadingText) const
 {
-	if (!CollectionSubsystem || !CollectionSubsystem->IsDataReady())
+	if (!TabController || !TabController->IsCatalogDataReady())
 	{
-		SetStatus(LoadingText, true);
+		const FText StatusTextValue = TabController && TabController->HasDataLoadCompleted()
+			? NSLOCTEXT("PBCollection", "CatalogLoadFailed", "도감 데이터 일부를 불러오지 못했습니다.")
+			: LoadingText;
+		SetStatus(StatusTextValue, true);
 		return false;
 	}
 	return true;
-}
-
-FString UPBCollectionTabWidgetBase::GetNormalizedSearchText() const
-{
-	return SearchTextBox ? SearchTextBox->GetText().ToString().TrimStartAndEnd() : FString();
 }
 
 bool UPBCollectionTabWidgetBase::MatchesSearch(
 	const FPBCollectionItemSummary& Summary,
 	const TArray<FText>& AdditionalTexts) const
 {
-	const FString SearchText = GetNormalizedSearchText();
-	if (SearchText.IsEmpty())
-	{
-		return true;
-	}
-
-	const auto Contains = [&SearchText](const FText& Source)
-	{
-		return Source.ToString().Contains(SearchText, ESearchCase::IgnoreCase);
-	};
-
-	if (Contains(Summary.DisplayName) || Contains(Summary.Subtitle) || Contains(Summary.Description))
-	{
-		return true;
-	}
-
-	return AdditionalTexts.ContainsByPredicate([&Contains](const FText& Text)
-	{
-		return Contains(Text);
-	});
+	return TabController && TabController->MatchesSearch(Summary, AdditionalTexts);
 }
 
 int32 UPBCollectionTabWidgetBase::PopulateCatalogItems(
@@ -105,54 +101,40 @@ int32 UPBCollectionTabWidgetBase::PopulateCatalogItems(
 	const TArray<FPBCollectionItemSummary>& Summaries,
 	const TArray<int32>& DataIndexes)
 {
-	CatalogItems.Reset();
-	if (!ListView || Summaries.Num() != DataIndexes.Num())
+	if (!ListView || !TabController)
 	{
 		return INDEX_NONE;
 	}
+
+	TArray<UPBCollectionCatalogItemObject*> CatalogItems;
+	UPBCollectionCatalogItemObject* SelectedItem = nullptr;
+	const int32 SelectedDataIndex = TabController->BuildCatalogItems(
+		Category,
+		Summaries,
+		DataIndexes,
+		CatalogItems,
+		SelectedItem);
 
 	ListView->ClearListItems();
-	int32 SelectedItemIndex = INDEX_NONE;
-	for (int32 Index = 0; Index < Summaries.Num(); ++Index)
+	for (UPBCollectionCatalogItemObject* Item : CatalogItems)
 	{
-		UPBCollectionCatalogItemObject* Item = NewObject<UPBCollectionCatalogItemObject>(this);
-		Item->Category = Category;
-		Item->Summary = Summaries[Index];
-		Item->DataIndex = DataIndexes[Index];
-		CatalogItems.Add(Item);
 		ListView->AddItem(Item);
-
-		if (Item->Summary.SourceRowName == SelectedSourceRowName)
-		{
-			SelectedItemIndex = Index;
-		}
 	}
-
-	if (CatalogItems.IsEmpty())
+	if (SelectedItem)
 	{
-		SelectedSourceRowName = NAME_None;
-		return INDEX_NONE;
+		ListView->SetSelectedItem(SelectedItem);
 	}
-
-	if (!CatalogItems.IsValidIndex(SelectedItemIndex))
-	{
-		SelectedItemIndex = 0;
-	}
-
-	UPBCollectionCatalogItemObject* SelectedItem = CatalogItems[SelectedItemIndex];
-	SelectedSourceRowName = SelectedItem->Summary.SourceRowName;
-	ListView->SetSelectedItem(SelectedItem);
-	return SelectedItem->DataIndex;
+	return SelectedDataIndex;
 }
 
 const UPBCollectionCatalogItemObject* UPBCollectionTabWidgetBase::ResolveCatalogItem(UObject* ItemObject)
 {
-	const UPBCollectionCatalogItemObject* Item = Cast<UPBCollectionCatalogItemObject>(ItemObject);
-	if (Item)
-	{
-		SelectedSourceRowName = Item->Summary.SourceRowName;
-	}
-	return Item;
+	return TabController ? TabController->ResolveCatalogItem(ItemObject) : nullptr;
+}
+
+UPBCollectionSubsystem* UPBCollectionTabWidgetBase::GetCollectionSubsystem() const
+{
+	return TabController ? TabController->GetCollectionSubsystem() : nullptr;
 }
 
 void UPBCollectionTabWidgetBase::SetStatus(const FText& Text, const bool bShow) const
@@ -168,24 +150,13 @@ void UPBCollectionTabWidgetBase::SetStatus(const FText& Text, const bool bShow) 
 
 void UPBCollectionTabWidgetBase::HandleSearchTextChanged(const FText& Text)
 {
-	if (bIsActiveTab)
+	if (TabController)
 	{
-		RefreshTab();
+		TabController->SetSearchText(Text);
 	}
 }
 
-void UPBCollectionTabWidgetBase::HandleCollectionDataReady(const bool bReady)
+void UPBCollectionTabWidgetBase::HandleRefreshRequested()
 {
-	if (bReady && bIsActiveTab)
-	{
-		RefreshTab();
-	}
-}
-
-void UPBCollectionTabWidgetBase::HandleCollectionEntryChanged(FName CollectionId)
-{
-	if (bIsActiveTab)
-	{
-		RefreshTab();
-	}
+	RefreshTab();
 }

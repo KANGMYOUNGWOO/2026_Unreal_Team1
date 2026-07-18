@@ -8,6 +8,7 @@ class UListView;
 class UTextBlock;
 class UTileView;
 
+/** Ball과 기본 Skill을 결합해 타일 및 상세 패널로 표시하는 도감 탭입니다. */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionBallTabWidget : public UPBCollectionTabWidgetBase
 {
@@ -35,6 +36,7 @@ private:
 	TArray<FPBCollectionBallDisplayData> CatalogData;
 };
 
+/** Synergy의 단계, 효과, Modifier, Trigger를 조합해 표시하는 도감 탭입니다. */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionSynergyTabWidget : public UPBCollectionTabWidgetBase
 {
@@ -60,6 +62,7 @@ private:
 	TArray<FPBCollectionSynergyDisplayData> CatalogData;
 };
 
+/** Relic과 Modifier를 조합해 타일 및 상세 패널로 표시하는 도감 탭입니다. */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionRelicTabWidget : public UPBCollectionTabWidgetBase
 {
@@ -84,6 +87,7 @@ private:
 	TArray<FPBCollectionRelicDisplayData> CatalogData;
 };
 
+/** 범퍼, Trigger, Effect 시트의 연결 결과를 표시하는 도감 탭입니다. */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionBumperTabWidget : public UPBCollectionTabWidgetBase
 {
@@ -109,6 +113,7 @@ private:
 	TArray<FPBCollectionBumperDisplayData> CatalogData;
 };
 
+/** Boss와 약점, 패턴 시트를 조합해 표시하는 도감 탭입니다. */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionBossTabWidget : public UPBCollectionTabWidgetBase
 {
