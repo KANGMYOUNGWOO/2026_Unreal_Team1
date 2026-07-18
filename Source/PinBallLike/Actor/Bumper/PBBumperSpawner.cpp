@@ -22,34 +22,6 @@
 #include "PinBallLike/Table/PBAssetBundleNames.h"
 #include "PinBallLike/Utils/PBSubsystemUtils.h"
 
-namespace
-{
-	bool DoesBumperTypeMatchEquipSlot(
-		const EPBBumperType BumperType,
-		const EPBBumperEquipSlot EquipSlot)
-	{
-		EPBBumperSlotType EquipSlotType;
-		if (!PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, EquipSlotType))
-		{
-			return false;
-		}
-
-		switch (BumperType)
-		{
-		case EPBBumperType::TopTarget:
-			return EquipSlotType == EPBBumperSlotType::Top;
-		case EPBBumperType::Side:
-			return EquipSlotType == EPBBumperSlotType::Side;
-		case EPBBumperType::Rebound:
-			return EquipSlotType == EPBBumperSlotType::Rebound;
-		case EPBBumperType::Gate:
-			return EquipSlotType == EPBBumperSlotType::Special;
-		default:
-			return false;
-		}
-	}
-}
-
 APBBumperSpawner::APBBumperSpawner()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -114,7 +86,9 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	BuildPendingBumperAssetIds(BumperAssetIds);
 	if (BumperAssetIds.IsEmpty())
 	{
-		return FGuid();
+		PreparedBumperSpawnDataList.Reset();
+		OnLoaded.ExecuteIfBound();
+		return FGuid::NewGuid();
 	}
 
 	TArray<FName> BundleNames;
@@ -142,6 +116,11 @@ void APBBumperSpawner::SpawnLoadedBumpers()
 	if (!BuildPreparedBumperSpawnData())
 	{
 		CompleteBumperPreparation(false);
+		return;
+	}
+	if (PreparedBumperSpawnDataList.IsEmpty())
+	{
+		CompleteBumperPreparation(true);
 		return;
 	}
 
@@ -183,7 +162,6 @@ void APBBumperSpawner::LogBattleTelemetrySummary()
 	{
 		return;
 	}
-
 	int32 ValidBumperCount = 0;
 	int32 TotalMeaningfulContacts = 0;
 	int32 TotalActivations = 0;
@@ -237,7 +215,7 @@ bool APBBumperSpawner::BuildPreparedBumperSpawnData()
 	PreparedBumperSpawnDataList.Reset();
 	if (PendingEquippedSlots.IsEmpty())
 	{
-		return false;
+		return true;
 	}
 
 	for (const FPBEquippedBumperSlot& EquippedSlot : PendingEquippedSlots)
@@ -266,7 +244,9 @@ bool APBBumperSpawner::TryBuildBumperSpawnData(
 	}
 	OutSpawnData.BumperRowId = BumperRowId;
 
-	if (!DoesBumperTypeMatchEquipSlot(OutSpawnData.BumperRow.BumperType, EquippedSlot.EquipSlot))
+	if (!PBBumperEquipSlotUtils::DoesBumperTypeMatchEquipSlot(
+		OutSpawnData.BumperRow.BumperType,
+		EquippedSlot.EquipSlot))
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Bumper] Equipped row does not match the physical slot. Slot=%s RowName=%s BumperType=%s"),
@@ -316,15 +296,25 @@ bool APBBumperSpawner::TryBuildBumperSpawnData(
 
 	OutSpawnData.EffectClass = TSubclassOf<UPBBumperEffectBase>(LoadedEffectClass);
 	OutSpawnData.ActivationVfx = BumperDataAsset->ActivationVfx.Get();
-	if (!OutSpawnData.EffectRow.ActivationVfxId.IsNone()
-		&& !IsValid(OutSpawnData.ActivationVfx))
+	OutSpawnData.DeliveryVfx = BumperDataAsset->DeliveryVfx.Get();
+	OutSpawnData.ImpactVfx = BumperDataAsset->ImpactVfx.Get();
+	OutSpawnData.StatusVfx = BumperDataAsset->StatusVfx.Get();
+	const auto ValidateVfx = [&](const FName VfxId, const UNiagaraSystem* LoadedVfx, const TCHAR* Stage)
 	{
-		UE_LOG(LogTemp, Warning,
-			TEXT("[Bumper] Activation VFX was configured but not loaded. RowName=%s EffectId=%s VfxId=%s"),
-			*BumperRowId.ToString(),
-			*OutSpawnData.BumperRow.EffectID.ToString(),
-			*OutSpawnData.EffectRow.ActivationVfxId.ToString());
-	}
+		if (!VfxId.IsNone() && !IsValid(LoadedVfx))
+		{
+			UE_LOG(LogTemp, Warning,
+				TEXT("[Bumper] %s VFX was configured but not loaded. RowName=%s EffectId=%s VfxId=%s"),
+				Stage,
+				*BumperRowId.ToString(),
+				*OutSpawnData.BumperRow.EffectID.ToString(),
+				*VfxId.ToString());
+		}
+	};
+	ValidateVfx(OutSpawnData.EffectRow.ActivationVfxId, OutSpawnData.ActivationVfx, TEXT("Activation"));
+	ValidateVfx(OutSpawnData.EffectRow.DeliveryVfxId, OutSpawnData.DeliveryVfx, TEXT("Delivery"));
+	ValidateVfx(OutSpawnData.EffectRow.ImpactVfxId, OutSpawnData.ImpactVfx, TEXT("Impact"));
+	ValidateVfx(OutSpawnData.EffectRow.StatusVfxId, OutSpawnData.StatusVfx, TEXT("Status"));
 	return true;
 }
 
@@ -411,6 +401,9 @@ APBModularBumperBase* APBBumperSpawner::PlaceBumperActor(const FPBPreparedBumper
 		SpawnData.EffectRow,
 		SpawnData.EffectClass,
 		SpawnData.ActivationVfx,
+		SpawnData.DeliveryVfx,
+		SpawnData.ImpactVfx,
+		SpawnData.StatusVfx,
 		AnchorTransforms);
 	UGameplayStatics::FinishSpawningActor(Bumper, FTransform::Identity);
 

@@ -37,6 +37,7 @@ void UPBComboBumperEffect::ActivateEffectForActor(
 
 	const int32 ComboAmount = FMath::Max(FMath::RoundToInt(EffectData.Power), 1);
 	Comboable->AddCombo(ComboAmount);
+	PlayResolvedVfx(InteractionActor);
 	UE_LOG(LogTemp, Log, TEXT("[Bumper] Combo effect applied. Bumper=%s Target=%s Amount=%d"),
 		*GetNameSafe(Bumper),
 		*GetNameSafe(InteractionActor),

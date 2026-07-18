@@ -1,8 +1,11 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Components/SphereComponent.h"
 #include "Engine/AssetManager.h"
 #include "Engine/DataTable.h"
+#include "HAL/IConsoleManager.h"
 #include "Misc/AutomationTest.h"
+#include "NiagaraEffectType.h"
 #include "NiagaraSystem.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBossDamageBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBossGroggyBumperEffect.h"
@@ -21,6 +24,9 @@
 #include "PinBallLike/Actor/Bumper/Effect/PBTurretSummonBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBVelocityBoostBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBBumperSummonAnchor.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBGateAccelerationField.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBGateFieldTuning.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBGateSupportField.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
 #include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
@@ -31,6 +37,7 @@
 #include "PinBallLike/Table/Effect/Struct/PBGameplayEffectParamRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBGameplayEffectRow.h"
 #include "PinBallLike/Utils/PBTextFormatUtils.h"
+#include "UObject/UnrealType.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FPBBumperCatalogTest,
@@ -40,6 +47,57 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 {
 	static_cast<void>(Parameters);
+
+	const APBGateAccelerationField* AccelerationField = GetDefault<APBGateAccelerationField>();
+	const APBGateSupportField* SupportField = GetDefault<APBGateSupportField>();
+	TestEqual(
+		TEXT("Gate field radius is twice the previous 180uu radius"),
+		PBGateFieldTuning::DefaultRadius,
+		360.0f);
+	const FTransform ExampleGateTransform(
+		FRotator(0.0f, 37.0f, 0.0f),
+		FVector(125.0f, -240.0f, 18.0f),
+		FVector(2.0f, 0.5f, 3.0f));
+	const FTransform FieldAtGateOrigin =
+		PBGateFieldTuning::MakeTransformAtGateOrigin(ExampleGateTransform);
+	TestTrue(
+		TEXT("Gate field keeps the Gate world origin"),
+		FieldAtGateOrigin.GetLocation().Equals(ExampleGateTransform.GetLocation()));
+	TestTrue(
+		TEXT("Gate field keeps the Gate world rotation"),
+		FieldAtGateOrigin.GetRotation().Equals(ExampleGateTransform.GetRotation()));
+	TestTrue(
+		TEXT("Gate field ignores Gate mesh scale"),
+		FieldAtGateOrigin.GetScale3D().Equals(FVector::OneVector));
+	TestNotNull(
+		TEXT("Gate field debug console variable is registered"),
+		IConsoleManager::Get().FindConsoleVariable(TEXT("pb.Bumper.DebugGateFields")));
+	TestEqual(
+		TEXT("Gate acceleration field uses the shared combat radius"),
+		AccelerationField->GetFieldRadius(),
+		PBGateFieldTuning::DefaultRadius);
+	TestEqual(
+		TEXT("Gate support field uses the shared combat radius"),
+		SupportField->GetFieldRadius(),
+		PBGateFieldTuning::DefaultRadius);
+	const USphereComponent* AccelerationArea =
+		AccelerationField->FindComponentByClass<USphereComponent>();
+	const USphereComponent* SupportArea =
+		SupportField->FindComponentByClass<USphereComponent>();
+	if (TestNotNull(TEXT("Gate acceleration field has a radial collision area"), AccelerationArea))
+	{
+		TestEqual(
+			TEXT("Gate acceleration radial collision matches the shared radius"),
+			AccelerationArea->GetUnscaledSphereRadius(),
+			PBGateFieldTuning::DefaultRadius);
+	}
+	if (TestNotNull(TEXT("Gate support field has a radial collision area"), SupportArea))
+	{
+		TestEqual(
+			TEXT("Gate support radial collision matches the shared radius"),
+			SupportArea->GetUnscaledSphereRadius(),
+			PBGateFieldTuning::DefaultRadius);
+	}
 
 	const UPBSummonBumperEffect* GenericSummonEffect = GetDefault<UPBSummonBumperEffect>();
 	const UPBTurretSummonBumperEffect* TurretSummonEffect = GetDefault<UPBTurretSummonBumperEffect>();
@@ -162,6 +220,18 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 	TMap<EPBBumperType, int32> TypeCounts;
 	TSet<FName> ReferencedTriggerIds;
 	TSet<FName> ReferencedEffectIds;
+	const TSet<FName> GateAreaEffectIds =
+	{
+		TEXT("Effect_SpeedUp_01"),
+		TEXT("Effect_RecoveryField_02"),
+		TEXT("Effect_ReactiveRepair_01"),
+		TEXT("Effect_ManaReactor_01")
+	};
+	const FClassProperty* SummonActorClassProperty = FindFProperty<FClassProperty>(
+		UPBSummonBumperEffect::StaticClass(),
+		TEXT("SummonActorClass"));
+	TestNotNull(TEXT("Summon effect exposes its configured Actor class"), SummonActorClassProperty);
+	int32 ConfiguredVfxStageCount = 0;
 	for (const TPair<FName, uint8*>& RowPair : BumperTable->GetRowMap())
 	{
 		const FPBBumperTableRow* Row = reinterpret_cast<const FPBBumperTableRow*>(RowPair.Value);
@@ -291,11 +361,96 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 				*FString::Printf(TEXT("EffectClass derives from the bumper effect base: %s"), *RowPair.Key.ToString()),
 				IsValid(EffectClass) && EffectClass->IsChildOf(UPBBumperEffectBase::StaticClass()));
 
-			if (EffectRow && !EffectRow->ActivationVfxId.IsNone())
+			if (GateAreaEffectIds.Contains(Row->EffectID)
+				&& IsValid(EffectClass)
+				&& SummonActorClassProperty)
 			{
-				TestNotNull(
-					*FString::Printf(TEXT("Configured ActivationVfx resolves: %s"), *RowPair.Key.ToString()),
-					BumperDataAsset->ActivationVfx.LoadSynchronous());
+				const UObject* EffectDefaultObject = EffectClass->GetDefaultObject();
+				UClass* SummonActorClass = Cast<UClass>(
+					SummonActorClassProperty->GetObjectPropertyValue_InContainer(EffectDefaultObject));
+				if (TestNotNull(
+					*FString::Printf(TEXT("Gate area SummonActorClass resolves: %s"), *RowPair.Key.ToString()),
+					SummonActorClass))
+				{
+					const bool bIsAccelerationField = Row->EffectID == TEXT("Effect_SpeedUp_01");
+					if (bIsAccelerationField)
+					{
+						TestTrue(
+							TEXT("SpeedUp summons a Gate acceleration field"),
+							SummonActorClass->IsChildOf(APBGateAccelerationField::StaticClass()));
+						const APBGateAccelerationField* FieldDefaultObject =
+							SummonActorClass->GetDefaultObject<APBGateAccelerationField>();
+						if (TestNotNull(TEXT("SpeedUp field defaults resolve"), FieldDefaultObject))
+						{
+							TestEqual(
+								TEXT("SpeedUp Blueprint field radius matches the shared radius"),
+								FieldDefaultObject->GetFieldRadius(),
+								PBGateFieldTuning::DefaultRadius);
+						}
+					}
+					else
+					{
+						TestTrue(
+							*FString::Printf(TEXT("Support effect summons a Gate support field: %s"), *RowPair.Key.ToString()),
+							SummonActorClass->IsChildOf(APBGateSupportField::StaticClass()));
+						const APBGateSupportField* FieldDefaultObject =
+							SummonActorClass->GetDefaultObject<APBGateSupportField>();
+						if (TestNotNull(
+							*FString::Printf(TEXT("Support field defaults resolve: %s"), *RowPair.Key.ToString()),
+							FieldDefaultObject))
+						{
+							TestEqual(
+								*FString::Printf(TEXT("Support Blueprint field radius matches the shared radius: %s"), *RowPair.Key.ToString()),
+								FieldDefaultObject->GetFieldRadius(),
+								PBGateFieldTuning::DefaultRadius);
+						}
+					}
+				}
+			}
+
+			if (EffectRow)
+			{
+				TestFalse(
+					*FString::Printf(TEXT("ActivationVfxId is configured: %s"), *RowPair.Key.ToString()),
+					EffectRow->ActivationVfxId.IsNone());
+
+				auto ValidateVfxStage = [this, &ConfiguredVfxStageCount, &RowPair](
+					const TCHAR* StageName,
+					const FName VfxId,
+					const TSoftObjectPtr<UNiagaraSystem>& VfxReference)
+				{
+					const FString Context = FString::Printf(
+						TEXT("%s VFX: %s"),
+						StageName,
+						*RowPair.Key.ToString());
+					if (VfxId.IsNone())
+					{
+						TestTrue(*FString::Printf(TEXT("Unused %s reference is empty"), *Context), VfxReference.IsNull());
+						return;
+					}
+
+					++ConfiguredVfxStageCount;
+					UNiagaraSystem* System = VfxReference.LoadSynchronous();
+					if (!TestNotNull(*FString::Printf(TEXT("%s resolves"), *Context), System))
+					{
+						return;
+					}
+					TestEqual(*FString::Printf(TEXT("%s asset name matches sheet ID"), *Context), System->GetFName(), VfxId);
+					TestEqual(*FString::Printf(TEXT("%s uses three visual layers"), *Context), System->GetEmitterHandles().Num(), 3);
+					UNiagaraEffectType* EffectType = System->GetEffectType();
+					if (TestNotNull(*FString::Printf(TEXT("%s has a shared Effect Type"), *Context), EffectType))
+					{
+						TestEqual(
+							*FString::Printf(TEXT("%s uses NET_BumperGameplay"), *Context),
+							EffectType->GetFName(),
+							FName(TEXT("NET_BumperGameplay")));
+					}
+				};
+
+				ValidateVfxStage(TEXT("Activation"), EffectRow->ActivationVfxId, BumperDataAsset->ActivationVfx);
+				ValidateVfxStage(TEXT("Delivery"), EffectRow->DeliveryVfxId, BumperDataAsset->DeliveryVfx);
+				ValidateVfxStage(TEXT("Impact"), EffectRow->ImpactVfxId, BumperDataAsset->ImpactVfx);
+				ValidateVfxStage(TEXT("Status"), EffectRow->StatusVfxId, BumperDataAsset->StatusVfx);
 			}
 		}
 
@@ -311,6 +466,7 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Side catalog count"), TypeCounts.FindRef(EPBBumperType::Side), 5);
 	TestEqual(TEXT("Top catalog count"), TypeCounts.FindRef(EPBBumperType::TopTarget), 5);
 	TestEqual(TEXT("Gate catalog count"), TypeCounts.FindRef(EPBBumperType::Gate), 5);
+	TestEqual(TEXT("Bumper VFX stage reference count"), ConfiguredVfxStageCount, 64);
 
 	struct FDeliveryExpectation
 	{

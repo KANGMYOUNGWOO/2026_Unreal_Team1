@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 
+struct FPBGameplayEffectRow;
+
 /** 범퍼가 공용 효과 시트에서 읽어 온 검증 완료 정의입니다. */
 struct FPBBumperSharedEffectDefinition
 {
@@ -22,10 +24,20 @@ struct FPBBumperSharedEffectDefinition
  */
 namespace PBBumperSharedEffectAdapter
 {
+	/** 시트 Row가 범퍼 Effect 클래스가 선언한 실행 대상 계약과 일치하는지 검증합니다. */
+	bool ValidateContract(
+		const FPBGameplayEffectRow& EffectRow,
+		FName ExpectedEffectType,
+		FName ExpectedTargetType,
+		FName ExpectedTargetFilter,
+		FString& OutError);
+
 	bool Resolve(
 		const UObject* WorldContext,
 		FName SharedEffectId,
 		FName ExpectedEffectType,
+		FName ExpectedTargetType,
+		FName ExpectedTargetFilter,
 		TConstArrayView<FName> RequiredParameters,
 		FPBBumperSharedEffectDefinition& OutDefinition,
 		FString& OutError);

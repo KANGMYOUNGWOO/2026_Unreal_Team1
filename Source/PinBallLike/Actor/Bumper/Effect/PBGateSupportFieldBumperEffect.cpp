@@ -2,6 +2,7 @@
 
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperSharedEffectAdapter.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBGateFieldTuning.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBGateSupportField.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 
@@ -32,6 +33,8 @@ void UPBGateSupportFieldBumperEffect::ActivateEffectForActor(
 			Bumper,
 			EffectData.SharedEffectId,
 			NAME_None,
+			TEXT("Ball"),
+			TEXT("All"),
 			TConstArrayView<FName>(),
 			Definition,
 			ResolveError))
@@ -99,7 +102,8 @@ void UPBGateSupportFieldBumperEffect::ActivateEffectForActor(
 	if (!IsValid(Bumper)
 		|| !IsValid(InteractionActor)
 		|| !FMath::IsFinite(ResolvedPower)
-		|| ResolvedPower <= 0.0f)
+		|| ResolvedPower <= 0.0f
+		|| !EnsureSummonActor(Bumper))
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Bumper] Support field skipped. Bumper=%s Target=%s Power=%.2f"),
@@ -122,7 +126,7 @@ void UPBGateSupportFieldBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
-	SupportField->SetActorTransform(SpawnOffset * ActiveTrigger->GetActorTransform());
+	SupportField->SetDebugTriggerOrigin(ActiveTrigger->GetActorLocation());
 	SupportField->ConfigureField(
 		ResolvedRewardType,
 		ResolvedResourceName,
@@ -133,6 +137,24 @@ void UPBGateSupportFieldBumperEffect::ActivateEffectForActor(
 		ResolvedTriggerCount,
 		ResolvedDuration,
 		FieldColor);
+	PlayResolvedVfx(SupportField, ResolvedDuration, true);
 
 	Super::ActivateEffectForActor(Bumper, InteractionActor);
+}
+
+FTransform UPBGateSupportFieldBumperEffect::ResolveSpawnTransform(
+	APBModularBumperBase* Bumper,
+	bool& bOutUsesSummonAnchor)
+{
+	if (IsValid(Bumper))
+	{
+		const APBBumperTriggerActorBase* ActiveTrigger = Bumper->GetActiveTriggerActor();
+		if (IsValid(ActiveTrigger))
+		{
+			bOutUsesSummonAnchor = false;
+			return PBGateFieldTuning::MakeTransformAtGateOrigin(ActiveTrigger->GetActorTransform());
+		}
+	}
+
+	return Super::ResolveSpawnTransform(Bumper, bOutUsesSummonAnchor);
 }

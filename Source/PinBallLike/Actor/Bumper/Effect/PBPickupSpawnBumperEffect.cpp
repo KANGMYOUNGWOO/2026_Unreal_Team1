@@ -50,6 +50,7 @@ void UPBPickupSpawnBumperEffect::ActivateEffectForActor(
 		EffectData.Power,
 		PickupLifetime,
 		PickupColor);
+	PlayResolvedVfx(PickupActor, PickupLifetime, true);
 
 	Super::ActivateEffectForActor(Bumper, InteractionActor);
 }

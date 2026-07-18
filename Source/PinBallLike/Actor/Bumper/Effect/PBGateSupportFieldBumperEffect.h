@@ -19,6 +19,10 @@ public:
 		AActor* InteractionActor) override;
 
 protected:
+	virtual FTransform ResolveSpawnTransform(
+		APBModularBumperBase* Bumper,
+		bool& bOutUsesSummonAnchor) override;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Support Field")
 	EPBBumperRewardType RewardType = EPBBumperRewardType::Resource;
 

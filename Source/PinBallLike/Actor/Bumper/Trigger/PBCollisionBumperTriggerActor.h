@@ -9,6 +9,7 @@
 class UPrimitiveComponent;
 class UPBBumperReactionComponent;
 
+/** 충돌 면과 유효 Trigger 면을 분리해 반발 및 카운트 접촉을 판정하는 범퍼 Trigger입니다. */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBCollisionBumperTriggerActor : public APBBumperTriggerActorBase
 {

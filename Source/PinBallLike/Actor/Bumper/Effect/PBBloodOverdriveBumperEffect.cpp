@@ -36,6 +36,8 @@ void UPBBloodOverdriveBumperEffect::ActivateEffectForActor(
 		Bumper,
 		EffectData.SharedEffectId,
 		TEXT("ResourceCostStatBuff"),
+		TEXT("Ball"),
+		TEXT("All"),
 		RequiredParameters,
 		Definition,
 		ResolveError)
@@ -101,6 +103,7 @@ void UPBBloodOverdriveBumperEffect::ActivateEffectForActor(
 
 	if (Result.bApplied)
 	{
+		PlayResolvedVfx(InteractionActor, Duration, true);
 		UE_LOG(LogTemp, Log,
 			TEXT("[Bumper] Blood overdrive resolved. Bumper=%s Target=%s Cost=%.2f Stat=%s Percent=%.1f Duration=%.1f"),
 			*GetNameSafe(Bumper),

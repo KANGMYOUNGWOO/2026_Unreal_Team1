@@ -92,6 +92,8 @@ void UPBApplyStatusEffectBumperEffect::ActivateEffectForActor(
 	}
 	else
 	{
+		const float VfxDuration = EffectData.Duration > 0.0f ? EffectData.Duration : 1.2f;
+		PlayResolvedVfx(InteractionActor, VfxDuration, true);
 		UE_LOG(LogTemp, Log,
 			TEXT("[Bumper] Status effect applied. Bumper=%s Target=%s StatusEffectId=%s Applied=%d Stack=%d"),
 			*GetNameSafe(Bumper),

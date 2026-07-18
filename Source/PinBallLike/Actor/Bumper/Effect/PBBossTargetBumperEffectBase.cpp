@@ -95,6 +95,9 @@ bool UPBBossTargetBumperEffectBase::SpawnBossProjectile(
 		Payload,
 		Power,
 		PayloadDuration,
-		ProjectileLifetime);
+		ProjectileLifetime,
+		Bumper->GetDeliveryVfx(),
+		Bumper->GetImpactVfx(),
+		Bumper->GetStatusVfx());
 	return IsValid(Projectile);
 }

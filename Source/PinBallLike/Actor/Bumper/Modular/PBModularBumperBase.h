@@ -103,7 +103,14 @@ public:
 		const FPBBumperEffectRow& InEffectData,
 		TSubclassOf<UPBBumperEffectBase> InEffectClass,
 		UNiagaraSystem* InActivationVfx,
+		UNiagaraSystem* InDeliveryVfx,
+		UNiagaraSystem* InImpactVfx,
+		UNiagaraSystem* InStatusVfx,
 		const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms);
+
+	UNiagaraSystem* GetDeliveryVfx() const { return DeliveryVfx; }
+	UNiagaraSystem* GetImpactVfx() const { return ImpactVfx; }
+	UNiagaraSystem* GetStatusVfx() const { return StatusVfx; }
 
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
 	FPBModularBumperTriggerCountChangedSignature OnBumperTriggerCountChanged;
@@ -184,6 +191,15 @@ protected:
 	/** Gameplay 번들에서 미리 로드한 일회성 효과 발동 연출이다. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
 	TObjectPtr<UNiagaraSystem> ActivationVfx;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
+	TObjectPtr<UNiagaraSystem> DeliveryVfx;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
+	TObjectPtr<UNiagaraSystem> ImpactVfx;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
+	TObjectPtr<UNiagaraSystem> StatusVfx;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<TObjectPtr<APBBumperTriggerActorBase>> SpawnedTriggerActors;

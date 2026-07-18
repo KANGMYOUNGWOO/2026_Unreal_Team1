@@ -91,13 +91,17 @@ void UPBTurretFireComponent::ConfigureAttack(
 	AActor* InTargetActor,
 	const EPBBumperProjectilePayload InPayload,
 	const int32 InPower,
-	const int32 InMaxShotCount)
+	const int32 InMaxShotCount,
+	UNiagaraSystem* InDeliveryVfx,
+	UNiagaraSystem* InImpactVfx)
 {
 	AttackTarget = InTargetActor;
 	AttackPayload = InPayload;
 	AttackPower = FMath::Max(InPower, 0);
 	MaxAttackShotCount = FMath::Max(InMaxShotCount, 0);
 	FiredAttackShotCount = 0;
+	DeliveryVfx = InDeliveryVfx;
+	ImpactVfx = InImpactVfx;
 }
 
 void UPBTurretFireComponent::ReleaseProjectile(AActor* Projectile)
@@ -186,7 +190,11 @@ void UPBTurretFireComponent::ActivateProjectile(AProjectileBase* Projectile, con
 			AttackTarget.Get(),
 			AttackPayload,
 			AttackPower,
-			false);
+			false,
+			0.0f,
+			DeliveryVfx,
+			ImpactVfx,
+			nullptr);
 		BumperProjectile->OnProjectileResolved.AddUObject(
 			this,
 			&UPBTurretFireComponent::HandleBumperProjectileResolved);

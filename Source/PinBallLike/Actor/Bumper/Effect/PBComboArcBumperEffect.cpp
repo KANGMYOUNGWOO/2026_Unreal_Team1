@@ -26,6 +26,8 @@ void UPBComboArcBumperEffect::ActivateEffectForActor(
 		Bumper,
 		EffectData.SharedEffectId,
 		TEXT("ComboExtraDamage"),
+		TEXT("Battle"),
+		TEXT("All"),
 		RequiredParameters,
 		Definition,
 		ResolveError)
@@ -78,6 +80,7 @@ void UPBComboArcBumperEffect::ActivateEffectForActor(
 			ProjectileLifetime);
 	if (bArmed)
 	{
+		PlayStatusVfx(InteractionActor, Duration);
 		UE_LOG(LogTemp, Log,
 			TEXT("[Bumper] Combo arc armed. Bumper=%s Target=%s Interval=%d Damage=%d Duration=%.1f"),
 			*GetNameSafe(Bumper),

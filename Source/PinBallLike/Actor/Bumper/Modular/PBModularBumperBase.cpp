@@ -263,6 +263,9 @@ void APBModularBumperBase::InitializeBumper(
 	const FPBBumperEffectRow& InEffectData,
 	TSubclassOf<UPBBumperEffectBase> InEffectClass,
 	UNiagaraSystem* InActivationVfx,
+	UNiagaraSystem* InDeliveryVfx,
+	UNiagaraSystem* InImpactVfx,
+	UNiagaraSystem* InStatusVfx,
 	const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms)
 {
 	BumperRowId = InBumperRowId;
@@ -273,6 +276,9 @@ void APBModularBumperBase::InitializeBumper(
 	EffectData = InEffectData;
 	EffectClass = InEffectClass;
 	ActivationVfx = InActivationVfx;
+	DeliveryVfx = InDeliveryVfx;
+	ImpactVfx = InImpactVfx;
+	StatusVfx = InStatusVfx;
 	AnchorTransforms = InAnchorTransforms;
 }
 

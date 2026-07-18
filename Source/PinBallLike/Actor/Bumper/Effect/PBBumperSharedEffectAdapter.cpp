@@ -31,6 +31,50 @@ namespace
 	}
 }
 
+bool PBBumperSharedEffectAdapter::ValidateContract(
+	const FPBGameplayEffectRow& EffectRow,
+	const FName ExpectedEffectType,
+	const FName ExpectedTargetType,
+	const FName ExpectedTargetFilter,
+	FString& OutError)
+{
+	OutError.Reset();
+	if (!GetSupportedEffectTypes().Contains(EffectRow.EffectType))
+	{
+		OutError = FString::Printf(
+			TEXT("EffectType '%s' is not supported by the bumper adapter."),
+			*EffectRow.EffectType.ToString());
+		return false;
+	}
+
+	if (!ExpectedEffectType.IsNone() && EffectRow.EffectType != ExpectedEffectType)
+	{
+		OutError = FString::Printf(
+			TEXT("EffectType mismatch. Expected='%s' Actual='%s'."),
+			*ExpectedEffectType.ToString(),
+			*EffectRow.EffectType.ToString());
+		return false;
+	}
+	if (!ExpectedTargetType.IsNone() && EffectRow.TargetType != ExpectedTargetType)
+	{
+		OutError = FString::Printf(
+			TEXT("TargetType mismatch. Expected='%s' Actual='%s'."),
+			*ExpectedTargetType.ToString(),
+			*EffectRow.TargetType.ToString());
+		return false;
+	}
+	if (!ExpectedTargetFilter.IsNone() && EffectRow.TargetFilter != ExpectedTargetFilter)
+	{
+		OutError = FString::Printf(
+			TEXT("TargetFilter mismatch. Expected='%s' Actual='%s'."),
+			*ExpectedTargetFilter.ToString(),
+			*EffectRow.TargetFilter.ToString());
+		return false;
+	}
+
+	return true;
+}
+
 bool FPBBumperSharedEffectDefinition::TryGetFloat(const FName Key, float& OutValue) const
 {
 	OutValue = 0.0f;
@@ -73,6 +117,8 @@ bool PBBumperSharedEffectAdapter::Resolve(
 	const UObject* WorldContext,
 	const FName SharedEffectId,
 	const FName ExpectedEffectType,
+	const FName ExpectedTargetType,
+	const FName ExpectedTargetFilter,
 	const TConstArrayView<FName> RequiredParameters,
 	FPBBumperSharedEffectDefinition& OutDefinition,
 	FString& OutError)
@@ -101,20 +147,13 @@ bool PBBumperSharedEffectAdapter::Resolve(
 		return false;
 	}
 
-	if (!GetSupportedEffectTypes().Contains(EffectRow.EffectType))
+	if (!ValidateContract(
+		EffectRow,
+		ExpectedEffectType,
+		ExpectedTargetType,
+		ExpectedTargetFilter,
+		OutError))
 	{
-		OutError = FString::Printf(
-			TEXT("EffectType '%s' is not supported by the bumper adapter."),
-			*EffectRow.EffectType.ToString());
-		return false;
-	}
-
-	if (!ExpectedEffectType.IsNone() && EffectRow.EffectType != ExpectedEffectType)
-	{
-		OutError = FString::Printf(
-			TEXT("EffectType mismatch. Expected='%s' Actual='%s'."),
-			*ExpectedEffectType.ToString(),
-			*EffectRow.EffectType.ToString());
 		return false;
 	}
 

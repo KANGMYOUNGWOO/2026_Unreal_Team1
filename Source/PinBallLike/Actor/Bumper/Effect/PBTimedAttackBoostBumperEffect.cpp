@@ -19,6 +19,10 @@ void UPBTimedAttackBoostBumperEffect::ActivateEffectForActor(
 		EffectData.Power,
 		EffectSourceId,
 		ResolvedDuration);
+	if (Result.bApplied)
+	{
+		PlayResolvedVfx(InteractionActor, ResolvedDuration, true);
+	}
 
 	UE_LOG(LogTemp, Log,
 		TEXT("[Bumper] Timed attack boost resolved. Bumper=%s Target=%s Applied=%s Percent=%.1f Bonus=%d Duration=%.1f"),

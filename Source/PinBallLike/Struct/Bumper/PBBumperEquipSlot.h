@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "PinBallLike/Struct/Bumper/PBBumperTriggerSpawnInfo.h"
+#include "PinBallLike/Struct/Bumper/PBBumperTypes.h"
 #include "PBBumperEquipSlot.generated.h"
 
 /** UI 목록을 나누는 범퍼 카테고리입니다. 열거형의 기존 숫자값은 Blueprint 호환을 위해 유지합니다. */
@@ -50,4 +51,7 @@ namespace PBBumperEquipSlotUtils
 
 	/** 물리 장착 위치를 전투 맵 Anchor의 PositionId로 변환합니다. */
 	PINBALLLIKE_API bool TryGetPositionId(EPBBumperEquipSlot EquipSlot, EPBBumperPositionId& OutPositionId);
+
+	/** 범퍼 테이블의 타입이 지정 물리 슬롯에 장착 가능한지 확인합니다. */
+	PINBALLLIKE_API bool DoesBumperTypeMatchEquipSlot(EPBBumperType BumperType, EPBBumperEquipSlot EquipSlot);
 }

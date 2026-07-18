@@ -49,6 +49,10 @@ void UPBPercentShieldBumperEffect::ActivateEffectForActor(
 	ResourceComponent->ApplyResourceDelta(PBResourceNames::Shield, RequestedShield);
 	const float AppliedShield =
 		ResourceComponent->GetResourceCurrent(PBResourceNames::Shield) - PreviousShield;
+	if (AppliedShield > KINDA_SMALL_NUMBER)
+	{
+		PlayResolvedVfx(InteractionActor);
+	}
 
 	UE_LOG(LogTemp, Log,
 		TEXT("[Bumper] Percent shield resolved. Bumper=%s Target=%s Percent=%.1f Requested=%.1f Applied=%.1f Cap=%.1f"),

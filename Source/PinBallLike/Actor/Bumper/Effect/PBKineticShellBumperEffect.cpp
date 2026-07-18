@@ -29,6 +29,8 @@ void UPBKineticShellBumperEffect::ActivateEffectForActor(
 		Bumper,
 		EffectData.SharedEffectId,
 		TEXT("VelocityScaledDamage"),
+		TEXT("Battle"),
+		TEXT("All"),
 		RequiredParameters,
 		Definition,
 		ResolveError)

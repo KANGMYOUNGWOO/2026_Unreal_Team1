@@ -43,6 +43,10 @@ void UPBTurretSummonBumperEffect::ActivateEffectForActor(
 	TurretActor->SetAttackPayload(
 		EPBBumperProjectilePayload::BossDamage,
 		ProjectileDamage,
-		ShotCount);
+		ShotCount,
+		TargetBumper->GetDeliveryVfx(),
+		TargetBumper->GetImpactVfx());
+	PlayImpactVfx(TurretActor);
+	PlayStatusVfx(TurretActor, 0.0f);
 	Super::ActivateEffectForActor(TargetBumper, InteractionActor);
 }

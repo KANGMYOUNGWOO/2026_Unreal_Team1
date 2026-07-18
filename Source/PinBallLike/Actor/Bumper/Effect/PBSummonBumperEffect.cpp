@@ -57,13 +57,6 @@ void UPBSummonBumperEffect::ShutdownEffect()
 	Super::ShutdownEffect();
 }
 
-void UPBSummonBumperEffect::BeginDestroy()
-{
-	ShutdownEffect();
-
-	Super::BeginDestroy();
-}
-
 void UPBSummonBumperEffect::HandleSummonActionFinished(APBBumperSummonActor* SummonActor)
 {
 	if (SummonActor != SpawnedSummonActor)
@@ -71,6 +64,7 @@ void UPBSummonBumperEffect::HandleSummonActionFinished(APBBumperSummonActor* Sum
 		return;
 	}
 
+	StopStatusVfx(SummonActor);
 	FinishEffect();
 }
 
@@ -243,6 +237,7 @@ void UPBSummonBumperEffect::DeactivateSummonActor() const
 {
 	if (IsValid(SpawnedSummonActor))
 	{
+		StopStatusVfx(SpawnedSummonActor);
 		SpawnedSummonActor->DeactivateSummon();
 	}
 }

@@ -5,7 +5,10 @@
 
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperVulnerabilityComponent.h"
+#include "PinBallLike/Actor/Bumper/Feedback/PBBumperVfxRuntimeComponent.h"
 #include "PinBallLike/Interface/BossInterface.h"
 
 APBBumperProjectile::APBBumperProjectile()
@@ -41,7 +44,10 @@ APBBumperProjectile* APBBumperProjectile::SpawnForTarget(
 	const EPBBumperProjectilePayload InPayload,
 	const int32 InPower,
 	const float InPayloadDuration,
-	const float InLifetime)
+	const float InLifetime,
+	UNiagaraSystem* InDeliveryVfx,
+	UNiagaraSystem* InImpactVfx,
+	UNiagaraSystem* InStatusVfx)
 {
 	UWorld* World = IsValid(WorldContext) ? WorldContext->GetWorld() : nullptr;
 	if (!IsValid(World)
@@ -73,7 +79,10 @@ APBBumperProjectile* APBBumperProjectile::SpawnForTarget(
 		InPayload,
 		InPower,
 		true,
-		InPayloadDuration);
+		InPayloadDuration,
+		InDeliveryVfx,
+		InImpactVfx,
+		InStatusVfx);
 	Projectile->SetLifeSpan(FMath::Max(InLifetime, 0.1f));
 	Projectile->ActivateProjectile();
 	return Projectile;
@@ -84,14 +93,21 @@ void APBBumperProjectile::ConfigureForTarget(
 	const EPBBumperProjectilePayload InPayload,
 	const int32 InPower,
 	const bool bInDestroyOnResolved,
-	const float InPayloadDuration)
+	const float InPayloadDuration,
+	UNiagaraSystem* InDeliveryVfx,
+	UNiagaraSystem* InImpactVfx,
+	UNiagaraSystem* InStatusVfx)
 {
 	TargetActor = InTargetActor;
 	Payload = InPayload;
 	PayloadPower = FMath::Max(InPower, 0);
 	PayloadDuration = FMath::Max(InPayloadDuration, 0.0f);
+	DeliveryVfx = InDeliveryVfx;
+	ImpactVfx = InImpactVfx;
+	StatusVfx = InStatusVfx;
 	bDestroyOnResolved = bInDestroyOnResolved;
 	bHasResolved = false;
+	StartDeliveryVfx();
 
 	if (!IsValid(ProjectileMovementComponent))
 	{
@@ -117,11 +133,15 @@ void APBBumperProjectile::ConfigureForTarget(
 
 void APBBumperProjectile::ResetForPool()
 {
+	StopDeliveryVfx();
 	OnProjectileResolved.Clear();
 	TargetActor.Reset();
 	Payload = EPBBumperProjectilePayload::None;
 	PayloadPower = 0;
 	PayloadDuration = 0.0f;
+	DeliveryVfx = nullptr;
+	ImpactVfx = nullptr;
+	StatusVfx = nullptr;
 	bDestroyOnResolved = false;
 	bHasResolved = false;
 
@@ -130,6 +150,12 @@ void APBBumperProjectile::ResetForPool()
 		ProjectileMovementComponent->bIsHomingProjectile = false;
 		ProjectileMovementComponent->HomingTargetComponent = nullptr;
 	}
+}
+
+void APBBumperProjectile::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	StopDeliveryVfx();
+	Super::EndPlay(EndPlayReason);
 }
 
 void APBBumperProjectile::HandleProjectileBeginOverlap(
@@ -155,6 +181,11 @@ void APBBumperProjectile::HandleProjectileBeginOverlap(
 
 	bHasResolved = true;
 	const bool bApplied = ApplyPayload(OtherActor);
+	StopDeliveryVfx();
+	if (bApplied)
+	{
+		PlayResolvedVfx(OtherActor);
+	}
 	OnProjectileResolved.Broadcast(this, bApplied);
 
 	if (bDestroyOnResolved && IsValid(this))
@@ -162,6 +193,55 @@ void APBBumperProjectile::HandleProjectileBeginOverlap(
 		SetActorEnableCollision(false);
 		DeactivateProjectile();
 		Destroy();
+	}
+}
+
+void APBBumperProjectile::StartDeliveryVfx()
+{
+	StopDeliveryVfx();
+	if (!IsValid(DeliveryVfx) || !IsValid(GetRootComponent()))
+	{
+		return;
+	}
+
+	DeliveryVfxComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		DeliveryVfx,
+		GetRootComponent(),
+		NAME_None,
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		EAttachLocation::KeepRelativeOffset,
+		false,
+		true,
+		ENCPoolMethod::None,
+		true);
+}
+
+void APBBumperProjectile::StopDeliveryVfx()
+{
+	if (IsValid(DeliveryVfxComponent))
+	{
+		DeliveryVfxComponent->DeactivateImmediate();
+		DeliveryVfxComponent->DestroyComponent();
+	}
+	DeliveryVfxComponent = nullptr;
+}
+
+void APBBumperProjectile::PlayResolvedVfx(AActor* Target) const
+{
+	UPBBumperVfxRuntimeComponent::PlayImpact(this, ImpactVfx, Target);
+	if (PayloadDuration <= 0.0f || !IsValid(StatusVfx) || !IsValid(Target))
+	{
+		return;
+	}
+
+	if (UPBBumperVfxRuntimeComponent* RuntimeVfx =
+		UPBBumperVfxRuntimeComponent::FindOrAddToActor(Target))
+	{
+		RuntimeVfx->PlayAttached(
+			FName(*FString::Printf(TEXT("BumperProjectileStatus_%d"), static_cast<int32>(Payload))),
+			StatusVfx,
+			PayloadDuration);
 	}
 }
 

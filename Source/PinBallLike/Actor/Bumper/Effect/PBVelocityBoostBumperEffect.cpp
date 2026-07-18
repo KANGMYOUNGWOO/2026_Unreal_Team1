@@ -97,6 +97,8 @@ void UPBVelocityBoostBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
+	PlayResolvedVfx(InteractionActor);
+
 	const TWeakObjectPtr<AActor> WeakInteractionActor = InteractionActor;
 	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda(
 		[WeakInteractionActor, TargetSpeed, FallbackDirection]()

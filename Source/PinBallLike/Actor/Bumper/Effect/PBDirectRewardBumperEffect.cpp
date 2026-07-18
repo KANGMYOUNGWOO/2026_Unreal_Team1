@@ -81,15 +81,26 @@ void UPBDirectRewardBumperEffect::ActivateEffectForActor(
 	AActor* InteractionActor)
 {
 	FPBBumperRewardApplyResult Result;
-	if (RewardType != EPBBumperRewardType::Resource
-		|| TargetPolicy == EPBDirectRewardTargetPolicy::InteractionActor)
+	TArray<TWeakObjectPtr<AActor>> AppliedTargets;
+	const auto ApplyReward = [&](AActor* TargetActor, const float Power)
 	{
-		Result = PBBumperRewardUtils::ApplyReward(
-			InteractionActor,
+		const FPBBumperRewardApplyResult ApplyResult = PBBumperRewardUtils::ApplyReward(
+			TargetActor,
 			RewardType,
 			ResourceName,
 			StatusEffectId,
-			EffectData.Power);
+			Power);
+		if (ApplyResult.bApplied && IsValid(TargetActor))
+		{
+			AppliedTargets.AddUnique(TargetActor);
+		}
+		return ApplyResult;
+	};
+
+	if (RewardType != EPBBumperRewardType::Resource
+		|| TargetPolicy == EPBDirectRewardTargetPolicy::InteractionActor)
+	{
+		Result = ApplyReward(InteractionActor, EffectData.Power);
 	}
 	else
 	{
@@ -101,23 +112,13 @@ void UPBDirectRewardBumperEffect::ActivateEffectForActor(
 				ResourceName,
 				nullptr);
 			AActor* RewardTarget = Candidates.IsEmpty() ? InteractionActor : Candidates[0];
-			Result = PBBumperRewardUtils::ApplyReward(
-				RewardTarget,
-				RewardType,
-				ResourceName,
-				StatusEffectId,
-				EffectData.Power);
+			Result = ApplyReward(RewardTarget, EffectData.Power);
 		}
 		else
 		{
 			float RemainingPower = EffectData.Power;
 			const FPBBumperRewardApplyResult InteractionResult =
-				PBBumperRewardUtils::ApplyReward(
-					InteractionActor,
-					RewardType,
-					ResourceName,
-					StatusEffectId,
-					RemainingPower);
+				ApplyReward(InteractionActor, RemainingPower);
 			Result.AppliedValue += InteractionResult.AppliedValue;
 			Result.AppliedCount += InteractionResult.AppliedCount;
 			RemainingPower = FMath::Max(RemainingPower - InteractionResult.AppliedValue, 0.0f);
@@ -133,12 +134,7 @@ void UPBDirectRewardBumperEffect::ActivateEffectForActor(
 				}
 
 				const FPBBumperRewardApplyResult CandidateResult =
-					PBBumperRewardUtils::ApplyReward(
-						Candidate,
-						RewardType,
-						ResourceName,
-						StatusEffectId,
-						RemainingPower);
+					ApplyReward(Candidate, RemainingPower);
 				Result.AppliedValue += CandidateResult.AppliedValue;
 				Result.AppliedCount += CandidateResult.AppliedCount;
 				RemainingPower = FMath::Max(
@@ -146,6 +142,14 @@ void UPBDirectRewardBumperEffect::ActivateEffectForActor(
 					0.0f);
 			}
 			Result.bApplied = Result.AppliedValue > KINDA_SMALL_NUMBER;
+		}
+	}
+
+	for (const TWeakObjectPtr<AActor>& AppliedTarget : AppliedTargets)
+	{
+		if (AppliedTarget.IsValid())
+		{
+			PlayResolvedVfx(AppliedTarget.Get());
 		}
 	}
 

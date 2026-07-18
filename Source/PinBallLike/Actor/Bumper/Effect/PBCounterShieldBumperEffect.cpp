@@ -84,6 +84,7 @@ void UPBCounterShieldBumperEffect::ActivateEffectForActor(
 			ProjectileLifetime);
 	if (bArmed)
 	{
+		PlayResolvedVfx(InteractionActor, CounterDuration, true);
 		UE_LOG(LogTemp, Log,
 			TEXT("[Bumper] Counter shield resolved. Bumper=%s Target=%s ShieldApplied=%.2f Armed=true"),
 			*GetNameSafe(Bumper),

@@ -140,7 +140,10 @@ bool UPBBumperCounterShieldComponent::FireCounterProjectile() const
 		EPBBumperProjectilePayload::BossDamage,
 		ArmedDamage,
 		0.0f,
-		ArmedProjectileLifetime));
+		ArmedProjectileLifetime,
+		Bumper->GetDeliveryVfx(),
+		Bumper->GetImpactVfx(),
+		nullptr));
 }
 
 void UPBBumperCounterShieldComponent::HandleResourceStructureChanged(
