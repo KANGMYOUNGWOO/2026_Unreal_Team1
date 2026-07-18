@@ -65,18 +65,22 @@ public:
 	FPBBumperEquipSelectionChangedNative OnSelectionChanged;
 
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+	friend class FPBBumperEquipEmptyAssetIdsTest;
+#endif
+
 	UFUNCTION()
 	void HandleStartupGameDataLoaded();
 
-	UFUNCTION()
-	void HandleBumperUIAssetsLoaded();
+	void HandleBumperUIAssetsLoaded(uint32 RequestGeneration);
 
-	void CacheRequiredSubsystems(UGameInstance* GameInstance);
+	bool CacheRequiredSubsystems(UGameInstance* GameInstance);
 	void BindDataLoadEvents();
 	void UnbindDataLoadEvents();
 	void EnsureInfoPanelViewModel();
 	bool LoadBumperRowsOnce();
 	void RequestBumperUIAssetsAsync();
+	void CompleteBumperCatalogBuild();
 	void BuildBumperListItemObjects();
 	void BindListItemSelectionEvents();
 	void UpdateInfoPanelByRowName(FName RowName);
@@ -123,4 +127,5 @@ private:
 	bool bBumperRowsLoaded = false;
 	bool bBumperUIAssetLoadPending = false;
 	bool bBumperListItemObjectsBuilt = false;
+	uint32 BumperUIAssetLoadGeneration = 0;
 };

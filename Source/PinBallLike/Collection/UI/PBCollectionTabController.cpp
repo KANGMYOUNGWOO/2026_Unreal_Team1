@@ -11,19 +11,21 @@ void UPBCollectionTabController::Initialize(UGameInstance* InGameInstance)
 		return;
 	}
 
-	bInitialized = true;
-	CollectionSubsystem = IsValid(InGameInstance)
-		? InGameInstance->GetSubsystem<UPBCollectionSubsystem>()
-		: nullptr;
-	if (IsValid(CollectionSubsystem))
+	CollectionSubsystem = InGameInstance->GetSubsystem<UPBCollectionSubsystem>();
+	if (!IsValid(CollectionSubsystem))
 	{
-		CollectionSubsystem->OnCollectionDataReady.AddUniqueDynamic(
-			this,
-			&ThisClass::HandleCollectionDataReady);
-		CollectionSubsystem->OnCollectionEntryChanged.AddUniqueDynamic(
-			this,
-			&ThisClass::HandleCollectionEntryChanged);
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Collection] Tab controller initialization deferred. Missing CollectionSubsystem."));
+		return;
 	}
+
+	CollectionSubsystem->OnCollectionDataReady.AddUniqueDynamic(
+		this,
+		&ThisClass::HandleCollectionDataReady);
+	CollectionSubsystem->OnCollectionEntryChanged.AddUniqueDynamic(
+		this,
+		&ThisClass::HandleCollectionEntryChanged);
+	bInitialized = true;
 }
 
 void UPBCollectionTabController::Shutdown()
@@ -44,6 +46,8 @@ void UPBCollectionTabController::Shutdown()
 	}
 	bIsActive = false;
 	bInitialized = false;
+	CatalogItems.Reset();
+	CollectionSubsystem = nullptr;
 }
 
 void UPBCollectionTabController::Activate()

@@ -31,10 +31,14 @@ void UPBBumperEquipController::Initialize(UGameInstance* InGameInstance)
 		return;
 	}
 
-	bInitialized = true;
-	CacheRequiredSubsystems(InGameInstance);
+	if (!CacheRequiredSubsystems(InGameInstance))
+	{
+		return;
+	}
+
 	EnsureInfoPanelViewModel();
 	BindDataLoadEvents();
+	bInitialized = true;
 
 	if (LoadBumperRowsOnce())
 	{
@@ -50,6 +54,8 @@ void UPBBumperEquipController::Shutdown()
 	}
 
 	UnbindDataLoadEvents();
+	++BumperUIAssetLoadGeneration;
+	bBumperUIAssetLoadPending = false;
 	bInitialized = false;
 }
 
@@ -315,32 +321,39 @@ void UPBBumperEquipController::HandleStartupGameDataLoaded()
 	}
 }
 
-void UPBBumperEquipController::HandleBumperUIAssetsLoaded()
+void UPBBumperEquipController::HandleBumperUIAssetsLoaded(const uint32 RequestGeneration)
 {
-	if (bBumperListItemObjectsBuilt || !bBumperUIAssetLoadPending)
+	if (!bInitialized
+		|| bBumperListItemObjectsBuilt
+		|| !bBumperUIAssetLoadPending
+		|| RequestGeneration != BumperUIAssetLoadGeneration)
 	{
 		return;
 	}
 
 	bBumperUIAssetLoadPending = false;
-	BuildBumperListItemObjects();
-	SelectBumperEquipSlot(SelectedBumperEquipSlot);
-	if (bInitialized)
-	{
-		OnCatalogReady.Broadcast();
-	}
+	CompleteBumperCatalogBuild();
 }
 
-void UPBBumperEquipController::CacheRequiredSubsystems(UGameInstance* GameInstance)
+bool UPBBumperEquipController::CacheRequiredSubsystems(UGameInstance* GameInstance)
 {
 	if (!IsValid(GameInstance))
 	{
-		return;
+		return false;
 	}
 
 	TableDataSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>();
 	PlayerDataSubsystem = GameInstance->GetSubsystem<UPBPlayerDataSubsystem>();
 	GameDataLoadSubsystem = GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>();
+	const bool bHasRequiredSubsystems = IsValid(TableDataSubsystem) && IsValid(PlayerDataSubsystem);
+	if (!bHasRequiredSubsystems)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Equip controller initialization deferred. TableData=%s PlayerData=%s"),
+			*GetNameSafe(TableDataSubsystem.Get()),
+			*GetNameSafe(PlayerDataSubsystem.Get()));
+	}
+	return bHasRequiredSubsystems;
 }
 
 void UPBBumperEquipController::BindDataLoadEvents()
@@ -397,9 +410,7 @@ void UPBBumperEquipController::RequestBumperUIAssetsAsync()
 	}
 	if (!IsValid(GameDataLoadSubsystem) || BumperRowNames.IsEmpty())
 	{
-		BuildBumperListItemObjects();
-		SelectBumperEquipSlot(SelectedBumperEquipSlot);
-		OnCatalogReady.Broadcast();
+		CompleteBumperCatalogBuild();
 		return;
 	}
 
@@ -414,14 +425,29 @@ void UPBBumperEquipController::RequestBumperUIAssetsAsync()
 	}
 	if (BumperAssetIds.IsEmpty())
 	{
+		CompleteBumperCatalogBuild();
 		return;
 	}
 
+	const uint32 RequestGeneration = ++BumperUIAssetLoadGeneration;
 	bBumperUIAssetLoadPending = true;
 	GameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
 		BumperAssetIds,
 		{PBAssetBundleNames::UI},
-		FStreamableDelegate::CreateUObject(this, &ThisClass::HandleBumperUIAssetsLoaded));
+		FStreamableDelegate::CreateUObject(
+			this,
+			&ThisClass::HandleBumperUIAssetsLoaded,
+			RequestGeneration));
+}
+
+void UPBBumperEquipController::CompleteBumperCatalogBuild()
+{
+	BuildBumperListItemObjects();
+	SelectBumperEquipSlot(SelectedBumperEquipSlot);
+	if (bInitialized)
+	{
+		OnCatalogReady.Broadcast();
+	}
 }
 
 void UPBBumperEquipController::BuildBumperListItemObjects()

@@ -56,6 +56,7 @@ void UPBCollectionTabWidgetBase::ActivateTab()
 {
 	if (TabController)
 	{
+		TabController->Initialize(GetGameInstance());
 		TabController->Activate();
 	}
 	RefreshTab();
@@ -86,6 +87,26 @@ bool UPBCollectionTabWidgetBase::IsCatalogDataReady(const FText& LoadingText) co
 		return false;
 	}
 	return true;
+}
+
+bool UPBCollectionTabWidgetBase::PrepareCatalogRefresh(
+	UListView* ListView,
+	const FText& LoadingText) const
+{
+	if (!ListView)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Collection] Catalog refresh skipped. Missing ListView binding. Widget=%s"),
+			*GetNameSafe(this));
+		return false;
+	}
+	if (IsCatalogDataReady(LoadingText))
+	{
+		return true;
+	}
+
+	ListView->ClearListItems();
+	return false;
 }
 
 bool UPBCollectionTabWidgetBase::MatchesSearch(
