@@ -21,6 +21,58 @@ class UPBTableDataSubsystem;
 class USceneComponent;
 class UNiagaraSystem;
 
+enum class EPBBumperAssetPreparationPhase : uint8
+{
+	Idle,
+	LoadingAssets,
+	ReadyToSpawn
+};
+
+struct FPBBumperAssetPreparationState
+{
+	bool TryBeginLoading()
+	{
+		if (Phase != EPBBumperAssetPreparationPhase::Idle)
+		{
+			return false;
+		}
+
+		Phase = EPBBumperAssetPreparationPhase::LoadingAssets;
+		return true;
+	}
+
+	void MarkAssetsLoaded()
+	{
+		if (Phase == EPBBumperAssetPreparationPhase::LoadingAssets)
+		{
+			Phase = EPBBumperAssetPreparationPhase::ReadyToSpawn;
+		}
+	}
+
+	void Reset()
+	{
+		Phase = EPBBumperAssetPreparationPhase::Idle;
+	}
+
+	bool IsLoading() const
+	{
+		return Phase == EPBBumperAssetPreparationPhase::LoadingAssets;
+	}
+
+	bool IsReadyToSpawn() const
+	{
+		return Phase == EPBBumperAssetPreparationPhase::ReadyToSpawn;
+	}
+
+	bool HasPendingSnapshot() const
+	{
+		return Phase != EPBBumperAssetPreparationPhase::Idle;
+	}
+
+private:
+	EPBBumperAssetPreparationPhase Phase = EPBBumperAssetPreparationPhase::Idle;
+};
+
 struct FPBPreparedBumperSpawnData
 {
 	FName BumperRowId = NAME_None;
@@ -112,7 +164,7 @@ private:
 	TArray<TObjectPtr<APBModularBumperBase>> SpawnedBumpers;
 
 	bool bBattleTelemetrySummaryLogged = false;
-	bool bBumperAssetLoadInProgress = false;
+	FPBBumperAssetPreparationState AssetPreparationState;
 	FGuid ActiveBumperAssetLoadRequestId;
 
 	UPROPERTY(Transient)

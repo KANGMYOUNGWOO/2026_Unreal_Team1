@@ -48,6 +48,9 @@ void APBBumperSpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	LogBattleTelemetrySummary();
 	ClearSpawnedBumpers();
+	PendingEquippedSlots.Reset();
+	AssetPreparationState.Reset();
+	ActiveBumperAssetLoadRequestId = FGuid();
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -78,12 +81,13 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	{
 		return FGuid();
 	}
-	if (bBumperAssetLoadInProgress)
+	if (!AssetPreparationState.TryBeginLoading())
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("[Bumper] Rejected overlapping asset preparation. Spawner=%s ActiveRequestId=%s"),
+			TEXT("[Bumper] Rejected overlapping asset preparation. Spawner=%s ActiveRequestId=%s ReadyToSpawn=%s"),
 			*GetNameSafe(this),
-			*ActiveBumperAssetLoadRequestId.ToString());
+			*ActiveBumperAssetLoadRequestId.ToString(),
+			AssetPreparationState.IsReadyToSpawn() ? TEXT("true") : TEXT("false"));
 		return FGuid();
 	}
 
@@ -95,6 +99,7 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	if (BumperAssetIds.IsEmpty())
 	{
 		PreparedBumperSpawnDataList.Reset();
+		AssetPreparationState.MarkAssetsLoaded();
 		OnLoaded.ExecuteIfBound();
 		return FGuid::NewGuid();
 	}
@@ -102,7 +107,6 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	TArray<FName> BundleNames;
 	BundleNames.Add(PBAssetBundleNames::Gameplay);
 
-	bBumperAssetLoadInProgress = true;
 	const FGuid RequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
 		BumperAssetIds,
 		BundleNames,
@@ -110,11 +114,12 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 			this,
 			&ThisClass::HandleBumperAssetsLoaded,
 			OnLoaded));
-	if (bBumperAssetLoadInProgress)
+	if (AssetPreparationState.IsLoading())
 	{
 		if (!RequestId.IsValid())
 		{
-			bBumperAssetLoadInProgress = false;
+			PendingEquippedSlots.Reset();
+			AssetPreparationState.Reset();
 		}
 		else
 		{
@@ -126,6 +131,15 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 
 void APBBumperSpawner::SpawnLoadedBumpers()
 {
+	if (!AssetPreparationState.IsReadyToSpawn())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Spawn request rejected before asset preparation completed. Spawner=%s Loading=%s"),
+			*GetNameSafe(this),
+			AssetPreparationState.IsLoading() ? TEXT("true") : TEXT("false"));
+		return;
+	}
+
 	if (!CacheRequiredSubsystems())
 	{
 		CompleteBumperPreparation(false);
@@ -182,7 +196,7 @@ void APBBumperSpawner::GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpe
 
 void APBBumperSpawner::HandleBumperAssetsLoaded(FStreamableDelegate OnLoaded)
 {
-	bBumperAssetLoadInProgress = false;
+	AssetPreparationState.MarkAssetsLoaded();
 	ActiveBumperAssetLoadRequestId = FGuid();
 	OnLoaded.ExecuteIfBound();
 }
@@ -443,6 +457,9 @@ APBModularBumperBase* APBBumperSpawner::PlaceBumperActor(const FPBPreparedBumper
 void APBBumperSpawner::CompleteBumperPreparation(const bool bSuccess)
 {
 	PreparedBumperSpawnDataList.Reset();
+	PendingEquippedSlots.Reset();
+	AssetPreparationState.Reset();
+	ActiveBumperAssetLoadRequestId = FGuid();
 
 	TArray<APBModularBumperBase*> SpawnedBumperActors;
 	GetSpawnedBumpers(SpawnedBumperActors);
