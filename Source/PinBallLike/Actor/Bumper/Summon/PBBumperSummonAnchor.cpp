@@ -12,9 +12,12 @@ APBBumperSummonAnchor::APBBumperSummonAnchor()
 
 #if WITH_EDITORONLY_DATA
 	DirectionArrow = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("DirectionArrow"));
-	DirectionArrow->SetupAttachment(SceneRoot);
-	DirectionArrow->SetArrowColor(FColor(64, 220, 255));
-	DirectionArrow->SetHiddenInGame(true);
+	if (DirectionArrow)
+	{
+		DirectionArrow->SetupAttachment(SceneRoot);
+		DirectionArrow->SetArrowColor(FColor(64, 220, 255));
+		DirectionArrow->SetHiddenInGame(true);
+	}
 #endif
 }
 
