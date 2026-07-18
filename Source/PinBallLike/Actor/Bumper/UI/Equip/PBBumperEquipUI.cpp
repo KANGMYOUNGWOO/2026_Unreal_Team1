@@ -1,14 +1,10 @@
 #include "PBBumperEquipUI.h"
 
 #include "PBBumperDragDropOperation.h"
+#include "PBBumperEquipController.h"
 #include "PBBumperEquipUIBuilder.h"
 #include "PinBallLike/Actor/Bumper/UI/Equip/PBBumperInfoPanelViewModel.h"
 #include "PinBallLike/Actor/Bumper/UI/Equip/PBBumperListItemObject.h"
-#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
-#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
-#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
-#include "PinBallLike/Table/PBAssetBundleNames.h"
-#include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Utils/PBTextFormatUtils.h"
 #include "Components/Border.h"
@@ -37,13 +33,11 @@ void UPBBumperEquipUI::NativeOnInitialized()
 
 	BindBoardSlotButtons();
 	BindRedesignedControls();
-	CacheRequiredSubsystems();
-	EnsureInfoPanelViewModel();
-	BindDataLoadEvents();
-
-	if (LoadBumperRowsOnce())
+	EnsureEquipController();
+	BindControllerEvents();
+	if (IsValid(EquipController))
 	{
-		RequestBumperUIAssetsAsync();
+		EquipController->Initialize(GetGameInstance());
 	}
 }
 
@@ -51,30 +45,32 @@ void UPBBumperEquipUI::NativeConstruct()
 {
 	Super::NativeConstruct();
 	bWidgetConstructed = true;
+	bCatalogReadyBroadcastForConstruct = false;
+	EnsureEquipController();
+	BindControllerEvents();
+	if (IsValid(EquipController))
+	{
+		EquipController->Initialize(GetGameInstance());
+	}
 	RefreshRedesignedPresentation();
 
-	// Cached assets can finish during NativeOnInitialized, before Blueprint Construct binds this event.
-	if (bBumperListItemObjectsBuilt)
+	// 재사용된 위젯은 컨트롤러가 이미 만든 목록을 즉시 Blueprint 목록에 다시 전달합니다.
+	if (IsValid(EquipController) && EquipController->IsCatalogReady())
 	{
-		OnBumperListItemsReady.Broadcast();
-
-		// Recreate the Blueprint list entries first, then restore the visible selection and details.
-		if (!SelectedBumperRowName.IsNone())
-		{
-			SelectBumperRow(SelectedBumperRowName);
-		}
-		else
-		{
-			SelectBumperEquipSlot(SelectedBumperEquipSlot);
-		}
+		HandleControllerCatalogReady();
 	}
 }
 
 void UPBBumperEquipUI::NativeDestruct()
 {
 	bWidgetConstructed = false;
+	bCatalogReadyBroadcastForConstruct = false;
 	HoveredDropSlot.Reset();
-	UnbindDataLoadEvents();
+	UnbindControllerEvents();
+	if (IsValid(EquipController))
+	{
+		EquipController->Shutdown();
+	}
 
 	Super::NativeDestruct();
 }
@@ -139,396 +135,167 @@ void UPBBumperEquipUI::GetBumperListItemObjects(
 	TArray<UPBBumperListItemObject*>& OutReboundItems,
 	TArray<UPBBumperListItemObject*>& OutSpecialItems) const
 {
+	if (IsValid(EquipController))
+	{
+		EquipController->GetBumperListItemObjects(
+			OutTopItems,
+			OutSideItems,
+			OutReboundItems,
+			OutSpecialItems);
+		return;
+	}
+
 	OutTopItems.Reset();
 	OutSideItems.Reset();
 	OutReboundItems.Reset();
 	OutSpecialItems.Reset();
-
-	PBBumperEquipUIBuilder::AppendListItemObjects(TopItems, OutTopItems);
-	PBBumperEquipUIBuilder::AppendListItemObjects(SideItems, OutSideItems);
-	PBBumperEquipUIBuilder::AppendListItemObjects(ReboundItems, OutReboundItems);
-	PBBumperEquipUIBuilder::AppendListItemObjects(SpecialItems, OutSpecialItems);
 }
 
 bool UPBBumperEquipUI::SelectBumperSlot(const EPBBumperSlotType SlotType)
 {
-	switch (SlotType)
-	{
-	case EPBBumperSlotType::Top:
-	case EPBBumperSlotType::Side:
-	case EPBBumperSlotType::Rebound:
-	case EPBBumperSlotType::Special:
-		break;
-	default:
-		return false;
-	}
-
-	return SelectBumperEquipSlot(PBBumperEquipSlotUtils::GetDefaultEquipSlot(SlotType));
+	return IsValid(EquipController) && EquipController->SelectBumperSlot(SlotType);
 }
 
 bool UPBBumperEquipUI::SelectBumperEquipSlot(const EPBBumperEquipSlot EquipSlot)
 {
-	EPBBumperSlotType SlotType;
-	if (!PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, SlotType))
-	{
-		return false;
-	}
-
-	SelectedBumperEquipSlot = EquipSlot;
-	SelectedBumperRowName = NAME_None;
-
-	FName EquippedRowName = NAME_None;
-	if (GetEquippedBumperForEquipSlot(EquipSlot, EquippedRowName))
-	{
-		SelectedBumperRowName = EquippedRowName;
-		UpdateInfoPanelByRowName(EquippedRowName);
-	}
-	else if (IsValid(InfoPanelViewModel))
-	{
-		InfoPanelViewModel->ClearBumperInfoPanelData();
-	}
-
-	BroadcastSelectedSlotChanged();
-	RefreshBoardSlotSelection();
-	RefreshRedesignedPresentation();
-	return true;
+	return IsValid(EquipController) && EquipController->SelectBumperEquipSlot(EquipSlot);
 }
 
 void UPBBumperEquipUI::SelectBumperRow(const FName RowName)
 {
-	if (RowName.IsNone())
+	if (IsValid(EquipController))
 	{
-		return;
+		EquipController->SelectBumperRow(RowName);
 	}
-
-	SelectedBumperRowName = RowName;
-
-	EPBBumperSlotType SlotType;
-	if (PBBumperEquipUIBuilder::TryGetBumperSlotTypeByRowName(BumperRowNames, BumperRows, RowName, SlotType))
-	{
-		EPBBumperSlotType CurrentSlotType;
-		if (!PBBumperEquipSlotUtils::TryGetSlotType(SelectedBumperEquipSlot, CurrentSlotType)
-			|| CurrentSlotType != SlotType)
-		{
-			SelectedBumperEquipSlot = PBBumperEquipSlotUtils::GetDefaultEquipSlot(SlotType);
-		}
-
-		BroadcastSelectedSlotChanged();
-		RefreshBoardSlotSelection();
-	}
-
-	UpdateInfoPanelByRowName(RowName);
-	RefreshRedesignedPresentation();
 }
 
 bool UPBBumperEquipUI::GetEquippedBumperForSlot(
 	const EPBBumperSlotType SlotType,
 	FName& OutBumperRowId) const
 {
-	EPBBumperSlotType SelectedSlotType;
-	const EPBBumperEquipSlot EquipSlot =
-		PBBumperEquipSlotUtils::TryGetSlotType(SelectedBumperEquipSlot, SelectedSlotType)
-		&& SelectedSlotType == SlotType
-			? SelectedBumperEquipSlot
-			: PBBumperEquipSlotUtils::GetDefaultEquipSlot(SlotType);
-
-	return GetEquippedBumperForEquipSlot(EquipSlot, OutBumperRowId);
+	if (!IsValid(EquipController))
+	{
+		OutBumperRowId = NAME_None;
+		return false;
+	}
+	return EquipController->GetEquippedBumperForSlot(SlotType, OutBumperRowId);
 }
 
 bool UPBBumperEquipUI::GetEquippedBumperForEquipSlot(
 	const EPBBumperEquipSlot EquipSlot,
 	FName& OutBumperRowId) const
 {
-	if (!IsValid(PlayerDataSubsystem))
+	if (!IsValid(EquipController))
 	{
 		OutBumperRowId = NAME_None;
 		return false;
 	}
-
-	return PlayerDataSubsystem->GetEquippedBumperAtSlot(EquipSlot, OutBumperRowId);
+	return EquipController->GetEquippedBumperForEquipSlot(EquipSlot, OutBumperRowId);
 }
 
 EPBBumperSlotType UPBBumperEquipUI::GetSelectedBumperSlotType() const
 {
-	EPBBumperSlotType SlotType = EPBBumperSlotType::Top;
-	PBBumperEquipSlotUtils::TryGetSlotType(SelectedBumperEquipSlot, SlotType);
-	return SlotType;
+	return IsValid(EquipController)
+		? EquipController->GetSelectedBumperSlotType()
+		: EPBBumperSlotType::Top;
+}
+
+FName UPBBumperEquipUI::GetSelectedBumperRowName() const
+{
+	return IsValid(EquipController) ? EquipController->GetSelectedBumperRowName() : NAME_None;
+}
+
+EPBBumperEquipSlot UPBBumperEquipUI::GetSelectedBumperEquipSlot() const
+{
+	return IsValid(EquipController)
+		? EquipController->GetSelectedBumperEquipSlot()
+		: EPBBumperEquipSlot::TopLeft;
+}
+
+UPBBumperInfoPanelViewModel* UPBBumperEquipUI::GetInfoPanelViewModel() const
+{
+	return IsValid(EquipController) ? EquipController->GetInfoPanelViewModel() : nullptr;
 }
 
 bool UPBBumperEquipUI::EquipBumperRow(const FName RowName)
 {
-	SelectBumperRow(RowName);
-	return EquipBumperRowAtSlot(RowName, SelectedBumperEquipSlot);
+	return IsValid(EquipController) && EquipController->EquipBumperRow(RowName);
 }
 
 bool UPBBumperEquipUI::EquipBumperRowAtSlot(
 	const FName RowName,
 	const EPBBumperEquipSlot EquipSlot)
 {
-	CacheRequiredSubsystems();
-	if (!IsValid(PlayerDataSubsystem) || !CanEquipBumperRowAtSlot(RowName, EquipSlot))
-	{
-		return false;
-	}
-
-	SelectedBumperEquipSlot = EquipSlot;
-	SelectedBumperRowName = RowName;
-	if (!PlayerDataSubsystem->EquipBumperAtSlot(EquipSlot, RowName))
-	{
-		return false;
-	}
-
-	RefreshBumperEquipState(RowName);
-	return true;
+	return IsValid(EquipController) && EquipController->EquipBumperRowAtSlot(RowName, EquipSlot);
 }
 
 bool UPBBumperEquipUI::UnequipBumperRow(const FName RowName)
 {
-	CacheRequiredSubsystems();
-
-	if (RowName.IsNone() || !IsValid(PlayerDataSubsystem))
-	{
-		return false;
-	}
-
-	EPBBumperSlotType SlotType;
-	if (!PBBumperEquipUIBuilder::TryGetBumperSlotTypeByRowName(BumperRowNames, BumperRows, RowName, SlotType))
-	{
-		return false;
-	}
-
-	SelectBumperRow(RowName);
-	FName EquippedRowName = NAME_None;
-	if (GetSelectedBumperSlotType() != SlotType
-		|| !PlayerDataSubsystem->GetEquippedBumperAtSlot(SelectedBumperEquipSlot, EquippedRowName)
-		|| EquippedRowName != RowName)
-	{
-		return false;
-	}
-
-	if (!PlayerDataSubsystem->UnequipBumperAtSlot(SelectedBumperEquipSlot))
-	{
-		return false;
-	}
-
-	RefreshBumperEquipState(RowName);
-
-	return true;
+	return IsValid(EquipController) && EquipController->UnequipBumperRow(RowName);
 }
 
 bool UPBBumperEquipUI::EquipSelectedBumper()
 {
-	return EquipBumperRow(SelectedBumperRowName);
+	return IsValid(EquipController) && EquipController->EquipSelectedBumper();
 }
 
 bool UPBBumperEquipUI::UnequipSelectedBumper()
 {
-	return UnequipBumperRow(SelectedBumperRowName);
+	return IsValid(EquipController) && EquipController->UnequipSelectedBumper();
 }
 
-void UPBBumperEquipUI::HandleStartupGameDataLoaded()
+void UPBBumperEquipUI::EnsureEquipController()
 {
-	if (LoadBumperRowsOnce())
+	if (!IsValid(EquipController))
 	{
-		RequestBumperUIAssetsAsync();
+		EquipController = NewObject<UPBBumperEquipController>(this);
 	}
 }
 
-void UPBBumperEquipUI::HandleBumperUIAssetsLoaded()
+void UPBBumperEquipUI::BindControllerEvents()
 {
-	if (bBumperListItemObjectsBuilt || !bBumperUIAssetLoadPending)
+	if (!IsValid(EquipController))
 	{
 		return;
 	}
 
-	bBumperUIAssetLoadPending = false;
-	BuildBumperListItemObjects();
-	if (bWidgetConstructed)
-	{
-		OnBumperListItemsReady.Broadcast();
-	}
-	SelectBumperEquipSlot(EPBBumperEquipSlot::TopLeft);
+	EquipController->OnCatalogReady.RemoveAll(this);
+	EquipController->OnSelectionChanged.RemoveAll(this);
+	EquipController->OnCatalogReady.AddUObject(this, &ThisClass::HandleControllerCatalogReady);
+	EquipController->OnSelectionChanged.AddUObject(this, &ThisClass::HandleControllerSelectionChanged);
 }
 
-void UPBBumperEquipUI::CacheRequiredSubsystems()
+void UPBBumperEquipUI::UnbindControllerEvents()
 {
-	UGameInstance* GameInstance = GetGameInstance();
-	if (!IsValid(GameInstance))
+	if (IsValid(EquipController))
+	{
+		EquipController->OnCatalogReady.RemoveAll(this);
+		EquipController->OnSelectionChanged.RemoveAll(this);
+	}
+}
+
+void UPBBumperEquipUI::HandleControllerCatalogReady()
+{
+	if (!bWidgetConstructed || bCatalogReadyBroadcastForConstruct || !IsValid(EquipController))
 	{
 		return;
 	}
 
-	if (!IsValid(TableDataSubsystem))
-	{
-		TableDataSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>();
-	}
-
-	if (!IsValid(PlayerDataSubsystem))
-	{
-		PlayerDataSubsystem = GameInstance->GetSubsystem<UPBPlayerDataSubsystem>();
-	}
-
-	if (!IsValid(GameDataLoadSubsystem))
-	{
-		GameDataLoadSubsystem = GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>();
-	}
+	bCatalogReadyBroadcastForConstruct = true;
+	OnBumperListItemsReady.Broadcast();
+	HandleControllerSelectionChanged();
 }
 
-void UPBBumperEquipUI::BindDataLoadEvents()
+void UPBBumperEquipUI::HandleControllerSelectionChanged()
 {
-	if (IsValid(TableDataSubsystem))
-	{
-		TableDataSubsystem->OnStartupGameDataLoaded.AddUniqueDynamic(
-			this,
-			&UPBBumperEquipUI::HandleStartupGameDataLoaded);
-	}
-}
-
-void UPBBumperEquipUI::UnbindDataLoadEvents()
-{
-	if (IsValid(TableDataSubsystem))
-	{
-		TableDataSubsystem->OnStartupGameDataLoaded.RemoveDynamic(
-			this,
-			&UPBBumperEquipUI::HandleStartupGameDataLoaded);
-	}
-}
-
-void UPBBumperEquipUI::EnsureInfoPanelViewModel()
-{
-	if (!IsValid(InfoPanelViewModel))
-	{
-		InfoPanelViewModel = NewObject<UPBBumperInfoPanelViewModel>(this);
-	}
-}
-
-bool UPBBumperEquipUI::LoadBumperRowsOnce()
-{
-	if (bBumperRowsLoaded)
-	{
-		return true;
-	}
-
-	CacheRequiredSubsystems();
-	if (!IsValid(TableDataSubsystem) || !TableDataSubsystem->IsTableDataReady())
-	{
-		return false;
-	}
-
-	bBumperRowsLoaded = TableDataSubsystem->GetAllBumperRows(BumperRowNames, BumperRows)
-		&& BumperRowNames.Num() == BumperRows.Num();
-
-	return bBumperRowsLoaded;
-}
-
-void UPBBumperEquipUI::RequestBumperUIAssetsAsync()
-{
-	if (bBumperListItemObjectsBuilt
-		|| bBumperUIAssetLoadPending
-		|| !IsValid(GameDataLoadSubsystem)
-		|| BumperRowNames.IsEmpty())
+	if (!bWidgetConstructed)
 	{
 		return;
 	}
 
-	TArray<FName> BundleNames;
-	BundleNames.Add(PBAssetBundleNames::UI);
-
-	TArray<FPrimaryAssetId> BumperAssetIds;
-	BumperAssetIds.Reserve(BumperRowNames.Num());
-	for (const FName BumperRowName : BumperRowNames)
-	{
-		if (!BumperRowName.IsNone())
-		{
-			BumperAssetIds.Emplace(PBBumperAssetIds::Type::BumperData, BumperRowName);
-		}
-	}
-	if (BumperAssetIds.IsEmpty())
-	{
-		return;
-	}
-
-	bBumperUIAssetLoadPending = true;
-	GameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
-		BumperAssetIds,
-		BundleNames,
-		FStreamableDelegate::CreateUObject(
-			this,
-			&UPBBumperEquipUI::HandleBumperUIAssetsLoaded));
-}
-
-void UPBBumperEquipUI::BuildBumperListItemObjects()
-{
-	if (bBumperListItemObjectsBuilt)
-	{
-		return;
-	}
-
-	TopItems.Reset();
-	SideItems.Reset();
-	ReboundItems.Reset();
-	SpecialItems.Reset();
-
-	const TSet<FName> EquippedRowIds = PBBumperEquipUIBuilder::MakeEquippedBumperRowIdSet(PlayerDataSubsystem.Get());
-
-	PBBumperEquipUIBuilder::BuildBumperListItemObjects(
-		this, this, BumperRowNames, BumperRows, EquippedRowIds, GameDataLoadSubsystem.Get(),
-		TopItems, SideItems, ReboundItems, SpecialItems);
-
-	bBumperListItemObjectsBuilt = true;
-
-	if (IsValid(InfoPanelViewModel))
-	{
-		InfoPanelViewModel->ClearBumperInfoPanelData();
-	}
-}
-
-void UPBBumperEquipUI::UpdateInfoPanelByRowName(const FName RowName)
-{
-	const FPBBumperTableRow* Row = PBBumperEquipUIBuilder::FindBumperRow(BumperRowNames, BumperRows, RowName);
-	if (!Row)
-	{
-		if (IsValid(InfoPanelViewModel))
-		{
-			InfoPanelViewModel->ClearBumperInfoPanelData();
-		}
-		ClearDetailPresentation();
-		return;
-	}
-
-	FName EquippedRowName = NAME_None;
-	const bool bIsEquippedInSelectedSlot = IsValid(PlayerDataSubsystem)
-		&& PlayerDataSubsystem->GetEquippedBumperAtSlot(SelectedBumperEquipSlot, EquippedRowName)
-		&& EquippedRowName == RowName;
-
-	EnsureInfoPanelViewModel();
-	if (IsValid(InfoPanelViewModel))
-	{
-		InfoPanelViewModel->SetBumperInfoPanelData(
-			Row->DisplayName,
-			PBBumperEquipUIBuilder::ResolveBumperIconTexture(GameDataLoadSubsystem.Get(), RowName, *Row),
-			PBBumperEquipUIBuilder::ResolveBumperDescription(TableDataSubsystem.Get(), *Row),
-			bIsEquippedInSelectedSlot);
-	}
-
-	UpdateDetailPresentation(RowName);
-}
-
-void UPBBumperEquipUI::UpdateBumperListEquipStates()
-{
-	const TSet<FName> EquippedRowIds = PBBumperEquipUIBuilder::MakeEquippedBumperRowIdSet(PlayerDataSubsystem.Get());
-	PBBumperEquipUIBuilder::UpdateBumperListEquipStates(
-		EquippedRowIds,
-		TopItems,
-		SideItems,
-		ReboundItems,
-		SpecialItems);
-}
-
-void UPBBumperEquipUI::RefreshBumperEquipState(const FName RowName)
-{
-	UpdateBumperListEquipStates();
-	SelectBumperRow(RowName);
+	BroadcastSelectedSlotChanged();
+	RefreshBoardSlotSelection();
+	RefreshRedesignedPresentation();
 }
 
 void UPBBumperEquipUI::BindBoardSlotButtons()
@@ -687,13 +454,14 @@ void UPBBumperEquipUI::RefreshRedesignedPresentation()
 	RefreshCategoryPresentation();
 	RefreshLoadoutPresentation();
 
-	if (SelectedBumperRowName.IsNone())
+	const FName SelectedRowName = GetSelectedBumperRowName();
+	if (SelectedRowName.IsNone())
 	{
 		ClearDetailPresentation();
 	}
 	else
 	{
-		UpdateDetailPresentation(SelectedBumperRowName);
+		UpdateDetailPresentation(SelectedRowName);
 	}
 }
 
@@ -739,7 +507,7 @@ void UPBBumperEquipUI::RefreshCategoryPresentation()
 	{
 		SelectedSlotText->SetText(FText::Format(
 			NSLOCTEXT("PBBumperEquipUI", "SelectedSlotFormat", "선택 위치 · {0}"),
-			PBBumperEquipUIBuilder::GetBumperEquipSlotDisplayName(SelectedBumperEquipSlot)));
+			PBBumperEquipUIBuilder::GetBumperEquipSlotDisplayName(GetSelectedBumperEquipSlot())));
 	}
 	if (IsValid(DetailAccentBorder))
 	{
@@ -749,26 +517,9 @@ void UPBBumperEquipUI::RefreshCategoryPresentation()
 
 void UPBBumperEquipUI::RefreshLoadoutPresentation()
 {
-	static constexpr EPBBumperEquipSlot EquipSlots[] =
-	{
-		EPBBumperEquipSlot::TopLeft,
-		EPBBumperEquipSlot::TopRight,
-		EPBBumperEquipSlot::SideLeft,
-		EPBBumperEquipSlot::SideRight,
-		EPBBumperEquipSlot::ReboundLeft,
-		EPBBumperEquipSlot::ReboundRight,
-		EPBBumperEquipSlot::Special
-	};
-
-	int32 EquippedCount = 0;
-	for (const EPBBumperEquipSlot EquipSlot : EquipSlots)
-	{
-		FName EquippedRowName = NAME_None;
-		if (GetEquippedBumperForEquipSlot(EquipSlot, EquippedRowName) && !EquippedRowName.IsNone())
-		{
-			++EquippedCount;
-		}
-	}
+	const int32 EquippedCount = IsValid(EquipController)
+		? EquipController->GetEquippedBumperCount()
+		: 0;
 
 	if (IsValid(LoadoutStatusText))
 	{
@@ -785,9 +536,10 @@ void UPBBumperEquipUI::RefreshLoadoutPresentation()
 
 	FName EquippedRowName = NAME_None;
 	const FPBBumperTableRow* EquippedRow = nullptr;
-	if (GetEquippedBumperForEquipSlot(SelectedBumperEquipSlot, EquippedRowName))
+	const EPBBumperEquipSlot SelectedEquipSlot = GetSelectedBumperEquipSlot();
+	if (GetEquippedBumperForEquipSlot(SelectedEquipSlot, EquippedRowName) && IsValid(EquipController))
 	{
-		EquippedRow = PBBumperEquipUIBuilder::FindBumperRow(BumperRowNames, BumperRows, EquippedRowName);
+		EquippedRow = EquipController->FindBumperRow(EquippedRowName);
 	}
 
 	SlotEquipStatusText->SetText(EquippedRow
@@ -837,7 +589,9 @@ void UPBBumperEquipUI::ClearDetailPresentation()
 
 void UPBBumperEquipUI::UpdateDetailPresentation(const FName RowName)
 {
-	const FPBBumperTableRow* Row = PBBumperEquipUIBuilder::FindBumperRow(BumperRowNames, BumperRows, RowName);
+	const FPBBumperTableRow* Row = IsValid(EquipController)
+		? EquipController->FindBumperRow(RowName)
+		: nullptr;
 	if (!Row)
 	{
 		ClearDetailPresentation();
@@ -846,8 +600,7 @@ void UPBBumperEquipUI::UpdateDetailPresentation(const FName RowName)
 
 	if (IsValid(DetailIconImage))
 	{
-		DetailIconImage->SetBrushFromTexture(
-			PBBumperEquipUIBuilder::ResolveBumperIconTexture(GameDataLoadSubsystem.Get(), RowName, *Row));
+		DetailIconImage->SetBrushFromTexture(EquipController->ResolveBumperIconTexture(RowName, *Row));
 		DetailIconImage->SetColorAndOpacity(FLinearColor::White);
 	}
 	if (IsValid(DetailNameText))
@@ -868,7 +621,7 @@ void UPBBumperEquipUI::UpdateDetailPresentation(const FName RowName)
 			FText::AsNumber(Row->RequiredTriggerCount)));
 	}
 
-	const FText TriggerDescription = PBBumperEquipUIBuilder::ResolveBumperTriggerDescription(TableDataSubsystem.Get(), *Row);
+	const FText TriggerDescription = EquipController->ResolveBumperTriggerDescription(*Row);
 	if (IsValid(DetailTriggerText))
 	{
 		DetailTriggerText->SetText(FText::Format(
@@ -878,7 +631,7 @@ void UPBBumperEquipUI::UpdateDetailPresentation(const FName RowName)
 				: TriggerDescription));
 	}
 
-	const FText EffectDescription = PBBumperEquipUIBuilder::ResolveBumperEffectDescription(TableDataSubsystem.Get(), *Row);
+	const FText EffectDescription = EquipController->ResolveBumperEffectDescription(*Row);
 	if (IsValid(DetailEffectText))
 	{
 		DetailEffectText->SetText(FText::Format(
@@ -889,15 +642,20 @@ void UPBBumperEquipUI::UpdateDetailPresentation(const FName RowName)
 	}
 
 	const bool bIsEquippedInCurrentSlot = IsSelectedBumperEquippedInCurrentSlot();
+	const bool bIsEquippedInAnotherSlot = IsValid(EquipController)
+		&& EquipController->IsBumperEquippedInAnotherSlot(RowName, GetSelectedBumperEquipSlot());
 	if (IsValid(EquipActionLabel))
 	{
 		EquipActionLabel->SetText(bIsEquippedInCurrentSlot
 			? NSLOCTEXT("PBBumperEquipUI", "UnequipAction", "해제")
-			: NSLOCTEXT("PBBumperEquipUI", "EquipSelectedAction", "장착"));
+			: bIsEquippedInAnotherSlot
+				? NSLOCTEXT("PBBumperEquipUI", "EquippedElsewhereAction", "다른 위치에 장착됨")
+				: NSLOCTEXT("PBBumperEquipUI", "EquipSelectedAction", "장착"));
 	}
 	if (IsValid(EquipActionButton))
 	{
-		EquipActionButton->SetIsEnabled(true);
+		// 이전 세션 데이터에 중복이 남아 있어도 현재 슬롯의 해제 동작은 막지 않는다.
+		EquipActionButton->SetIsEnabled(bIsEquippedInCurrentSlot || !bIsEquippedInAnotherSlot);
 		EquipActionButton->SetBackgroundColor(bIsEquippedInCurrentSlot
 			? UnequipActionColor
 			: GetSlotColor(GetSelectedBumperSlotType()));
@@ -939,8 +697,8 @@ void UPBBumperEquipUI::SetBoardSlotButtonState(
 	FName EquippedRowName = NAME_None;
 	const bool bHasEquippedBumper =
 		GetEquippedBumperForEquipSlot(EquipSlot, EquippedRowName) && !EquippedRowName.IsNone();
-	const FPBBumperTableRow* EquippedRow = bHasEquippedBumper
-		? PBBumperEquipUIBuilder::FindBumperRow(BumperRowNames, BumperRows, EquippedRowName)
+	const FPBBumperTableRow* EquippedRow = bHasEquippedBumper && IsValid(EquipController)
+		? EquipController->FindBumperRow(EquippedRowName)
 		: nullptr;
 
 	const FText SlotDisplayName = PBBumperEquipUIBuilder::GetBumperEquipSlotDisplayName(EquipSlot);
@@ -950,7 +708,7 @@ void UPBBumperEquipUI::SetBoardSlotButtonState(
 			? FText::FromName(EquippedRowName)
 			: NSLOCTEXT("PBBumperEquipUI", "EmptyBoardSlot", "비어 있음");
 
-	const bool bIsSelected = SelectedBumperEquipSlot == EquipSlot;
+	const bool bIsSelected = GetSelectedBumperEquipSlot() == EquipSlot;
 	const bool bIsDropHovered = HoveredDropSlot.IsSet() && HoveredDropSlot.GetValue() == EquipSlot;
 	const FLinearColor SlotColor = GetSlotColor(SlotType);
 	FLinearColor BackgroundColor = InactiveCategoryColor
@@ -983,10 +741,7 @@ void UPBBumperEquipUI::SetBoardSlotButtonState(
 		if (UImage* IconImage = IconReference->Get())
 		{
 			UTexture2D* IconTexture = EquippedRow
-				? PBBumperEquipUIBuilder::ResolveBumperIconTexture(
-					GameDataLoadSubsystem.Get(),
-					EquippedRowName,
-					*EquippedRow)
+				? EquipController->ResolveBumperIconTexture(EquippedRowName, *EquippedRow)
 				: nullptr;
 			IconImage->SetBrushFromTexture(IconTexture);
 			IconImage->SetVisibility(IsValid(IconTexture)
@@ -1023,20 +778,8 @@ bool UPBBumperEquipUI::CanEquipBumperRowAtSlot(
 	const FName RowName,
 	const EPBBumperEquipSlot EquipSlot) const
 {
-	if (RowName.IsNone())
-	{
-		return false;
-	}
-
-	EPBBumperSlotType BumperSlotType;
-	EPBBumperSlotType TargetSlotType;
-	return PBBumperEquipUIBuilder::TryGetBumperSlotTypeByRowName(
-			BumperRowNames,
-			BumperRows,
-			RowName,
-			BumperSlotType)
-		&& PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, TargetSlotType)
-		&& BumperSlotType == TargetSlotType;
+	return IsValid(EquipController)
+		&& EquipController->CanEquipBumperRowAtSlot(RowName, EquipSlot);
 }
 
 bool UPBBumperEquipUI::FindBoardSlotAtScreenPosition(
@@ -1121,7 +864,7 @@ void UPBBumperEquipUI::SetCategoryButtonState(
 
 void UPBBumperEquipUI::BroadcastSelectedSlotChanged()
 {
-	OnSelectedBumperEquipSlotChanged.Broadcast(SelectedBumperEquipSlot);
+	OnSelectedBumperEquipSlotChanged.Broadcast(GetSelectedBumperEquipSlot());
 	OnSelectedBumperSlotChanged.Broadcast(GetSelectedBumperSlotType());
 }
 
@@ -1182,7 +925,7 @@ void UPBBumperEquipUI::HandleSpecialCategoryClicked()
 
 void UPBBumperEquipUI::HandleEquipActionClicked()
 {
-	if (SelectedBumperRowName.IsNone())
+	if (GetSelectedBumperRowName().IsNone())
 	{
 		return;
 	}
@@ -1199,8 +942,6 @@ void UPBBumperEquipUI::HandleEquipActionClicked()
 
 bool UPBBumperEquipUI::IsSelectedBumperEquippedInCurrentSlot() const
 {
-	FName EquippedRowName = NAME_None;
-	return !SelectedBumperRowName.IsNone()
-		&& GetEquippedBumperForEquipSlot(SelectedBumperEquipSlot, EquippedRowName)
-		&& EquippedRowName == SelectedBumperRowName;
+	return IsValid(EquipController)
+		&& EquipController->IsSelectedBumperEquippedInCurrentSlot();
 }

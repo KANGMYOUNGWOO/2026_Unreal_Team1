@@ -21,14 +21,18 @@ class UPBTableDataSubsystem;
 class USceneComponent;
 class UNiagaraSystem;
 
+/** 비동기 로드 완료 후 범퍼 Actor 한 개를 생성하는 데 필요한 런타임 참조 묶음입니다. */
 struct FPBPreparedBumperSpawnData
 {
-	// 비동기 로드가 끝난 뒤 Modular Bumper 생성에 필요한 값만 모아둔다.
+	FName BumperRowId = NAME_None;
 	FPBBumperTableRow BumperRow;
 	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
 	FPBBumperEffectRow EffectRow;
 	TSubclassOf<UPBBumperEffectBase> EffectClass;
 	UNiagaraSystem* ActivationVfx = nullptr;
+	UNiagaraSystem* DeliveryVfx = nullptr;
+	UNiagaraSystem* ImpactVfx = nullptr;
+	UNiagaraSystem* StatusVfx = nullptr;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
@@ -36,6 +40,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	bool, bSuccess,
 	const TArray<APBModularBumperBase*>&, SpawnedBumperActors);
 
+/** 저장된 장착 슬롯을 비동기 로드하고 맵 Anchor 위치에 모듈형 범퍼를 생성합니다. */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBumperSpawner : public AActor
 {
@@ -60,6 +65,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|Spawn")
 	void GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpers) const;
+
+	/** 현재 전투의 슬롯별 유효 접촉·발동 누계를 로그에 한 번만 기록합니다. */
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Telemetry")
+	void LogBattleTelemetrySummary();
 
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Spawn")
 	FPBSpawnedBumpersReadySignature OnSpawnedBumpersReady;
@@ -103,6 +112,8 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<APBModularBumperBase>> SpawnedBumpers;
+
+	bool bBattleTelemetrySummaryLogged = false;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBGameDataLoadSubsystem> CachedGameDataLoadSubsystem;

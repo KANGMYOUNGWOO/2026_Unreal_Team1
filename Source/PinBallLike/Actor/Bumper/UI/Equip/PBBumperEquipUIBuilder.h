@@ -7,7 +7,6 @@
 class UPBGameDataLoadSubsystem;
 class UPBPlayerDataSubsystem;
 class UPBTableDataSubsystem;
-class UPBBumperEquipUI;
 class UTexture2D;
 enum class EPBBumperSlotType : uint8;
 enum class EPBBumperEquipSlot : uint8;
@@ -23,7 +22,6 @@ namespace PBBumperEquipUIBuilder
 		FName RowName);
 	void BuildBumperListItemObjects(
 		UObject* Outer,
-		UPBBumperEquipUI* ClickHandler,
 		const TArray<FName>& RowNames,
 		const TArray<FPBBumperTableRow>& Rows,
 		const TSet<FName>& EquippedRowIds,

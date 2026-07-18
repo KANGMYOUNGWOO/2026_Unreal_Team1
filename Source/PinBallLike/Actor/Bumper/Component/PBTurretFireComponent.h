@@ -8,11 +8,13 @@
 #include "PBTurretFireComponent.generated.h"
 
 class AProjectileBase;
+class UNiagaraSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FPBTurretProjectileSignature,
 	AActor*, Projectile);
 
+/** 범퍼 포탑의 발사, 명중 payload, 투사체 풀 수명주기를 관리합니다. */
 UCLASS(ClassGroup = (PinBall), meta = (BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBTurretFireComponent : public UActorComponent
 {
@@ -31,7 +33,10 @@ public:
 	void ConfigureAttack(
 		AActor* InTargetActor,
 		EPBBumperProjectilePayload InPayload,
-		int32 InPower);
+		int32 InPower,
+		int32 InMaxShotCount,
+		UNiagaraSystem* InDeliveryVfx = nullptr,
+		UNiagaraSystem* InImpactVfx = nullptr);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Pool")
 	void ReleaseProjectile(AActor* Projectile);
@@ -84,4 +89,12 @@ private:
 	TWeakObjectPtr<AActor> AttackTarget;
 	EPBBumperProjectilePayload AttackPayload = EPBBumperProjectilePayload::None;
 	int32 AttackPower = 0;
+	int32 MaxAttackShotCount = 0;
+	int32 FiredAttackShotCount = 0;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> DeliveryVfx;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> ImpactVfx;
 };

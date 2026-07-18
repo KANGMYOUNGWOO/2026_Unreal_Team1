@@ -77,6 +77,19 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
 	APBBumperTriggerActorBase* GetActiveTriggerActor() const;
 
+	/** Returns the first configured physical slot when no Trigger is currently active. */
+	UFUNCTION(BlueprintPure, Category = "Bumper|Position")
+	EPBBumperPositionId GetPrimaryPositionId() const;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Telemetry")
+	FName GetBumperRowId() const { return BumperRowId; }
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Telemetry")
+	int32 GetMeaningfulContactCount() const { return RuntimeState.MeaningfulContactCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Telemetry")
+	int32 GetActivationCount() const { return RuntimeState.ActivationCount; }
+
 	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
 	int32 GetPendingActivationCount() const;
 
@@ -84,12 +97,20 @@ public:
 	void CreateBumperEffect();
 
 	void InitializeBumper(
+		FName InBumperRowId,
 		const FPBBumperTableRow& InBumperData,
 		const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
 		const FPBBumperEffectRow& InEffectData,
 		TSubclassOf<UPBBumperEffectBase> InEffectClass,
 		UNiagaraSystem* InActivationVfx,
+		UNiagaraSystem* InDeliveryVfx,
+		UNiagaraSystem* InImpactVfx,
+		UNiagaraSystem* InStatusVfx,
 		const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms);
+
+	UNiagaraSystem* GetDeliveryVfx() const { return DeliveryVfx; }
+	UNiagaraSystem* GetImpactVfx() const { return ImpactVfx; }
+	UNiagaraSystem* GetStatusVfx() const { return StatusVfx; }
 
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Event")
 	FPBModularBumperTriggerCountChangedSignature OnBumperTriggerCountChanged;
@@ -150,6 +171,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
 	FPBBumperTableRow BumperData;
 
+	/** 데이터 테이블과 장착 슬롯을 연결하는 논리 ID입니다. */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper")
+	FName BumperRowId = NAME_None;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
 
@@ -166,6 +191,15 @@ protected:
 	/** Gameplay 번들에서 미리 로드한 일회성 효과 발동 연출이다. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
 	TObjectPtr<UNiagaraSystem> ActivationVfx;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
+	TObjectPtr<UNiagaraSystem> DeliveryVfx;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
+	TObjectPtr<UNiagaraSystem> ImpactVfx;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
+	TObjectPtr<UNiagaraSystem> StatusVfx;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TArray<TObjectPtr<APBBumperTriggerActorBase>> SpawnedTriggerActors;

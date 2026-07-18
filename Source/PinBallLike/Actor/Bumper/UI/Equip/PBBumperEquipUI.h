@@ -1,17 +1,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
-#include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
+#include "PinBallLike/Struct/Bumper/PBBumperEquipSlot.h"
 #include "PinBallLike/UI/PBUserWidget.h"
 #include "PBBumperEquipUI.generated.h"
 
+class UPBBumperEquipController;
 class UPBBumperInfoPanelViewModel;
 class UPBBumperListItemObject;
 class UPBBumperDragDropOperation;
-class UPBGameDataLoadSubsystem;
-class UPBPlayerDataSubsystem;
-class UPBTableDataSubsystem;
 class UDragDropOperation;
 class UBorder;
 class UButton;
@@ -30,8 +27,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	SelectedEquipSlot);
 
 /**
- * 범퍼 카탈로그 조회와 7개 물리 슬롯의 장착·해제를 조정하는 메인 UI입니다.
- * DataTable과 PlayerDataSubsystem을 원본으로 사용하며, 버튼과 드래그 입력을 같은 장착 API로 연결합니다.
+ * 범퍼 장착 화면의 위젯 표시와 사용자 입력만 담당합니다.
+ * 데이터 로드, 선택 상태, 장착 규칙은 PBBumperEquipController에 위임합니다.
  */
 UCLASS(BlueprintType, Blueprintable)
 class PINBALLLIKE_API UPBBumperEquipUI : public UPBUserWidget
@@ -78,13 +75,13 @@ public:
 	bool UnequipSelectedBumper();
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
-	FName GetSelectedBumperRowName() const { return SelectedBumperRowName; }
+	FName GetSelectedBumperRowName() const;
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
 	EPBBumperSlotType GetSelectedBumperSlotType() const;
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
-	EPBBumperEquipSlot GetSelectedBumperEquipSlot() const { return SelectedBumperEquipSlot; }
+	EPBBumperEquipSlot GetSelectedBumperEquipSlot() const;
 
 	/** 보드 미리보기에 표시할 슬롯별 현재 장착 Row를 반환한다. */
 	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
@@ -94,7 +91,7 @@ public:
 	bool GetEquippedBumperForEquipSlot(EPBBumperEquipSlot EquipSlot, FName& OutBumperRowId) const;
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|EquipUI")
-	UPBBumperInfoPanelViewModel* GetInfoPanelViewModel() const { return InfoPanelViewModel; }
+	UPBBumperInfoPanelViewModel* GetInfoPanelViewModel() const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|EquipUI")
 	FPBBumperListItemsReadySignature OnBumperListItemsReady;
@@ -119,22 +116,11 @@ protected:
 		UDragDropOperation* InOperation) override;
 
 private:
-	UFUNCTION()
-	void HandleStartupGameDataLoaded();
-
-	UFUNCTION()
-	void HandleBumperUIAssetsLoaded();
-
-	void CacheRequiredSubsystems();
-	void BindDataLoadEvents();
-	void UnbindDataLoadEvents();
-	void EnsureInfoPanelViewModel();
-	bool LoadBumperRowsOnce();
-	void RequestBumperUIAssetsAsync();
-	void BuildBumperListItemObjects();
-	void UpdateInfoPanelByRowName(FName RowName);
-	void UpdateBumperListEquipStates();
-	void RefreshBumperEquipState(FName RowName);
+	void EnsureEquipController();
+	void BindControllerEvents();
+	void UnbindControllerEvents();
+	void HandleControllerCatalogReady();
+	void HandleControllerSelectionChanged();
 	void BindBoardSlotButtons();
 	void BuildBoardSlotPresentations();
 	void BuildBoardSlotPresentation(UButton* Button, EPBBumperEquipSlot EquipSlot);
@@ -297,48 +283,13 @@ private:
 	FLinearColor UnequipActionColor = FLinearColor(0.40f, 0.12f, 0.14f, 1.0f);
 
 	UPROPERTY(Transient)
-	TObjectPtr<UPBBumperInfoPanelViewModel> InfoPanelViewModel;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UPBTableDataSubsystem> TableDataSubsystem;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UPBPlayerDataSubsystem> PlayerDataSubsystem;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UPBGameDataLoadSubsystem> GameDataLoadSubsystem;
-
-	UPROPERTY(Transient)
-	TArray<FName> BumperRowNames;
-
-	UPROPERTY(Transient)
-	TArray<FPBBumperTableRow> BumperRows;
-
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UPBBumperListItemObject>> TopItems;
-
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UPBBumperListItemObject>> SideItems;
-
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UPBBumperListItemObject>> ReboundItems;
-
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UPBBumperListItemObject>> SpecialItems;
-
-	UPROPERTY(Transient)
-	FName SelectedBumperRowName = NAME_None;
-
-	UPROPERTY(Transient)
-	EPBBumperEquipSlot SelectedBumperEquipSlot = EPBBumperEquipSlot::TopLeft;
+	TObjectPtr<UPBBumperEquipController> EquipController;
 
 	/** 런타임에 기존 슬롯 버튼 안에 생성한 아이콘과 라벨입니다. WidgetTree가 수명을 소유합니다. */
 	TMap<EPBBumperEquipSlot, TWeakObjectPtr<UImage>> BoardSlotIconImages;
 	TMap<EPBBumperEquipSlot, TWeakObjectPtr<UTextBlock>> BoardSlotLabels;
 	TOptional<EPBBumperEquipSlot> HoveredDropSlot;
 
-	bool bBumperRowsLoaded = false;
-	bool bBumperUIAssetLoadPending = false;
-	bool bBumperListItemObjectsBuilt = false;
 	bool bWidgetConstructed = false;
+	bool bCatalogReadyBroadcastForConstruct = false;
 };

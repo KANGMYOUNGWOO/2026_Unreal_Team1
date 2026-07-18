@@ -15,10 +15,16 @@ APBTurretSummonActor::APBTurretSummonActor()
 
 void APBTurretSummonActor::SetAttackPayload(
 	const EPBBumperProjectilePayload InPayload,
-	const int32 InPower)
+	const int32 InPower,
+	const int32 InShotCount,
+	UNiagaraSystem* InDeliveryVfx,
+	UNiagaraSystem* InImpactVfx)
 {
 	AttackPayload = InPayload;
 	AttackPower = FMath::Max(InPower, 0);
+	AttackShotCount = FMath::Max(InShotCount, 0);
+	DeliveryVfx = InDeliveryVfx;
+	ImpactVfx = InImpactVfx;
 }
 
 void APBTurretSummonActor::StartActionForActor(
@@ -42,7 +48,13 @@ void APBTurretSummonActor::StartActionForActor(
 		return;
 	}
 
-	FireComponent->ConfigureAttack(BossTarget, AttackPayload, AttackPower);
+	FireComponent->ConfigureAttack(
+		BossTarget,
+		AttackPayload,
+		AttackPower,
+		AttackShotCount,
+		DeliveryVfx,
+		ImpactVfx);
 	Super::StartActionForActor(Bumper, InteractionActor);
 	OnTurretActivatedForActor(Bumper, InteractionActor);
 
@@ -56,8 +68,17 @@ void APBTurretSummonActor::DeactivateSummon()
 {
 	if (UPBTurretFireComponent* FireComponent = FindComponentByClass<UPBTurretFireComponent>())
 	{
-		FireComponent->ConfigureAttack(nullptr, EPBBumperProjectilePayload::None, 0);
+		FireComponent->ConfigureAttack(
+			nullptr,
+			EPBBumperProjectilePayload::None,
+			0,
+			0,
+			nullptr,
+			nullptr);
 	}
+	AttackShotCount = 0;
+	DeliveryVfx = nullptr;
+	ImpactVfx = nullptr;
 	Super::DeactivateSummon();
 }
 

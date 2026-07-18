@@ -14,6 +14,8 @@ class PINBALLLIKE_API UPBTurretSummonBumperEffect : public UPBSummonBumperEffect
 	GENERATED_BODY()
 
 public:
+	UPBTurretSummonBumperEffect();
+
 	virtual void ActivateEffectForActor(
 		APBModularBumperBase* Bumper,
 		AActor* InteractionActor) override;

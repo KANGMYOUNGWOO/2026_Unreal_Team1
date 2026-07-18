@@ -4,6 +4,7 @@
 
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBGateAccelerationField.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBGateFieldTuning.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 
 UPBGateAccelerationBumperEffect::UPBGateAccelerationBumperEffect()
@@ -31,7 +32,7 @@ void UPBGateAccelerationBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
-	if (!IsValid(Bumper) || !IsValid(InteractionActor) || !IsValid(SpawnedSummonActor))
+	if (!IsValid(Bumper) || !IsValid(InteractionActor) || !EnsureSummonActor(Bumper))
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Bumper] Gate acceleration activation context is invalid. Bumper=%s Target=%s Field=%s"),
@@ -52,15 +53,39 @@ void UPBGateAccelerationBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
-	const FTransform FieldTransform = SpawnOffset * ActiveTrigger->GetActorTransform();
-	SpawnedSummonActor->SetActorTransform(FieldTransform);
+	if (APBGateAccelerationField* AccelerationField = Cast<APBGateAccelerationField>(SpawnedSummonActor))
+	{
+		AccelerationField->SetDebugTriggerOrigin(ActiveTrigger->GetActorLocation());
+	}
 	if (!ConfigureAccelerationField())
 	{
 		FinishEffect();
 		return;
 	}
 
+	const float ResolvedDuration = EffectData.Duration > 0.0f
+		? EffectData.Duration
+		: FieldDuration;
+	PlayResolvedVfx(SpawnedSummonActor, ResolvedDuration, true);
+
 	Super::ActivateEffectForActor(Bumper, InteractionActor);
+}
+
+FTransform UPBGateAccelerationBumperEffect::ResolveSpawnTransform(
+	APBModularBumperBase* Bumper,
+	bool& bOutUsesSummonAnchor)
+{
+	if (IsValid(Bumper))
+	{
+		const APBBumperTriggerActorBase* ActiveTrigger = Bumper->GetActiveTriggerActor();
+		if (IsValid(ActiveTrigger))
+		{
+			bOutUsesSummonAnchor = false;
+			return PBGateFieldTuning::MakeTransformAtGateOrigin(ActiveTrigger->GetActorTransform());
+		}
+	}
+
+	return Super::ResolveSpawnTransform(Bumper, bOutUsesSummonAnchor);
 }
 
 bool UPBGateAccelerationBumperEffect::ConfigureAccelerationField() const
@@ -75,6 +100,9 @@ bool UPBGateAccelerationBumperEffect::ConfigureAccelerationField() const
 		return false;
 	}
 
-	AccelerationField->ConfigureField(EffectData.Power, FieldDuration);
+	const float ResolvedDuration = EffectData.Duration > 0.0f
+		? EffectData.Duration
+		: FieldDuration;
+	AccelerationField->ConfigureField(EffectData.Power, ResolvedDuration);
 	return true;
 }

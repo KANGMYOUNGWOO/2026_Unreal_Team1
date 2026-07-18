@@ -30,6 +30,14 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Bumper|Table")
 	TSoftObjectPtr<UDataTable> BumperEffectTable;
+
+	/** 여러 콘텐츠가 함께 참조하는 공용 효과 정의 테이블입니다. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> GameplayEffectTable;
+
+	/** 공용 효과의 Key-Value 파라미터 테이블입니다. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> GameplayEffectParamTable;
 	
 #pragma endregion
 	

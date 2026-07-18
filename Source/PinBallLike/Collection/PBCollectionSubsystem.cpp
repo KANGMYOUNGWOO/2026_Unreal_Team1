@@ -60,20 +60,22 @@ bool UPBCollectionSubsystem::ReloadCollectionData()
 {
 	TArray<FPBCollectionEntryData> LoadedEntries;
 	const bool bMetadataLoaded = BuildEntriesFromCollectionTable(LoadedEntries);
-	if (bMetadataLoaded)
-	{
-		Entries = MoveTemp(LoadedEntries);
-		RebuildLookupIndexes();
-	}
+	// 실패한 재로드에서도 이전 메타데이터를 남기지 않아 삭제된 시트 행이 계속 보이는 일을 막습니다.
+	Entries = MoveTemp(LoadedEntries);
+	RebuildLookupIndexes();
 
 	const UGameInstance* GameInstance = GetGameInstance();
 	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
 		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
 		: nullptr;
-	bIsDataReady = IsValid(TableDataSubsystem) && TableDataSubsystem->IsTableDataReady();
+	bIsDataReady = IsValid(TableDataSubsystem) && TableDataSubsystem->IsCollectionCatalogDataReady();
 	if (!bIsDataReady)
 	{
-		return bMetadataLoaded;
+		if (IsValid(TableDataSubsystem) && TableDataSubsystem->HasStartupGameDataLoadCompleted())
+		{
+			OnCollectionDataReady.Broadcast(false);
+		}
+		return false;
 	}
 
 	UE_LOG(
@@ -85,7 +87,16 @@ bool UPBCollectionSubsystem::ReloadCollectionData()
 
 	OnCollectionDataReady.Broadcast(true);
 	OnCollectionEntryChanged.Broadcast(NAME_None);
-	return bMetadataLoaded;
+	return true;
+}
+
+bool UPBCollectionSubsystem::HasDataLoadCompleted() const
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
+		: nullptr;
+	return IsValid(TableDataSubsystem) && TableDataSubsystem->HasStartupGameDataLoadCompleted();
 }
 
 TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntries(EPBCollectionCategory Category) const

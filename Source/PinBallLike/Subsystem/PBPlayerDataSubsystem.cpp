@@ -3,13 +3,66 @@
 
 #include "PBPlayerDataSubsystem.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "PinBallLike/Actor/Bumper/Save/PBBumperLoadoutSaveGame.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
+
+namespace
+{
+	constexpr TCHAR BumperLoadoutSaveSlot[] = TEXT("PB_BumperLoadout");
+	constexpr int32 BumperLoadoutUserIndex = 0;
+}
 
 void UPBPlayerDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	InitializeDefaultBumpersForTest();
+	Collection.InitializeDependency(UPBTableDataSubsystem::StaticClass());
+
+	const bool bLoadedBumperLoadout = LoadBumperLoadout();
+	if (!bLoadedBumperLoadout)
+	{
+		InitializeDefaultBumpers();
+	}
+
+	bBumperPersistenceInitialized = true;
+	if (!bLoadedBumperLoadout || bLoadedBumperLoadoutNeedsResave)
+	{
+		SaveBumperLoadout();
+	}
+
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBTableDataSubsystem* TableDataSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>())
+		{
+			TableDataSubsystem->OnStartupGameDataLoaded.AddUniqueDynamic(
+				this,
+				&UPBPlayerDataSubsystem::HandleStartupGameDataLoaded);
+
+			if (TableDataSubsystem->IsBumperTableReady())
+			{
+				SanitizeEquippedBumpers();
+			}
+		}
+	}
+}
+
+void UPBPlayerDataSubsystem::Deinitialize()
+{
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBTableDataSubsystem* TableDataSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>())
+		{
+			TableDataSubsystem->OnStartupGameDataLoaded.RemoveDynamic(
+				this,
+				&UPBPlayerDataSubsystem::HandleStartupGameDataLoaded);
+		}
+	}
+
+	bBumperPersistenceInitialized = false;
+	Super::Deinitialize();
 }
 
 void UPBPlayerDataSubsystem::AdvanceBossProgress(const int32 BossCount)
@@ -30,16 +83,10 @@ bool UPBPlayerDataSubsystem::EquipBumper(const EPBBumperSlotType SlotType, const
 	switch (SlotType)
 	{
 	case EPBBumperSlotType::Top:
-		return EquipBumperAtSlot(EPBBumperEquipSlot::TopLeft, BumperRowId)
-			&& EquipBumperAtSlot(EPBBumperEquipSlot::TopRight, BumperRowId);
 	case EPBBumperSlotType::Side:
-		return EquipBumperAtSlot(EPBBumperEquipSlot::SideLeft, BumperRowId)
-			&& EquipBumperAtSlot(EPBBumperEquipSlot::SideRight, BumperRowId);
 	case EPBBumperSlotType::Rebound:
-		return EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, BumperRowId)
-			&& EquipBumperAtSlot(EPBBumperEquipSlot::ReboundRight, BumperRowId);
 	case EPBBumperSlotType::Special:
-		return EquipBumperAtSlot(EPBBumperEquipSlot::Special, BumperRowId);
+		return EquipBumperAtSlot(PBBumperEquipSlotUtils::GetDefaultEquipSlot(SlotType), BumperRowId);
 	default:
 		return false;
 	}
@@ -69,7 +116,13 @@ bool UPBPlayerDataSubsystem::UnequipBumper(const EPBBumperSlotType SlotType)
 		break;
 	}
 
-	return RemovedCount > 0;
+	if (RemovedCount > 0)
+	{
+		SaveBumperLoadout();
+		return true;
+	}
+
+	return false;
 }
 
 bool UPBPlayerDataSubsystem::GetEquippedBumper(
@@ -118,19 +171,42 @@ bool UPBPlayerDataSubsystem::EquipBumperAtSlot(
 	const EPBBumperEquipSlot EquipSlot,
 	const FName BumperRowId)
 {
+	const FName NormalizedBumperRowId = PBBumperAssetIds::NormalizeBumperRowId(BumperRowId);
 	EPBBumperSlotType SlotType;
-	if (BumperRowId.IsNone() || !PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, SlotType))
+	if (NormalizedBumperRowId.IsNone()
+		|| !PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, SlotType))
 	{
 		return false;
 	}
 
-	EquippedBumperRowIds.Add(EquipSlot, BumperRowId);
+	if (IsBumperEquippedInAnotherSlot(NormalizedBumperRowId, EquipSlot))
+	{
+		UE_LOG(LogTemp, Log,
+			TEXT("[BumperEquip] Duplicate row rejected. TargetSlot=%s RowName=%s"),
+			*UEnum::GetValueAsString(EquipSlot),
+			*NormalizedBumperRowId.ToString());
+		return false;
+	}
+
+	if (!ValidateBumperForSlot(EquipSlot, NormalizedBumperRowId))
+	{
+		return false;
+	}
+
+	EquippedBumperRowIds.Add(EquipSlot, NormalizedBumperRowId);
+	SaveBumperLoadout();
 	return true;
 }
 
 bool UPBPlayerDataSubsystem::UnequipBumperAtSlot(const EPBBumperEquipSlot EquipSlot)
 {
-	return EquippedBumperRowIds.Remove(EquipSlot) > 0;
+	if (EquippedBumperRowIds.Remove(EquipSlot) > 0)
+	{
+		SaveBumperLoadout();
+		return true;
+	}
+
+	return false;
 }
 
 bool UPBPlayerDataSubsystem::GetEquippedBumperAtSlot(
@@ -177,6 +253,29 @@ TArray<FPBEquippedBumperSlot> UPBPlayerDataSubsystem::GetEquippedBumperSlots() c
 	return EquippedSlots;
 }
 
+bool UPBPlayerDataSubsystem::IsBumperEquippedInAnotherSlot(
+	const FName BumperRowId,
+	const EPBBumperEquipSlot TargetSlot) const
+{
+	const FName NormalizedBumperRowId = PBBumperAssetIds::NormalizeBumperRowId(BumperRowId);
+	if (NormalizedBumperRowId.IsNone())
+	{
+		return false;
+	}
+
+	for (const TPair<EPBBumperEquipSlot, FName>& EquippedBumper : EquippedBumperRowIds)
+	{
+		if (EquippedBumper.Key != TargetSlot
+			&& PBBumperAssetIds::NormalizeBumperRowId(EquippedBumper.Value)
+				== NormalizedBumperRowId)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 TArray<FName> UPBPlayerDataSubsystem::GetEquippedBumperRowIds() const
 {
 	TArray<FName> BumperRowIds;
@@ -188,13 +287,153 @@ TArray<FName> UPBPlayerDataSubsystem::GetEquippedBumperRowIds() const
 	return BumperRowIds;
 }
 
-void UPBPlayerDataSubsystem::InitializeDefaultBumpersForTest()
+void UPBPlayerDataSubsystem::InitializeDefaultBumpers()
 {
 	EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, PBBumperAssetIds::Bumper::Rebound_PowerPush);
-	EquipBumperAtSlot(EPBBumperEquipSlot::ReboundRight, PBBumperAssetIds::Bumper::Rebound_CounterShell);
+	EquipBumperAtSlot(EPBBumperEquipSlot::ReboundRight, PBBumperAssetIds::Bumper::Rebound_KineticShell);
 	EquipBumperAtSlot(EPBBumperEquipSlot::SideLeft, PBBumperAssetIds::Bumper::Side_ShieldCharge);
 	EquipBumperAtSlot(EPBBumperEquipSlot::SideRight, PBBumperAssetIds::Bumper::Side_ManaCharge);
-	EquipBumperAtSlot(EPBBumperEquipSlot::TopLeft, PBBumperAssetIds::Bumper::Top_ComboUp);
+	EquipBumperAtSlot(EPBBumperEquipSlot::TopLeft, PBBumperAssetIds::Bumper::Top_ComboArc);
 	EquipBumperAtSlot(EPBBumperEquipSlot::TopRight, PBBumperAssetIds::Bumper::Top_GroggyStrike);
 	EquipBumperAtSlot(EPBBumperEquipSlot::Special, PBBumperAssetIds::Bumper::Gate_SpeedUp);
+}
+
+bool UPBPlayerDataSubsystem::LoadBumperLoadout()
+{
+	EquippedBumperRowIds.Reset();
+	bLoadedBumperLoadoutNeedsResave = false;
+	if (!UGameplayStatics::DoesSaveGameExist(BumperLoadoutSaveSlot, BumperLoadoutUserIndex))
+	{
+		return false;
+	}
+
+	const UPBBumperLoadoutSaveGame* SaveGame = Cast<UPBBumperLoadoutSaveGame>(
+		UGameplayStatics::LoadGameFromSlot(BumperLoadoutSaveSlot, BumperLoadoutUserIndex));
+	if (!IsValid(SaveGame) || SaveGame->SaveVersion != UPBBumperLoadoutSaveGame::CurrentSaveVersion)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BumperEquip] Loadout save is missing or has an unsupported version."));
+		return false;
+	}
+
+	TSet<EPBBumperEquipSlot> LoadedSlots;
+	TSet<FName> LoadedRows;
+	for (const FPBEquippedBumperSlot& EquippedSlot : SaveGame->EquippedSlots)
+	{
+		EPBBumperSlotType SlotType;
+		const FName NormalizedRowId = PBBumperAssetIds::NormalizeBumperRowId(EquippedSlot.BumperRowId);
+		if (!PBBumperEquipSlotUtils::TryGetSlotType(EquippedSlot.EquipSlot, SlotType)
+			|| NormalizedRowId.IsNone()
+			|| LoadedSlots.Contains(EquippedSlot.EquipSlot)
+			|| LoadedRows.Contains(NormalizedRowId))
+		{
+			bLoadedBumperLoadoutNeedsResave = true;
+			continue;
+		}
+
+		EquippedBumperRowIds.Add(EquippedSlot.EquipSlot, NormalizedRowId);
+		LoadedSlots.Add(EquippedSlot.EquipSlot);
+		LoadedRows.Add(NormalizedRowId);
+		bLoadedBumperLoadoutNeedsResave |= NormalizedRowId != EquippedSlot.BumperRowId;
+	}
+
+	return true;
+}
+
+bool UPBPlayerDataSubsystem::SaveBumperLoadout() const
+{
+	if (!bBumperPersistenceInitialized)
+	{
+		return true;
+	}
+
+	UPBBumperLoadoutSaveGame* SaveGame = Cast<UPBBumperLoadoutSaveGame>(
+		UGameplayStatics::CreateSaveGameObject(UPBBumperLoadoutSaveGame::StaticClass()));
+	if (!IsValid(SaveGame))
+	{
+		return false;
+	}
+
+	SaveGame->EquippedSlots = GetEquippedBumperSlots();
+	const bool bSaved = UGameplayStatics::SaveGameToSlot(
+		SaveGame,
+		BumperLoadoutSaveSlot,
+		BumperLoadoutUserIndex);
+	if (!bSaved)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[BumperEquip] Failed to save the bumper loadout."));
+	}
+	return bSaved;
+}
+
+bool UPBPlayerDataSubsystem::ValidateBumperForSlot(
+	const EPBBumperEquipSlot EquipSlot,
+	const FName BumperRowId) const
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
+		: nullptr;
+	if (!IsValid(TableDataSubsystem) || !TableDataSubsystem->IsBumperTableReady())
+	{
+		// 에디터 단위 테스트와 초기 비동기 로딩 구간은 테이블 준비 후 일괄 정리합니다.
+		return true;
+	}
+
+	FPBBumperTableRow BumperRow;
+	if (!TableDataSubsystem->FindBumperRow(BumperRowId, BumperRow))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[BumperEquip] Unknown bumper row rejected. Slot=%s RowName=%s"),
+			*UEnum::GetValueAsString(EquipSlot),
+			*BumperRowId.ToString());
+		return false;
+	}
+
+	if (!PBBumperEquipSlotUtils::DoesBumperTypeMatchEquipSlot(BumperRow.BumperType, EquipSlot))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[BumperEquip] Bumper type does not match slot. Slot=%s RowName=%s Type=%s"),
+			*UEnum::GetValueAsString(EquipSlot),
+			*BumperRowId.ToString(),
+			*UEnum::GetValueAsString(BumperRow.BumperType));
+		return false;
+	}
+
+	return true;
+}
+
+void UPBPlayerDataSubsystem::SanitizeEquippedBumpers()
+{
+	bool bChanged = false;
+	TSet<FName> ValidRows;
+	for (auto It = EquippedBumperRowIds.CreateIterator(); It; ++It)
+	{
+		const FName NormalizedRowId = PBBumperAssetIds::NormalizeBumperRowId(It.Value());
+		if (NormalizedRowId.IsNone()
+			|| ValidRows.Contains(NormalizedRowId)
+			|| !ValidateBumperForSlot(It.Key(), NormalizedRowId))
+		{
+			It.RemoveCurrent();
+			bChanged = true;
+			continue;
+		}
+
+		if (It.Value() != NormalizedRowId)
+		{
+			It.Value() = NormalizedRowId;
+			bChanged = true;
+		}
+		ValidRows.Add(NormalizedRowId);
+	}
+
+	if (bChanged)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BumperEquip] Invalid saved loadout entries were removed."));
+		SaveBumperLoadout();
+	}
+}
+
+void UPBPlayerDataSubsystem::HandleStartupGameDataLoaded()
+{
+	SanitizeEquippedBumpers();
 }

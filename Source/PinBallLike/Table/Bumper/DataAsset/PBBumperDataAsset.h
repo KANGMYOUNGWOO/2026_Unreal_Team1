@@ -12,6 +12,7 @@
 class UTexture2D;
 class UNiagaraSystem;
 
+/** 범퍼 RowName을 PrimaryAssetId로 삼고 UI 및 전투용 soft reference를 번들별로 보관합니다. */
 UCLASS(BlueprintType)
 class PINBALLLIKE_API UPBBumperDataAsset : public UPrimaryDataAsset
 {
@@ -47,4 +48,16 @@ public:
 	/** Effect 시트의 ActivationVfxId를 파서가 실제 에셋 참조로 변환한다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
 	TSoftObjectPtr<UNiagaraSystem> ActivationVfx;
+
+	/** 투사체나 직접 전달 단계에 사용하는 연출. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
+	TSoftObjectPtr<UNiagaraSystem> DeliveryVfx;
+
+	/** 효과가 실제 적용된 위치에서 한 번 재생하는 연출. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
+	TSoftObjectPtr<UNiagaraSystem> ImpactVfx;
+
+	/** 실제 효과 수명에 맞춰 대상에 부착하는 지속 연출. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
+	TSoftObjectPtr<UNiagaraSystem> StatusVfx;
 };

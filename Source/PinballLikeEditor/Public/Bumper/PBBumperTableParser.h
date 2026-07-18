@@ -41,5 +41,6 @@ protected:
 	FPBSheetAssetPathPreset ActivationVfxPreset;
 
 	UPBBumperDataAsset* SetupBumperDataAsset(FName RowName, FName TriggerId, FName EffectId) const;
-	TSoftObjectPtr<UNiagaraSystem> ResolveActivationVfx(FName EffectId) const;
+	bool ResolveEffectVfx(FName EffectId, struct FPBBumperEffectRow& OutEffectRow) const;
+	TSoftObjectPtr<UNiagaraSystem> ResolveVfx(FName VfxId) const;
 };

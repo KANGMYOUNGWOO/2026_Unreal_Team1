@@ -24,6 +24,10 @@ public:
 		AActor* InteractionActor) override;
 
 protected:
+	virtual FTransform ResolveSpawnTransform(
+		APBModularBumperBase* Bumper,
+		bool& bOutUsesSummonAnchor) override;
+
 	/** 영역 지속시간. 가속률은 Effect 시트의 Power에서 읽는다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect|Gate", meta = (ClampMin = "0.1", ClampMax = "60.0"))
 	float FieldDuration = 5.0f;

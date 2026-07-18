@@ -22,34 +22,6 @@
 #include "PinBallLike/Table/PBAssetBundleNames.h"
 #include "PinBallLike/Utils/PBSubsystemUtils.h"
 
-namespace
-{
-	bool DoesBumperTypeMatchEquipSlot(
-		const EPBBumperType BumperType,
-		const EPBBumperEquipSlot EquipSlot)
-	{
-		EPBBumperSlotType EquipSlotType;
-		if (!PBBumperEquipSlotUtils::TryGetSlotType(EquipSlot, EquipSlotType))
-		{
-			return false;
-		}
-
-		switch (BumperType)
-		{
-		case EPBBumperType::TopTarget:
-			return EquipSlotType == EPBBumperSlotType::Top;
-		case EPBBumperType::Side:
-			return EquipSlotType == EPBBumperSlotType::Side;
-		case EPBBumperType::Rebound:
-			return EquipSlotType == EPBBumperSlotType::Rebound;
-		case EPBBumperType::Gate:
-			return EquipSlotType == EPBBumperSlotType::Special;
-		default:
-			return false;
-		}
-	}
-}
-
 APBBumperSpawner::APBBumperSpawner()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -74,6 +46,7 @@ void APBBumperSpawner::OnConstruction(const FTransform& Transform)
 
 void APBBumperSpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	LogBattleTelemetrySummary();
 	ClearSpawnedBumpers();
 
 	Super::EndPlay(EndPlayReason);
@@ -113,7 +86,9 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	BuildPendingBumperAssetIds(BumperAssetIds);
 	if (BumperAssetIds.IsEmpty())
 	{
-		return FGuid();
+		PreparedBumperSpawnDataList.Reset();
+		OnLoaded.ExecuteIfBound();
+		return FGuid::NewGuid();
 	}
 
 	TArray<FName> BundleNames;
@@ -134,6 +109,7 @@ void APBBumperSpawner::SpawnLoadedBumpers()
 	}
 
 	ClearSpawnedBumpers();
+	bBattleTelemetrySummaryLogged = false;
 	CollectBumperAnchors();
 
 	// 로드된 DataAsset과 테이블 row를 실제 스폰용 데이터로 변환한다.
@@ -142,12 +118,19 @@ void APBBumperSpawner::SpawnLoadedBumpers()
 		CompleteBumperPreparation(false);
 		return;
 	}
+	if (PreparedBumperSpawnDataList.IsEmpty())
+	{
+		CompleteBumperPreparation(true);
+		return;
+	}
 
 	PlacePreparedBumperActors();
 }
 
 void APBBumperSpawner::ClearSpawnedBumpers()
 {
+	LogBattleTelemetrySummary();
+
 	for (APBModularBumperBase* Bumper : SpawnedBumpers)
 	{
 		if (IsValid(Bumper))
@@ -173,6 +156,44 @@ void APBBumperSpawner::GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpe
 	}
 }
 
+void APBBumperSpawner::LogBattleTelemetrySummary()
+{
+	if (bBattleTelemetrySummaryLogged || SpawnedBumpers.IsEmpty())
+	{
+		return;
+	}
+	int32 ValidBumperCount = 0;
+	int32 TotalMeaningfulContacts = 0;
+	int32 TotalActivations = 0;
+	for (const APBModularBumperBase* Bumper : SpawnedBumpers)
+	{
+		if (!IsValid(Bumper))
+		{
+			continue;
+		}
+
+		++ValidBumperCount;
+		TotalMeaningfulContacts += Bumper->GetMeaningfulContactCount();
+		TotalActivations += Bumper->GetActivationCount();
+		UE_LOG(LogTemp, Log,
+			TEXT("[BumperTelemetry] BattleSummary RowName=%s Position=%s MeaningfulContacts=%d Activations=%d Progress=%d/%d Pending=%d"),
+			*Bumper->GetBumperRowId().ToString(),
+			*UEnum::GetValueAsString(Bumper->GetPrimaryPositionId()),
+			Bumper->GetMeaningfulContactCount(),
+			Bumper->GetActivationCount(),
+			Bumper->GetCurrentTriggerCount(),
+			Bumper->GetRequiredTriggerCount(),
+			Bumper->GetPendingActivationCount());
+	}
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[BumperTelemetry] BattleSummaryTotal Bumpers=%d MeaningfulContacts=%d Activations=%d"),
+		ValidBumperCount,
+		TotalMeaningfulContacts,
+		TotalActivations);
+	bBattleTelemetrySummaryLogged = true;
+}
+
 void APBBumperSpawner::BuildPendingBumperAssetIds(TArray<FPrimaryAssetId>& OutAssetIds) const
 {
 	OutAssetIds.Reset();
@@ -194,7 +215,7 @@ bool APBBumperSpawner::BuildPreparedBumperSpawnData()
 	PreparedBumperSpawnDataList.Reset();
 	if (PendingEquippedSlots.IsEmpty())
 	{
-		return false;
+		return true;
 	}
 
 	for (const FPBEquippedBumperSlot& EquippedSlot : PendingEquippedSlots)
@@ -221,8 +242,11 @@ bool APBBumperSpawner::TryBuildBumperSpawnData(
 	{
 		return false;
 	}
+	OutSpawnData.BumperRowId = BumperRowId;
 
-	if (!DoesBumperTypeMatchEquipSlot(OutSpawnData.BumperRow.BumperType, EquippedSlot.EquipSlot))
+	if (!PBBumperEquipSlotUtils::DoesBumperTypeMatchEquipSlot(
+		OutSpawnData.BumperRow.BumperType,
+		EquippedSlot.EquipSlot))
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Bumper] Equipped row does not match the physical slot. Slot=%s RowName=%s BumperType=%s"),
@@ -272,15 +296,25 @@ bool APBBumperSpawner::TryBuildBumperSpawnData(
 
 	OutSpawnData.EffectClass = TSubclassOf<UPBBumperEffectBase>(LoadedEffectClass);
 	OutSpawnData.ActivationVfx = BumperDataAsset->ActivationVfx.Get();
-	if (!OutSpawnData.EffectRow.ActivationVfxId.IsNone()
-		&& !IsValid(OutSpawnData.ActivationVfx))
+	OutSpawnData.DeliveryVfx = BumperDataAsset->DeliveryVfx.Get();
+	OutSpawnData.ImpactVfx = BumperDataAsset->ImpactVfx.Get();
+	OutSpawnData.StatusVfx = BumperDataAsset->StatusVfx.Get();
+	const auto ValidateVfx = [&](const FName VfxId, const UNiagaraSystem* LoadedVfx, const TCHAR* Stage)
 	{
-		UE_LOG(LogTemp, Warning,
-			TEXT("[Bumper] Activation VFX was configured but not loaded. RowName=%s EffectId=%s VfxId=%s"),
-			*BumperRowId.ToString(),
-			*OutSpawnData.BumperRow.EffectID.ToString(),
-			*OutSpawnData.EffectRow.ActivationVfxId.ToString());
-	}
+		if (!VfxId.IsNone() && !IsValid(LoadedVfx))
+		{
+			UE_LOG(LogTemp, Warning,
+				TEXT("[Bumper] %s VFX was configured but not loaded. RowName=%s EffectId=%s VfxId=%s"),
+				Stage,
+				*BumperRowId.ToString(),
+				*OutSpawnData.BumperRow.EffectID.ToString(),
+				*VfxId.ToString());
+		}
+	};
+	ValidateVfx(OutSpawnData.EffectRow.ActivationVfxId, OutSpawnData.ActivationVfx, TEXT("Activation"));
+	ValidateVfx(OutSpawnData.EffectRow.DeliveryVfxId, OutSpawnData.DeliveryVfx, TEXT("Delivery"));
+	ValidateVfx(OutSpawnData.EffectRow.ImpactVfxId, OutSpawnData.ImpactVfx, TEXT("Impact"));
+	ValidateVfx(OutSpawnData.EffectRow.StatusVfxId, OutSpawnData.StatusVfx, TEXT("Status"));
 	return true;
 }
 
@@ -313,7 +347,7 @@ bool APBBumperSpawner::TryBuildTriggerSpawnInfos(
 		return false;
 	}
 
-	// 같은 Row가 좌우에 장착돼도 각 Modular Bumper는 자기 위치의 Trigger 하나만 생성한다.
+	// 각 장착 Row는 자기 물리 슬롯의 Trigger 하나만 생성한다.
 	FPBBumperTriggerSpawnInfo TriggerSpawnInfo;
 	TriggerSpawnInfo.TriggerClass =
 		TSubclassOf<APBBumperTriggerActorBase>(BumperDataAsset->TriggerClass.Get());
@@ -361,11 +395,15 @@ APBModularBumperBase* APBBumperSpawner::PlaceBumperActor(const FPBPreparedBumper
 	}
 
 	Bumper->InitializeBumper(
+		SpawnData.BumperRowId,
 		SpawnData.BumperRow,
 		SpawnData.TriggerSpawnInfos,
 		SpawnData.EffectRow,
 		SpawnData.EffectClass,
 		SpawnData.ActivationVfx,
+		SpawnData.DeliveryVfx,
+		SpawnData.ImpactVfx,
+		SpawnData.StatusVfx,
 		AnchorTransforms);
 	UGameplayStatics::FinishSpawningActor(Bumper, FTransform::Identity);
 

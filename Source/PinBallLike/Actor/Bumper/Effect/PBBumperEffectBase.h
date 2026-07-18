@@ -11,6 +11,7 @@ class APBBallBase;
 class APBModularBumperBase;
 class AActor;
 
+/** 시트 Effect Row와 소유 범퍼를 받아 모든 범퍼 효과의 공통 실행 및 VFX API를 제공합니다. */
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API UPBBumperEffectBase : public UObject
 {
@@ -42,6 +43,14 @@ public:
 	FPBBumperEffectRow GetEffectData() const;
 
 protected:
+	/** 직접 적용 효과의 짧은 전달 연출을 대상에 부착합니다. 투사체 효과는 투사체가 직접 소유합니다. */
+	void PlayDeliveryVfx(AActor* TargetActor, float Duration = 0.55f) const;
+	void PlayImpactVfx(AActor* TargetActor) const;
+	void PlayStatusVfx(AActor* TargetActor, float Duration) const;
+	void StopStatusVfx(AActor* TargetActor) const;
+	void PlayResolvedVfx(AActor* TargetActor, float StatusDuration = 0.0f, bool bPlayStatus = false) const;
+	FName MakeVfxChannel(const TCHAR* Stage) const;
+
 	UPROPERTY()
 	TWeakObjectPtr<APBModularBumperBase> OwnerBumper;
 

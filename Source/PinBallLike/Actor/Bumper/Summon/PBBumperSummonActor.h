@@ -15,6 +15,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FPBBumperSummonActionFinishedSignature,
 	APBBumperSummonActor*, SummonActor);
 
+/** 소환형 범퍼 효과가 재사용하는 Actor의 시작, 종료, 비활성화 계약을 정의합니다. */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBumperSummonActor : public AActor
 {
