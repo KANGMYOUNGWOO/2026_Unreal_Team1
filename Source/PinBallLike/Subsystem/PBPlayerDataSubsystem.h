@@ -8,6 +8,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBPlayerDataSubsystem.generated.h"
 
+/** 전투 진행값과 플레이어의 범퍼 장착 구성을 소유하고 저장하는 게임 인스턴스 서비스입니다. */
 UCLASS()
 class PINBALLLIKE_API UPBPlayerDataSubsystem : public UGameInstanceSubsystem
 {
@@ -15,6 +16,7 @@ class PINBALLLIKE_API UPBPlayerDataSubsystem : public UGameInstanceSubsystem
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 
 #pragma region Battle
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
@@ -62,11 +64,20 @@ public:
 #pragma endregion 
 
 private:
-	// TODO: SaveGame 연동 전까지 사용하는 임시 기본 장착값.
-	void InitializeDefaultBumpersForTest();
+	void InitializeDefaultBumpers();
+	bool LoadBumperLoadout();
+	bool SaveBumperLoadout() const;
+	bool ValidateBumperForSlot(EPBBumperEquipSlot EquipSlot, FName BumperRowId) const;
+	void SanitizeEquippedBumpers();
+
+	UFUNCTION()
+	void HandleStartupGameDataLoaded();
 
 	UPROPERTY(Transient)
 	TMap<EPBBumperEquipSlot, FName> EquippedBumperRowIds;
+
+	bool bBumperPersistenceInitialized = false;
+	bool bLoadedBumperLoadoutNeedsResave = false;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 InitialBattleLaunchCount = 5;

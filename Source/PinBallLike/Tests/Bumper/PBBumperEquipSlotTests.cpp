@@ -1,7 +1,9 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Engine/GameInstance.h"
+#include "Kismet/GameplayStatics.h"
 #include "Misc/AutomationTest.h"
+#include "PinBallLike/Actor/Bumper/Save/PBBumperLoadoutSaveGame.h"
 #include "PinBallLike/Struct/Bumper/PBBumperEquipSlot.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
@@ -20,17 +22,18 @@ bool FPBBumperEquipSlotMappingTest::RunTest(const FString& Parameters)
 		EPBBumperEquipSlot EquipSlot;
 		EPBBumperSlotType SlotType;
 		EPBBumperPositionId PositionId;
+		EPBBumperType BumperType;
 	};
 
 	const FExpectedSlotMapping ExpectedMappings[] =
 	{
-		{ EPBBumperEquipSlot::TopLeft, EPBBumperSlotType::Top, EPBBumperPositionId::TopTargetLeft },
-		{ EPBBumperEquipSlot::TopRight, EPBBumperSlotType::Top, EPBBumperPositionId::TopTargetRight },
-		{ EPBBumperEquipSlot::SideLeft, EPBBumperSlotType::Side, EPBBumperPositionId::SideLeft },
-		{ EPBBumperEquipSlot::SideRight, EPBBumperSlotType::Side, EPBBumperPositionId::SideRight },
-		{ EPBBumperEquipSlot::ReboundLeft, EPBBumperSlotType::Rebound, EPBBumperPositionId::ReboundLeft },
-		{ EPBBumperEquipSlot::ReboundRight, EPBBumperSlotType::Rebound, EPBBumperPositionId::ReboundRight },
-		{ EPBBumperEquipSlot::Special, EPBBumperSlotType::Special, EPBBumperPositionId::GateCenterMid }
+		{ EPBBumperEquipSlot::TopLeft, EPBBumperSlotType::Top, EPBBumperPositionId::TopTargetLeft, EPBBumperType::TopTarget },
+		{ EPBBumperEquipSlot::TopRight, EPBBumperSlotType::Top, EPBBumperPositionId::TopTargetRight, EPBBumperType::TopTarget },
+		{ EPBBumperEquipSlot::SideLeft, EPBBumperSlotType::Side, EPBBumperPositionId::SideLeft, EPBBumperType::Side },
+		{ EPBBumperEquipSlot::SideRight, EPBBumperSlotType::Side, EPBBumperPositionId::SideRight, EPBBumperType::Side },
+		{ EPBBumperEquipSlot::ReboundLeft, EPBBumperSlotType::Rebound, EPBBumperPositionId::ReboundLeft, EPBBumperType::Rebound },
+		{ EPBBumperEquipSlot::ReboundRight, EPBBumperSlotType::Rebound, EPBBumperPositionId::ReboundRight, EPBBumperType::Rebound },
+		{ EPBBumperEquipSlot::Special, EPBBumperSlotType::Special, EPBBumperPositionId::GateCenterMid, EPBBumperType::Gate }
 	};
 
 	for (const FExpectedSlotMapping& Expected : ExpectedMappings)
@@ -47,6 +50,17 @@ bool FPBBumperEquipSlotMappingTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Mapped board position is correct"),
 			static_cast<uint8>(ActualPositionId),
 			static_cast<uint8>(Expected.PositionId));
+		TestTrue(TEXT("Expected Bumper type is accepted by the physical slot"),
+			PBBumperEquipSlotUtils::DoesBumperTypeMatchEquipSlot(
+				Expected.BumperType,
+				Expected.EquipSlot));
+		const EPBBumperType MismatchedType = Expected.BumperType == EPBBumperType::Gate
+			? EPBBumperType::Rebound
+			: EPBBumperType::Gate;
+		TestFalse(TEXT("Mismatched Bumper type is rejected by the physical slot"),
+			PBBumperEquipSlotUtils::DoesBumperTypeMatchEquipSlot(
+				MismatchedType,
+				Expected.EquipSlot));
 	}
 
 	return true;
@@ -120,6 +134,12 @@ bool FPBBumperIndependentEquipmentTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Two physical slots are currently equipped"), EquippedSlots.Num(), 2);
 	const TArray<FName> UniqueRows = PlayerData->GetEquippedBumperRowIds();
 	TestEqual(TEXT("Every equipped row is unique"), UniqueRows.Num(), 2);
+	TestTrue(TEXT("Removing the Rebound category clears its remaining slot"),
+		PlayerData->UnequipBumper(EPBBumperSlotType::Rebound));
+	TestTrue(TEXT("Removing the Side category clears its remaining slot"),
+		PlayerData->UnequipBumper(EPBBumperSlotType::Side));
+	TestTrue(TEXT("An empty Bumper loadout remains a valid stored state"),
+		PlayerData->GetEquippedBumperSlots().IsEmpty());
 
 	const EPBBumperSlotType InvalidSlotType = static_cast<EPBBumperSlotType>(255);
 	TestFalse(TEXT("Invalid legacy category is rejected"),
@@ -172,6 +192,73 @@ bool FPBBumperIndependentEquipmentTest::RunTest(const FString& Parameters)
 		MigrationPlayerData->EquipBumperAtSlot(
 			EPBBumperEquipSlot::TopRight,
 			PBBumperAssetIds::Bumper::Top_ComboArc));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBBumperLoadoutSerializationTest,
+	"PinBallLike.Bumper.Equipment.SaveGameSerialization",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBBumperLoadoutSerializationTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	UPBBumperLoadoutSaveGame* Source = NewObject<UPBBumperLoadoutSaveGame>();
+	if (!TestNotNull(TEXT("Bumper loadout SaveGame can be created"), Source))
+	{
+		return false;
+	}
+
+	FPBEquippedBumperSlot& SourceSlot = Source->EquippedSlots.AddDefaulted_GetRef();
+	SourceSlot.EquipSlot = EPBBumperEquipSlot::SideRight;
+	SourceSlot.BumperRowId = PBBumperAssetIds::Bumper::Side_ManaCharge;
+
+	TArray<uint8> SaveBytes;
+	if (!TestTrue(
+		TEXT("Bumper loadout serializes to memory"),
+		UGameplayStatics::SaveGameToMemory(Source, SaveBytes)))
+	{
+		return false;
+	}
+
+	const UPBBumperLoadoutSaveGame* Restored = Cast<UPBBumperLoadoutSaveGame>(
+		UGameplayStatics::LoadGameFromMemory(SaveBytes));
+	if (!TestNotNull(TEXT("Serialized bumper loadout restores as the expected class"), Restored))
+	{
+		return false;
+	}
+
+	TestEqual(
+		TEXT("Save version survives serialization"),
+		Restored->SaveVersion,
+		UPBBumperLoadoutSaveGame::CurrentSaveVersion);
+	if (TestEqual(TEXT("Equipped slot count survives serialization"), Restored->EquippedSlots.Num(), 1))
+	{
+		TestEqual(
+			TEXT("Physical slot survives serialization"),
+			static_cast<uint8>(Restored->EquippedSlots[0].EquipSlot),
+			static_cast<uint8>(EPBBumperEquipSlot::SideRight));
+		TestEqual(
+			TEXT("Bumper RowName survives serialization"),
+			Restored->EquippedSlots[0].BumperRowId,
+			PBBumperAssetIds::Bumper::Side_ManaCharge);
+	}
+
+	Source->EquippedSlots.Reset();
+	SaveBytes.Reset();
+	TestTrue(
+		TEXT("An intentionally empty loadout serializes"),
+		UGameplayStatics::SaveGameToMemory(Source, SaveBytes));
+	const UPBBumperLoadoutSaveGame* EmptyRestored = Cast<UPBBumperLoadoutSaveGame>(
+		UGameplayStatics::LoadGameFromMemory(SaveBytes));
+	if (TestNotNull(TEXT("An intentionally empty loadout restores"), EmptyRestored))
+	{
+		TestTrue(
+			TEXT("Empty loadout is preserved instead of being replaced by defaults"),
+			EmptyRestored->EquippedSlots.IsEmpty());
+	}
 
 	return true;
 }
