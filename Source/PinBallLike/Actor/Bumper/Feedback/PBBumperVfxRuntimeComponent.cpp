@@ -52,6 +52,7 @@ UNiagaraComponent* UPBBumperVfxRuntimeComponent::PlayAttached(
 		|| !IsValid(AttachComponent)
 		|| !IsValid(World)
 		|| !FMath::IsFinite(Duration)
+		|| Duration < 0.0f
 		|| RelativeLocation.ContainsNaN()
 		|| Scale.ContainsNaN())
 	{
