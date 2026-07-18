@@ -52,7 +52,6 @@ void UPBComboCashoutBumperEffect::ActivateEffectForActor(
 		FMath::RoundToInt(FMath::Min(RawDamage, static_cast<double>(MaxCashoutDamagePerActivation))),
 		1,
 		MaxCashoutDamagePerActivation);
-	// 먼저 소비하고 탄환 생성이 실패하면 되돌려 한쪽만 적용되는 상태를 막습니다.
 	const bool bComboReserved = Comboable->TryConsumeCombo(ConsumedCombo);
 	const bool bProjectileSpawned = bComboReserved
 		&& SpawnBossProjectile(

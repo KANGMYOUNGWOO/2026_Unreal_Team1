@@ -21,7 +21,58 @@ class UPBTableDataSubsystem;
 class USceneComponent;
 class UNiagaraSystem;
 
-/** 비동기 로드 완료 후 범퍼 Actor 한 개를 생성하는 데 필요한 런타임 참조 묶음입니다. */
+enum class EPBBumperAssetPreparationPhase : uint8
+{
+	Idle,
+	LoadingAssets,
+	ReadyToSpawn
+};
+
+struct FPBBumperAssetPreparationState
+{
+	bool TryBeginLoading()
+	{
+		if (Phase != EPBBumperAssetPreparationPhase::Idle)
+		{
+			return false;
+		}
+
+		Phase = EPBBumperAssetPreparationPhase::LoadingAssets;
+		return true;
+	}
+
+	void MarkAssetsLoaded()
+	{
+		if (Phase == EPBBumperAssetPreparationPhase::LoadingAssets)
+		{
+			Phase = EPBBumperAssetPreparationPhase::ReadyToSpawn;
+		}
+	}
+
+	void Reset()
+	{
+		Phase = EPBBumperAssetPreparationPhase::Idle;
+	}
+
+	bool IsLoading() const
+	{
+		return Phase == EPBBumperAssetPreparationPhase::LoadingAssets;
+	}
+
+	bool IsReadyToSpawn() const
+	{
+		return Phase == EPBBumperAssetPreparationPhase::ReadyToSpawn;
+	}
+
+	bool HasPendingSnapshot() const
+	{
+		return Phase != EPBBumperAssetPreparationPhase::Idle;
+	}
+
+private:
+	EPBBumperAssetPreparationPhase Phase = EPBBumperAssetPreparationPhase::Idle;
+};
+
 struct FPBPreparedBumperSpawnData
 {
 	FName BumperRowId = NAME_None;
@@ -40,7 +91,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	bool, bSuccess,
 	const TArray<APBModularBumperBase*>&, SpawnedBumperActors);
 
-/** 저장된 장착 슬롯을 비동기 로드하고 맵 Anchor 위치에 모듈형 범퍼를 생성합니다. */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBumperSpawner : public AActor
 {
@@ -66,7 +116,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper|Spawn")
 	void GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpers) const;
 
-	/** 현재 전투의 슬롯별 유효 접촉·발동 누계를 로그에 한 번만 기록합니다. */
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Telemetry")
 	void LogBattleTelemetrySummary();
 
@@ -91,6 +140,7 @@ private:
 
 	void PlacePreparedBumperActors();
 	APBModularBumperBase* PlaceBumperActor(const FPBPreparedBumperSpawnData& SpawnData);
+	void HandleBumperAssetsLoaded(FStreamableDelegate OnLoaded);
 
 	// 준비 결과를 delegate와 Gameplay Message로 알린다.
 	void CompleteBumperPreparation(bool bSuccess);
@@ -114,6 +164,8 @@ private:
 	TArray<TObjectPtr<APBModularBumperBase>> SpawnedBumpers;
 
 	bool bBattleTelemetrySummaryLogged = false;
+	FPBBumperAssetPreparationState AssetPreparationState;
+	FGuid ActiveBumperAssetLoadRequestId;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBGameDataLoadSubsystem> CachedGameDataLoadSubsystem;

@@ -48,6 +48,9 @@ void APBBumperSpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	LogBattleTelemetrySummary();
 	ClearSpawnedBumpers();
+	PendingEquippedSlots.Reset();
+	AssetPreparationState.Reset();
+	ActiveBumperAssetLoadRequestId = FGuid();
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -78,6 +81,15 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	{
 		return FGuid();
 	}
+	if (!AssetPreparationState.TryBeginLoading())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Rejected overlapping asset preparation. Spawner=%s ActiveRequestId=%s ReadyToSpawn=%s"),
+			*GetNameSafe(this),
+			*ActiveBumperAssetLoadRequestId.ToString(),
+			AssetPreparationState.IsReadyToSpawn() ? TEXT("true") : TEXT("false"));
+		return FGuid();
+	}
 
 	PendingEquippedSlots = CachedPlayerDataSubsystem->GetEquippedBumperSlots();
 
@@ -87,6 +99,7 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	if (BumperAssetIds.IsEmpty())
 	{
 		PreparedBumperSpawnDataList.Reset();
+		AssetPreparationState.MarkAssetsLoaded();
 		OnLoaded.ExecuteIfBound();
 		return FGuid::NewGuid();
 	}
@@ -94,14 +107,39 @@ FGuid APBBumperSpawner::LoadEquippedBumperDataAssetAsync(const FStreamableDelega
 	TArray<FName> BundleNames;
 	BundleNames.Add(PBAssetBundleNames::Gameplay);
 
-	return CachedGameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
+	const FGuid RequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
 		BumperAssetIds,
 		BundleNames,
-		OnLoaded);
+		FStreamableDelegate::CreateUObject(
+			this,
+			&ThisClass::HandleBumperAssetsLoaded,
+			OnLoaded));
+	if (AssetPreparationState.IsLoading())
+	{
+		if (!RequestId.IsValid())
+		{
+			PendingEquippedSlots.Reset();
+			AssetPreparationState.Reset();
+		}
+		else
+		{
+			ActiveBumperAssetLoadRequestId = RequestId;
+		}
+	}
+	return RequestId;
 }
 
 void APBBumperSpawner::SpawnLoadedBumpers()
 {
+	if (!AssetPreparationState.IsReadyToSpawn())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Spawn request rejected before asset preparation completed. Spawner=%s Loading=%s"),
+			*GetNameSafe(this),
+			AssetPreparationState.IsLoading() ? TEXT("true") : TEXT("false"));
+		return;
+	}
+
 	if (!CacheRequiredSubsystems())
 	{
 		CompleteBumperPreparation(false);
@@ -154,6 +192,13 @@ void APBBumperSpawner::GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpe
 			OutBumpers.Add(Bumper);
 		}
 	}
+}
+
+void APBBumperSpawner::HandleBumperAssetsLoaded(FStreamableDelegate OnLoaded)
+{
+	AssetPreparationState.MarkAssetsLoaded();
+	ActiveBumperAssetLoadRequestId = FGuid();
+	OnLoaded.ExecuteIfBound();
 }
 
 void APBBumperSpawner::LogBattleTelemetrySummary()
@@ -347,7 +392,6 @@ bool APBBumperSpawner::TryBuildTriggerSpawnInfos(
 		return false;
 	}
 
-	// 각 장착 Row는 자기 물리 슬롯의 Trigger 하나만 생성한다.
 	FPBBumperTriggerSpawnInfo TriggerSpawnInfo;
 	TriggerSpawnInfo.TriggerClass =
 		TSubclassOf<APBBumperTriggerActorBase>(BumperDataAsset->TriggerClass.Get());
@@ -413,6 +457,9 @@ APBModularBumperBase* APBBumperSpawner::PlaceBumperActor(const FPBPreparedBumper
 void APBBumperSpawner::CompleteBumperPreparation(const bool bSuccess)
 {
 	PreparedBumperSpawnDataList.Reset();
+	PendingEquippedSlots.Reset();
+	AssetPreparationState.Reset();
+	ActiveBumperAssetLoadRequestId = FGuid();
 
 	TArray<APBModularBumperBase*> SpawnedBumperActors;
 	GetSpawnedBumpers(SpawnedBumperActors);

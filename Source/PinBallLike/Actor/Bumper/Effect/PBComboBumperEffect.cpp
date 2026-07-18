@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "PBComboBumperEffect.h"
 
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
@@ -43,6 +41,5 @@ void UPBComboBumperEffect::ActivateEffectForActor(
 		*GetNameSafe(InteractionActor),
 		ComboAmount);
 
-	// 즉시 효과는 성공 여부와 관계없이 범퍼를 Idle 상태로 돌려야 한다.
 	FinishEffect();
 }

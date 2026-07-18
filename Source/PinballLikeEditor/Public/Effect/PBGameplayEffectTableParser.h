@@ -4,7 +4,6 @@
 #include "PBTableParserBase.h"
 #include "PBGameplayEffectTableParser.generated.h"
 
-/** 공용 Effect 시트를 DT_GameplayEffect로 변환합니다. */
 UCLASS()
 class PINBALLLIKEEDITOR_API UPBGameplayEffectTableParser : public UPBTableParserBase
 {

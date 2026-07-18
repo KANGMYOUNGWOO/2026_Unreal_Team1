@@ -42,7 +42,6 @@ void APBModularBumperBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	ClearTriggerActors();
 	if (IsValid(BumperEffect))
 	{
-		// 소환형 효과가 만든 필드와 획득 아이템을 GC 시점까지 월드에 남기지 않는다.
 		BumperEffect->ShutdownEffect();
 		BumperEffect = nullptr;
 	}
@@ -90,7 +89,6 @@ void APBModularBumperBase::FinishActivation()
 		FinishedTrigger->FinishTrigger();
 	}
 
-	// 전투 흐름이 범퍼를 Disabled로 바꾼 경우, 효과 종료가 그 상태를 임의로 해제하지 않는다.
 	if (RuntimeState.CurrentState != EPBBumperState::Disabled)
 	{
 		SetBumperState(EPBBumperState::Idle);
@@ -448,8 +446,6 @@ void APBModularBumperBase::QueueActivation(
 
 	if (EffectData.ExecutionPolicy == EPBBumperEffectExecutionPolicy::Immediate)
 	{
-		// Immediate 효과가 이 경로에 들어오면 이전 효과가 FinishEffect를 아직 호출하지 않은 것이다.
-		// 같은 Effect UObject 재진입을 막기 위해 안전하게 직렬화하고 설정 오류를 로그로 드러낸다.
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Bumper] Immediate effect request was serialized because the execution lane is busy. Bumper=%s Trigger=%s Pending=%d"),
 			*GetNameSafe(this),
@@ -592,7 +588,6 @@ void APBModularBumperBase::ProcessNextPendingActivation()
 		APBBumperTriggerActorBase* TriggerActor = PendingActivation.TriggerActor.Get();
 		if (!IsValid(TriggerActor) || !TriggerActor->IsTriggerReady())
 		{
-			// 대기 중 Trigger가 파괴되거나 외부 초기화된 경우 모듈 호환 UI 값도 다시 계산한다.
 			NotifyTriggerCountChanged();
 			continue;
 		}
@@ -663,7 +658,6 @@ bool APBModularBumperBase::FindBumperPositionTransform(
 void APBModularBumperBase::NotifyTriggerCountChanged()
 {
 	const int32 RequiredTriggerCount = GetRequiredTriggerCount();
-	// 기존 모듈 단위 UI가 즉시 깨지지 않도록 자식 Trigger 중 가장 높은 진행도를 호환값으로 제공한다.
 	RuntimeState.CurrentTriggerCount = GetCurrentTriggerCount();
 	OnBumperTriggerCountChanged.Broadcast(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
 	OnTriggerCountChanged(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
@@ -671,7 +665,6 @@ void APBModularBumperBase::NotifyTriggerCountChanged()
 
 void APBModularBumperBase::ApplyBumperEffectToActor_Implementation(AActor* InteractionActor)
 {
-	// 기존 Ball Blueprint 구현은 그대로 재사용하고, 일반 Actor에 구현이 없으면 실행 레인을 해제한다.
 	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
 	{
 		ApplyBumperEffect(Ball);
@@ -683,6 +676,5 @@ void APBModularBumperBase::ApplyBumperEffectToActor_Implementation(AActor* Inter
 
 void APBModularBumperBase::ApplyBumperEffect_Implementation(APBBallBase* Ball)
 {
-	// 자식에서 효과를 구현하지 않으면 즉시 Idle로 돌려 테스트하기 쉽게 둔다.
 	FinishActivation();
 }

@@ -12,10 +12,6 @@ class UPBCollectionEntryViewModel;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBCollectionEntryClickedSignature, FName, CollectionId);
 
-/**
- * 도감 목록에서 항목 하나의 표시 데이터와 클릭 전달을 담당합니다.
- * 외형은 이 클래스를 부모로 삼은 Widget Blueprint에서 구성합니다.
- */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionEntryWidget : public UUserWidget
 {
@@ -37,7 +33,6 @@ public:
 protected:
 	virtual void NativeOnInitialized() override;
 
-	/** Widget Blueprint가 상태별 아이콘, 색상, 애니메이션을 갱신할 때 사용합니다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Collection|Entry", meta = (DisplayName = "On Collection Display Data Changed"))
 	void BP_OnCollectionDisplayDataChanged(const FPBCollectionDisplayData& InDisplayData);
 
@@ -74,7 +69,6 @@ private:
 	UPROPERTY(Transient)
 	FPBCollectionDisplayData DisplayData;
 
-	/** WBP의 MVVM 바인딩이 참조하는 카드 표시 상태입니다. */
 	UPROPERTY(Transient)
 	TObjectPtr<UPBCollectionEntryViewModel> EntryViewModel;
 

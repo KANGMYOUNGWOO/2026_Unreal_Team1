@@ -16,7 +16,6 @@ class PINBALLLIKEEDITOR_API UPBTableParserBase : public UGoogleSheetParserBase
 public:
 	virtual void OnParseComplete() override;
 
-	/** 에디터 자동화에서도 Details 패널과 같은 방식으로 출력 DataTable을 지정합니다. */
 	void SetTargetTable(UDataTable* InTargetTable) { TargetTable = InTargetTable; }
 
 protected:

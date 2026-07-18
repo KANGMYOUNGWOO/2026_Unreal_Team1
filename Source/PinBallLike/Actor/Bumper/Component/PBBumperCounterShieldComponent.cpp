@@ -2,7 +2,6 @@
 
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/Projectile/PBBumperProjectile.h"
-#include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "TimerManager.h"
@@ -20,6 +19,7 @@ UPBBumperCounterShieldComponent::UPBBumperCounterShieldComponent()
 
 bool UPBBumperCounterShieldComponent::Arm(
 	APBModularBumperBase* SourceBumper,
+	const FTransform& SourceTransform,
 	AActor* BossTarget,
 	TSubclassOf<APBBumperProjectile> ProjectileClass,
 	const int32 Damage,
@@ -33,11 +33,15 @@ bool UPBBumperCounterShieldComponent::Arm(
 		|| !IsValid(World)
 		|| !ResourceComponent->HasResource(PBResourceNames::Shield)
 		|| !IsValid(SourceBumper)
+		|| SourceTransform.ContainsNaN()
 		|| !IsValid(BossTarget)
 		|| !ProjectileClass
 		|| Damage <= 0
 		|| !FMath::IsFinite(Duration)
-		|| Duration <= 0.0f)
+		|| Duration <= 0.0f
+		|| SpawnOffset.ContainsNaN()
+		|| !FMath::IsFinite(ProjectileLifetime)
+		|| ProjectileLifetime <= 0.0f)
 	{
 		return false;
 	}
@@ -57,6 +61,7 @@ bool UPBBumperCounterShieldComponent::Arm(
 	ArmedBumper = SourceBumper;
 	ArmedBossTarget = BossTarget;
 	ArmedProjectileClass = ProjectileClass;
+	ArmedSourceTransform = SourceTransform;
 	ArmedSpawnOffset = SpawnOffset;
 	ArmedDamage = FMath::Clamp(Damage, 1, MaxCounterShieldDamage);
 	ArmedProjectileLifetime = FMath::Max(ProjectileLifetime, 0.1f);
@@ -109,6 +114,8 @@ void UPBBumperCounterShieldComponent::Disarm()
 	ArmedBumper.Reset();
 	ArmedBossTarget.Reset();
 	ArmedProjectileClass = nullptr;
+	ArmedSourceTransform = FTransform::Identity;
+	ArmedSpawnOffset = FVector::ZeroVector;
 	ArmedDamage = 0;
 }
 
@@ -121,14 +128,10 @@ bool UPBBumperCounterShieldComponent::FireCounterProjectile() const
 		return false;
 	}
 
-	const APBBumperTriggerActorBase* ActiveTrigger = Bumper->GetActiveTriggerActor();
-	const FTransform SourceTransform = IsValid(ActiveTrigger)
-		? ActiveTrigger->GetActorTransform()
-		: Bumper->GetActorTransform();
-	const FVector SpawnLocation = SourceTransform.TransformPosition(ArmedSpawnOffset);
+	const FVector SpawnLocation = ResolveProjectileSpawnLocation();
 	const FVector TargetDirection = BossTarget->GetActorLocation() - SpawnLocation;
 	const FRotator SpawnRotation = TargetDirection.IsNearlyZero()
-		? SourceTransform.Rotator()
+		? ArmedSourceTransform.Rotator()
 		: TargetDirection.Rotation();
 	return IsValid(APBBumperProjectile::SpawnForTarget(
 		Bumper,
@@ -144,6 +147,11 @@ bool UPBBumperCounterShieldComponent::FireCounterProjectile() const
 		Bumper->GetDeliveryVfx(),
 		Bumper->GetImpactVfx(),
 		nullptr));
+}
+
+FVector UPBBumperCounterShieldComponent::ResolveProjectileSpawnLocation() const
+{
+	return ArmedSourceTransform.TransformPosition(ArmedSpawnOffset);
 }
 
 void UPBBumperCounterShieldComponent::HandleResourceStructureChanged(

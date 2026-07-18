@@ -10,17 +10,12 @@ class UButton;
 class UPBCollectionTabWidgetBase;
 class UWidgetSwitcher;
 
-/**
- * 도감의 공통 셸입니다.
- * 다섯 탭 전환과 Push/Pop만 담당하며 목록, 검색, 상세 표시는 각 탭 WBP가 소유합니다.
- */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionWidget : public UPBUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	/** 기존 Blueprint 호출 호환용입니다. 현재 활성 탭만 갱신합니다. */
 	UFUNCTION(BlueprintCallable, Category = "Collection|UI")
 	void RefreshCollection();
 

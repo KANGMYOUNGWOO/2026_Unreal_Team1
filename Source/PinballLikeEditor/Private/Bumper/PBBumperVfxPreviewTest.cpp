@@ -278,7 +278,6 @@ namespace
 			LoadedSystems.Add(System);
 		}
 
-		// 첫 시스템만 비동기 로드/컴파일 대기 상태로 남아 즉시 완료되는 순서 의존성을 제거합니다.
 		FlushAsyncLoading();
 		UMaterialInterface::SubmitRemainingJobsForWorld(World);
 		FAssetCompilingManager::Get().FinishAllCompilation();
@@ -309,7 +308,6 @@ namespace
 			Component->SetCanRenderWhileSeeking(true);
 			Component->SetMaxSimTime(0.0f);
 			PreviewScene.AddComponent(Component, FTransform(Entry.Location));
-			// 컴포넌트를 World에 등록한 뒤 활성화해야 Burst가 등록 전 완료되는 순서 의존성을 피할 수 있습니다.
 			Component->Activate(true);
 			if (!Test.TestTrue(
 				*FString::Printf(TEXT("Preview component registers: %s"), Entry.AssetName),
@@ -317,8 +315,6 @@ namespace
 			{
 				return false;
 			}
-			// Stateless Burst는 활성화 직후 아직 DesiredAge를 적용하지 않은 시점에 Complete로 보일 수 있습니다.
-			// 실제 유효성은 아래의 지정 시점 시뮬레이션 결과(파티클 수와 렌더 픽셀)로 검증합니다.
 			SpawnedComponents.Add(Component);
 		}
 
@@ -374,7 +370,6 @@ namespace
 		{
 			CaptureComponent->ShowOnlyComponents.Add(Component);
 		}
-		// 첫 렌더는 새로 생성된 머티리얼의 셰이더 요청을 발생시키는 준비 프레임이다.
 		CaptureComponent->CaptureScene();
 		FlushRenderingCommands();
 		FAssetCompilingManager::Get().FinishAllCompilation();

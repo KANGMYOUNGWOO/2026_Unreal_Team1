@@ -4,7 +4,6 @@
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
 #include "PBTimedAttackBoostBumperEffect.generated.h"
 
-/** Effect 시트의 Power를 공격력 증가율로 사용해 충돌한 Ball에 한시적 보정을 적용합니다. */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API UPBTimedAttackBoostBumperEffect : public UPBBumperEffectBase
 {

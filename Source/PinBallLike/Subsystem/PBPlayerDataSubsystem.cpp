@@ -375,7 +375,6 @@ bool UPBPlayerDataSubsystem::ValidateBumperForSlot(
 		: nullptr;
 	if (!IsValid(TableDataSubsystem) || !TableDataSubsystem->IsBumperTableReady())
 	{
-		// 에디터 단위 테스트와 초기 비동기 로딩 구간은 테이블 준비 후 일괄 정리합니다.
 		return true;
 	}
 

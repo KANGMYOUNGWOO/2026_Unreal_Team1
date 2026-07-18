@@ -54,7 +54,6 @@ void UPBBumperEquipUI::NativeConstruct()
 	}
 	RefreshRedesignedPresentation();
 
-	// 재사용된 위젯은 컨트롤러가 이미 만든 목록을 즉시 Blueprint 목록에 다시 전달합니다.
 	if (IsValid(EquipController) && EquipController->IsCatalogReady())
 	{
 		HandleControllerCatalogReady();
@@ -357,7 +356,6 @@ void UPBBumperEquipUI::BuildBoardSlotPresentation(
 		return;
 	}
 
-	// 기존 Blueprint 라벨을 재사용하여 폰트 설정과 변수 참조를 보존합니다.
 	UTextBlock* Label = Cast<UTextBlock>(Button->GetContent());
 	if (!IsValid(Label) || !Button->RemoveChild(Label))
 	{
@@ -654,7 +652,6 @@ void UPBBumperEquipUI::UpdateDetailPresentation(const FName RowName)
 	}
 	if (IsValid(EquipActionButton))
 	{
-		// 이전 세션 데이터에 중복이 남아 있어도 현재 슬롯의 해제 동작은 막지 않는다.
 		EquipActionButton->SetIsEnabled(bIsEquippedInCurrentSlot || !bIsEquippedInAnotherSlot);
 		EquipActionButton->SetBackgroundColor(bIsEquippedInCurrentSlot
 			? UnequipActionColor

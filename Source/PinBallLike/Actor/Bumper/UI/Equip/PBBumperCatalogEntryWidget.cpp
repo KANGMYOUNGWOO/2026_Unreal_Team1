@@ -9,7 +9,6 @@ void UPBBumperCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObj
 {
 	BumperListItem = Cast<UPBBumperListItemObject>(ListItemObject);
 
-	// 기존 WBP_BumperSlotEntry의 OnListItemObjectSet 그래프와 MVVM 주입을 그대로 실행합니다.
 	IUserObjectListEntry::NativeOnListItemObjectSet(ListItemObject);
 }
 
@@ -24,7 +23,6 @@ FReply UPBBumperCatalogEntryWidget::NativeOnPreviewMouseButtonDown(
 		return Super::NativeOnPreviewMouseButtonDown(InGeometry, InMouseEvent);
 	}
 
-	// 드래그를 시작해도 상세 정보가 즉시 해당 카드로 바뀌도록 클릭 선택을 먼저 반영합니다.
 	BumperListItem->BroadcastClicked();
 	return UWidgetBlueprintLibrary::DetectDragIfPressed(
 		InMouseEvent,

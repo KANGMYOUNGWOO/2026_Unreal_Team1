@@ -34,7 +34,6 @@ class UDataTable;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBTableDataLoadEvent);
 
-/** 비동기로 준비된 프로젝트 DataTable들을 소유하고 타입 안전한 조회 API를 제공합니다. */
 UCLASS()
 class PINBALLLIKE_API UPBTableDataSubsystem : public UGameInstanceSubsystem
 {

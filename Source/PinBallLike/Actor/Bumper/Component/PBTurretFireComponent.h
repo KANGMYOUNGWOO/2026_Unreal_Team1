@@ -14,7 +14,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FPBTurretProjectileSignature,
 	AActor*, Projectile);
 
-/** 범퍼 포탑의 발사, 명중 payload, 투사체 풀 수명주기를 관리합니다. */
 UCLASS(ClassGroup = (PinBall), meta = (BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBTurretFireComponent : public UActorComponent
 {
@@ -29,7 +28,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Fire")
 	AActor* FireOnce();
 
-	/** 이후 발사되는 범퍼 탄환이 추적할 보스와 명중 payload를 설정합니다. */
 	void ConfigureAttack(
 		AActor* InTargetActor,
 		EPBBumperProjectilePayload InPayload,

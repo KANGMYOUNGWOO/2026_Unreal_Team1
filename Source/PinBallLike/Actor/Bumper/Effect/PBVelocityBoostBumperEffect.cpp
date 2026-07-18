@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "PBVelocityBoostBumperEffect.h"
 
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
@@ -147,6 +145,5 @@ void UPBVelocityBoostBumperEffect::ActivateEffectForActor(
 		*GetNameSafe(InteractionActor),
 		TargetSpeed);
 
-	// 예약이 끝났으므로 범퍼 실행 상태는 즉시 Idle로 돌리고, 가속은 Timer가 안전하게 처리한다.
 	FinishEffect();
 }

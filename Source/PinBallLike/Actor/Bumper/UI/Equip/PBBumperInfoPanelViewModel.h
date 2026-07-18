@@ -7,7 +7,6 @@
 
 class UTexture2D;
 
-/** 선택한 범퍼의 상세 정보와 장착 상태를 정보 패널에 제공하는 ViewModel입니다. */
 UCLASS(BlueprintType, meta = (MVVMAllowedContextCreationType = "Manual"))
 class PINBALLLIKE_API UPBBumperInfoPanelViewModel : public UMVVMViewModelBase
 {

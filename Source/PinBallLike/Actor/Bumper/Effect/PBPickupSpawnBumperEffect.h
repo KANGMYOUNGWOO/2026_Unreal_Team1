@@ -5,10 +5,6 @@
 #include "PinBallLike/Struct/Bumper/PBBumperRewardTypes.h"
 #include "PBPickupSpawnBumperEffect.generated.h"
 
-/**
- * 발동한 Trigger 앞에 일정 시간 유지되는 획득 아이템을 생성합니다.
- * 보상 종류는 파생 Effect Blueprint가, 보상량은 Effect 시트의 Power가 소유합니다.
- */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API UPBPickupSpawnBumperEffect : public UPBSummonBumperEffect
 {
@@ -35,7 +31,6 @@ protected:
 		meta = (ClampMin = "0.5", ClampMax = "60.0", Units = "s"))
 	float PickupLifetime = 8.0f;
 
-	/** Trigger의 전방으로 띄워 아이템이 발동 Ball에 즉시 먹히는 빈도를 줄입니다. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Pickup",
 		meta = (ClampMin = "0.0", ClampMax = "1000.0", Units = "cm"))
 	float SpawnDistance = 150.0f;

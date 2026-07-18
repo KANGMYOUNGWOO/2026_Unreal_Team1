@@ -13,10 +13,6 @@ class UPBCollectionTabController;
 class UPBCollectionSubsystem;
 class UTextBlock;
 
-/**
- * 도감 탭의 검색 입력과 공통 목록 위젯 표시만 담당합니다.
- * 검색·선택 상태와 데이터 이벤트 구독은 PBCollectionTabController에 위임합니다.
- */
 UCLASS(Abstract)
 class PINBALLLIKE_API UPBCollectionTabWidgetBase : public UUserWidget
 {
@@ -39,6 +35,7 @@ protected:
 
 	UPBCollectionSubsystem* GetCollectionSubsystem() const;
 	bool IsCatalogDataReady(const FText& LoadingText) const;
+	bool PrepareCatalogRefresh(UListView* ListView, const FText& LoadingText) const;
 	bool MatchesSearch(const FPBCollectionItemSummary& Summary, const TArray<FText>& AdditionalTexts = {}) const;
 	int32 PopulateCatalogItems(
 		UListView* ListView,

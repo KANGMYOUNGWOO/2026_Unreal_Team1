@@ -5,10 +5,6 @@
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "PBCollectionEntryViewModel.generated.h"
 
-/**
- * 도감 카드 한 장에 필요한 표시값을 보관합니다.
- * 원본 도감 데이터를 UMG가 바로 바인딩할 수 있는 텍스트와 색상으로 변환합니다.
- */
 UCLASS(BlueprintType, meta = (MVVMAllowedContextCreationType = "Manual"))
 class PINBALLLIKE_API UPBCollectionEntryViewModel : public UMVVMViewModelBase
 {

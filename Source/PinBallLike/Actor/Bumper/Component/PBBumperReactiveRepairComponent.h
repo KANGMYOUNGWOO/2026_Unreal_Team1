@@ -6,10 +6,6 @@
 
 class UPBBaseResourceComponent;
 
-/**
- * 지정한 시간 동안 HP 감소를 관찰해 제한된 횟수만큼 회복합니다.
- * Resource 구조/최대치 변경과 범퍼가 지불하는 의도적인 비용은 피해 처리에서 제외합니다.
- */
 UCLASS(Transient)
 class PINBALLLIKE_API UPBBumperReactiveRepairComponent : public UActorComponent
 {
@@ -24,7 +20,6 @@ public:
 		float HealAmount,
 		float Duration);
 
-	/** 범퍼가 지불하는 HP 비용처럼 피해가 아닌 감소를 다음 한 번의 관찰에서 제외합니다. */
 	void SuppressNextIntentionalDecrease(FName ResourceName);
 
 	bool IsArmed() const { return bArmed; }

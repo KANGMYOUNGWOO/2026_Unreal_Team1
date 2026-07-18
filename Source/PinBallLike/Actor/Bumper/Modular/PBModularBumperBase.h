@@ -28,10 +28,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	EPBBumperState, PreviousState,
 	EPBBumperState, NewState);
 
-/**
- * Trigger 배치와 효과 실행을 조정하는 범퍼 모듈이다.
- * 개별 충전값은 Trigger가 소유하고, 이 클래스는 발동 순서와 효과 실행 레인만 관리한다.
- */
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API APBModularBumperBase : public AActor
 {
@@ -52,7 +48,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
 	void FinishActivation();
 
-	/** 실행 중인 효과는 취소하지 않고, 대기 요청과 나머지 Trigger의 진행도만 초기화한다. */
 	UFUNCTION(BlueprintCallable, Category = "Bumper")
 	void ResetTriggerCount();
 
@@ -77,7 +72,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")
 	APBBumperTriggerActorBase* GetActiveTriggerActor() const;
 
-	/** Returns the first configured physical slot when no Trigger is currently active. */
 	UFUNCTION(BlueprintPure, Category = "Bumper|Position")
 	EPBBumperPositionId GetPrimaryPositionId() const;
 
@@ -138,12 +132,10 @@ protected:
 	void ClearTriggerActors();
 
 #pragma region Blueprint Events
-	/** 일반 이동 Actor를 지원하는 기본 효과 확장 지점이다. */
 	UFUNCTION(BlueprintNativeEvent, Category = "Bumper")
 	void ApplyBumperEffectToActor(AActor* InteractionActor);
 	virtual void ApplyBumperEffectToActor_Implementation(AActor* InteractionActor);
 
-	/** 기존 Ball 기반 Blueprint의 효과 함수를 깨지 않기 위한 호환 경로다. */
 	UFUNCTION(BlueprintNativeEvent, Category = "Bumper")
 	void ApplyBumperEffect(APBBallBase* Ball);
 	virtual void ApplyBumperEffect_Implementation(APBBallBase* Ball);
@@ -157,7 +149,6 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
 	void OnMovableActorActivated(AActor* InteractionActor);
 
-	/** 기존 Ball 타입 Blueprint 이벤트 핀 호환을 위해 유지한다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper")
 	void OnBumperActivated(APBBallBase* Ball);
 
@@ -171,7 +162,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper")
 	FPBBumperTableRow BumperData;
 
-	/** 데이터 테이블과 장착 슬롯을 연결하는 논리 ID입니다. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper")
 	FName BumperRowId = NAME_None;
 
@@ -181,14 +171,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect")
 	TSubclassOf<UPBBumperEffectBase> EffectClass;
 
-	/** 시트의 Effect 행에서 읽은 실행 수치와 설명. 스폰 시 주입되며 BP 기본값에 의존하지 않는다. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
 	FPBBumperEffectRow EffectData;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
 	TObjectPtr<UPBBumperEffectBase> BumperEffect;
 
-	/** Gameplay 번들에서 미리 로드한 일회성 효과 발동 연출이다. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Bumper|Effect")
 	TObjectPtr<UNiagaraSystem> ActivationVfx;
 

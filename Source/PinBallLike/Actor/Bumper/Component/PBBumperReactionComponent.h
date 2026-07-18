@@ -10,7 +10,6 @@
 class UCurveFloat;
 class USceneComponent;
 
-/** 범퍼 충돌 시 대상 시각 컴포넌트의 위치와 크기 반응을 Timeline으로 재생합니다. */
 UCLASS(ClassGroup = (PinBall), meta = (BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBumperReactionComponent : public UActorComponent
 {

@@ -5,10 +5,6 @@
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "PBCollectionDetailViewModel.generated.h"
 
-/**
- * 선택한 도감 항목의 상세 패널 표시값을 보관합니다.
- * 선택 없음과 비동기 로딩 상태도 상세 패널이 직접 판단하지 않도록 함께 관리합니다.
- */
 UCLASS(BlueprintType, meta = (MVVMAllowedContextCreationType = "Manual"))
 class PINBALLLIKE_API UPBCollectionDetailViewModel : public UMVVMViewModelBase
 {

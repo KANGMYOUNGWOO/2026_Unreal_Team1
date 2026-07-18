@@ -43,7 +43,6 @@ void PBGateFieldDebugDraw::Draw(
 	const FVector DrawCenter = FieldCenter + FVector(0.0f, 0.0f, DebugHeightOffset);
 	const FColor SafeFieldColor = FieldColor == FColor::Black ? FColor::Cyan : FieldColor;
 
-	// Forward와 Right 축을 사용해 탑다운 화면의 XY 평면에 실제 판정 반경을 그립니다.
 	DrawDebugCircle(
 		World,
 		DrawCenter,

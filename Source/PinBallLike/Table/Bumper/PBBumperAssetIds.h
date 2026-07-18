@@ -38,7 +38,6 @@ namespace PBBumperAssetIds
 		inline const FName Gate_LaunchCharge(TEXT("Gate_LaunchCharge"));
 	}
 
-	// RowNames for TriggerTable
 	namespace Trigger
 	{
 		inline const FName Rebound_Trigger_PowerPush(TEXT("Rebound_Trigger_PowerPush"));
@@ -88,7 +87,6 @@ namespace PBBumperAssetIds
 		inline const FName Effect_SpeedUp_01(TEXT("Effect_SpeedUp_01"));
 	}
 
-	/** 과거 장착 데이터에서만 읽는 식별자입니다. 새 데이터에는 사용하지 않습니다. */
 	namespace LegacyBumper
 	{
 		inline const FName Rebound_CounterShell(TEXT("Rebound_CounterShell"));

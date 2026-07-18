@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "PBGateAccelerationBumperEffect.h"
 
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
