@@ -8,10 +8,16 @@
 
 class UPBBumperInfoPanelViewModel;
 class UPBBumperListItemObject;
+class UPBBumperDragDropOperation;
 class UPBGameDataLoadSubsystem;
 class UPBPlayerDataSubsystem;
 class UPBTableDataSubsystem;
+class UDragDropOperation;
+class UBorder;
 class UButton;
+class UImage;
+class UTextBlock;
+class UWidgetSwitcher;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBBumperListItemsReadySignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
@@ -23,6 +29,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	EPBBumperEquipSlot,
 	SelectedEquipSlot);
 
+/**
+ * 범퍼 카탈로그 조회와 7개 물리 슬롯의 장착·해제를 조정하는 메인 UI입니다.
+ * DataTable과 PlayerDataSubsystem을 원본으로 사용하며, 버튼과 드래그 입력을 같은 장착 API로 연결합니다.
+ */
 UCLASS(BlueprintType, Blueprintable)
 class PINBALLLIKE_API UPBBumperEquipUI : public UPBUserWidget
 {
@@ -53,6 +63,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
 	bool EquipBumperRow(FName RowName);
+
+	/** 드롭 대상까지 명시하여 범퍼를 장착합니다. 카테고리가 맞지 않으면 상태를 바꾸지 않습니다. */
+	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
+	bool EquipBumperRowAtSlot(FName RowName, EPBBumperEquipSlot EquipSlot);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
 	bool UnequipBumperRow(FName RowName);
@@ -91,6 +105,19 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|EquipUI")
 	FPBBumperSelectedEquipSlotChangedSignature OnSelectedBumperEquipSlotChanged;
 
+protected:
+	virtual void NativeOnDragLeave(
+		const FDragDropEvent& InDragDropEvent,
+		UDragDropOperation* InOperation) override;
+	virtual bool NativeOnDragOver(
+		const FGeometry& InGeometry,
+		const FDragDropEvent& InDragDropEvent,
+		UDragDropOperation* InOperation) override;
+	virtual bool NativeOnDrop(
+		const FGeometry& InGeometry,
+		const FDragDropEvent& InDragDropEvent,
+		UDragDropOperation* InOperation) override;
+
 private:
 	UFUNCTION()
 	void HandleStartupGameDataLoaded();
@@ -109,9 +136,23 @@ private:
 	void UpdateBumperListEquipStates();
 	void RefreshBumperEquipState(FName RowName);
 	void BindBoardSlotButtons();
+	void BuildBoardSlotPresentations();
+	void BuildBoardSlotPresentation(UButton* Button, EPBBumperEquipSlot EquipSlot);
+	void BindRedesignedControls();
 	void RefreshBoardSlotSelection();
+	void RefreshRedesignedPresentation();
+	void RefreshCategoryPresentation();
+	void RefreshLoadoutPresentation();
+	void ClearDetailPresentation();
+	void UpdateDetailPresentation(FName RowName);
+	FLinearColor GetSlotColor(EPBBumperSlotType SlotType) const;
 	void SetBoardSlotButtonState(UButton* Button, EPBBumperEquipSlot EquipSlot) const;
+	void SetCategoryButtonState(UButton* Button, EPBBumperSlotType SlotType) const;
+	bool CanEquipBumperRowAtSlot(FName RowName, EPBBumperEquipSlot EquipSlot) const;
+	bool FindBoardSlotAtScreenPosition(const FVector2D& ScreenPosition, EPBBumperEquipSlot& OutEquipSlot) const;
+	void SetHoveredDropSlot(TOptional<EPBBumperEquipSlot> EquipSlot);
 	void BroadcastSelectedSlotChanged();
+	bool IsSelectedBumperEquippedInCurrentSlot() const;
 
 	UFUNCTION()
 	void HandleTopLeftSlotClicked();
@@ -134,6 +175,21 @@ private:
 	UFUNCTION()
 	void HandleSpecialSlotClicked();
 
+	UFUNCTION()
+	void HandleTopCategoryClicked();
+
+	UFUNCTION()
+	void HandleSideCategoryClicked();
+
+	UFUNCTION()
+	void HandleReboundCategoryClicked();
+
+	UFUNCTION()
+	void HandleSpecialCategoryClicked();
+
+	UFUNCTION()
+	void HandleEquipActionClicked();
+
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> TopLeftMarker;
 
@@ -155,22 +211,90 @@ private:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> SpecialCenterMarker;
 
+	/** 새 화면은 네 카테고리 목록을 동시에 늘어놓지 않고 선택한 위치의 목록만 보여줍니다. */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UWidgetSwitcher> CatalogSwitcher;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> TopCategoryButton;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> SideCategoryButton;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ReboundCategoryButton;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> SpecialCategoryButton;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> CatalogTitleText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> SelectedSlotText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> LoadoutStatusText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> SlotEquipStatusText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UBorder> DetailAccentBorder;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> DetailIconImage;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> DetailNameText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> DetailMetaText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> DetailDescriptionText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> DetailTriggerText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> DetailEffectText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> EquipActionButton;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> EquipActionLabel;
+
 	/** 보드 미리보기의 슬롯 계열별 기본색입니다. Widget Blueprint 기본값에서 조정할 수 있습니다. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
-	FLinearColor TopSlotColor = FLinearColor(0.72f, 0.20f, 0.24f, 1.0f);
+	FLinearColor TopSlotColor = FLinearColor(0.85f, 0.27f, 0.24f, 1.0f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
-	FLinearColor SideSlotColor = FLinearColor(0.22f, 0.42f, 0.66f, 1.0f);
+	FLinearColor SideSlotColor = FLinearColor(0.18f, 0.55f, 0.78f, 1.0f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
-	FLinearColor ReboundSlotColor = FLinearColor(0.78f, 0.48f, 0.18f, 1.0f);
+	FLinearColor ReboundSlotColor = FLinearColor(0.93f, 0.56f, 0.16f, 1.0f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
-	FLinearColor SpecialSlotColor = FLinearColor(0.16f, 0.56f, 0.48f, 1.0f);
+	FLinearColor SpecialSlotColor = FLinearColor(0.22f, 0.67f, 0.49f, 1.0f);
 
-	/** 선택되지 않은 슬롯을 흐리게 표시할 때 사용할 투명도입니다. */
+	/** 선택되지 않은 슬롯의 계열색 라벨에 적용할 투명도입니다. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
-	float UnselectedSlotOpacity = 0.34f;
+	float UnselectedSlotOpacity = 0.82f;
+
+	/** 장착됐지만 현재 선택되지 않은 배치 슬롯에 카테고리색을 섞는 비율입니다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+	float EquippedSlotTintStrength = 0.34f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
+	FLinearColor InactiveCategoryColor = FLinearColor(0.075f, 0.081f, 0.089f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
+	FLinearColor InactiveControlTextColor = FLinearColor(0.67f, 0.69f, 0.71f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|EquipUI|Style", meta = (AllowPrivateAccess = "true"))
+	FLinearColor UnequipActionColor = FLinearColor(0.40f, 0.12f, 0.14f, 1.0f);
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBumperInfoPanelViewModel> InfoPanelViewModel;
@@ -207,6 +331,11 @@ private:
 
 	UPROPERTY(Transient)
 	EPBBumperEquipSlot SelectedBumperEquipSlot = EPBBumperEquipSlot::TopLeft;
+
+	/** 런타임에 기존 슬롯 버튼 안에 생성한 아이콘과 라벨입니다. WidgetTree가 수명을 소유합니다. */
+	TMap<EPBBumperEquipSlot, TWeakObjectPtr<UImage>> BoardSlotIconImages;
+	TMap<EPBBumperEquipSlot, TWeakObjectPtr<UTextBlock>> BoardSlotLabels;
+	TOptional<EPBBumperEquipSlot> HoveredDropSlot;
 
 	bool bBumperRowsLoaded = false;
 	bool bBumperUIAssetLoadPending = false;

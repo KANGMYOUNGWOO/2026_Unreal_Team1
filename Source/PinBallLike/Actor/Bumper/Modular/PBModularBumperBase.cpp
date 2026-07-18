@@ -40,6 +40,12 @@ void APBModularBumperBase::BeginPlay()
 void APBModularBumperBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	ClearTriggerActors();
+	if (IsValid(BumperEffect))
+	{
+		// 소환형 효과가 만든 필드와 획득 아이템을 GC 시점까지 월드에 남기지 않는다.
+		BumperEffect->ShutdownEffect();
+		BumperEffect = nullptr;
+	}
 
 	Super::EndPlay(EndPlayReason);
 }

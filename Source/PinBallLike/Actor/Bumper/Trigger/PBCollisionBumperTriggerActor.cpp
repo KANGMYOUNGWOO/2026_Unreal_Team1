@@ -5,7 +5,6 @@
 
 #include "Components/BoxComponent.h"
 #include "Components/PrimitiveComponent.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Interface/StatProvider.h"
@@ -238,10 +237,8 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 	{
 		PlayImpactCameraShake();
 	}
-	if (APBBallBase* Ball = Cast<APBBallBase>(OtherActor))
-	{
-		IncreaseTrigger(Ball, Hit);
-	}
+	// 판정과 반발에 사용한 동일한 IMovable Actor를 전달해 BallBase 비상속 구현도 충전되게 한다.
+	IncreaseTrigger(OtherActor, Hit);
 }
 
 void APBCollisionBumperTriggerActor::HandleTriggerBeginOverlap(

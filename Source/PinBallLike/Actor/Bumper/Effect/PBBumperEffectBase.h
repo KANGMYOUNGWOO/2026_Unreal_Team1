@@ -35,6 +35,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Effect")
 	virtual void FinishEffect();
 
+	/** Owner 범퍼가 제거될 때 남은 비동기 작업과 외부 액터 참조를 정리합니다. */
+	virtual void ShutdownEffect();
+
 	UFUNCTION(BlueprintPure, Category = "Bumper|Effect")
 	FPBBumperEffectRow GetEffectData() const;
 
