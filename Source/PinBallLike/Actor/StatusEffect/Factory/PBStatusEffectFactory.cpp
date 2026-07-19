@@ -2,9 +2,12 @@
 
 #include "PinBallLike/Actor/StatusEffect/PBBaseStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
+#include "PinBallLike/Actor/StatusEffect/Effects/PBBounceStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBStrengthStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBBurnStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBShieldStatusEffect.h"
+#include "PinBallLike/Actor/StatusEffect/Effects/PBZeroGravityStatusEffect.h"
+#include "PinBallLike/Table/StatusEffect/PBStatusEffectAssetIds.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectModifierRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectTriggerRow.h"
@@ -71,9 +74,11 @@ TMap<FName, TSubclassOf<UPBBaseStatusEffect>>& PBStatusEffectFactory::GetStatusE
 	static TMap<FName, TSubclassOf<UPBBaseStatusEffect>> StatusEffectClassMap;
 	if (StatusEffectClassMap.Num() == 0)
 	{
-		StatusEffectClassMap.Add(TEXT("Strength"), UPBStrengthStatusEffect::StaticClass());
-		StatusEffectClassMap.Add(TEXT("Burn"), UPBBurnStatusEffect::StaticClass());
-		StatusEffectClassMap.Add(TEXT("Shield"), UPBShieldStatusEffect::StaticClass());
+		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::BounceUp, UPBBounceStatusEffect::StaticClass());
+		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Strength, UPBStrengthStatusEffect::StaticClass());
+		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Burn, UPBBurnStatusEffect::StaticClass());
+		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Shield, UPBShieldStatusEffect::StaticClass());
+		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::ZeroGravity, UPBZeroGravityStatusEffect::StaticClass());
 	}
 
 	return StatusEffectClassMap;
