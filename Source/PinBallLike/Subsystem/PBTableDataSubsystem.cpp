@@ -35,7 +35,7 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	}
 
 	TArray<FSoftObjectPath> TablePaths;
-	TablePaths.Reserve(24);
+	TablePaths.Reserve(25);
 
 	// 테이블 경로는 DeveloperSettings에서 관리한다.
 	const FSoftObjectPath CollectionTablePath = Settings->CollectionTable.ToSoftObjectPath();
@@ -53,6 +53,8 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath StatusEffectTablePath = Settings->StatusEffectTable.ToSoftObjectPath();
 	const FSoftObjectPath StatusEffectModifierTablePath = Settings->StatusEffectModifierTable.ToSoftObjectPath();
 	const FSoftObjectPath StatusEffectTriggerTablePath = Settings->StatusEffectTriggerTable.ToSoftObjectPath();
+	const FSoftObjectPath EffectTablePath = Settings->EffectTable.ToSoftObjectPath();
+	const FSoftObjectPath EffectParamTablePath = Settings->EffectParamTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyTablePath = Settings->SynergyTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyTierTablePath = Settings->SynergyTierTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyEffectTablePath = Settings->SynergyEffectTable.ToSoftObjectPath();
@@ -137,6 +139,16 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 		TablePaths.Add(StatusEffectTriggerTablePath);
 	}
 
+	if (EffectTablePath.IsValid())
+	{
+		TablePaths.Add(EffectTablePath);
+	}
+
+	if (EffectParamTablePath.IsValid())
+	{
+		TablePaths.Add(EffectParamTablePath);
+	}
+
 	if (SynergyTablePath.IsValid())
 	{
 		TablePaths.Add(SynergyTablePath);
@@ -211,6 +223,7 @@ void UPBTableDataSubsystem::UnloadStartupGameData()
 	SetSkillTable(nullptr);
 	SetBossTables(nullptr, nullptr, nullptr);
 	SetStatusEffectTables(nullptr, nullptr, nullptr);
+	SetEffectTables(nullptr, nullptr);
 	SetRelicTable(nullptr,nullptr);
 	SetShopTable(nullptr);
 	
@@ -242,6 +255,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedStatusEffectTable = nullptr;
 	UDataTable* LoadedStatusEffectModifierTable = nullptr;
 	UDataTable* LoadedStatusEffectTriggerTable = nullptr;
+	UDataTable* LoadedEffectTable = nullptr;
+	UDataTable* LoadedEffectParamTable = nullptr;
 	UDataTable* LoadedRelicTable = nullptr;
 	UDataTable* LoadedRelicModifierTable = nullptr;
 	
@@ -272,6 +287,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedStatusEffectTable = Cast<UDataTable>(Settings->StatusEffectTable.Get());
 		LoadedStatusEffectModifierTable = Cast<UDataTable>(Settings->StatusEffectModifierTable.Get());
 		LoadedStatusEffectTriggerTable = Cast<UDataTable>(Settings->StatusEffectTriggerTable.Get());
+		LoadedEffectTable = Cast<UDataTable>(Settings->EffectTable.Get());
+		LoadedEffectParamTable = Cast<UDataTable>(Settings->EffectParamTable.Get());
 		LoadedRelicTable = Cast<UDataTable>(Settings->RelicTable.Get());
 		LoadedRelicModifierTable = Cast<UDataTable>(Settings->RelicModifierTable.Get());
 		LoadedSynergyTable = Cast<UDataTable>(Settings->SynergyTable.Get());
@@ -297,6 +314,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	SetSkillTable(LoadedSkillTable);
 	SetBossTables(LoadedBossTable, LoadedBossHitPointTable, LoadedBossPatternTable);
 	SetStatusEffectTables(LoadedStatusEffectTable, LoadedStatusEffectModifierTable, LoadedStatusEffectTriggerTable);
+	SetEffectTables(LoadedEffectTable, LoadedEffectParamTable);
 	SetSynergyTables(
 		LoadedSynergyTable,
 		LoadedSynergyTierTable,
@@ -479,6 +497,18 @@ void UPBTableDataSubsystem::SetStatusEffectTables(
 		*GetNameSafe(StatusEffectTable),
 		*GetNameSafe(StatusEffectModifierTable),
 		*GetNameSafe(StatusEffectTriggerTable));
+}
+
+void UPBTableDataSubsystem::SetEffectTables(
+	UDataTable* InEffectTable,
+	UDataTable* InEffectParamTable)
+{
+	EffectTable = InEffectTable;
+	EffectParamTable = InEffectParamTable;
+
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Effect tables assigned. Effect=%s Param=%s"),
+		*GetNameSafe(EffectTable),
+		*GetNameSafe(EffectParamTable));
 }
 
 void UPBTableDataSubsystem::SetSynergyTables(
@@ -767,6 +797,38 @@ bool UPBTableDataSubsystem::GetStatusEffectTriggerRows(
 		[StatusEffectId, &OutRows](const FName& RowName, const FPBStatusEffectTriggerRow& Row)
 		{
 			if (Row.StatusEffectId == StatusEffectId)
+			{
+				OutRows.Add(Row);
+			}
+		});
+
+	return OutRows.Num() > 0;
+}
+
+#pragma endregion
+
+#pragma region Effect
+
+bool UPBTableDataSubsystem::FindEffectRow(const FName RowName, FPBEffectTableRow& OutRow) const
+{
+	return FindTableRow(EffectTable, RowName, OutRow, TEXT("FindEffectRow"));
+}
+
+bool UPBTableDataSubsystem::GetEffectParamRows(
+	const FName EffectId,
+	TArray<FPBEffectParamRow>& OutRows) const
+{
+	OutRows.Reset();
+	if (!IsValid(EffectParamTable) || EffectId.IsNone())
+	{
+		return false;
+	}
+
+	EffectParamTable->ForeachRow<FPBEffectParamRow>(
+		TEXT("GetEffectParamRows"),
+		[EffectId, &OutRows](const FName& RowName, const FPBEffectParamRow& Row)
+		{
+			if (Row.EffectId == EffectId)
 			{
 				OutRows.Add(Row);
 			}
