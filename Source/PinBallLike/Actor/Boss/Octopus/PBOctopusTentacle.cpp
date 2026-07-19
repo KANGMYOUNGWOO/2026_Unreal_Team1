@@ -21,6 +21,9 @@ APBOctopusTentacle::APBOctopusTentacle()
 	TentacleMesh->SetGenerateOverlapEvents(true);
 	TentacleMesh->SetNotifyRigidBodyCollision(true);
 
+	TelegraphStartPoint = CreateDefaultSubobject<USceneComponent>(TEXT("TelegraphStartPoint"));
+	TelegraphStartPoint->SetupAttachment(TentacleMesh);
+
 	HitEffectComponent = CreateDefaultSubobject<UPBBossHitEffectComponent>(TEXT("HitEffectComponent"));
 }
 
@@ -57,6 +60,9 @@ bool APBOctopusTentacle::DamageToBoss_Implementation(int32 DamageAmount)
 void APBOctopusTentacle::InitializeTentacle(APBOctopusBoss* NewOwnerBoss)
 {
 	OwnerBoss = NewOwnerBoss;
+	DefaultActorLocation = GetActorLocation();
+	DefaultActorRotation = GetActorRotation();
+	IsDefaultActorRotationInitialized = true;
 	MaxTentacleHP = FMath::Max(1, MaxTentacleHP);
 	CurrentTentacleHP = MaxTentacleHP;
 	IsTentacleDestroyed = false;
@@ -113,9 +119,16 @@ void APBOctopusTentacle::StartSlam(FVector NewSlamDirection, float SlamDuration)
 	}
 
 	SlamDirection = NewSlamDirection;
+	const FVector SlamOriginBeforeRotation = TelegraphStartPoint
+		? TelegraphStartPoint->GetComponentLocation()
+		: GetActorLocation();
 	FRotator SlamRotation = GetActorRotation();
 	SlamRotation.Yaw = SlamDirection.Rotation().Yaw;
 	SetActorRotation(SlamRotation);
+	if (TelegraphStartPoint)
+	{
+		AddActorWorldOffset(SlamOriginBeforeRotation - TelegraphStartPoint->GetComponentLocation());
+	}
 	SlamDurationSeconds = SlamDuration;
 	SlamStartTime = World->GetTimeSeconds();
 	SlamProgress = 0.0f;
@@ -136,6 +149,10 @@ void APBOctopusTentacle::FinishSlam()
 	SlamStartTime = 0.0f;
 	SlamDurationSeconds = 0.0f;
 	SetActorTickEnabled(false);
+	if (IsDefaultActorRotationInitialized)
+	{
+		SetActorLocationAndRotation(DefaultActorLocation, DefaultActorRotation);
+	}
 	BP_OnSlamFinished();
 }
 
@@ -166,6 +183,11 @@ float APBOctopusTentacle::GetSlamControlRigWeight() const
 USkeletalMeshComponent* APBOctopusTentacle::GetTentacleMesh() const
 {
 	return TentacleMesh;
+}
+
+USceneComponent* APBOctopusTentacle::GetTelegraphStartComponent() const
+{
+	return TelegraphStartPoint;
 }
 
 void APBOctopusTentacle::DestroyTentacle()

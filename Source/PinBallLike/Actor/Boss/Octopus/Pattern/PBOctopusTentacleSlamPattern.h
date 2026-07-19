@@ -5,6 +5,7 @@
 #include "PBOctopusTentacleSlamPattern.generated.h"
 
 class APBOctopusTentacle;
+class APBOctopusTentacleSlamTelegraph;
 class UPrimitiveComponent;
 
 UCLASS(Blueprintable)
@@ -14,6 +15,7 @@ class PINBALLLIKE_API UPBOctopusTentacleSlamPattern : public UPBBossPatternBase
 
 protected:
 	virtual bool CanExecute_Implementation(APBBossBase* Boss) const override;
+	virtual void StartPattern_Implementation(APBBossBase* Boss) override;
 	virtual void ExecutePattern_Implementation(APBBossBase* Boss) override;
 	virtual void CancelPatternInternal_Implementation(APBBossBase* Boss) override;
 
@@ -22,6 +24,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Slam", meta = (ClampMin = "0.01"))
 	float SlamDuration = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Slam Telegraph", meta = (ClampMin = "0.0"))
+	float TelegraphDuration = 1.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Slam Telegraph")
+	TSubclassOf<APBOctopusTentacleSlamTelegraph> TelegraphClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Slam Damage", meta = (ClampMin = "0"))
 	int32 SlamDamage = 1;
@@ -33,6 +41,8 @@ protected:
 	float DamageWindowDuration = 0.2f;
 
 private:
+	void BeginSlamAfterTelegraph();
+	float SpawnSlamTelegraph(APBBossBase* Boss, const FVector& SlamDirection);
 	void StartDamageWindow();
 	void FinishDamageWindow();
 	void CompleteSlamPattern();
@@ -56,9 +66,13 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> TargetBall;
 
+	UPROPERTY(Transient)
+	TObjectPtr<APBOctopusTentacleSlamTelegraph> ActiveTelegraph;
+
 	FTimerHandle DamageWindowStartTimerHandle;
 	FTimerHandle DamageWindowFinishTimerHandle;
 	FTimerHandle PatternFinishTimerHandle;
+	FTimerHandle TelegraphFinishTimerHandle;
 	bool IsDamageWindowActive = false;
 	bool IsDamageApplied = false;
 };

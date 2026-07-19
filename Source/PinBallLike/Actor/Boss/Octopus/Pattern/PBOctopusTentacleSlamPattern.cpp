@@ -3,6 +3,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "PinBallLike/Actor/Boss/Octopus/PBOctopusBoss.h"
 #include "PinBallLike/Actor/Boss/Octopus/PBOctopusTentacle.h"
+#include "PBOctopusTentacleSlamTelegraph.h"
 #include "PinBallLike/Interface/Damageable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 #include "TimerManager.h"
@@ -18,6 +19,40 @@ bool UPBOctopusTentacleSlamPattern::CanExecute_Implementation(APBBossBase* Boss)
 		&& FindPinballActor(Boss)
 		&& SlamDuration > 0.0f
 		&& DamageWindowStart <= SlamDuration;
+}
+
+void UPBOctopusTentacleSlamPattern::StartPattern_Implementation(APBBossBase* Boss)
+{
+	APBOctopusBoss* OctopusBoss = Cast<APBOctopusBoss>(Boss);
+	ActiveTentacle = OctopusBoss ? OctopusBoss->GetTentacle(TentacleIndex) : nullptr;
+	TargetBall = FindPinballActor(Boss);
+	if (!Boss || !ActiveTentacle || !TargetBall)
+	{
+		FinishPattern();
+		return;
+	}
+
+	SetOwnerBoss(Boss);
+	FVector SlamDirection = TargetBall->GetActorLocation() - ActiveTentacle->GetActorLocation();
+	if (!SlamDirection.Normalize())
+	{
+		FinishPattern();
+		return;
+	}
+
+	const float CurrentTelegraphDuration = SpawnSlamTelegraph(Boss, SlamDirection);
+	if (CurrentTelegraphDuration <= 0.0f)
+	{
+		BeginSlamAfterTelegraph();
+		return;
+	}
+
+	Boss->GetWorldTimerManager().SetTimer(
+		TelegraphFinishTimerHandle,
+		this,
+		&UPBOctopusTentacleSlamPattern::BeginSlamAfterTelegraph,
+		CurrentTelegraphDuration,
+		false);
 }
 
 void UPBOctopusTentacleSlamPattern::ExecutePattern_Implementation(APBBossBase* Boss)
@@ -80,6 +115,92 @@ void UPBOctopusTentacleSlamPattern::CancelPatternInternal_Implementation(APBBoss
 	CleanupSlamPattern();
 }
 
+void UPBOctopusTentacleSlamPattern::BeginSlamAfterTelegraph()
+{
+	if (ActiveTelegraph)
+	{
+		ActiveTelegraph->DestroyTelegraph();
+		ActiveTelegraph = nullptr;
+	}
+
+	APBBossBase* Boss = GetOwnerBoss();
+	if (!Boss)
+	{
+		FinishPattern();
+		return;
+	}
+
+	ExecutePattern(Boss);
+}
+
+float UPBOctopusTentacleSlamPattern::SpawnSlamTelegraph(
+	APBBossBase* Boss,
+	const FVector& SlamDirection)
+{
+	USkeletalMeshComponent* TentacleMesh = ActiveTentacle ? ActiveTentacle->GetTentacleMesh() : nullptr;
+	if (!TentacleMesh)
+	{
+		return 0.0f;
+	}
+
+	UWorld* World = Boss ? Boss->GetWorld() : nullptr;
+	if (!World || TelegraphDuration <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	TentacleMesh->UpdateBounds();
+	TArray<double> TentacleDimensions = {
+		TentacleMesh->Bounds.BoxExtent.X * 2.0f,
+		TentacleMesh->Bounds.BoxExtent.Y * 2.0f,
+		TentacleMesh->Bounds.BoxExtent.Z * 2.0f
+	};
+	TentacleDimensions.Sort(TGreater<double>());
+	const double TentacleLength = TentacleDimensions[0];
+	const double TentacleWidth = TentacleDimensions[1];
+	FVector TelegraphDirection(SlamDirection.X, SlamDirection.Y, 0.0);
+	if (!TelegraphDirection.Normalize())
+	{
+		return 0.0f;
+	}
+
+	USceneComponent* TelegraphStartComponent = ActiveTentacle->GetTelegraphStartComponent();
+	if (!TelegraphStartComponent)
+	{
+		return 0.0f;
+	}
+
+	const FVector SlamOriginLocation = TelegraphStartComponent->GetComponentLocation();
+	FVector TelegraphLocation = SlamOriginLocation
+		+ TelegraphDirection * (TentacleLength * 0.5f);
+	TelegraphLocation.Z = SlamOriginLocation.Z;
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = Boss;
+	SpawnParameters.Instigator = Boss;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	UClass* SpawnClass = TelegraphClass
+		? TelegraphClass.Get()
+		: APBOctopusTentacleSlamTelegraph::StaticClass();
+	ActiveTelegraph = World->SpawnActor<APBOctopusTentacleSlamTelegraph>(
+		SpawnClass,
+		TelegraphLocation,
+		FRotator::ZeroRotator,
+		SpawnParameters);
+	if (!ActiveTelegraph)
+	{
+		return 0.0f;
+	}
+
+	ActiveTelegraph->InitSlamTelegraph(
+		TelegraphStartComponent,
+		TargetBall,
+		TentacleLength,
+		TentacleWidth,
+		TelegraphDuration);
+	return TelegraphDuration;
+}
+
 void UPBOctopusTentacleSlamPattern::StartDamageWindow()
 {
 	if (!ActiveTentacle || DamageWindowDuration <= 0.0f || SlamDamage <= 0)
@@ -118,6 +239,11 @@ void UPBOctopusTentacleSlamPattern::CleanupSlamPattern()
 {
 	ClearPatternTimers();
 	IsDamageWindowActive = false;
+	if (ActiveTelegraph)
+	{
+		ActiveTelegraph->DestroyTelegraph();
+		ActiveTelegraph = nullptr;
+	}
 
 	if (ActiveTentacle)
 	{
@@ -146,6 +272,7 @@ void UPBOctopusTentacleSlamPattern::ClearPatternTimers()
 	TimerManager.ClearTimer(DamageWindowStartTimerHandle);
 	TimerManager.ClearTimer(DamageWindowFinishTimerHandle);
 	TimerManager.ClearTimer(PatternFinishTimerHandle);
+	TimerManager.ClearTimer(TelegraphFinishTimerHandle);
 }
 
 void UPBOctopusTentacleSlamPattern::HandleTentacleHit(

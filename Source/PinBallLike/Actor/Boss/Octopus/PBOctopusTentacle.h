@@ -64,6 +64,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Octopus Tentacle")
 	USkeletalMeshComponent* GetTentacleMesh() const;
 
+	UFUNCTION(BlueprintPure, Category = "Boss|Octopus Tentacle|Slam")
+	USceneComponent* GetTelegraphStartComponent() const;
+
 	UPROPERTY(BlueprintAssignable, Category = "Boss|Octopus Tentacle|HP")
 	FPBOctopusTentacleHPChangedSignature OnTentacleHPChanged;
 
@@ -91,6 +94,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Octopus Tentacle")
 	TObjectPtr<USkeletalMeshComponent> TentacleMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Octopus Tentacle|Slam")
+	TObjectPtr<USceneComponent> TelegraphStartPoint;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Octopus Tentacle")
 	TObjectPtr<UPBBossHitEffectComponent> HitEffectComponent;
@@ -133,4 +139,7 @@ private:
 	FTimerHandle RegenerationTimerHandle;
 	float SlamStartTime = 0.0f;
 	float SlamDurationSeconds = 0.0f;
+	FVector DefaultActorLocation = FVector::ZeroVector;
+	FRotator DefaultActorRotation = FRotator::ZeroRotator;
+	bool IsDefaultActorRotationInitialized = false;
 };
