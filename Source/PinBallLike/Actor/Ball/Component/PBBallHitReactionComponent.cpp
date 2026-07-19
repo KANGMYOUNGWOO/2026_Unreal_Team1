@@ -78,6 +78,14 @@ void UPBBallHitReactionComponent::ProcessBallContact(const FHitResult& Hit)
 	
 	if (bDamageApplied)
 	{
+		const int32 GroggyAmount = StatProvider
+			? StatProvider->GetStat(PBStatNames::StaggerPower)
+			: 0;
+		if (GroggyAmount > 0)
+		{
+			IBossInterface::Execute_IncreaseGroggy(OtherActor, GroggyAmount);
+		}
+
 		if (UGameplayMessageSubsystem::HasInstance(this))
 		{
 			FPBDamageLogMessage Message;

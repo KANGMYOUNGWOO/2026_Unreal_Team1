@@ -4,9 +4,12 @@
 #include "PBBumperTriggerActorBase.h"
 
 #include "Components/SceneComponent.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Struct/Battle/PBBumperTriggeredMessage.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBBumperTriggerActorBase::APBBumperTriggerActorBase()
@@ -124,6 +127,16 @@ void APBBumperTriggerActorBase::IncreaseTrigger(
 		|| !CanIncreaseTrigger())
 	{
 		return;
+	}
+
+	if (UGameplayMessageSubsystem::HasInstance(this))
+	{
+		FPBBumperTriggeredMessage Message;
+		Message.Bumper = OwnerBumper.Get();
+		Message.TriggerLocation = TriggerHit.ImpactPoint;
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_Battle_Bumper_Triggered,
+			Message);
 	}
 
 	// 자식 액터가 감지한 판정을 범퍼 본체의 카운트 증가 흐름으로 전달한다.
