@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "PBApplyStatusEffectBumperEffect.h"
 
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
@@ -92,6 +90,8 @@ void UPBApplyStatusEffectBumperEffect::ActivateEffectForActor(
 	}
 	else
 	{
+		const float VfxDuration = EffectData.Duration > 0.0f ? EffectData.Duration : 1.2f;
+		PlayResolvedVfx(InteractionActor, VfxDuration, true);
 		UE_LOG(LogTemp, Log,
 			TEXT("[Bumper] Status effect applied. Bumper=%s Target=%s StatusEffectId=%s Applied=%d Stack=%d"),
 			*GetNameSafe(Bumper),
@@ -101,6 +101,5 @@ void UPBApplyStatusEffectBumperEffect::ActivateEffectForActor(
 			StatusEffectComponent->GetStatusEffectStackCount(StatusEffectId));
 	}
 
-	// 상태이상의 수명은 Ball의 StatusEffectComponent가 관리하므로 범퍼 효과는 즉시 종료한다.
 	FinishEffect();
 }

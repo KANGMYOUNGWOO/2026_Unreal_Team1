@@ -41,13 +41,18 @@ void UPBComboCashoutBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
-	const double RawDamage = static_cast<double>(CurrentCombo) * static_cast<double>(EffectData.Power);
+	const int32 ResolvedMaxConsumption = EffectData.Count > 0
+		? EffectData.Count
+		: MaxComboConsumption;
+	const int32 ConsumedCombo = FMath::Min(
+		CurrentCombo,
+		FMath::Max(ResolvedMaxConsumption, 1));
+	const double RawDamage = static_cast<double>(ConsumedCombo) * static_cast<double>(EffectData.Power);
 	const int32 DamageAmount = FMath::Clamp(
 		FMath::RoundToInt(FMath::Min(RawDamage, static_cast<double>(MaxCashoutDamagePerActivation))),
 		1,
 		MaxCashoutDamagePerActivation);
-	// 먼저 소비하고 탄환 생성이 실패하면 되돌려 한쪽만 적용되는 상태를 막습니다.
-	const bool bComboReserved = Comboable->TryConsumeCombo(CurrentCombo);
+	const bool bComboReserved = Comboable->TryConsumeCombo(ConsumedCombo);
 	const bool bProjectileSpawned = bComboReserved
 		&& SpawnBossProjectile(
 			Bumper,
@@ -56,17 +61,19 @@ void UPBComboCashoutBumperEffect::ActivateEffectForActor(
 			DamageAmount);
 	if (bComboReserved && !bProjectileSpawned)
 	{
-		Comboable->AddCombo(CurrentCombo);
+		Comboable->AddCombo(ConsumedCombo);
 	}
 	const bool bComboCommitted = bComboReserved && bProjectileSpawned;
 
 	if (bProjectileSpawned && bComboCommitted)
 	{
 		UE_LOG(LogTemp, Log,
-			TEXT("[Bumper] Combo cashout projectile spawned. Bumper=%s Boss=%s Combo=%d Multiplier=%.2f Damage=%d"),
+			TEXT("[Bumper] Combo cashout projectile spawned. Bumper=%s Boss=%s CurrentCombo=%d ConsumedCombo=%d RemainingCombo=%d Multiplier=%.2f Damage=%d"),
 			*GetNameSafe(Bumper),
 			*GetNameSafe(BossTarget),
 			CurrentCombo,
+			ConsumedCombo,
+			Comboable->GetCombo(),
 			EffectData.Power,
 			DamageAmount);
 	}

@@ -2,25 +2,36 @@
 
 #include "Components/BoxComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "PinBallLike/Actor/Bumper/Reward/PBBumperRewardUtils.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBGateFieldDebugDraw.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 
 APBGateSupportField::APBGateSupportField()
 {
+#if ENABLE_DRAW_DEBUG
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+#else
 	PrimaryActorTick.bCanEverTick = false;
+#endif
 
 	FieldArea = CreateDefaultSubobject<UBoxComponent>(TEXT("FieldArea"));
 	FieldArea->SetupAttachment(SceneRoot);
-	FieldArea->SetBoxExtent(FVector(180.0f, 100.0f, 80.0f));
 	FieldArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	FieldArea->SetCollisionObjectType(ECC_WorldDynamic);
-	FieldArea->SetCollisionResponseToAllChannels(ECR_Ignore);
-	FieldArea->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Overlap);
-	FieldArea->SetGenerateOverlapEvents(true);
-	FieldArea->OnComponentBeginOverlap.AddUniqueDynamic(
+	FieldArea->SetGenerateOverlapEvents(false);
+
+	RadialFieldArea = CreateDefaultSubobject<USphereComponent>(TEXT("RadialFieldArea"));
+	RadialFieldArea->SetupAttachment(SceneRoot);
+	RadialFieldArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RadialFieldArea->SetCollisionObjectType(ECC_WorldDynamic);
+	RadialFieldArea->SetCollisionResponseToAllChannels(ECR_Ignore);
+	RadialFieldArea->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Overlap);
+	RadialFieldArea->SetGenerateOverlapEvents(true);
+	RadialFieldArea->OnComponentBeginOverlap.AddUniqueDynamic(
 		this,
 		&APBGateSupportField::HandleFieldBeginOverlap);
 
@@ -28,7 +39,7 @@ APBGateSupportField::APBGateSupportField()
 	FieldVisual->SetupAttachment(FieldArea);
 	FieldVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	FieldVisual->SetGenerateOverlapEvents(false);
-	FieldVisual->SetRelativeScale3D(FVector(3.6f, 2.0f, 0.05f));
+	FieldVisual->SetRelativeScale3D(FVector(1.0f, 1.0f, 0.05f));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(
 		TEXT("/Engine/BasicShapes/Cube.Cube"));
@@ -41,10 +52,36 @@ APBGateSupportField::APBGateSupportField()
 	FieldLight->SetupAttachment(FieldArea);
 	FieldLight->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
 	FieldLight->SetIntensity(1200.0f);
-	FieldLight->SetAttenuationRadius(360.0f);
 	FieldLight->SetCastShadows(false);
 
+	RefreshFieldGeometry();
+
 	SetFieldActive(false);
+}
+
+void APBGateSupportField::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+	RefreshFieldGeometry();
+}
+
+void APBGateSupportField::Tick(const float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	PBGateFieldDebugDraw::Draw(
+		GetWorld(),
+		GetActorLocation(),
+		FieldRadius,
+		DebugFieldColor,
+		TEXT("GATE SUPPORT FIELD"),
+		bHasDebugTriggerOrigin,
+		DebugTriggerOrigin);
+}
+
+void APBGateSupportField::SetDebugTriggerOrigin(const FVector& InTriggerOrigin)
+{
+	bHasDebugTriggerOrigin = !InTriggerOrigin.ContainsNaN();
+	DebugTriggerOrigin = bHasDebugTriggerOrigin ? InTriggerOrigin : FVector::ZeroVector;
 }
 
 void APBGateSupportField::StartActionForActor(
@@ -57,10 +94,10 @@ void APBGateSupportField::StartActionForActor(
 	}
 
 	RewardedActors.Reset();
+	RefreshFieldGeometry();
 	SetFieldActive(true);
 	Super::StartActionForActor(Bumper, InteractionActor);
 
-	// 영역이 켜지는 순간 이미 안에 있던 발동 Actor도 첫 혜택을 받도록 명시적으로 처리합니다.
 	TryApplyReward(InteractionActor);
 
 	if (UWorld* World = GetWorld())
@@ -90,18 +127,26 @@ void APBGateSupportField::ConfigureField(
 	const EPBBumperRewardType InRewardType,
 	const FName InResourceName,
 	const FName InStatusEffectId,
+	const FName InTimedEffectSourceId,
+	const FName InTimedStatName,
 	const float InRewardPower,
+	const int32 InTriggerCount,
 	const float InActiveDuration,
 	const FLinearColor& InFieldColor)
 {
 	RewardType = InRewardType;
 	ResourceName = InResourceName;
 	StatusEffectId = InStatusEffectId;
+	TimedEffectSourceId = InTimedEffectSourceId;
+	TimedStatName = InTimedStatName;
 	RewardPower = FMath::IsFinite(InRewardPower) ? FMath::Max(InRewardPower, 0.0f) : 0.0f;
+	TriggerCount = FMath::Max(InTriggerCount, 0);
 	ActiveDuration = FMath::IsFinite(InActiveDuration)
 		? FMath::Clamp(InActiveDuration, 0.5f, 60.0f)
 		: 5.0f;
 	FieldLight->SetLightColor(InFieldColor);
+	DebugFieldColor = InFieldColor.ToFColor(true);
+	RefreshFieldGeometry();
 }
 
 void APBGateSupportField::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -117,10 +162,34 @@ void APBGateSupportField::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void APBGateSupportField::SetFieldActive(const bool bNewActive)
 {
-	FieldArea->SetCollisionEnabled(
+	FieldArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RadialFieldArea->SetCollisionEnabled(
 		bNewActive ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 	FieldVisual->SetVisibility(bNewActive, true);
 	FieldLight->SetVisibility(bNewActive, true);
+#if ENABLE_DRAW_DEBUG
+	SetActorTickEnabled(bNewActive);
+#endif
+}
+
+void APBGateSupportField::RefreshFieldGeometry()
+{
+	FieldRadius = FMath::Clamp(
+		FieldRadius,
+		PBGateFieldTuning::MinimumRadius,
+		PBGateFieldTuning::MaximumRadius);
+	FieldArea->SetBoxExtent(FVector(
+		FieldRadius,
+		FieldRadius,
+		PBGateFieldTuning::CollisionHalfHeight));
+	RadialFieldArea->SetSphereRadius(FieldRadius, true);
+
+	FVector VisualScale = FieldVisual->GetRelativeScale3D();
+	const float DiameterScale = FieldRadius / PBGateFieldTuning::BasicShapeRadiusAtScaleOne;
+	VisualScale.X = DiameterScale;
+	VisualScale.Y = DiameterScale;
+	FieldVisual->SetRelativeScale3D(VisualScale);
+	FieldLight->SetAttenuationRadius(FieldRadius * 2.0f);
 }
 
 bool APBGateSupportField::TryApplyReward(AActor* TargetActor)
@@ -135,7 +204,11 @@ bool APBGateSupportField::TryApplyReward(AActor* TargetActor)
 		RewardType,
 		ResourceName,
 		StatusEffectId,
-		RewardPower);
+		RewardPower,
+		TimedEffectSourceId,
+		ActiveDuration,
+		TimedStatName,
+		TriggerCount);
 	if (!Result.bApplied)
 	{
 		return false;

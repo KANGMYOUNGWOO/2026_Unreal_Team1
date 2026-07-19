@@ -31,7 +31,6 @@ AActor* UPBBossTargetBumperEffectBase::FindBossTarget(const UObject* WorldContex
 		}
 	}
 
-	// 에디터 단독 테스트처럼 Spawner 없이 배치된 보스 본체도 지원한다.
 	for (TActorIterator<APBBossBase> It(World); It; ++It)
 	{
 		if (IsValid(*It))
@@ -61,7 +60,8 @@ bool UPBBossTargetBumperEffectBase::SpawnBossProjectile(
 	APBModularBumperBase* Bumper,
 	AActor* BossTarget,
 	const EPBBumperProjectilePayload Payload,
-	const int32 Power) const
+	const int32 Power,
+	const float PayloadDuration) const
 {
 	if (!IsValid(Bumper) || !IsValid(BossTarget) || !ProjectileClass || Power <= 0)
 	{
@@ -84,22 +84,19 @@ bool UPBBossTargetBumperEffectBase::SpawnBossProjectile(
 		? SourceTransform.Rotator()
 		: TargetDirection.Rotation();
 
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.Owner = Bumper;
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	APBBumperProjectile* Projectile = World->SpawnActor<APBBumperProjectile>(
+	APBBumperProjectile* Projectile = APBBumperProjectile::SpawnForTarget(
+		Bumper,
 		ProjectileClass,
+		Bumper,
 		SpawnLocation,
 		SpawnRotation,
-		SpawnParameters);
-	if (!IsValid(Projectile))
-	{
-		return false;
-	}
-
-	Projectile->ConfigureForTarget(BossTarget, Payload, Power, true);
-	Projectile->SetLifeSpan(FMath::Max(ProjectileLifetime, 0.1f));
-	Projectile->ActivateProjectile();
-	return true;
+		BossTarget,
+		Payload,
+		Power,
+		PayloadDuration,
+		ProjectileLifetime,
+		Bumper->GetDeliveryVfx(),
+		Bumper->GetImpactVfx(),
+		Bumper->GetStatusVfx());
+	return IsValid(Projectile);
 }

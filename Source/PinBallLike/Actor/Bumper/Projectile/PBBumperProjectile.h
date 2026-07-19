@@ -6,13 +6,16 @@
 #include "PinBallLike/Actor/Projectile/ProjectileBase.h"
 #include "PBBumperProjectile.generated.h"
 
-/** 범퍼 투사체가 보스에게 전달할 실제 명중 효과입니다. */
+class UNiagaraComponent;
+class UNiagaraSystem;
+
 UENUM(BlueprintType)
 enum class EPBBumperProjectilePayload : uint8
 {
 	None,
 	BossDamage,
-	BossGroggy
+	BossGroggy,
+	BossVulnerability
 };
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(
@@ -20,10 +23,6 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(
 	class APBBumperProjectile*,
 	bool);
 
-/**
- * 범퍼와 소환 포탑이 함께 사용하는 보스 표적 유도탄입니다.
- * 시트 Power는 발사 시 payload로 보관되고, 보스와 실제로 겹쳤을 때만 적용됩니다.
- */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBumperProjectile : public AProjectileBase
 {
@@ -32,16 +31,37 @@ class PINBALLLIKE_API APBBumperProjectile : public AProjectileBase
 public:
 	APBBumperProjectile();
 
+	static APBBumperProjectile* SpawnForTarget(
+		UObject* WorldContext,
+		TSubclassOf<APBBumperProjectile> InProjectileClass,
+		AActor* OwnerActor,
+		const FVector& SpawnLocation,
+		const FRotator& SpawnRotation,
+		AActor* InTargetActor,
+		EPBBumperProjectilePayload InPayload,
+		int32 InPower,
+		float InPayloadDuration,
+		float InLifetime,
+		UNiagaraSystem* InDeliveryVfx = nullptr,
+		UNiagaraSystem* InImpactVfx = nullptr,
+		UNiagaraSystem* InStatusVfx = nullptr);
+
 	void ConfigureForTarget(
 		AActor* InTargetActor,
 		EPBBumperProjectilePayload InPayload,
 		int32 InPower,
-		bool bInDestroyOnResolved);
+		bool bInDestroyOnResolved,
+		float InPayloadDuration = 0.0f,
+		UNiagaraSystem* InDeliveryVfx = nullptr,
+		UNiagaraSystem* InImpactVfx = nullptr,
+		UNiagaraSystem* InStatusVfx = nullptr);
 	void ResetForPool();
 
 	FPBBumperProjectileResolvedSignature OnProjectileResolved;
 
 protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	virtual void HandleProjectileBeginOverlap(
 		UPrimitiveComponent* OverlappedComponent,
 		AActor* OtherActor,
@@ -56,10 +76,27 @@ protected:
 
 private:
 	bool ApplyPayload(AActor* Target) const;
+	void StartDeliveryVfx();
+	void StopDeliveryVfx();
+	void PlayResolvedVfx(AActor* Target) const;
 
 	TWeakObjectPtr<AActor> TargetActor;
 	EPBBumperProjectilePayload Payload = EPBBumperProjectilePayload::None;
 	int32 PayloadPower = 0;
+	float PayloadDuration = 0.0f;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> DeliveryVfx;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> ImpactVfx;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> StatusVfx;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraComponent> DeliveryVfxComponent;
+
 	bool bDestroyOnResolved = true;
 	bool bHasResolved = false;
 };

@@ -35,8 +35,10 @@ FText JoinTexts(const TArray<FText>& Texts)
 void UPBCollectionBallTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!BallTileView || !IsCatalogDataReady(LOCTEXT("BallLoading", "볼 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(BallTileView, LOCTEXT("BallLoading", "볼 데이터를 준비하는 중입니다.")))
 	{
+		CatalogData.Reset();
+		ShowDetails(INDEX_NONE);
 		return;
 	}
 
@@ -100,8 +102,10 @@ void UPBCollectionBallTabWidget::ShowDetails(const int32 DataIndex) const
 void UPBCollectionSynergyTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!SynergyListView || !IsCatalogDataReady(LOCTEXT("SynergyLoading", "시너지 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(SynergyListView, LOCTEXT("SynergyLoading", "시너지 데이터를 준비하는 중입니다.")))
 	{
+		CatalogData.Reset();
+		ShowDetails(INDEX_NONE);
 		return;
 	}
 
@@ -171,8 +175,10 @@ void UPBCollectionSynergyTabWidget::ShowDetails(const int32 DataIndex) const
 void UPBCollectionRelicTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!RelicTileView || !IsCatalogDataReady(LOCTEXT("RelicLoading", "유물 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(RelicTileView, LOCTEXT("RelicLoading", "유물 데이터를 준비하는 중입니다.")))
 	{
+		CatalogData.Reset();
+		ShowDetails(INDEX_NONE);
 		return;
 	}
 
@@ -227,8 +233,10 @@ void UPBCollectionRelicTabWidget::ShowDetails(const int32 DataIndex) const
 void UPBCollectionBumperTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!BumperTileView || !IsCatalogDataReady(LOCTEXT("BumperLoading", "범퍼 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(BumperTileView, LOCTEXT("BumperLoading", "범퍼 데이터를 준비하는 중입니다.")))
 	{
+		CatalogData.Reset();
+		ShowDetails(INDEX_NONE);
 		return;
 	}
 
@@ -304,8 +312,10 @@ void UPBCollectionBumperTabWidget::ShowDetails(const int32 DataIndex) const
 void UPBCollectionBossTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!BossSelector || !IsCatalogDataReady(LOCTEXT("BossLoading", "보스 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(BossSelector, LOCTEXT("BossLoading", "보스 데이터를 준비하는 중입니다.")))
 	{
+		CatalogData.Reset();
+		ShowDetails(INDEX_NONE);
 		return;
 	}
 

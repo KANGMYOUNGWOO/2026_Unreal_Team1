@@ -29,5 +29,5 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
 	FPBSheetAssetPathPreset ActivationVfxPreset;
 
-	void UpdateLinkedBumperDataAssets(FName EffectId, FName ActivationVfxId) const;
+	void UpdateLinkedBumperDataAssets(FName EffectId, const struct FPBBumperEffectRow& EffectRow) const;
 };

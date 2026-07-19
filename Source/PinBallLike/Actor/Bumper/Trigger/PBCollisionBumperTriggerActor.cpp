@@ -6,6 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
+#include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Interface/StatProvider.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
@@ -80,6 +81,21 @@ void APBCollisionBumperTriggerActor::RegisterCollisionAreas()
 	{
 		SetupTriggerArea(Cast<UPrimitiveComponent>(TaggedComponent));
 	}
+
+	if (CollisionAreas.IsEmpty() || TriggerAreas.IsEmpty())
+	{
+		const APBModularBumperBase* Bumper = GetOwnerBumper();
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Collision trigger setup incomplete. Trigger=%s Class=%s BumperRow=%s Position=%s CollisionTag=%s CollisionAreas=%d TriggerTag=%s TriggerAreas=%d"),
+			*GetNameSafe(this),
+			*GetPathNameSafe(GetClass()),
+			IsValid(Bumper) ? *Bumper->GetBumperRowId().ToString() : TEXT("None"),
+			*UEnum::GetValueAsString(GetPositionId()),
+			*CollisionAreaTag.ToString(),
+			CollisionAreas.Num(),
+			*TriggerAreaTag.ToString(),
+			TriggerAreas.Num());
+	}
 }
 
 void APBCollisionBumperTriggerActor::SetupCollisionArea(UPrimitiveComponent* CollisionArea)
@@ -140,7 +156,6 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 
 		if (const UBoxComponent* BoxArea = Cast<UBoxComponent>(TriggerArea))
 		{
-			// 회전과 음수 Scale을 포함한 월드 Transform으로 충돌 지점을 Box 로컬 공간에 옮긴다.
 			const FTransform& AreaTransform = BoxArea->GetComponentTransform();
 			const FVector LocalHitPoint = AreaTransform.InverseTransformPosition(HitPoint);
 			const FVector BoxExtent = BoxArea->GetUnscaledBoxExtent();
@@ -159,7 +174,6 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 			continue;
 		}
 
-		// Box 외 Primitive를 쓰는 파생 BP도 Trigger Area를 교체할 수 있도록 일반 경로를 남긴다.
 		FVector ClosestPoint;
 		const float Distance = TriggerArea->GetClosestPointOnCollision(HitPoint, ClosestPoint);
 		if (Distance >= 0.0f && Distance <= TriggerAreaHitPointTolerance)
@@ -237,7 +251,6 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 	{
 		PlayImpactCameraShake();
 	}
-	// 판정과 반발에 사용한 동일한 IMovable Actor를 전달해 BallBase 비상속 구현도 충전되게 한다.
 	IncreaseTrigger(OtherActor, Hit);
 }
 

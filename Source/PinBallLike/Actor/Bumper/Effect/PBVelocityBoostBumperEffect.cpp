@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "PBVelocityBoostBumperEffect.h"
 
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
@@ -31,8 +29,8 @@ void UPBVelocityBoostBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
-	const float BoostPower = FMath::Min(EffectData.Power, FMath::Max(MaxBoostPower, 0.0f));
-	if (BoostPower <= 0.0f)
+	const float TargetSpeed = FMath::Min(EffectData.Power, FMath::Max(MaxBoostPower, 0.0f));
+	if (TargetSpeed <= 0.0f)
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Bumper] Velocity boost skipped because MaxBoostPower is zero. Effect=%s"),
@@ -41,12 +39,12 @@ void UPBVelocityBoostBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
-	if (BoostPower < EffectData.Power)
+	if (TargetSpeed < EffectData.Power)
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("[Bumper] Velocity boost Power was limited. Requested=%.2f Applied=%.2f"),
+			TEXT("[Bumper] Velocity target was limited. Requested=%.2f Target=%.2f"),
 			EffectData.Power,
-			BoostPower);
+			TargetSpeed);
 	}
 
 	if (!PBInterfaceUtils::FindInterface<IMovable>(InteractionActor))
@@ -97,9 +95,11 @@ void UPBVelocityBoostBumperEffect::ActivateEffectForActor(
 		return;
 	}
 
+	PlayResolvedVfx(InteractionActor);
+
 	const TWeakObjectPtr<AActor> WeakInteractionActor = InteractionActor;
 	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda(
-		[WeakInteractionActor, BoostPower, FallbackDirection]()
+		[WeakInteractionActor, TargetSpeed, FallbackDirection]()
 		{
 			AActor* ResolvedActor = WeakInteractionActor.Get();
 			if (!IsValid(ResolvedActor))
@@ -123,23 +123,27 @@ void UPBVelocityBoostBumperEffect::ActivateEffectForActor(
 			}
 
 			const float SpeedBefore = ResolvedMovable->GetVelocity().Size2D();
-			ResolvedMovable->AddVelocity(BoostDirection * BoostPower);
+			const float AddedSpeed = FMath::Max(TargetSpeed - SpeedBefore, 0.0f);
+			if (AddedSpeed > KINDA_SMALL_NUMBER)
+			{
+				ResolvedMovable->AddVelocity(BoostDirection * AddedSpeed);
+			}
 			const float SpeedAfter = ResolvedMovable->GetVelocity().Size2D();
 
 			UE_LOG(LogTemp, Log,
-				TEXT("[Bumper] Deferred velocity boost applied. Target=%s Power=%.2f SpeedBefore=%.2f SpeedAfter=%.2f"),
+				TEXT("[Bumper] Deferred velocity floor resolved. Target=%s TargetSpeed=%.2f AddedSpeed=%.2f SpeedBefore=%.2f SpeedAfter=%.2f"),
 				*GetNameSafe(ResolvedActor),
-				BoostPower,
+				TargetSpeed,
+				AddedSpeed,
 				SpeedBefore,
 				SpeedAfter);
 		}));
 
 	UE_LOG(LogTemp, Verbose,
-		TEXT("[Bumper] Velocity boost scheduled after movement resolution. Bumper=%s Target=%s Power=%.2f"),
+		TEXT("[Bumper] Velocity floor scheduled after movement resolution. Bumper=%s Target=%s TargetSpeed=%.2f"),
 		*GetNameSafe(Bumper),
 		*GetNameSafe(InteractionActor),
-		BoostPower);
+		TargetSpeed);
 
-	// 예약이 끝났으므로 범퍼 실행 상태는 즉시 Idle로 돌리고, 가속은 Timer가 안전하게 처리한다.
 	FinishEffect();
 }

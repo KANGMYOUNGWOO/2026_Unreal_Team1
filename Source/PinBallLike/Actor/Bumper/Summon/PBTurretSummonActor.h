@@ -9,6 +9,7 @@
 
 class APBBallBase;
 class APBModularBumperBase;
+class UNiagaraSystem;
 
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBTurretSummonActor : public APBBumperSummonActor
@@ -18,8 +19,15 @@ class PINBALLLIKE_API APBTurretSummonActor : public APBBumperSummonActor
 public:
 	APBTurretSummonActor();
 
-	/** Effect 시트의 Power를 각 포탑 탄환에 전달합니다. */
-	void SetAttackPayload(EPBBumperProjectilePayload InPayload, int32 InPower);
+	void SetAttackPayload(
+		EPBBumperProjectilePayload InPayload,
+		int32 InPower,
+		int32 InShotCount,
+		UNiagaraSystem* InDeliveryVfx = nullptr,
+		UNiagaraSystem* InImpactVfx = nullptr);
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Summon|Turret")
+	int32 GetAttackShotCount() const { return AttackShotCount; }
 
 	virtual void StartActionForActor(
 		APBModularBumperBase* Bumper,
@@ -31,7 +39,6 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Summon|Turret")
 	void OnTurretActivatedForActor(APBModularBumperBase* Bumper, AActor* InteractionActor);
 
-	/** 기존 Ball 타입 Blueprint 이벤트 핀 호환을 위해 유지한다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Summon|Turret")
 	void OnTurretActivated(APBModularBumperBase* Bumper, APBBallBase* Ball);
 
@@ -42,4 +49,11 @@ private:
 
 	EPBBumperProjectilePayload AttackPayload = EPBBumperProjectilePayload::None;
 	int32 AttackPower = 0;
+	int32 AttackShotCount = 0;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> DeliveryVfx;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> ImpactVfx;
 };

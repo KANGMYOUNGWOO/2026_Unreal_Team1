@@ -21,12 +21,10 @@ public:
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 
 #if WITH_EDITOR
-	/** 시트 파서나 검증 도구가 Primary Asset 논리 ID를 안전하게 기록할 때만 사용한다. */
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Data")
 	bool SetRowNameForImport(FName InRowName);
 #endif
 
-	/** 시트 RowName과 동일한 논리 ID. PrimaryAssetId의 Name으로 사용함 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Data")
 	FName RowName = NAME_None;
 	
@@ -44,7 +42,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<UPBBumperEffectBase> EffectClass;
 
-	/** Effect 시트의 ActivationVfxId를 파서가 실제 에셋 참조로 변환한다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
 	TSoftObjectPtr<UNiagaraSystem> ActivationVfx;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
+	TSoftObjectPtr<UNiagaraSystem> DeliveryVfx;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
+	TSoftObjectPtr<UNiagaraSystem> ImpactVfx;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Effect", meta = (AssetBundles = "Gameplay"))
+	TSoftObjectPtr<UNiagaraSystem> StatusVfx;
 };

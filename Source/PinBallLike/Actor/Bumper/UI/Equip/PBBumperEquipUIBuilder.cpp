@@ -1,6 +1,5 @@
 #include "PBBumperEquipUIBuilder.h"
 
-#include "PBBumperEquipUI.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
@@ -16,7 +15,6 @@ namespace PBBumperEquipUIBuilder
 	{
 		void AddBumperListItemObject(
 			UObject* Outer,
-			UPBBumperEquipUI* ClickHandler,
 			const FName RowName,
 			const FPBBumperTableRow& Row,
 			const TSet<FName>& EquippedRowIds,
@@ -40,8 +38,6 @@ namespace PBBumperEquipUIBuilder
 				PrimaryAssetId,
 				ResolveBumperIconTexture(GameDataLoadSubsystem, RowName, Row),
 				IsBumperEquipped(RowName, EquippedRowIds));
-			ItemObject->OnClicked.AddDynamic(ClickHandler, &UPBBumperEquipUI::SelectBumperRow);
-
 			switch (Row.BumperType)
 			{
 			case EPBBumperType::TopTarget:
@@ -88,7 +84,6 @@ namespace PBBumperEquipUIBuilder
 
 	void BuildBumperListItemObjects(
 		UObject* Outer,
-		UPBBumperEquipUI* ClickHandler,
 		const TArray<FName>& RowNames,
 		const TArray<FPBBumperTableRow>& Rows,
 		const TSet<FName>& EquippedRowIds,
@@ -102,7 +97,6 @@ namespace PBBumperEquipUIBuilder
 		{
 			AddBumperListItemObject(
 				Outer,
-				ClickHandler,
 				RowNames[RowIndex],
 				Rows[RowIndex],
 				EquippedRowIds,

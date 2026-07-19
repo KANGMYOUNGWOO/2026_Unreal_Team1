@@ -60,20 +60,21 @@ bool UPBCollectionSubsystem::ReloadCollectionData()
 {
 	TArray<FPBCollectionEntryData> LoadedEntries;
 	const bool bMetadataLoaded = BuildEntriesFromCollectionTable(LoadedEntries);
-	if (bMetadataLoaded)
-	{
-		Entries = MoveTemp(LoadedEntries);
-		RebuildLookupIndexes();
-	}
+	Entries = MoveTemp(LoadedEntries);
+	RebuildLookupIndexes();
 
 	const UGameInstance* GameInstance = GetGameInstance();
 	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
 		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
 		: nullptr;
-	bIsDataReady = IsValid(TableDataSubsystem) && TableDataSubsystem->IsTableDataReady();
+	bIsDataReady = IsValid(TableDataSubsystem) && TableDataSubsystem->IsCollectionCatalogDataReady();
 	if (!bIsDataReady)
 	{
-		return bMetadataLoaded;
+		if (IsValid(TableDataSubsystem) && TableDataSubsystem->HasStartupGameDataLoadCompleted())
+		{
+			OnCollectionDataReady.Broadcast(false);
+		}
+		return false;
 	}
 
 	UE_LOG(
@@ -85,7 +86,16 @@ bool UPBCollectionSubsystem::ReloadCollectionData()
 
 	OnCollectionDataReady.Broadcast(true);
 	OnCollectionEntryChanged.Broadcast(NAME_None);
-	return bMetadataLoaded;
+	return true;
+}
+
+bool UPBCollectionSubsystem::HasDataLoadCompleted() const
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
+		: nullptr;
+	return IsValid(TableDataSubsystem) && TableDataSubsystem->HasStartupGameDataLoadCompleted();
 }
 
 TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntries(EPBCollectionCategory Category) const
@@ -568,7 +578,6 @@ FPBCollectionDisplayData UPBCollectionSubsystem::MakeDisplayData(
 	DisplayData.SourceId = EntryData.SourceId;
 	DisplayData.SourceTableName = EntryData.SourceTableName;
 	DisplayData.SourceRowName = EntryData.SourceRowName;
-	// State 필드는 기존 Widget Blueprint 직렬화 호환용입니다. 카탈로그 항목은 항상 전체 공개 상태입니다.
 	DisplayData.State = EPBCollectionState::Unlocked;
 	DisplayData.CategoryText = GetCategoryDisplayText(EntryData.Category);
 	DisplayData.StateText = FText::GetEmpty();

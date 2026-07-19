@@ -76,4 +76,29 @@ namespace PBBumperEquipSlotUtils
 			return false;
 		}
 	}
+
+	bool DoesBumperTypeMatchEquipSlot(
+		const EPBBumperType BumperType,
+		const EPBBumperEquipSlot EquipSlot)
+	{
+		EPBBumperSlotType EquipSlotType;
+		if (!TryGetSlotType(EquipSlot, EquipSlotType))
+		{
+			return false;
+		}
+
+		switch (BumperType)
+		{
+		case EPBBumperType::TopTarget:
+			return EquipSlotType == EPBBumperSlotType::Top;
+		case EPBBumperType::Side:
+			return EquipSlotType == EPBBumperSlotType::Side;
+		case EPBBumperType::Rebound:
+			return EquipSlotType == EPBBumperSlotType::Rebound;
+		case EPBBumperType::Gate:
+			return EquipSlotType == EPBBumperSlotType::Special;
+		default:
+			return false;
+		}
+	}
 }

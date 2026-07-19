@@ -8,6 +8,7 @@
 #include "PBTurretFireComponent.generated.h"
 
 class AProjectileBase;
+class UNiagaraSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FPBTurretProjectileSignature,
@@ -27,11 +28,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Fire")
 	AActor* FireOnce();
 
-	/** 이후 발사되는 범퍼 탄환이 추적할 보스와 명중 payload를 설정합니다. */
 	void ConfigureAttack(
 		AActor* InTargetActor,
 		EPBBumperProjectilePayload InPayload,
-		int32 InPower);
+		int32 InPower,
+		int32 InMaxShotCount,
+		UNiagaraSystem* InDeliveryVfx = nullptr,
+		UNiagaraSystem* InImpactVfx = nullptr);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Pool")
 	void ReleaseProjectile(AActor* Projectile);
@@ -84,4 +87,12 @@ private:
 	TWeakObjectPtr<AActor> AttackTarget;
 	EPBBumperProjectilePayload AttackPayload = EPBBumperProjectilePayload::None;
 	int32 AttackPower = 0;
+	int32 MaxAttackShotCount = 0;
+	int32 FiredAttackShotCount = 0;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> DeliveryVfx;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> ImpactVfx;
 };

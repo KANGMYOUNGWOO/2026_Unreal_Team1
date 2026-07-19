@@ -30,6 +30,12 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Bumper|Table")
 	TSoftObjectPtr<UDataTable> BumperEffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> GameplayEffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> GameplayEffectParamTable;
 	
 #pragma endregion
 	

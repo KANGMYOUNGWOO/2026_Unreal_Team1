@@ -21,14 +21,69 @@ class UPBTableDataSubsystem;
 class USceneComponent;
 class UNiagaraSystem;
 
+enum class EPBBumperAssetPreparationPhase : uint8
+{
+	Idle,
+	LoadingAssets,
+	ReadyToSpawn
+};
+
+struct FPBBumperAssetPreparationState
+{
+	bool TryBeginLoading()
+	{
+		if (Phase != EPBBumperAssetPreparationPhase::Idle)
+		{
+			return false;
+		}
+
+		Phase = EPBBumperAssetPreparationPhase::LoadingAssets;
+		return true;
+	}
+
+	void MarkAssetsLoaded()
+	{
+		if (Phase == EPBBumperAssetPreparationPhase::LoadingAssets)
+		{
+			Phase = EPBBumperAssetPreparationPhase::ReadyToSpawn;
+		}
+	}
+
+	void Reset()
+	{
+		Phase = EPBBumperAssetPreparationPhase::Idle;
+	}
+
+	bool IsLoading() const
+	{
+		return Phase == EPBBumperAssetPreparationPhase::LoadingAssets;
+	}
+
+	bool IsReadyToSpawn() const
+	{
+		return Phase == EPBBumperAssetPreparationPhase::ReadyToSpawn;
+	}
+
+	bool HasPendingSnapshot() const
+	{
+		return Phase != EPBBumperAssetPreparationPhase::Idle;
+	}
+
+private:
+	EPBBumperAssetPreparationPhase Phase = EPBBumperAssetPreparationPhase::Idle;
+};
+
 struct FPBPreparedBumperSpawnData
 {
-	// 비동기 로드가 끝난 뒤 Modular Bumper 생성에 필요한 값만 모아둔다.
+	FName BumperRowId = NAME_None;
 	FPBBumperTableRow BumperRow;
 	TArray<FPBBumperTriggerSpawnInfo> TriggerSpawnInfos;
 	FPBBumperEffectRow EffectRow;
 	TSubclassOf<UPBBumperEffectBase> EffectClass;
 	UNiagaraSystem* ActivationVfx = nullptr;
+	UNiagaraSystem* DeliveryVfx = nullptr;
+	UNiagaraSystem* ImpactVfx = nullptr;
+	UNiagaraSystem* StatusVfx = nullptr;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
@@ -61,6 +116,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper|Spawn")
 	void GetSpawnedBumpers(TArray<APBModularBumperBase*>& OutBumpers) const;
 
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Telemetry")
+	void LogBattleTelemetrySummary();
+
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Spawn")
 	FPBSpawnedBumpersReadySignature OnSpawnedBumpersReady;
 
@@ -82,6 +140,7 @@ private:
 
 	void PlacePreparedBumperActors();
 	APBModularBumperBase* PlaceBumperActor(const FPBPreparedBumperSpawnData& SpawnData);
+	void HandleBumperAssetsLoaded(FStreamableDelegate OnLoaded);
 
 	// 준비 결과를 delegate와 Gameplay Message로 알린다.
 	void CompleteBumperPreparation(bool bSuccess);
@@ -103,6 +162,10 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<APBModularBumperBase>> SpawnedBumpers;
+
+	bool bBattleTelemetrySummaryLogged = false;
+	FPBBumperAssetPreparationState AssetPreparationState;
+	FGuid ActiveBumperAssetLoadRequestId;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBGameDataLoadSubsystem> CachedGameDataLoadSubsystem;

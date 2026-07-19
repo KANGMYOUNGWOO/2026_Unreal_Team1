@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBBumperSummonAnchor.h"
 #include "PBSummonBumperEffect.generated.h"
 
 class APBBumperSummonActor;
@@ -20,7 +21,9 @@ public:
 		AActor* InteractionActor) override;
 	virtual void FinishEffect() override;
 	virtual void ShutdownEffect() override;
-	virtual void BeginDestroy() override;
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Effect|Summon|Anchor")
+	EPBBumperSummonAnchorType GetSpawnAnchorType() const;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect|Summon")
@@ -29,19 +32,32 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect|Summon")
 	FTransform SpawnOffset = FTransform::Identity;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect|Summon|Anchor")
+	EPBBumperSummonAnchorType SpawnAnchorType = EPBBumperSummonAnchorType::None;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Effect|Summon")
 	bool IsDestroyOnFinished = false;
 
 	UPROPERTY()
 	TObjectPtr<APBBumperSummonActor> SpawnedSummonActor;
 
-	/** 파생 Effect가 발동 전 소환 Actor를 구성할 수 있도록 생성 여부를 보장합니다. */
 	bool EnsureSummonActor(APBModularBumperBase* Bumper);
+
+	virtual FTransform ResolveSpawnTransform(
+		APBModularBumperBase* Bumper,
+		bool& bOutUsesSummonAnchor);
 
 private:
 	UFUNCTION()
 	void HandleSummonActionFinished(APBBumperSummonActor* SummonActor);
 
+	EPBBumperPositionId ResolveSourcePositionId(const APBModularBumperBase* Bumper) const;
+	void UpdateSummonActorTransform(
+		APBModularBumperBase* Bumper,
+		const FTransform& SpawnTransform,
+		bool bUsesSummonAnchor) const;
 	void DeactivateSummonActor() const;
 	void DestroySummonActor();
+
+	bool bHasReportedAnchorResolutionFailure = false;
 };

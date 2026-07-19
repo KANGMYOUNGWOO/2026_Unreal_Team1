@@ -10,7 +10,6 @@
 class UPBBumperDataAsset;
 class UNiagaraSystem;
 
-/** Bumper 시트의 행을 테이블과 런타임용 데이터 에셋으로 변환한다. */
 UCLASS()
 class PINBALLLIKEEDITOR_API UPBBumperTableParser : public UPBTableParserBase
 {
@@ -30,7 +29,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
 	FPBSheetAssetPathPreset IconPreset;
 
-	/** 선행 로드된 Trigger/Effect의 Blueprint 클래스를 Bumper 데이터 에셋에 연결한다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
 	FPBSheetAssetPathPreset TriggerClassPreset;
 
@@ -41,5 +39,6 @@ protected:
 	FPBSheetAssetPathPreset ActivationVfxPreset;
 
 	UPBBumperDataAsset* SetupBumperDataAsset(FName RowName, FName TriggerId, FName EffectId) const;
-	TSoftObjectPtr<UNiagaraSystem> ResolveActivationVfx(FName EffectId) const;
+	bool ResolveEffectVfx(FName EffectId, struct FPBBumperEffectRow& OutEffectRow) const;
+	TSoftObjectPtr<UNiagaraSystem> ResolveVfx(FName VfxId) const;
 };

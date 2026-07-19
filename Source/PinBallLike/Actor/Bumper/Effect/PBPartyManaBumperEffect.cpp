@@ -70,6 +70,7 @@ void UPBPartyManaBumperEffect::ActivateEffectForActor(
 		{
 			++AffectedBallCount;
 			TotalRecoveredMana += RecoveredMana;
+			PlayResolvedVfx(Ball);
 		}
 	}
 

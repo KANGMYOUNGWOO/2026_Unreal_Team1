@@ -5,7 +5,6 @@
 #include "PinBallLike/Struct/Bumper/PBBumperRewardTypes.h"
 #include "PBGateSupportFieldBumperEffect.generated.h"
 
-/** 관문 앞에 HP, MP, 상태효과 중 하나를 제공하는 한시적 지원 영역을 생성합니다. */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API UPBGateSupportFieldBumperEffect : public UPBSummonBumperEffect
 {
@@ -19,6 +18,10 @@ public:
 		AActor* InteractionActor) override;
 
 protected:
+	virtual FTransform ResolveSpawnTransform(
+		APBModularBumperBase* Bumper,
+		bool& bOutUsesSummonAnchor) override;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Support Field")
 	EPBBumperRewardType RewardType = EPBBumperRewardType::Resource;
 
@@ -27,6 +30,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Support Field")
 	FName StatusEffectId = NAME_None;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Support Field")
+	FName TimedEffectSourceId = TEXT("GateStrengthField");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Support Field")
+	FName TimedStatName = NAME_None;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Support Field",
 		meta = (ClampMin = "0.5", ClampMax = "60.0", Units = "s"))

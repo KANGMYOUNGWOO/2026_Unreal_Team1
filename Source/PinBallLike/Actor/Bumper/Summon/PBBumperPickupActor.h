@@ -10,10 +10,6 @@ class UPrimitiveComponent;
 class USphereComponent;
 class UStaticMeshComponent;
 
-/**
- * 생성형 범퍼가 필드에 잠시 배치하는 공통 획득 아이템입니다.
- * 실제 보상 종류와 수치는 Effect Blueprint와 Effect 시트가 주입합니다.
- */
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBumperPickupActor : public APBBumperSummonActor
 {
