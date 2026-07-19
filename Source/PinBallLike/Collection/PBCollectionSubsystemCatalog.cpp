@@ -225,10 +225,11 @@ TArray<FPBCollectionBallDisplayData> UPBCollectionSubsystem::GetBallCatalogEntri
 				DisplayData.SkillName = SkillRow.DisplayName;
 				DisplayData.SkillDescription = SkillRow.Description;
 				DisplayData.SkillStatsText = FText::Format(
-					LOCTEXT("BallSkillStats", "피해 배율 {0} / 지속 {1}초 / 값 {2}"),
-					FText::AsNumber(SkillRow.DamageMultiplier),
-					FText::AsNumber(SkillRow.Duration),
-					FText::AsNumber(SkillRow.Value));
+					LOCTEXT("BallSkillStats", "Power {0} / Life {1} / Effect {2} / Groggy {3}"),
+					FText::AsNumber(SkillRow.PowerValue),
+					FText::AsNumber(SkillRow.LifeValue),
+					FText::AsNumber(SkillRow.EffectValue),
+					FText::AsNumber(SkillRow.GroggyValue));
 				DisplayData.bHasValidSkill = BallRow.DefaultSkillIds.Num() == 1;
 			}
 			else

@@ -498,6 +498,11 @@ void APBCombatPartyController::RequestUseSkill(const int32 SkillInputValue)
 		return;
 	}
 
+	Ball->TryActivateSkill();
+	return;
+
+	//TODO : 테스트를 위해 마나 없이도 스킬사용 
+	
 	UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
 	const float MaxMana = ResourceComponent
 		? ResourceComponent->GetResourceMax(PBResourceNames::Mana)
