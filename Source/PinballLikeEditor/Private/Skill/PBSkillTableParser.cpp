@@ -35,15 +35,18 @@ bool UPBSkillTableParser::ParseRow(
 	FPBBallSkillTableRow NewRow;
 	NewRow.DisplayName = FText::FromString(RowData.FindRef(TEXT("DisplayName")));
 	NewRow.Description = FText::FromString(RowData.FindRef(TEXT("Description")));
-	NewRow.DamageMultiplier = FMath::Max(
-		ParseFloatValue(RowData.FindRef(TEXT("Power")), 1.0f),
+	NewRow.PowerValue = FMath::Max(
+		ParseFloatValue(RowData.FindRef(TEXT("PowerValue")), 1.0f),
 		0.0f);
-	NewRow.Duration = FMath::Max(
-		ParseFloatValue(RowData.FindRef(TEXT("Duration")), 2.0f),
-		0.01f);
-	NewRow.Value = FMath::Max(
-		ParseIntValue(RowData.FindRef(TEXT("Value")), 1),
-		1);
+	NewRow.LifeValue = FMath::Max(
+		ParseFloatValue(RowData.FindRef(TEXT("LifeValue")), 2.0f),
+		0.0f);
+	NewRow.EffectValue = FMath::Max(
+		ParseIntValue(RowData.FindRef(TEXT("EffectValue")), 1),
+		0);
+	NewRow.GroggyValue = FMath::Max(
+		ParseIntValue(RowData.FindRef(TEXT("GroggyValue")), 0),
+		0);
 
 	TargetTable->AddRow(RowName, NewRow);
 	UpdateLinkedBallDataAssets(RowName);
