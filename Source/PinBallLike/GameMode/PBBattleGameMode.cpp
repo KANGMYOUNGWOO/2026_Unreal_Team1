@@ -730,15 +730,8 @@ void APBBattleGameMode::HandlePartyShiftRequestedMessage(
 		return;
 	}
 
-	if (!BattleGameState->HasRemainingBattleShiftCount())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Ignore party shift request. No remaining shift count."));
-		return;
-	}
-
 	if (BallDeckSubsystem->RotateDeploymentSlots())
 	{
-		BattleGameState->ConsumeBattleShiftCount();
 		TriggerPartySwitchEffects();
 	}
 }

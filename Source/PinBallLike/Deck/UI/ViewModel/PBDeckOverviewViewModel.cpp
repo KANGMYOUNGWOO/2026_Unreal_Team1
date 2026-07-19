@@ -1,4 +1,4 @@
-#include "PBBattleHUDViewModel.h"
+#include "PBDeckOverviewViewModel.h"
 
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
@@ -6,12 +6,12 @@
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
 
-void UPBBattleHUDViewModel::Initialize(UObject* InWorldContextObject)
+void UPBDeckOverviewViewModel::Initialize(UObject* InWorldContextObject)
 {
 	WorldContextObject = InWorldContextObject;
 }
 
-void UPBBattleHUDViewModel::SetSynergyStates(const TArray<FPBSynergyState>& InSynergyStates)
+void UPBDeckOverviewViewModel::SetSynergyStates(const TArray<FPBSynergyState>& InSynergyStates)
 {
 	TArray<FPBSynergyViewData> NewViewData;
 
@@ -68,20 +68,20 @@ void UPBBattleHUDViewModel::SetSynergyStates(const TArray<FPBSynergyState>& InSy
 	UE_MVVM_SET_PROPERTY_VALUE(ActiveSynergyViewData, NewViewData);
 }
 
-void UPBBattleHUDViewModel::ClearSynergyViewData()
+void UPBDeckOverviewViewModel::ClearSynergyViewData()
 {
 	TArray<FPBSynergyViewData> EmptyViewData;
 	UE_MVVM_SET_PROPERTY_VALUE(ActiveSynergyViewData, EmptyViewData);
 }
 
-const UPBTableDataSubsystem* UPBBattleHUDViewModel::GetTableDataSubsystem() const
+const UPBTableDataSubsystem* UPBDeckOverviewViewModel::GetTableDataSubsystem() const
 {
 	UWorld* World = WorldContextObject ? WorldContextObject->GetWorld() : nullptr;
 	UGameInstance* GameInstance = World ? World->GetGameInstance() : nullptr;
 	return GameInstance ? GameInstance->GetSubsystem<UPBTableDataSubsystem>() : nullptr;
 }
 
-FText UPBBattleHUDViewModel::BuildSynergyCountListText(const FName SynergyId, const int32 CurrentCount) const
+FText UPBDeckOverviewViewModel::BuildSynergyCountListText(const FName SynergyId, const int32 CurrentCount) const
 {
 	const UPBTableDataSubsystem* TableDataSubsystem = GetTableDataSubsystem();
 	if (!TableDataSubsystem || SynergyId.IsNone())

@@ -4,12 +4,12 @@
 #include "MVVMViewModelBase.h"
 #include "PinBallLike/Struct/Synergy/PBSynergyState.h"
 #include "PinBallLike/Struct/Synergy/PBSynergyViewData.h"
-#include "PBBattleHUDViewModel.generated.h"
+#include "PBDeckOverviewViewModel.generated.h"
 
 class UPBTableDataSubsystem;
 
 UCLASS(BlueprintType, meta = (MVVMAllowedContextCreationType = "Manual"))
-class PINBALLLIKE_API UPBBattleHUDViewModel : public UMVVMViewModelBase
+class PINBALLLIKE_API UPBDeckOverviewViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
@@ -20,7 +20,7 @@ public:
 
 	const TArray<FPBSynergyViewData>& GetActiveSynergyViewData() const { return ActiveSynergyViewData; }
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "BattleHUD|ViewModel")
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "DeckOverview|ViewModel")
 	TArray<FPBSynergyViewData> ActiveSynergyViewData;
 
 private:
