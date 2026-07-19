@@ -18,12 +18,16 @@ AProjectileBase::AProjectileBase()
 	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	CollisionSphere->SetCollisionResponseToAllChannels(ECR_Overlap);
 	CollisionSphere->SetGenerateOverlapEvents(true);
+	CollisionSphere->OnComponentBeginOverlap.AddUniqueDynamic(
+		this,
+		&AProjectileBase::HandleProjectileBeginOverlap);
 
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
 	ProjectileMovementComponent->UpdatedComponent = CollisionSphere;
 	ProjectileMovementComponent->InitialSpeed = ProjectileSpeed;
 	ProjectileMovementComponent->MaxSpeed = ProjectileSpeed;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
+	ProjectileMovementComponent->bInitialVelocityInLocalSpace = false;
 	ProjectileMovementComponent->bShouldBounce = false;
 	ProjectileMovementComponent->bSweepCollision = false;
 	ProjectileMovementComponent->bAutoActivate = false;
