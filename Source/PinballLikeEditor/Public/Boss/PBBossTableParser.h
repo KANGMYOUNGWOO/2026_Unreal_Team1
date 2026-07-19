@@ -26,7 +26,7 @@ protected:
 	FPBSheetAssetPathPreset DataAssetPreset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Sheet")
-	TArray<FPBSheetAssetPathPreset> BossClassPresets;
+	FPBSheetAssetPathPreset IconPreset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Sheet")
 	FPBSheetAssetPathPreset BossUILayerClassPreset;

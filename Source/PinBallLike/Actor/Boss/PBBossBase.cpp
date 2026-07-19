@@ -156,16 +156,6 @@ bool APBBossBase::IsEnragedPhase() const
 	return BossStatComponent && BossStatComponent->IsEnraged;
 }
 
-bool APBBossBase::IsFixedBoss() const
-{
-	return BossMovementType == EPBBossMovementType::Fixed;
-}
-
-bool APBBossBase::IsMovableBoss() const
-{
-	return BossMovementType == EPBBossMovementType::Movable;
-}
-
 void APBBossBase::StartIdleState_Implementation()
 {
 	SetBossState(EPBBossState::Idle);
@@ -314,8 +304,11 @@ void APBBossBase::InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAs
 	{
 		BossName = BossDataAsset->BossName;
 	}
+	if (!BossDataAsset->BossIntroImage.IsNull())
+	{
+		BossIntroImage = BossDataAsset->BossIntroImage.LoadSynchronous();
+	}
 
-	BossMovementType = BossDataAsset->BossMovementType;
 	GroggyDurationSeconds = FMath::Max(0.1f, BossDataAsset->GroggyDurationSeconds);
 	EnrageCameraShakeClass = BossDataAsset->EnrageCameraShakeClass.Get();
 	if (BossUIComponent && !BossDataAsset->BossUILayerClass.IsNull())

@@ -225,9 +225,6 @@ struct FPBCollectionBossDisplayData
 	FPBCollectionItemSummary Summary;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Boss")
-	FText MovementTypeText;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Boss")
 	int32 MaxHP = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Boss")

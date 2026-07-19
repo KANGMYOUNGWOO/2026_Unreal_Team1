@@ -10,8 +10,6 @@
 APBTurtleBoss::APBTurtleBoss()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	BossMovementType = EPBBossMovementType::Movable;
-
 	TurtleMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("TurtleMesh"));
 	TurtleMesh->SetupAttachment(GetRootComponent());
 

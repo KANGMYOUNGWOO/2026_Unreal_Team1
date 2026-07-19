@@ -6,6 +6,7 @@
 #include "PBSheetParserUtils.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Camera/CameraShakeBase.h"
+#include "Engine/Texture2D.h"
 #include "Modules/ModuleManager.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/UI/PBBossUILayerWidget.h"
@@ -24,21 +25,8 @@ UPBBossTableParser::UPBBossTableParser()
 {
 	DataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Boss");
 	DataAssetPreset.NameFormat = TEXT("DA_Boss_{0}");
-
-	FPBSheetAssetPathPreset BossRootClassPreset;
-	BossRootClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss");
-	BossRootClassPreset.NameFormat = TEXT("BP_{0}");
-	BossClassPresets.Add(BossRootClassPreset);
-
-	FPBSheetAssetPathPreset SnakeBossClassPreset;
-	SnakeBossClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/Snake");
-	SnakeBossClassPreset.NameFormat = TEXT("BP_{0}");
-	BossClassPresets.Add(SnakeBossClassPreset);
-
-	FPBSheetAssetPathPreset GolemBossClassPreset;
-	GolemBossClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/Golem");
-	GolemBossClassPreset.NameFormat = TEXT("BP_{0}");
-	BossClassPresets.Add(GolemBossClassPreset);
+	IconPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/BossAsset");
+	IconPreset.NameFormat = TEXT("{0}");
 
 	BossUILayerClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Boss/UI");
 	BossUILayerClassPreset.NameFormat = TEXT("WBP_{0}");
@@ -59,9 +47,7 @@ UScriptStruct* UPBBossTableParser::GetRowStruct() const
 bool UPBBossTableParser::ParseRow(const FName RowName, const TMap<FString, FString>& RowData)
 {
 	FPBBossTableRow NewRow;
-	NewRow.BossId = ParseIntValue(RowData.FindRef(TEXT("BossId")), 0);
 	NewRow.DisplayName = FText::FromString(RowData.FindRef(TEXT("DisplayName")));
-	NewRow.BossMovementType = ParseEnumValue(RowData.FindRef(TEXT("BossMovementType")), EPBBossMovementType::Fixed);
 	NewRow.MaxHP = FMath::Max(ParseIntValue(RowData.FindRef(TEXT("MaxHP")), 100), 1);
 	NewRow.MaxGroggyGauge = FMath::Max(ParseIntValue(RowData.FindRef(TEXT("MaxGroggyGauge")), 100), 1);
 	NewRow.GroggyDurationSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("GroggyDurationSeconds")), 3.0f), 0.1f);
@@ -96,12 +82,19 @@ UPBBossDataAsset* UPBBossTableParser::SetupBossDataAsset(
 		return nullptr;
 	}
 
-	const FName BossClassId = GetClassIdOrRowName(RowData, TEXT("BossClassID"), RowName);
 	const FName BossUILayerClassId = GetClassIdOrRowName(RowData, TEXT("BossUILayerClassID"), NAME_None);
 	const FName EnrageCameraShakeClassId = GetClassIdOrRowName(RowData, TEXT("EnrageCameraShakeClassID"), NAME_None);
+	const FString IconIdString = TrimCell(RowData.FindRef(TEXT("Icon")));
 
 	BossDataAsset->BossName = FText::FromString(RowData.FindRef(TEXT("DisplayName")));
-	BossDataAsset->BossMovementType = ParseEnumValue(RowData.FindRef(TEXT("BossMovementType")), EPBBossMovementType::Fixed);
+	if (IconPreset.IsValid() && !IsUnsetValue(IconIdString))
+	{
+		BossDataAsset->BossIntroImage = FindObject<UTexture2D>(IconPreset, FName(*IconIdString));
+	}
+	else
+	{
+		BossDataAsset->BossIntroImage.Reset();
+	}
 	BossDataAsset->MaxHP = FMath::Max(ParseIntValue(RowData.FindRef(TEXT("MaxHP")), 100), 1);
 	BossDataAsset->MaxGroggyGauge = FMath::Max(ParseIntValue(RowData.FindRef(TEXT("MaxGroggyGauge")), 100), 1);
 	BossDataAsset->GroggyDurationSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("GroggyDurationSeconds")), 3.0f), 0.1f);
@@ -115,10 +108,7 @@ UPBBossDataAsset* UPBBossTableParser::SetupBossDataAsset(
 		BossDataAsset->DefaultHitPointName = TEXT("Normal");
 	}
 
-	if (!BossClassId.IsNone())
-	{
-		BossDataAsset->BossClass = FindBossClass(BossClassId);
-	}
+	BossDataAsset->BossClass = FindBossClass(RowName);
 
 	if (BossUILayerClassPreset.IsValid() && !BossUILayerClassId.IsNone())
 	{

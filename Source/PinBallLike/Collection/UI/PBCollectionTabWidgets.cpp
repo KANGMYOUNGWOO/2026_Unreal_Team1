@@ -327,7 +327,7 @@ void UPBCollectionBossTabWidget::RefreshTab()
 	for (int32 Index = 0; Index < CatalogData.Num(); ++Index)
 	{
 		const FPBCollectionBossDisplayData& Item = CatalogData[Index];
-		if (MatchesSearch(Item.Summary, {Item.MovementTypeText}))
+		if (MatchesSearch(Item.Summary))
 		{
 			Summaries.Add(Item.Summary);
 			DataIndexes.Add(Index);
@@ -362,7 +362,7 @@ void UPBCollectionBossTabWidget::ShowDetails(const int32 DataIndex) const
 
 	const FPBCollectionBossDisplayData& Data = CatalogData[DataIndex];
 	SetText(DetailNameText, Data.Summary.DisplayName);
-	SetText(DetailMetaText, Data.MovementTypeText);
+	SetText(DetailMetaText, Data.Summary.Subtitle);
 	SetText(DetailDescriptionText, Data.Summary.Description);
 	SetText(BossStatsText, FText::Format(
 		LOCTEXT("BossStats", "HP {0} / 그로기 {1} / 그로기 지속 {2}초 / 격노 {3}%"),

@@ -5,6 +5,7 @@
 
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/PBBossSpawner.h"
 #include "PinBallLike/Actor/Bumper/PBBumperSpawner.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
@@ -591,7 +592,7 @@ void APBBattleGameMode::HandleBossIntroCompletedMessage(
 	if (!BattleGameState
 		|| BattleGameState->GetBattleLevelPhase() != EPBBattleLevelPhase::BossIntro
 		|| !SpawnedBoss
-		|| Message.BossActor != SpawnedBoss)
+		|| Message.BossActor.Get() != SpawnedBoss)
 	{
 		return;
 	}

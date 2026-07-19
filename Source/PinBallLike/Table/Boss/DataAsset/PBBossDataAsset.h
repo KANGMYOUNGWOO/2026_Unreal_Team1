@@ -12,6 +12,7 @@
 #include "PBBossDataAsset.generated.h"
 
 class UCameraShakeBase;
+class UTexture2D;
 
 UCLASS(BlueprintType)
 class PINBALLLIKE_API UPBBossDataAsset : public UPrimaryDataAsset
@@ -30,8 +31,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Profile")
 	FText BossName;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Type")
-	EPBBossMovementType BossMovementType = EPBBossMovementType::Fixed;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Profile", meta = (AssetBundles = "UI"))
+	TSoftObjectPtr<UTexture2D> BossIntroImage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Stat", meta = (ClampMin = "1"))
 	int32 MaxHP = 100;
