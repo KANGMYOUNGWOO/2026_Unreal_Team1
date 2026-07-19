@@ -6,6 +6,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "HAL/IConsoleManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
@@ -22,13 +23,52 @@
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 #include "PinBallLike/Table/Ball/PBBallAssetIds.h"
+#include "PinBallLike/UI/Popup/PBSimplePopupWidget.h"
 
 namespace
 {
 const FName LeftGolemHandName = TEXT("Left");
 const FName RightGolemHandName = TEXT("Right");
 constexpr int32 MaxBumperCheatChargeCount = 100;
+const TCHAR* SimplePopupWidgetClassPath =
+	TEXT("/Game/Blueprints/UI/Popup/WBP_SimplePopup.WBP_SimplePopup_C");
+
+void ShowSimplePopup(UWorld* World)
+{
+	UGameInstance* GameInstance = IsValid(World) ? World->GetGameInstance() : nullptr;
+	UPBUIManagerSubsystem* UIManager = GameInstance
+		? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+		: nullptr;
+	if (!UIManager)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] ShowPopup failed. UIManager is invalid."));
+		return;
+	}
+
+	const TSubclassOf<UPBSimplePopupWidget> PopupClass =
+		LoadClass<UPBSimplePopupWidget>(nullptr, SimplePopupWidgetClassPath);
+	if (!PopupClass)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Cheat] ShowPopup failed. Popup class was not found. Path=%s"),
+			SimplePopupWidgetClassPath);
+		return;
+	}
+
+	if (!UIManager->PushSimplePopup(
+		PopupClass,
+		FText::FromString(TEXT("Simple popup test."))))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] ShowPopup failed. PushSimplePopup failed."));
+	}
+}
+
+FAutoConsoleCommandWithWorld ShowPopupConsoleCommand(
+	TEXT("ShowPopup"),
+	TEXT("Shows the simple popup test widget in the current game world."),
+	FConsoleCommandWithWorldDelegate::CreateStatic(&ShowSimplePopup));
 
 FString GetBumperPositionName(const EPBBumperPositionId PositionId)
 {
@@ -539,6 +579,11 @@ void UPBCheatManager::ShowBallStatEffect()
 		TEXT("[Cheat][StatusEffect] Finished. Balls=%d ActiveEffects=%d"),
 		BallCount,
 		EffectCount);
+}
+
+void UPBCheatManager::ShowPopup()
+{
+	ShowSimplePopup(GetWorld());
 }
 
 void UPBCheatManager::BumperStatus() const

@@ -1,6 +1,7 @@
 #include "PBUIManagerSubsystem.h"
 
 #include "PinBallLike/UI/PBUserWidget.h"
+#include "PinBallLike/UI/Popup/PBSimplePopupWidget.h"
 
 UPBUserWidget* UPBUIManagerSubsystem::PushWidget(
 	const TSubclassOf<UPBUserWidget> WidgetClass,
@@ -28,6 +29,20 @@ UPBUserWidget* UPBUIManagerSubsystem::PushWidget(
 	Widget->OnPushed();
 
 	return Widget;
+}
+
+UPBSimplePopupWidget* UPBUIManagerSubsystem::PushSimplePopup(
+	const TSubclassOf<UPBSimplePopupWidget> PopupClass,
+	const FText& Message,
+	const int32 ZOrder)
+{
+	UPBSimplePopupWidget* Popup = Cast<UPBSimplePopupWidget>(PushWidget(PopupClass, ZOrder));
+	if (IsValid(Popup))
+	{
+		Popup->InitializePopup(Message);
+	}
+
+	return Popup;
 }
 
 bool UPBUIManagerSubsystem::RequestPopWidget()

@@ -5,6 +5,7 @@
 #include "PBUIManagerSubsystem.generated.h"
 
 class UPBUserWidget;
+class UPBSimplePopupWidget;
 
 UCLASS()
 class PINBALLLIKE_API UPBUIManagerSubsystem : public UGameInstanceSubsystem
@@ -15,6 +16,12 @@ public:
 	// Widget을 생성하고 Viewport와 Stack에 추가한다.
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	UPBUserWidget* PushWidget(TSubclassOf<UPBUserWidget> WidgetClass, int32 ZOrder = 0);
+
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	UPBSimplePopupWidget* PushSimplePopup(
+		TSubclassOf<UPBSimplePopupWidget> PopupClass,
+		const FText& Message,
+		int32 ZOrder = 100);
 
 	// Top Widget에 닫기 요청을 보낸다. 실제 제거는 Widget의 CompletePop 호출 후 처리된다.
 	UFUNCTION(BlueprintCallable, Category = "UI")
