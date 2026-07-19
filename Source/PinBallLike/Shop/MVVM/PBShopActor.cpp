@@ -26,130 +26,145 @@ APBShopActor::APBShopActor()
 
 void APBShopActor::OpenShop()
 {
-	 APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
-    if (!PC)
-    {
-        return;
-    }
+	APlayerController* PC =
+		UGameplayStatics::GetPlayerController(this, 0);
 
-    if (!ShopManager)
-    {
-        ShopManager = NewObject<UPBShopManager>(this);
-    	ShopPurchaseHandler = ShopManager;
-    	ShopManager->SetShopActorHandler(this);
-    }
-	
-    if (!ShopWidget)
-    {
-        if (!ShopWidgetClass)
-        {
-            return;
-        }
-
-        ShopWidget = CreateWidget<UPBShopWidget>(PC, ShopWidgetClass);
-        if (!ShopWidget)
-        {
-            return;
-        }
-    	
-    	ApplyViewModelToWidget(ShopWidget);
-    	
-    	ShopWidget->AddToViewport();
-    }
-
-    UGameInstance* GI = UGameplayStatics::GetGameInstance(GetWorld());
-    if (!GI)
-    {
-        return;
-    }
-
-	UPBTableDataSubsystem* TableSub = GI->GetSubsystem<UPBTableDataSubsystem>();
-
-	if (!TableSub)
+	if (!PC)
 	{
 		return;
 	}
 
-	const TArray<FName> ShopItemIds = ShopManager->OpenShop();
+	if (!ShopManager)
+	{
+		ShopManager = NewObject<UPBShopManager>(this);
+		ShopPurchaseHandler = ShopManager;
 
-	UStaticMesh* CubeMesh = LoadObject<UStaticMesh>(
-		nullptr,
-		TEXT("/Engine/BasicShapes/Cube.Cube")
-	);
+		ShopManager->SetShopActorHandler(this);
+	}
+
+	if (!ShopWidget)
+	{
+		if (!ShopWidgetClass)
+		{
+			return;
+		}
+
+		ShopWidget =
+			CreateWidget<UPBShopWidget>(
+				PC,
+				ShopWidgetClass);
+
+		if (!ShopWidget)
+		{
+			return;
+		}
+
+		ApplyViewModelToWidget(ShopWidget);
+		ShopWidget->AddToViewport();
+	}
+
+	UGameInstance* GameInstance =
+		UGameplayStatics::GetGameInstance(GetWorld());
+
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	UPBTableDataSubsystem* TableSubsystem =
+		GameInstance->GetSubsystem<UPBTableDataSubsystem>();
+
+	if (!TableSubsystem)
+	{
+		return;
+	}
+
+	const TArray<FName> ShopItemBallIds =
+		ShopManager->OpenShop();
+
+	UStaticMesh* CubeMesh =
+		LoadObject<UStaticMesh>(
+			nullptr,
+			TEXT("/Engine/BasicShapes/Cube.Cube"));
 
 	if (!CubeMesh)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Default Cube Mesh load failed"));
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("[ShopActor] Default cube mesh load failed."));
+
 		return;
 	}
 
 	TArray<UStaticMesh*> LoadedMeshes;
-	LoadedMeshes.Reserve(ShopItemIds.Num());
+	LoadedMeshes.Reserve(ShopItemBallIds.Num());
 
-	for (int32 i = 0; i < ShopItemIds.Num(); ++i)
+	for (int32 SlotIndex = 0;
+		 SlotIndex < ShopItemBallIds.Num();
+		 ++SlotIndex)
 	{
-		FPBBallTableRow BallRow;
+		const FName BallId =
+			ShopItemBallIds[SlotIndex];
 
-		if (!TableSub->FindBallRow(ShopItemIds[i], BallRow))
+		const int32 BuyPrice =
+			ShopManager->GetShopItemPrice(SlotIndex);
+
+		FPBBallTableRow BallRow;
+		if (!TableSubsystem->FindBallRow(
+			BallId,
+			BallRow))
 		{
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT(
+					"[ShopActor] Ball row not found. "
+					"Slot=%d BallId=%s"),
+				SlotIndex,
+				*BallId.ToString());
+
 			LoadedMeshes.Add(CubeMesh);
 
 			ShopWidget->SetShopSlotWidgetData(
-				i,
-				FText::FromName(ShopItemIds[i]),
-				100,
-				FText::GetEmpty()
-			);
+				SlotIndex,
+				FText::FromName(BallId),
+				BuyPrice,
+				FText::GetEmpty());
 
 			continue;
 		}
 
-		const FText Name = BallRow.DisplayName;
-
-		// TODO: 가격은 나중에 ShopId 기반 ShopTable에서 가져오도록 교체
-		const int32 TempPrice = 100;
+		LoadedMeshes.Add(CubeMesh);
 
 		ShopWidget->SetShopSlotWidgetData(
-			i,
-			Name,
-			TempPrice,
-			FText::GetEmpty()
-		);
-
-		LoadedMeshes.Add(CubeMesh);
+			SlotIndex,
+			BallRow.DisplayName,
+			BuyPrice,
+			BallRow.DescriptionKey);
 	}
 
 	if (ShopDisplayActor)
 	{
 		const TArray<FVector> UIWorldLocations =
-		ShopDisplayActor->DisplayItems(
-			ShopItemIds,
-			LoadedMeshes,
-			ShopPurchaseHandler
-		);
+			ShopDisplayActor->DisplayItems(
+				ShopItemBallIds,
+				LoadedMeshes,
+				ShopPurchaseHandler);
 
-		if (ShopWidget)
-		{
-			ShopWidget->SetShopSlotWorldLocations(UIWorldLocations);
-		}
-		
-		for (int32 i = 0; i < UIWorldLocations.Num(); ++i)
-		{
-			UE_LOG(LogTemp, Warning,
-				TEXT("UIWorldLocations[%d] %s"),
-				i,
-				*UIWorldLocations[i].ToString());
-		}
+		ShopWidget->SetShopSlotWorldLocations(
+			UIWorldLocations);
 	}
 
-    RefreshViewModel();
+	RefreshViewModel();
 
-    PC->bShowMouseCursor = true;
-    PC->SetInputMode(FInputModeGameAndUI());
+	PC->bShowMouseCursor = true;
 	PC->bEnableClickEvents = true;
 	PC->bEnableMouseOverEvents = true;
-}
 
+	FInputModeGameAndUI InputMode;
+	PC->SetInputMode(InputMode);
+}
 void APBShopActor::CloseShop()
 {
 	if (ShopWidget)

@@ -5,6 +5,7 @@
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Choice/PBChoiceType.h"
 
+
 void UPBBettingWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -49,4 +50,20 @@ void UPBBettingWidget::OnExitButtonClicked()
 	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
 		GameplayTags::Event_UI_Choice_Exit,
 		Message);
+}
+
+void UPBBettingWidget::PlayIntroAnimation()
+{
+	if (!IntroAnim)
+	{
+		return;
+	}
+
+	PlayAnimation(
+		IntroAnim,
+		0.f,
+		1,
+		EUMGSequencePlayMode::Forward,
+		1.f
+	);
 }

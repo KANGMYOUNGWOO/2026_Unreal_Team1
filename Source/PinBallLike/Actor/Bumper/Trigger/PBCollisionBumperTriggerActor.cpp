@@ -5,8 +5,8 @@
 
 #include "Components/BoxComponent.h"
 #include "Components/PrimitiveComponent.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
+#include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Interface/StatProvider.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
@@ -81,6 +81,21 @@ void APBCollisionBumperTriggerActor::RegisterCollisionAreas()
 	{
 		SetupTriggerArea(Cast<UPrimitiveComponent>(TaggedComponent));
 	}
+
+	if (CollisionAreas.IsEmpty() || TriggerAreas.IsEmpty())
+	{
+		const APBModularBumperBase* Bumper = GetOwnerBumper();
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Collision trigger setup incomplete. Trigger=%s Class=%s BumperRow=%s Position=%s CollisionTag=%s CollisionAreas=%d TriggerTag=%s TriggerAreas=%d"),
+			*GetNameSafe(this),
+			*GetPathNameSafe(GetClass()),
+			IsValid(Bumper) ? *Bumper->GetBumperRowId().ToString() : TEXT("None"),
+			*UEnum::GetValueAsString(GetPositionId()),
+			*CollisionAreaTag.ToString(),
+			CollisionAreas.Num(),
+			*TriggerAreaTag.ToString(),
+			TriggerAreas.Num());
+	}
 }
 
 void APBCollisionBumperTriggerActor::SetupCollisionArea(UPrimitiveComponent* CollisionArea)
@@ -141,7 +156,6 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 
 		if (const UBoxComponent* BoxArea = Cast<UBoxComponent>(TriggerArea))
 		{
-			// 회전과 음수 Scale을 포함한 월드 Transform으로 충돌 지점을 Box 로컬 공간에 옮긴다.
 			const FTransform& AreaTransform = BoxArea->GetComponentTransform();
 			const FVector LocalHitPoint = AreaTransform.InverseTransformPosition(HitPoint);
 			const FVector BoxExtent = BoxArea->GetUnscaledBoxExtent();
@@ -160,7 +174,6 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 			continue;
 		}
 
-		// Box 외 Primitive를 쓰는 파생 BP도 Trigger Area를 교체할 수 있도록 일반 경로를 남긴다.
 		FVector ClosestPoint;
 		const float Distance = TriggerArea->GetClosestPointOnCollision(HitPoint, ClosestPoint);
 		if (Distance >= 0.0f && Distance <= TriggerAreaHitPointTolerance)
@@ -172,35 +185,36 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 	return false;
 }
 
-void APBCollisionBumperTriggerActor::AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const
+bool APBCollisionBumperTriggerActor::AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const
 {
 	if (!IsValid(BallActor))
 	{
-		return;
+		return false;
 	}
 
 	const IStatProvider* StatProvider = PBInterfaceUtils::FindInterface<IStatProvider>(BallActor);
 	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(BallActor);
 	if (!StatProvider || !Movable)
 	{
-		return;
+		return false;
 	}
 
 	const int32 BallBounce = StatProvider->GetStat(PBStatNames::Bounciness);
 	const float BounceForce = BallBounce + BounceVelocityStrength;
 	if (BounceForce <= 0.0f)
 	{
-		return;
+		return false;
 	}
 
 	FVector BounceDirection = Hit.ImpactNormal;
 	BounceDirection.Z = 0.0f;
 	if (!BounceDirection.Normalize())
 	{
-		return;
+		return false;
 	}
 
 	Movable->AddVelocity(BounceDirection * BounceForce);
+	return true;
 }
 
 void APBCollisionBumperTriggerActor::HandleComponentHit(
@@ -233,11 +247,11 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 		ReactionComponent->PlayImpactReaction(Hit);
 	}
 
-	AddBounceVelocityToBall(OtherActor, Hit);
-	if (APBBallBase* Ball = Cast<APBBallBase>(OtherActor))
+	if (AddBounceVelocityToBall(OtherActor, Hit))
 	{
-		IncreaseTrigger(Ball, Hit);
+		PlayImpactCameraShake();
 	}
+	IncreaseTrigger(OtherActor, Hit);
 }
 
 void APBCollisionBumperTriggerActor::HandleTriggerBeginOverlap(

@@ -5,24 +5,30 @@ void UPBCollectionDetailViewModel::SetDisplayData(const FPBCollectionDisplayData
 	UE_MVVM_SET_PROPERTY_VALUE(bHasSelection, true);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsLoading, false);
 	UE_MVVM_SET_PROPERTY_VALUE(NameText, InDisplayData.DisplayName);
-	UE_MVVM_SET_PROPERTY_VALUE(MetaText, FText::Format(
-		NSLOCTEXT("PBCollection", "DetailMetaFormat", "{0} · {1} · {2} · {3} · {4} · {5}성"),
-		InDisplayData.CategoryText,
-		InDisplayData.StateText,
-		InDisplayData.AttackTypeText,
-		InDisplayData.RoleText,
-		InDisplayData.AttributeText,
-		FText::AsNumber(InDisplayData.StarGrade)));
+
+	TArray<FString> MetadataParts;
+	MetadataParts.Add(InDisplayData.CategoryText.ToString());
+	if (!InDisplayData.AttackTypeId.IsNone())
+	{
+		MetadataParts.Add(InDisplayData.AttackTypeText.ToString());
+	}
+	if (!InDisplayData.RoleId.IsNone())
+	{
+		MetadataParts.Add(InDisplayData.RoleText.ToString());
+	}
+	if (!InDisplayData.AttributeId.IsNone())
+	{
+		MetadataParts.Add(InDisplayData.AttributeText.ToString());
+	}
+	if (InDisplayData.StarGrade > 0)
+	{
+		MetadataParts.Add(FString::Printf(TEXT("%d성"), InDisplayData.StarGrade));
+	}
+	UE_MVVM_SET_PROPERTY_VALUE(MetaText, FText::FromString(FString::Join(MetadataParts, TEXT(" · "))));
 	UE_MVVM_SET_PROPERTY_VALUE(DescriptionText, InDisplayData.DetailDescription);
-	UE_MVVM_SET_PROPERTY_VALUE(UnlockText, FText::Format(
-		NSLOCTEXT("PBCollection", "UnlockFormat", "해금 조건: {0}"),
-		InDisplayData.UnlockConditionText));
-	UE_MVVM_SET_PROPERTY_VALUE(RecordText, InDisplayData.bCanShowFullData
-		? InDisplayData.RecordText
-		: NSLOCTEXT("PBCollection", "LockedRecordText", "기록은 해금 이후 표시됩니다."));
-	UE_MVVM_SET_PROPERTY_VALUE(AccentColor, InDisplayData.State == EPBCollectionState::Locked
-		? FLinearColor(0.22f, 0.22f, 0.22f, 1.0f)
-		: InDisplayData.AccentColor);
+	UE_MVVM_SET_PROPERTY_VALUE(UnlockText, FText::GetEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(RecordText, FText::GetEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(AccentColor, InDisplayData.AccentColor);
 }
 
 void UPBCollectionDetailViewModel::SetEmpty(const bool bLoading)

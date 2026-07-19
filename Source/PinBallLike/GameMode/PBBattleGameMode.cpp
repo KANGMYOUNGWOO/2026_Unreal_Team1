@@ -129,6 +129,10 @@ void APBBattleGameMode::HandleCurrentPhase()
 		EnterBossDead();
 		break;
 	case EPBBattleLevelPhase::Reward:
+		if (APBBumperSpawner* FoundBumperSpawner = FindBumperSpawner())
+		{
+			FoundBumperSpawner->LogBattleTelemetrySummary();
+		}
 		HandleReward();
 		break;
 	default:
@@ -643,6 +647,10 @@ void APBBattleGameMode::HandlePartyAllBallsDeadMessage(
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Party all balls dead with no remaining launch count."));
+	if (APBBumperSpawner* FoundBumperSpawner = FindBumperSpawner())
+	{
+		FoundBumperSpawner->LogBattleTelemetrySummary();
+	}
 }
 
 void APBBattleGameMode::HandlePartyShiftRequestedMessage(

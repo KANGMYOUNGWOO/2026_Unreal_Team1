@@ -26,7 +26,7 @@ class PINBALLLIKE_API IBossInterface
 public:
 	// DamageAmount: 보스에게 적용할 기본 데미지 값입니다.
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss")
-	void DamageToBoss(int32 DamageAmount);
+	bool DamageToBoss(int32 DamageAmount);
 
 	// GroggyAmount: 보스 그로기 게이지에 더할 기본 수치입니다.
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss")

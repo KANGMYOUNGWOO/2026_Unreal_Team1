@@ -1,6 +1,5 @@
 #include "PBBumperEquipUIBuilder.h"
 
-#include "PBBumperEquipUI.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
@@ -8,6 +7,7 @@
 #include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
+#include "PinBallLike/Utils/PBTextFormatUtils.h"
 
 namespace PBBumperEquipUIBuilder
 {
@@ -15,7 +15,6 @@ namespace PBBumperEquipUIBuilder
 	{
 		void AddBumperListItemObject(
 			UObject* Outer,
-			UPBBumperEquipUI* ClickHandler,
 			const FName RowName,
 			const FPBBumperTableRow& Row,
 			const TSet<FName>& EquippedRowIds,
@@ -39,8 +38,6 @@ namespace PBBumperEquipUIBuilder
 				PrimaryAssetId,
 				ResolveBumperIconTexture(GameDataLoadSubsystem, RowName, Row),
 				IsBumperEquipped(RowName, EquippedRowIds));
-			ItemObject->OnClicked.AddDynamic(ClickHandler, &UPBBumperEquipUI::SelectBumperRow);
-
 			switch (Row.BumperType)
 			{
 			case EPBBumperType::TopTarget:
@@ -87,7 +84,6 @@ namespace PBBumperEquipUIBuilder
 
 	void BuildBumperListItemObjects(
 		UObject* Outer,
-		UPBBumperEquipUI* ClickHandler,
 		const TArray<FName>& RowNames,
 		const TArray<FPBBumperTableRow>& Rows,
 		const TSet<FName>& EquippedRowIds,
@@ -101,7 +97,6 @@ namespace PBBumperEquipUIBuilder
 		{
 			AddBumperListItemObject(
 				Outer,
-				ClickHandler,
 				RowNames[RowIndex],
 				Rows[RowIndex],
 				EquippedRowIds,
@@ -196,38 +191,126 @@ namespace PBBumperEquipUIBuilder
 		return TryGetBumperSlotType(*Row, OutSlotType);
 	}
 
+	FText GetBumperSlotTypeDisplayName(const EPBBumperSlotType SlotType)
+	{
+		switch (SlotType)
+		{
+		case EPBBumperSlotType::Top:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "TopSlot", "탑");
+		case EPBBumperSlotType::Side:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "SideSlot", "사이드");
+		case EPBBumperSlotType::Rebound:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "ReboundSlot", "리바운드");
+		case EPBBumperSlotType::Special:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "SpecialSlot", "스페셜");
+		default:
+			return FText::GetEmpty();
+		}
+	}
+
+	FText GetBumperEquipSlotDisplayName(const EPBBumperEquipSlot EquipSlot)
+	{
+		switch (EquipSlot)
+		{
+		case EPBBumperEquipSlot::TopLeft:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "TopLeftSlot", "탑 왼쪽");
+		case EPBBumperEquipSlot::TopRight:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "TopRightSlot", "탑 오른쪽");
+		case EPBBumperEquipSlot::SideLeft:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "SideLeftSlot", "사이드 왼쪽");
+		case EPBBumperEquipSlot::SideRight:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "SideRightSlot", "사이드 오른쪽");
+		case EPBBumperEquipSlot::ReboundLeft:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "ReboundLeftSlot", "리바운드 왼쪽");
+		case EPBBumperEquipSlot::ReboundRight:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "ReboundRightSlot", "리바운드 오른쪽");
+		case EPBBumperEquipSlot::Special:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "SpecialEquipSlot", "스페셜 중앙");
+		default:
+			return FText::GetEmpty();
+		}
+	}
+
+	FText GetBumperRoleDisplayName(const EPBBumperRoleType RoleType)
+	{
+		switch (RoleType)
+		{
+		case EPBBumperRoleType::Attack:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "AttackRole", "공격형");
+		case EPBBumperRoleType::Spawn:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "SpawnRole", "생성형");
+		case EPBBumperRoleType::Support:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "SupportRole", "지원형");
+		case EPBBumperRoleType::Zone:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "ZoneRole", "영역형");
+		default:
+			return FText::GetEmpty();
+		}
+	}
+
+	FText GetBumperEffectTypeDisplayName(const EPBBumperEffectType EffectType)
+	{
+		switch (EffectType)
+		{
+		case EPBBumperEffectType::Instant:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "InstantEffect", "즉시 효과");
+		case EPBBumperEffectType::Buff:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "BuffEffect", "버프");
+		case EPBBumperEffectType::Area:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "AreaEffect", "영역 효과");
+		case EPBBumperEffectType::Summon:
+			return NSLOCTEXT("PBBumperEquipUIBuilder", "SummonEffect", "생성 효과");
+		default:
+			return FText::GetEmpty();
+		}
+	}
+
+	FText ResolveBumperTriggerDescription(
+		const UPBTableDataSubsystem* TableDataSubsystem,
+		const FPBBumperTableRow& Row)
+	{
+		if (!IsValid(TableDataSubsystem) || Row.TriggerID.IsNone())
+		{
+			return FText::GetEmpty();
+		}
+
+		FPBBumperTriggerRow TriggerRow;
+		if (!TableDataSubsystem->FindBumperTriggerRow(Row.TriggerID, TriggerRow))
+		{
+			return FText::GetEmpty();
+		}
+
+		return PBTextFormatUtils::FormatSingleValueTemplate(
+			TriggerRow.TriggerDescription,
+			FText::AsNumber(Row.RequiredTriggerCount));
+	}
+
+	FText ResolveBumperEffectDescription(
+		const UPBTableDataSubsystem* TableDataSubsystem,
+		const FPBBumperTableRow& Row)
+	{
+		if (!IsValid(TableDataSubsystem) || Row.EffectID.IsNone())
+		{
+			return FText::GetEmpty();
+		}
+
+		FPBBumperEffectRow EffectRow;
+		if (!TableDataSubsystem->FindBumperEffectRow(Row.EffectID, EffectRow))
+		{
+			return FText::GetEmpty();
+		}
+
+		return PBTextFormatUtils::FormatSingleValueTemplate(
+			EffectRow.Description,
+			FText::AsNumber(EffectRow.Power));
+	}
+
 	FText ResolveBumperDescription(
 		const UPBTableDataSubsystem* TableDataSubsystem,
 		const FPBBumperTableRow& Row)
 	{
-		if (!IsValid(TableDataSubsystem))
-		{
-			return Row.Description;
-		}
-
-		FText TriggerDescription;
-		if (!Row.TriggerID.IsNone())
-		{
-			FPBBumperTriggerRow TriggerRow;
-			if (TableDataSubsystem->FindBumperTriggerRow(Row.TriggerID, TriggerRow))
-			{
-				TriggerDescription = FText::Format(
-					TriggerRow.TriggerDescription,
-					FText::AsNumber(Row.RequiredTriggerCount));
-			}
-		}
-
-		FText EffectDescription;
-		if (!Row.EffectID.IsNone())
-		{
-			FPBBumperEffectRow EffectRow;
-			if (TableDataSubsystem->FindBumperEffectRow(Row.EffectID, EffectRow))
-			{
-				EffectDescription = FText::Format(
-					EffectRow.Description,
-					FText::AsNumber(EffectRow.Power));
-			}
-		}
+		const FText TriggerDescription = ResolveBumperTriggerDescription(TableDataSubsystem, Row);
+		const FText EffectDescription = ResolveBumperEffectDescription(TableDataSubsystem, Row);
 
 		const bool bHasTriggerDescription = !TriggerDescription.IsEmptyOrWhitespace();
 		const bool bHasEffectDescription = !EffectDescription.IsEmptyOrWhitespace();

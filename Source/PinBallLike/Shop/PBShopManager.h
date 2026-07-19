@@ -19,8 +19,6 @@ class PINBALLLIKE_API UPBShopManager : public UObject , public IIShopPurchaseHan
 	
 public :
 	
-	
-	
 	TArray<FName> OpenShop();
 	
 	bool BuyItem(int32 SlotIndex) override;
@@ -29,12 +27,26 @@ public :
 	
 	void SetShopActorHandler(IIShopActorHandler* Handler);
 	
+	bool RerollShop();
+	
+	
+	int32 GetShopItemPrice(int32 SlotIndex) const;
+	FName GetShopItemRowName(int32 SlotIndex) const;
 private :
 	
 	int32 CurrentGold;
 	TArray<FName> CurrentShopItemBallIds;
 	TArray<bool> ShopItemIsSell;
-	
+private:
+	// ShopTable에서 상품을 무작위로 뽑아 현재 상점 목록을 재구성한다.
+	bool GenerateShopItems(int32 SlotCount);
 	IIShopActorHandler* ShopActorHandler;
+	UPROPERTY()
+	TArray<bool> ShopItemIsSold;
+	int RerollChance;
+	UPROPERTY()
+	TArray<FName> CurrentShopItemRowNames;
+	int32 CurrentRerollCost = 30;
+	
 	
 };

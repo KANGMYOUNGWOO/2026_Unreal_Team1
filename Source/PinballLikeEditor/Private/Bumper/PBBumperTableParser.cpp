@@ -4,8 +4,14 @@
 #include "Bumper/PBBumperTableParser.h"
 
 #include "PBSheetParserUtils.h"
+#include "Engine/DataTable.h"
 #include "Engine/Texture2D.h"
+#include "NiagaraSystem.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
+#include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
+#include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
 #include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 
 using namespace PBSheetParserUtils;
@@ -16,6 +22,12 @@ UPBBumperTableParser::UPBBumperTableParser()
 	DataAssetPreset.NameFormat = TEXT("DA_Bumper_{0}");
 	IconPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon");
 	IconPreset.NameFormat = TEXT("T_{0}");
+	TriggerClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Trigger");
+	TriggerClassPreset.NameFormat = TEXT("BP_{0}");
+	EffectClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Effect");
+	EffectClassPreset.NameFormat = TEXT("BP_{0}");
+	ActivationVfxPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Effect/VFX");
+	ActivationVfxPreset.NameFormat = TEXT("{0}");
 }
 
 const TCHAR* UPBBumperTableParser::GetParserName() const
@@ -41,7 +53,10 @@ bool UPBBumperTableParser::ParseRow(const FName RowName, const TMap<FString, FSt
 		ParseIntValue(RowData.FindRef(TEXT("RequireTriggerCount")), 1),
 		1);
 	NewRow.EffectID = FName(*TrimCell(RowData.FindRef(TEXT("EffectID"))));
-	if (UPBBumperDataAsset* BumperDataAsset = SetupBumperDataAsset(RowName))
+	if (UPBBumperDataAsset* BumperDataAsset = SetupBumperDataAsset(
+		RowName,
+		NewRow.TriggerID,
+		NewRow.EffectID))
 	{
 		NewRow.BumperDataAsset = TSoftObjectPtr<UPBBumperDataAsset>(BumperDataAsset);
 	}
@@ -50,7 +65,10 @@ bool UPBBumperTableParser::ParseRow(const FName RowName, const TMap<FString, FSt
 	return true;
 }
 
-UPBBumperDataAsset* UPBBumperTableParser::SetupBumperDataAsset(const FName RowName) const
+UPBBumperDataAsset* UPBBumperTableParser::SetupBumperDataAsset(
+	const FName RowName,
+	const FName TriggerId,
+	const FName EffectId) const
 {
 	UPBBumperDataAsset* BumperDataAsset =
 		GetOrCreateDataAsset<UPBBumperDataAsset>(DataAssetPreset, RowName, TEXT("Bumper"));
@@ -63,8 +81,69 @@ UPBBumperDataAsset* UPBBumperTableParser::SetupBumperDataAsset(const FName RowNa
 	{
 		BumperDataAsset->Icon = FindObject<UTexture2D>(IconPreset, RowName);
 	}
+	BumperDataAsset->TriggerClass =
+		FindBlueprintClass<APBBumperTriggerActorBase>(TriggerClassPreset, TriggerId);
+	BumperDataAsset->EffectClass =
+		FindBlueprintClass<UPBBumperEffectBase>(EffectClassPreset, EffectId);
+	FPBBumperEffectRow EffectRow;
+	if (ResolveEffectVfx(EffectId, EffectRow))
+	{
+		BumperDataAsset->ActivationVfx = ResolveVfx(EffectRow.ActivationVfxId);
+		BumperDataAsset->DeliveryVfx = ResolveVfx(EffectRow.DeliveryVfxId);
+		BumperDataAsset->ImpactVfx = ResolveVfx(EffectRow.ImpactVfxId);
+		BumperDataAsset->StatusVfx = ResolveVfx(EffectRow.StatusVfxId);
+	}
+	else
+	{
+		BumperDataAsset->ActivationVfx.Reset();
+		BumperDataAsset->DeliveryVfx.Reset();
+		BumperDataAsset->ImpactVfx.Reset();
+		BumperDataAsset->StatusVfx.Reset();
+	}
 
 	(void)BumperDataAsset->SetRowNameForImport(RowName);
 	(void)BumperDataAsset->MarkPackageDirty();
 	return BumperDataAsset;
+}
+
+bool UPBBumperTableParser::ResolveEffectVfx(
+	const FName EffectId,
+	FPBBumperEffectRow& OutEffectRow) const
+{
+	if (EffectId.IsNone())
+	{
+		return false;
+	}
+
+	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
+	UDataTable* EffectTable = Settings ? Settings->BumperEffectTable.LoadSynchronous() : nullptr;
+	if (!IsValid(EffectTable))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Sheet][Bumper] VFX lookup skipped because Effect table is unavailable. EffectId=%s"),
+			*EffectId.ToString());
+		return false;
+	}
+
+	const FPBBumperEffectRow* EffectRow = EffectTable->FindRow<FPBBumperEffectRow>(
+		EffectId,
+		TEXT("ResolveBumperActivationVfx"),
+		false);
+	if (!EffectRow)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Sheet][Bumper] VFX lookup skipped because Effect row is missing. EffectId=%s"),
+			*EffectId.ToString());
+		return false;
+	}
+
+	OutEffectRow = *EffectRow;
+	return true;
+}
+
+TSoftObjectPtr<UNiagaraSystem> UPBBumperTableParser::ResolveVfx(const FName VfxId) const
+{
+	return VfxId.IsNone()
+		? nullptr
+		: FindObject<UNiagaraSystem>(ActivationVfxPreset, VfxId);
 }

@@ -28,7 +28,7 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void DamageToBoss_Implementation(int32 DamageAmount) override;
+	virtual bool DamageToBoss_Implementation(int32 DamageAmount) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Golem Hand")
 	void InitializeGolemHand(APBGolemBoss* NewOwnerBoss, EPBGolemBossHandType NewHandType, FVector NewDefaultOffset);

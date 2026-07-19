@@ -14,6 +14,12 @@ struct PINBALLLIKE_API FPBBumperRuntimeState
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime")
 	int32 CurrentTriggerCount = 0;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime|Telemetry")
+	int32 MeaningfulContactCount = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime|Telemetry")
+	int32 ActivationCount = 0;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime")
 	EPBBumperState CurrentState = EPBBumperState::Idle;
 };

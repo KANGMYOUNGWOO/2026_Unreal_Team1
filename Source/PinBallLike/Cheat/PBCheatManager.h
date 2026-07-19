@@ -45,10 +45,25 @@ public:
 	void DamageBall();
 
 	UFUNCTION(exec)
+	void RegenMana();
+
+	UFUNCTION(exec)
 	void DamageGolemHand(FName HandName, int32 DamageAmount);
 
 	UFUNCTION(exec)
 	void AddBossGroggy(int32 GroggyAmount);
+
+	UFUNCTION(exec)
+	void BumperStatus() const;
+
+	UFUNCTION(exec)
+	void BumperCharge(FName PositionName, int32 Count);
+
+	UFUNCTION(exec)
+	void BumperComplete(FName PositionName);
+
+	UFUNCTION(exec)
+	void BumperReset(FName PositionName);
 
 private:
 	UGameInstance* GetCheatGameInstance() const;

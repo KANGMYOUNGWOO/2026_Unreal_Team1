@@ -1,8 +1,6 @@
 #include "PBCollectionSubsystem.h"
 
-#include "PBCollectionNotificationRouter.h"
 #include "Internationalization/Text.h"
-#include "Misc/DateTime.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 
@@ -61,27 +59,43 @@ void UPBCollectionSubsystem::HandleStartupGameDataLoaded()
 bool UPBCollectionSubsystem::ReloadCollectionData()
 {
 	TArray<FPBCollectionEntryData> LoadedEntries;
-	if (!BuildEntriesFromCollectionTable(LoadedEntries))
+	const bool bMetadataLoaded = BuildEntriesFromCollectionTable(LoadedEntries);
+	Entries = MoveTemp(LoadedEntries);
+	RebuildLookupIndexes();
+
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
+		: nullptr;
+	bIsDataReady = IsValid(TableDataSubsystem) && TableDataSubsystem->IsCollectionCatalogDataReady();
+	if (!bIsDataReady)
 	{
-		// 일시적인 재로딩 실패가 이미 표시 중인 정상 데이터를 지우지 않게 합니다.
-		bIsDataReady = !Entries.IsEmpty();
+		if (IsValid(TableDataSubsystem) && TableDataSubsystem->HasStartupGameDataLoadCompleted())
+		{
+			OnCollectionDataReady.Broadcast(false);
+		}
 		return false;
 	}
 
-	Entries = MoveTemp(LoadedEntries);
-	RebuildLookupIndexes();
-	ReconcileProgressWithEntries();
-	bIsDataReady = true;
 	UE_LOG(
 		LogTemp,
 		Log,
-		TEXT("[Collection] Data reload completed. EntryCount=%d ProgressCount=%d"),
-		Entries.Num(),
-		ProgressMap.Num());
+		TEXT("[Collection] Catalog source data is ready. MetadataLoaded=%s MetadataEntryCount=%d"),
+		bMetadataLoaded ? TEXT("true") : TEXT("false"),
+		Entries.Num());
 
 	OnCollectionDataReady.Broadcast(true);
 	OnCollectionEntryChanged.Broadcast(NAME_None);
 	return true;
+}
+
+bool UPBCollectionSubsystem::HasDataLoadCompleted() const
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
+		: nullptr;
+	return IsValid(TableDataSubsystem) && TableDataSubsystem->HasStartupGameDataLoadCompleted();
 }
 
 TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntries(EPBCollectionCategory Category) const
@@ -97,22 +111,12 @@ TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntriesByQuer
 
 	for (const FPBCollectionEntryData& EntryData : Entries)
 	{
-		const FPBCollectionProgressData* ProgressData = FindProgressData(EntryData.CollectionId);
-		if (!ProgressData)
-		{
-			continue;
-		}
-		if (EntryData.bHiddenUntilDiscovered && ProgressData->State == EPBCollectionState::Locked)
+		if (!DoesEntryMatchQuery(EntryData, Query))
 		{
 			continue;
 		}
 
-		if (!DoesEntryMatchQuery(EntryData, *ProgressData, Query))
-		{
-			continue;
-		}
-
-		Result.Add(MakeDisplayData(EntryData, *ProgressData));
+		Result.Add(MakeDisplayData(EntryData));
 	}
 
 	Result.Sort([Query](const FPBCollectionDisplayData& A, const FPBCollectionDisplayData& B)
@@ -154,14 +158,12 @@ TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntriesByQuer
 bool UPBCollectionSubsystem::GetDisplayEntry(FName CollectionId, FPBCollectionDisplayData& OutDisplayData) const
 {
 	const FPBCollectionEntryData* EntryData = FindEntryData(CollectionId);
-	const FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	if (!EntryData || !ProgressData
-		|| (EntryData->bHiddenUntilDiscovered && ProgressData->State == EPBCollectionState::Locked))
+	if (!EntryData)
 	{
 		return false;
 	}
 
-	OutDisplayData = MakeDisplayData(*EntryData, *ProgressData);
+	OutDisplayData = MakeDisplayData(*EntryData);
 	return true;
 }
 
@@ -170,13 +172,6 @@ TArray<FName> UPBCollectionSubsystem::GetAvailableMetadataIds(EPBCollectionFilte
 	TSet<FName> UniqueIds;
 	for (const FPBCollectionEntryData& EntryData : Entries)
 	{
-		const FPBCollectionProgressData* ProgressData = FindProgressData(EntryData.CollectionId);
-		if (!ProgressData
-			|| (EntryData.bHiddenUntilDiscovered && ProgressData->State == EPBCollectionState::Locked))
-		{
-			continue;
-		}
-
 		FName MetadataId = NAME_None;
 		switch (Field)
 		{
@@ -212,13 +207,6 @@ TArray<int32> UPBCollectionSubsystem::GetAvailableStarGrades() const
 	TSet<int32> UniqueGrades;
 	for (const FPBCollectionEntryData& EntryData : Entries)
 	{
-		const FPBCollectionProgressData* ProgressData = FindProgressData(EntryData.CollectionId);
-		if (!ProgressData
-			|| (EntryData.bHiddenUntilDiscovered && ProgressData->State == EPBCollectionState::Locked))
-		{
-			continue;
-		}
-
 		if (EntryData.StarGrade > 0)
 		{
 			UniqueGrades.Add(EntryData.StarGrade);
@@ -278,126 +266,27 @@ TArray<FName> UPBCollectionSubsystem::FindCollectionIdsBySourceRow(
 
 bool UPBCollectionSubsystem::DiscoverEntry(FName CollectionId)
 {
-	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	const FPBCollectionEntryData* EntryData = FindEntryData(CollectionId);
-	if (!ProgressData || !EntryData)
-	{
-		return false;
-	}
-
-	const EPBCollectionState PreviousState = ProgressData->State;
-	if (ProgressData->State == EPBCollectionState::Locked)
-	{
-		ProgressData->State = EPBCollectionState::Discovered;
-		if (!HasTimestamp(ProgressData->FirstDiscoveredAt))
-		{
-			ProgressData->FirstDiscoveredAt = MakeNow();
-		}
-		ProgressData->bIsNew = true;
-		NotifyProgressChanged(CollectionId);
-		BroadcastProgressNotification(*EntryData, PreviousState, ProgressData->State);
-	}
-
-	return true;
+	(void)CollectionId;
+	return false;
 }
 
 bool UPBCollectionSubsystem::UnlockEntry(FName CollectionId)
 {
-	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	const FPBCollectionEntryData* EntryData = FindEntryData(CollectionId);
-	if (!ProgressData || !EntryData)
-	{
-		return false;
-	}
-
-	const EPBCollectionState PreviousState = ProgressData->State;
-	const FDateTime Now = MakeNow();
-	if (ProgressData->State == EPBCollectionState::Locked
-		&& !HasTimestamp(ProgressData->FirstDiscoveredAt))
-	{
-		ProgressData->FirstDiscoveredAt = Now;
-	}
-
-	if (ProgressData->State == EPBCollectionState::Locked || ProgressData->State == EPBCollectionState::Discovered)
-	{
-		ProgressData->State = EPBCollectionState::Unlocked;
-		if (!HasTimestamp(ProgressData->FirstUnlockedAt))
-		{
-			ProgressData->FirstUnlockedAt = Now;
-		}
-		ProgressData->bIsNew = true;
-		NotifyProgressChanged(CollectionId);
-		BroadcastProgressNotification(*EntryData, PreviousState, ProgressData->State);
-	}
-
-	return true;
+	(void)CollectionId;
+	return false;
 }
 
 bool UPBCollectionSubsystem::CompleteEntry(FName CollectionId, const FString& CompletedByCharacterName)
 {
-	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	const FPBCollectionEntryData* EntryData = FindEntryData(CollectionId);
-	if (!ProgressData || !EntryData)
-	{
-		return false;
-	}
-
-	const EPBCollectionState PreviousState = ProgressData->State;
-	const bool bWasCompleted = ProgressData->State == EPBCollectionState::Completed;
-	bool bChanged = false;
-	if (!bWasCompleted)
-	{
-		const FDateTime Now = MakeNow();
-		if (!HasTimestamp(ProgressData->FirstDiscoveredAt))
-		{
-			ProgressData->FirstDiscoveredAt = Now;
-		}
-		if (!HasTimestamp(ProgressData->FirstUnlockedAt))
-		{
-			ProgressData->FirstUnlockedAt = Now;
-		}
-		if (!HasTimestamp(ProgressData->CompletedAt))
-		{
-			ProgressData->CompletedAt = Now;
-		}
-
-		ProgressData->State = EPBCollectionState::Completed;
-		ProgressData->bIsNew = true;
-		bChanged = true;
-	}
-
-	if (!CompletedByCharacterName.IsEmpty()
-		&& ProgressData->CompletedByCharacterName.IsEmpty())
-	{
-		ProgressData->CompletedByCharacterName = CompletedByCharacterName;
-		bChanged = true;
-	}
-
-	if (bChanged)
-	{
-		NotifyProgressChanged(CollectionId);
-	}
-	if (!bWasCompleted)
-	{
-		BroadcastProgressNotification(*EntryData, PreviousState, ProgressData->State);
-	}
-	return true;
+	(void)CollectionId;
+	(void)CompletedByCharacterName;
+	return false;
 }
 
 bool UPBCollectionSubsystem::MarkEntryAsSeen(FName CollectionId)
 {
-	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	if (!ProgressData || !FindEntryData(CollectionId))
-	{
-		return false;
-	}
-
-	if (ProgressData->bIsNew)
-	{
-		ProgressData->bIsNew = false;
-		NotifyProgressChanged(CollectionId);
-	}
-	return true;
+	(void)CollectionId;
+	return false;
 }
 
 bool UPBCollectionSubsystem::UpdateEntryStatistics(
@@ -408,73 +297,24 @@ bool UPBCollectionSubsystem::UpdateEntryStatistics(
 	int32 BestComboCandidate,
 	int32 TotalDamageDelta)
 {
-	FPBCollectionProgressData* ProgressData = FindProgressData(CollectionId);
-	if (!ProgressData || !FindEntryData(CollectionId))
-	{
-		return false;
-	}
-
-	const auto AddClamped = [](int32 CurrentValue, int32 Delta)
-	{
-		return static_cast<int32>(FMath::Min<int64>(
-			static_cast<int64>(MAX_int32),
-			static_cast<int64>(CurrentValue) + FMath::Max(0, Delta)));
-	};
-
-	const int32 NewAcquireCount = AddClamped(ProgressData->AcquireCount, AcquireDelta);
-	const int32 NewUseCount = AddClamped(ProgressData->UseCount, UseDelta);
-	const int32 NewDefeatCount = AddClamped(ProgressData->DefeatCount, DefeatDelta);
-	const int32 NewBestCombo = FMath::Max(ProgressData->BestCombo, FMath::Max(0, BestComboCandidate));
-	const int32 NewTotalDamage = AddClamped(ProgressData->TotalDamage, TotalDamageDelta);
-
-	const bool bChanged = NewAcquireCount != ProgressData->AcquireCount
-		|| NewUseCount != ProgressData->UseCount
-		|| NewDefeatCount != ProgressData->DefeatCount
-		|| NewBestCombo != ProgressData->BestCombo
-		|| NewTotalDamage != ProgressData->TotalDamage;
-
-	ProgressData->AcquireCount = NewAcquireCount;
-	ProgressData->UseCount = NewUseCount;
-	ProgressData->DefeatCount = NewDefeatCount;
-	ProgressData->BestCombo = NewBestCombo;
-	ProgressData->TotalDamage = NewTotalDamage;
-
-	if (bChanged)
-	{
-		NotifyProgressChanged(CollectionId);
-	}
-	return true;
+	(void)CollectionId;
+	(void)AcquireDelta;
+	(void)UseDelta;
+	(void)DefeatDelta;
+	(void)BestComboCandidate;
+	(void)TotalDamageDelta;
+	return false;
 }
 
 TArray<FPBCollectionProgressData> UPBCollectionSubsystem::GetProgressSnapshot() const
 {
-	TArray<FPBCollectionProgressData> Result;
-	ProgressMap.GenerateValueArray(Result);
-	Result.Sort([](const FPBCollectionProgressData& A, const FPBCollectionProgressData& B)
-	{
-		return A.CollectionId.ToString() < B.CollectionId.ToString();
-	});
-	return Result;
+	return {};
 }
 
 void UPBCollectionSubsystem::ApplyProgressSnapshot(
 	const TArray<FPBCollectionProgressData>& ProgressSnapshot)
 {
-	ProgressMap.Reset();
-	for (FPBCollectionProgressData ProgressData : ProgressSnapshot)
-	{
-		if (ProgressData.CollectionId.IsNone())
-		{
-			continue;
-		}
-
-		SanitizeProgressData(ProgressData);
-		ProgressMap.Add(ProgressData.CollectionId, MoveTemp(ProgressData));
-	}
-
-	ReconcileProgressWithEntries();
-	OnCollectionProgressChanged.Broadcast(NAME_None);
-	OnCollectionEntryChanged.Broadcast(NAME_None);
+	(void)ProgressSnapshot;
 }
 
 FText UPBCollectionSubsystem::GetCategoryDisplayText(EPBCollectionCategory Category)
@@ -484,15 +324,17 @@ FText UPBCollectionSubsystem::GetCategoryDisplayText(EPBCollectionCategory Categ
 	case EPBCollectionCategory::All:
 		return NSLOCTEXT("PBCollection", "CategoryAll", "전체");
 	case EPBCollectionCategory::Ball:
-		return NSLOCTEXT("PBCollection", "CategoryBall", "Ball");
+		return NSLOCTEXT("PBCollection", "CategoryBall", "볼");
 	case EPBCollectionCategory::Bumper:
-		return NSLOCTEXT("PBCollection", "CategoryBumper", "Bumper");
+		return NSLOCTEXT("PBCollection", "CategoryBumper", "범퍼");
 	case EPBCollectionCategory::Boss:
-		return NSLOCTEXT("PBCollection", "CategoryBoss", "Boss");
+		return NSLOCTEXT("PBCollection", "CategoryBoss", "보스");
 	case EPBCollectionCategory::Relic:
-		return NSLOCTEXT("PBCollection", "CategoryRelic", "Relic");
+		return NSLOCTEXT("PBCollection", "CategoryRelic", "유물");
 	case EPBCollectionCategory::Achievement:
 		return NSLOCTEXT("PBCollection", "CategoryAchievement", "업적");
+	case EPBCollectionCategory::Synergy:
+		return NSLOCTEXT("PBCollection", "CategorySynergy", "시너지");
 	default:
 		return FText::GetEmpty();
 	}
@@ -517,6 +359,11 @@ FText UPBCollectionSubsystem::GetStateDisplayText(EPBCollectionState State)
 
 FText UPBCollectionSubsystem::GetMetadataDisplayText(FName MetadataId)
 {
+	if (MetadataId.IsNone())
+	{
+		return FText::GetEmpty();
+	}
+
 	if (MetadataId == TEXT("Melee"))
 	{
 		return NSLOCTEXT("PBCollection", "MetadataMelee", "근접");
@@ -711,36 +558,6 @@ void UPBCollectionSubsystem::RebuildLookupIndexes()
 	}
 }
 
-void UPBCollectionSubsystem::ReconcileProgressWithEntries()
-{
-	for (const FPBCollectionEntryData& EntryData : Entries)
-	{
-		FPBCollectionProgressData& ProgressData = ProgressMap.FindOrAdd(EntryData.CollectionId);
-		ProgressData.CollectionId = EntryData.CollectionId;
-		SanitizeProgressData(ProgressData);
-	}
-}
-
-void UPBCollectionSubsystem::NotifyProgressChanged(FName CollectionId)
-{
-	OnCollectionProgressChanged.Broadcast(CollectionId);
-	OnCollectionEntryChanged.Broadcast(CollectionId);
-}
-
-void UPBCollectionSubsystem::SanitizeProgressData(FPBCollectionProgressData& ProgressData)
-{
-	if (static_cast<uint8>(ProgressData.State) > static_cast<uint8>(EPBCollectionState::Completed))
-	{
-		ProgressData.State = EPBCollectionState::Locked;
-	}
-
-	ProgressData.AcquireCount = FMath::Max(0, ProgressData.AcquireCount);
-	ProgressData.UseCount = FMath::Max(0, ProgressData.UseCount);
-	ProgressData.DefeatCount = FMath::Max(0, ProgressData.DefeatCount);
-	ProgressData.BestCombo = FMath::Max(0, ProgressData.BestCombo);
-	ProgressData.TotalDamage = FMath::Max(0, ProgressData.TotalDamage);
-}
-
 const FPBCollectionEntryData* UPBCollectionSubsystem::FindEntryData(FName CollectionId) const
 {
 	const int32* EntryIndex = EntryIndexByCollectionId.Find(CollectionId);
@@ -752,19 +569,8 @@ const FPBCollectionEntryData* UPBCollectionSubsystem::FindEntryData(FName Collec
 	return &Entries[*EntryIndex];
 }
 
-FPBCollectionProgressData* UPBCollectionSubsystem::FindProgressData(FName CollectionId)
-{
-	return ProgressMap.Find(CollectionId);
-}
-
-const FPBCollectionProgressData* UPBCollectionSubsystem::FindProgressData(FName CollectionId) const
-{
-	return ProgressMap.Find(CollectionId);
-}
-
 FPBCollectionDisplayData UPBCollectionSubsystem::MakeDisplayData(
-	const FPBCollectionEntryData& EntryData,
-	const FPBCollectionProgressData& ProgressData) const
+	const FPBCollectionEntryData& EntryData) const
 {
 	FPBCollectionDisplayData DisplayData;
 	DisplayData.CollectionId = EntryData.CollectionId;
@@ -772,9 +578,9 @@ FPBCollectionDisplayData UPBCollectionSubsystem::MakeDisplayData(
 	DisplayData.SourceId = EntryData.SourceId;
 	DisplayData.SourceTableName = EntryData.SourceTableName;
 	DisplayData.SourceRowName = EntryData.SourceRowName;
-	DisplayData.State = ProgressData.State;
+	DisplayData.State = EPBCollectionState::Unlocked;
 	DisplayData.CategoryText = GetCategoryDisplayText(EntryData.Category);
-	DisplayData.StateText = GetStateDisplayText(ProgressData.State);
+	DisplayData.StateText = FText::GetEmpty();
 	DisplayData.AttackTypeId = EntryData.AttackTypeId;
 	DisplayData.RoleId = EntryData.RoleId;
 	DisplayData.AttributeId = EntryData.AttributeId;
@@ -783,63 +589,22 @@ FPBCollectionDisplayData UPBCollectionSubsystem::MakeDisplayData(
 	DisplayData.AttributeText = GetMetadataDisplayText(EntryData.AttributeId);
 	DisplayData.StarGrade = EntryData.StarGrade;
 	DisplayData.SortOrder = EntryData.SortOrder;
-	DisplayData.UnlockConditionText = EntryData.UnlockConditionText;
-	DisplayData.RecordText = BuildRecordText(ProgressData);
-	DisplayData.bIsNew = ProgressData.bIsNew;
-	DisplayData.bCanShowFullData = ProgressData.State == EPBCollectionState::Unlocked
-		|| ProgressData.State == EPBCollectionState::Completed;
+	DisplayData.DisplayName = EntryData.DisplayName;
+	DisplayData.ShortDescription = EntryData.ShortDescription;
+	DisplayData.DetailDescription = EntryData.DetailDescription;
+	DisplayData.UnlockConditionText = FText::GetEmpty();
+	DisplayData.RecordText = FText::GetEmpty();
+	DisplayData.bIsNew = false;
+	DisplayData.bCanShowFullData = true;
 	DisplayData.IconAssetKey = EntryData.IconAssetKey;
 	DisplayData.PreviewAssetKey = EntryData.PreviewAssetKey;
 	DisplayData.AssetBundleName = EntryData.AssetBundleName;
 	DisplayData.AccentColor = EntryData.AccentColor;
-
-	if (ProgressData.State == EPBCollectionState::Locked)
-	{
-		DisplayData.DisplayName = EntryData.LockedName;
-		DisplayData.ShortDescription = NSLOCTEXT("PBCollection", "LockedShortDescription", "아직 정보가 공개되지 않았습니다.");
-		DisplayData.DetailDescription = NSLOCTEXT("PBCollection", "LockedDetailDescription", "해금 조건을 달성하면 상세 정보가 표시됩니다.");
-		return DisplayData;
-	}
-
-	if (ProgressData.State == EPBCollectionState::Discovered)
-	{
-		DisplayData.DisplayName = EntryData.DisplayName;
-		DisplayData.ShortDescription = EntryData.ShortDescription;
-		DisplayData.DetailDescription = NSLOCTEXT("PBCollection", "DiscoveredDetailDescription", "발견한 항목입니다. 해금하면 전체 설명과 기록을 확인할 수 있습니다.");
-		return DisplayData;
-	}
-
-	DisplayData.DisplayName = EntryData.DisplayName;
-	DisplayData.ShortDescription = EntryData.ShortDescription;
-	DisplayData.DetailDescription = EntryData.DetailDescription;
 	return DisplayData;
-}
-
-void UPBCollectionSubsystem::BroadcastProgressNotification(
-	const FPBCollectionEntryData& EntryData,
-	EPBCollectionState PreviousState,
-	EPBCollectionState NewState)
-{
-	if (PreviousState == NewState)
-	{
-		return;
-	}
-
-	FPBCollectionNotificationMessage Message;
-	Message.CollectionId = EntryData.CollectionId;
-	Message.Category = EntryData.Category;
-	Message.PreviousState = PreviousState;
-	Message.NewState = NewState;
-	Message.DisplayName = EntryData.DisplayName;
-	Message.MessageText = FPBCollectionNotificationRouter::BuildNotificationText(Message);
-
-	OnCollectionNotificationRequested.Broadcast(Message);
-	FPBCollectionNotificationRouter::Broadcast(this, Message);
 }
 
 bool UPBCollectionSubsystem::DoesEntryMatchQuery(
 	const FPBCollectionEntryData& EntryData,
-	const FPBCollectionProgressData& ProgressData,
 	const FPBCollectionQuery& Query) const
 {
 	if (Query.Category != EPBCollectionCategory::All && EntryData.Category != Query.Category)
@@ -875,10 +640,8 @@ bool UPBCollectionSubsystem::DoesEntryMatchQuery(
 
 	if (ContainsSearchText(EntryData.CollectionId.ToString(), SearchText)
 		|| ContainsSearchText(EntryData.DisplayName, SearchText)
-		|| ContainsSearchText(EntryData.LockedName, SearchText)
 		|| ContainsSearchText(EntryData.ShortDescription, SearchText)
 		|| ContainsSearchText(GetCategoryDisplayText(EntryData.Category), SearchText)
-		|| ContainsSearchText(GetStateDisplayText(ProgressData.State), SearchText)
 		|| ContainsSearchText(GetMetadataDisplayText(EntryData.AttackTypeId), SearchText)
 		|| ContainsSearchText(GetMetadataDisplayText(EntryData.RoleId), SearchText)
 		|| ContainsSearchText(GetMetadataDisplayText(EntryData.AttributeId), SearchText))
@@ -895,73 +658,4 @@ bool UPBCollectionSubsystem::DoesEntryMatchQuery(
 	}
 
 	return false;
-}
-
-FText UPBCollectionSubsystem::BuildRecordText(const FPBCollectionProgressData& ProgressData) const
-{
-	TArray<FString> RecordLines;
-
-	if (HasTimestamp(ProgressData.FirstDiscoveredAt))
-	{
-		RecordLines.Add(FString::Printf(
-			TEXT("최초 발견: %s"),
-			*FormatTimestamp(ProgressData.FirstDiscoveredAt)));
-	}
-	if (HasTimestamp(ProgressData.FirstUnlockedAt))
-	{
-		RecordLines.Add(FString::Printf(
-			TEXT("최초 해금: %s"),
-			*FormatTimestamp(ProgressData.FirstUnlockedAt)));
-	}
-	if (HasTimestamp(ProgressData.CompletedAt))
-	{
-		RecordLines.Add(FString::Printf(
-			TEXT("완료 시점: %s"),
-			*FormatTimestamp(ProgressData.CompletedAt)));
-	}
-	if (!ProgressData.CompletedByCharacterName.IsEmpty())
-	{
-		RecordLines.Add(FString::Printf(
-			TEXT("완료 캐릭터: %s"),
-			*ProgressData.CompletedByCharacterName));
-	}
-
-	if (ProgressData.AcquireCount > 0 || ProgressData.UseCount > 0)
-	{
-		RecordLines.Add(FString::Printf(
-			TEXT("획득/사용: %d / %d"),
-			ProgressData.AcquireCount,
-			ProgressData.UseCount));
-	}
-	if (ProgressData.DefeatCount > 0)
-	{
-		RecordLines.Add(FString::Printf(TEXT("처치 횟수: %d"), ProgressData.DefeatCount));
-	}
-	if (ProgressData.BestCombo > 0)
-	{
-		RecordLines.Add(FString::Printf(TEXT("최고 콤보: %d"), ProgressData.BestCombo));
-	}
-	if (ProgressData.TotalDamage > 0)
-	{
-		RecordLines.Add(FString::Printf(TEXT("누적 피해: %d"), ProgressData.TotalDamage));
-	}
-
-	return RecordLines.IsEmpty()
-		? NSLOCTEXT("PBCollection", "NoProgressRecord", "아직 기록이 없습니다.")
-		: FText::FromString(FString::Join(RecordLines, TEXT("\n")));
-}
-
-bool UPBCollectionSubsystem::HasTimestamp(const FDateTime& Timestamp)
-{
-	return Timestamp.GetTicks() > 0;
-}
-
-FDateTime UPBCollectionSubsystem::MakeNow()
-{
-	return FDateTime::Now();
-}
-
-FString UPBCollectionSubsystem::FormatTimestamp(const FDateTime& Timestamp)
-{
-	return Timestamp.ToString(TEXT("%Y-%m-%d %H:%M"));
 }

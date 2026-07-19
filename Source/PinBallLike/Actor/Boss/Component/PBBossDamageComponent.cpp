@@ -17,7 +17,7 @@ void UPBBossDamageComponent::BeginPlay()
 	BindHitPartCollisionEvents();
 }
 
-void UPBBossDamageComponent::ApplyHitPartDamage(int32 DamageAmount)
+bool UPBBossDamageComponent::ApplyHitPartDamage(int32 DamageAmount)
 {
 	const FName HitPointName = ResolveHitPointName();
 
@@ -26,7 +26,7 @@ void UPBBossDamageComponent::ApplyHitPartDamage(int32 DamageAmount)
 		|| !CanApplyDamageRateLimit()
 		|| IsWeakPointHitBlocked(HitPointName))
 	{
-		return;
+		return false;
 	}
 
 	ApplyDamageToBoss(HitPointName, DamageAmount);
@@ -34,6 +34,7 @@ void UPBBossDamageComponent::ApplyHitPartDamage(int32 DamageAmount)
 		*HitPointName.ToString(),
 		DamageAmount);
 	RecordDamageRateLimit();
+	return true;
 }
 
 void UPBBossDamageComponent::SetPinballCollisionDamageBlocked(bool IsBlocked)

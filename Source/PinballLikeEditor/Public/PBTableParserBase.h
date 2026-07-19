@@ -16,6 +16,8 @@ class PINBALLLIKEEDITOR_API UPBTableParserBase : public UGoogleSheetParserBase
 public:
 	virtual void OnParseComplete() override;
 
+	void SetTargetTable(UDataTable* InTargetTable) { TargetTable = InTargetTable; }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sheet")
 	TObjectPtr<UDataTable> TargetTable;
