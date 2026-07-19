@@ -60,7 +60,31 @@ void APBShopActor::OpenShop()
 		}
 
 		ApplyViewModelToWidget(ShopWidget);
+		ShopWidget->OnRerollRequested.AddDynamic(
+			this,
+			&APBShopActor::HandleRerollRequested);
 		ShopWidget->AddToViewport();
+	}
+
+	const TArray<FName> ShopItemBallIds =
+		ShopManager->OpenShop();
+	RefreshShopDisplay(ShopItemBallIds);
+
+	RefreshViewModel();
+
+	PC->bShowMouseCursor = true;
+	PC->bEnableClickEvents = true;
+	PC->bEnableMouseOverEvents = true;
+
+	FInputModeGameAndUI InputMode;
+	PC->SetInputMode(InputMode);
+}
+
+void APBShopActor::RefreshShopDisplay(const TArray<FName>& ShopItemBallIds)
+{
+	if (!ShopManager || !ShopWidget)
+	{
+		return;
 	}
 
 	UGameInstance* GameInstance =
@@ -78,9 +102,6 @@ void APBShopActor::OpenShop()
 	{
 		return;
 	}
-
-	const TArray<FName> ShopItemBallIds =
-		ShopManager->OpenShop();
 
 	UStaticMesh* CubeMesh =
 		LoadObject<UStaticMesh>(
@@ -155,16 +176,25 @@ void APBShopActor::OpenShop()
 		ShopWidget->SetShopSlotWorldLocations(
 			UIWorldLocations);
 	}
-
-	RefreshViewModel();
-
-	PC->bShowMouseCursor = true;
-	PC->bEnableClickEvents = true;
-	PC->bEnableMouseOverEvents = true;
-
-	FInputModeGameAndUI InputMode;
-	PC->SetInputMode(InputMode);
 }
+
+void APBShopActor::HandleRerollRequested()
+{
+	if (!ShopManager)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[ShopActor] Reroll failed. ShopManager is null."));
+		return;
+	}
+
+	if (!ShopManager->RerollShop())
+	{
+		return;
+	}
+
+	RefreshShopDisplay(ShopManager->GetCurrentShopItemBallIds());
+	RefreshViewModel();
+}
+
 void APBShopActor::CloseShop()
 {
 	if (ShopWidget)
@@ -194,6 +224,7 @@ void APBShopActor::BuyItem(int32 SlotIndex)
 		ShopWidget->UnActiveSlotWidget(SlotIndex);
 	}
 	
+	RefreshUnsoldShopSlotWidgets();
 	RefreshViewModel();
 }
 
@@ -248,6 +279,63 @@ void APBShopActor::RefreshViewModel()
 	}
 
 	ShopViewModel->SetGold(ShopManager->GetCurrentGold());
+}
+
+void APBShopActor::RefreshUnsoldShopSlotWidgets()
+{
+	if (!ShopManager || !ShopWidget)
+	{
+		return;
+	}
+
+	UGameInstance* GameInstance =
+		UGameplayStatics::GetGameInstance(GetWorld());
+
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	UPBTableDataSubsystem* TableSubsystem =
+		GameInstance->GetSubsystem<UPBTableDataSubsystem>();
+
+	if (!TableSubsystem)
+	{
+		return;
+	}
+
+	const TArray<FName>& ShopItemBallIds =
+		ShopManager->GetCurrentShopItemBallIds();
+
+	for (int32 SlotIndex = 0;
+		 SlotIndex < ShopItemBallIds.Num();
+		 ++SlotIndex)
+	{
+		if (ShopManager->IsShopItemSold(SlotIndex))
+		{
+			continue;
+		}
+
+		const FName BallId = ShopItemBallIds[SlotIndex];
+		const int32 BuyPrice = ShopManager->GetShopItemPrice(SlotIndex);
+
+		FPBBallTableRow BallRow;
+		if (!TableSubsystem->FindBallRow(BallId, BallRow))
+		{
+			ShopWidget->SetShopSlotWidgetData(
+				SlotIndex,
+				FText::FromName(BallId),
+				BuyPrice,
+				FText::GetEmpty());
+			continue;
+		}
+
+		ShopWidget->SetShopSlotWidgetData(
+			SlotIndex,
+			BallRow.DisplayName,
+			BuyPrice,
+			BallRow.DescriptionKey);
+	}
 }
 
 

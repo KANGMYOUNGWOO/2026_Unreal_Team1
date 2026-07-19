@@ -42,6 +42,11 @@ public:
 private :
 	
 	void RefreshViewModel();
+	void RefreshShopDisplay(const TArray<FName>& ShopItemBallIds);
+	void RefreshUnsoldShopSlotWidgets();
+	
+	UFUNCTION()
+	void HandleRerollRequested();
 	
 
 	

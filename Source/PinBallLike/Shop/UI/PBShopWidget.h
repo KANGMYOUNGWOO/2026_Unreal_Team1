@@ -16,6 +16,8 @@ class UButton;
 struct FBallDataStruct;
 class UPBShopViewModel;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBShopRerollRequested);
+
 
 UCLASS()
 class PINBALLLIKE_API UPBShopWidget : public UUserWidget
@@ -55,6 +57,13 @@ public :
 	UPROPERTY(meta = (BindWidget) )
 	TObjectPtr<UButton> ExitButton;
 	
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> Button_Reroll;
+
+	UPROPERTY(BlueprintAssignable, Category="Shop|Event")
+	FPBShopRerollRequested OnRerollRequested;
+	
 	UFUNCTION(BlueprintImplementableEvent)
 	void BP_SetShopViewModel(UPBShopViewModel* InViewModel);
 	
@@ -76,6 +85,9 @@ private:
 	
 	UFUNCTION()
 	void OnExitButtonClicked();
+	
+	UFUNCTION()
+	void OnRerollButtonClicked();
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> ShopCanvas;

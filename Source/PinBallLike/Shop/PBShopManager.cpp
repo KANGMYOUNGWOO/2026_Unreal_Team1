@@ -4,6 +4,10 @@
 #include "Engine/StreamableManager.h"
 #include "Kismet/GameplayStatics.h"
 
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Effect/PBEffectContext.h"
+#include "PinBallLike/Struct/Effect/PBEffectTypes.h"
+#include "PinBallLike/Subsystem/PBEffectSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 
@@ -16,6 +20,7 @@
 TArray<FName> UPBShopManager::OpenShop()
 {
     CurrentGold = 1000;
+    RefreshActiveSynergyDiscounts();
 
     GenerateShopItems(8);
 
@@ -141,7 +146,10 @@ int32 UPBShopManager::GetShopItemPrice(int32 SlotIndex) const
         return 0;
     }
 
-    return ShopRow.BuyPrice;
+    return CalculateDiscountedPrice(
+        ShopRow.BuyPrice,
+        ShopPriceDiscountAmount,
+        ShopPriceDiscountPercent);
 }
 
 FName UPBShopManager::GetShopItemRowName(int32 SlotIndex) const
@@ -198,7 +206,10 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
         return false;
     }
 
-    const int32 Price = ShopRow.BuyPrice;
+    const int32 Price = CalculateDiscountedPrice(
+        ShopRow.BuyPrice,
+        ShopPriceDiscountAmount,
+        ShopPriceDiscountPercent);
 
     //------------------------------------------------------
     // 골드 검사
@@ -230,6 +241,7 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
     ShopItemIsSold[SlotIndex] = true;
 
     CurrentGold -= Price;
+    RefreshActiveSynergyDiscounts();
 
     if (ShopActorHandler)
     {
@@ -250,24 +262,39 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
 
 bool UPBShopManager::RerollShop()
 {
-    constexpr int32 RerollCost = 50;
-
-    if (CurrentGold < RerollCost)
+    if (CurrentGold < CurrentRerollCost)
     {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[Shop] Reroll failed. Not enough gold. CurrentGold=%d Cost=%d"),
+            CurrentGold,
+            CurrentRerollCost);
         return false;
     }
 
     if (!GenerateShopItems(8))
     {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[Shop] Reroll failed. Could not generate shop items."));
         return false;
     }
 
-    CurrentGold -= RerollCost;
+    CurrentGold -= CurrentRerollCost;
 
     if (ShopActorHandler)
     {
         //ShopActorHandler->RefreshShop();
     }
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[Shop] Reroll succeeded. CurrentGold=%d Cost=%d"),
+        CurrentGold,
+        CurrentRerollCost);
 
     return true;
 }
@@ -279,8 +306,141 @@ int32 UPBShopManager::GetCurrentGold() const
     return CurrentGold;
 }
 
+const TArray<FName>& UPBShopManager::GetCurrentShopItemBallIds() const
+{
+    return CurrentShopItemBallIds;
+}
+
+bool UPBShopManager::IsShopItemSold(const int32 SlotIndex) const
+{
+    return ShopItemIsSold.IsValidIndex(SlotIndex) && ShopItemIsSold[SlotIndex];
+}
+
 void UPBShopManager::SetShopActorHandler(
     IIShopActorHandler* Handler)
 {
     ShopActorHandler = Handler;
+}
+
+void UPBShopManager::ApplyShopPriceDiscount(const FName ModifyType, const float Value)
+{
+    if (FMath::IsNearlyZero(Value))
+    {
+        return;
+    }
+
+    if (ModifyType == PBEffectTypes::ModifyType::Add)
+    {
+        ShopPriceDiscountAmount = FMath::Max(0.0f, ShopPriceDiscountAmount + Value);
+    }
+    else
+    {
+        ShopPriceDiscountPercent = FMath::Clamp(
+            ShopPriceDiscountPercent + Value,
+            0.0f,
+            100.0f);
+    }
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[Shop] Price discount applied. ModifyType=%s Value=%.2f Amount=%.2f Percent=%.2f"),
+        *ModifyType.ToString(),
+        Value,
+        ShopPriceDiscountAmount,
+        ShopPriceDiscountPercent);
+}
+
+void UPBShopManager::ApplyShopRerollDiscount(const FName ModifyType, const float Value)
+{
+    if (FMath::IsNearlyZero(Value))
+    {
+        return;
+    }
+
+    if (ModifyType == PBEffectTypes::ModifyType::Add)
+    {
+        ShopRerollDiscountAmount = FMath::Max(0.0f, ShopRerollDiscountAmount + Value);
+    }
+    else
+    {
+        ShopRerollDiscountPercent = FMath::Clamp(
+            ShopRerollDiscountPercent + Value,
+            0.0f,
+            100.0f);
+    }
+
+    CurrentRerollCost = CalculateDiscountedPrice(
+        BaseRerollCost,
+        ShopRerollDiscountAmount,
+        ShopRerollDiscountPercent);
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[Shop] Reroll discount applied. ModifyType=%s Value=%.2f Amount=%.2f Percent=%.2f Cost=%d"),
+        *ModifyType.ToString(),
+        Value,
+        ShopRerollDiscountAmount,
+        ShopRerollDiscountPercent,
+        CurrentRerollCost);
+}
+
+void UPBShopManager::RefreshActiveSynergyDiscounts()
+{
+    ShopPriceDiscountPercent = 0.0f;
+    ShopPriceDiscountAmount = 0.0f;
+    ShopRerollDiscountPercent = 0.0f;
+    ShopRerollDiscountAmount = 0.0f;
+    CurrentRerollCost = BaseRerollCost;
+    
+    UGameInstance* GI = UGameplayStatics::GetGameInstance(GetWorld());
+    if (!GI)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Shop] Failed to apply synergy effects. GameInstance is null."));
+        return;
+    }
+
+    UPBEffectSubsystem* EffectSubsystem = GI->GetSubsystem<UPBEffectSubsystem>();
+    if (!EffectSubsystem)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Shop] Failed to apply synergy effects. EffectSubsystem is null."));
+        return;
+    }
+
+    FPBEffectContext EffectContext;
+    EffectContext.WorldContextObject = this;
+    const int32 AppliedCount = EffectSubsystem->NotifyTrigger(
+        GameplayTags::TriggerEvent_Shop_Opened,
+        EffectContext);
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[Shop] Active synergy shop effects applied. Count=%d PriceDiscountAmount=%.2f PriceDiscountPercent=%.2f RerollDiscountAmount=%.2f RerollDiscountPercent=%.2f RerollCost=%d"),
+        AppliedCount,
+        ShopPriceDiscountAmount,
+        ShopPriceDiscountPercent,
+        ShopRerollDiscountAmount,
+        ShopRerollDiscountPercent,
+        CurrentRerollCost);
+}
+
+int32 UPBShopManager::CalculateDiscountedPrice(
+    const int32 BasePrice,
+    const float DiscountAmount,
+    const float DiscountPercent) const
+{
+    if (BasePrice <= 0)
+    {
+        return 0;
+    }
+
+    const float PriceAfterAmountDiscount = FMath::Max(
+        0.0f,
+        static_cast<float>(BasePrice) - FMath::Max(0.0f, DiscountAmount));
+    const float ClampedDiscountPercent = FMath::Clamp(DiscountPercent, 0.0f, 100.0f);
+    return FMath::Max(
+        0,
+        FMath::RoundToInt(PriceAfterAmountDiscount * (1.0f - ClampedDiscountPercent * 0.01f)));
 }
