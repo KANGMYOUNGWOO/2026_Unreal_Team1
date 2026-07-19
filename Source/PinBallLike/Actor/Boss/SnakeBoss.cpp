@@ -34,7 +34,7 @@ ASnakeBoss::ASnakeBoss()
 	SnakeMesh->SetupAttachment(GetRootComponent());
 	SnakeMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	SnakeMesh->SetCollisionResponseToAllChannels(ECR_Block);
-	SnakeMesh->SetGenerateOverlapEvents(false);
+	SnakeMesh->SetGenerateOverlapEvents(true);
 	SnakeMesh->SetNotifyRigidBodyCollision(true);
 	SnakeMesh->SetMobility(EComponentMobility::Movable);
 }
