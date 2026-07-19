@@ -11,6 +11,8 @@
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
+#include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
+#include "PinBallLike/Actor/StatusEffect/PBBaseStatusEffect.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossGroggyComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossStatComponent.h"
@@ -480,6 +482,63 @@ void UPBCheatManager::RegenMana()
 		TEXT("[Cheat] RestoreBallMana finished. Mana=%.0f RestoredBalls=%d"),
 		ManaAmount,
 		RestoredBallCount);
+}
+
+void UPBCheatManager::ShowBallStatEffect()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	int32 BallCount = 0;
+	int32 EffectCount = 0;
+	for (TActorIterator<APBBallBase> It(World); It; ++It)
+	{
+		APBBallBase* Ball = *It;
+		UPBStatusEffectComponent* StatusEffectComponent = Ball->GetStatusEffectComponent();
+		if (!StatusEffectComponent)
+		{
+			continue;
+		}
+
+		++BallCount;
+		TArray<UPBBaseStatusEffect*> ActiveStatusEffects;
+		StatusEffectComponent->GetActiveStatusEffects(ActiveStatusEffects);
+
+		UE_LOG(LogTemp, Log,
+			TEXT("[Cheat][StatusEffect] Ball=%s BallId=%s InstanceId=%d ActiveEffects=%d"),
+			*GetNameSafe(Ball),
+			*Ball->GetBallId().ToString(),
+			Ball->GetBallInstanceId(),
+			ActiveStatusEffects.Num());
+
+		for (const UPBBaseStatusEffect* StatusEffect : ActiveStatusEffects)
+		{
+			if (!IsValid(StatusEffect))
+			{
+				continue;
+			}
+
+			const FPBStatusEffectRow& EffectRow = StatusEffect->GetStatusEffectRow();
+			UE_LOG(LogTemp, Log,
+				TEXT("[Cheat][StatusEffect] Effect=%s Stack=%d StackType=%s DurationPolicy=%s Duration=%.2f Interval=%.2f Tags=%s"),
+				*StatusEffect->GetStatusEffectId().ToString(),
+				StatusEffect->GetStackCount(),
+				*UEnum::GetValueAsString(EffectRow.StackType),
+				*UEnum::GetValueAsString(EffectRow.DurationPolicy),
+				EffectRow.DurationValue,
+				EffectRow.Interval,
+				*EffectRow.Tags);
+			++EffectCount;
+		}
+	}
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[Cheat][StatusEffect] Finished. Balls=%d ActiveEffects=%d"),
+		BallCount,
+		EffectCount);
 }
 
 void UPBCheatManager::BumperStatus() const

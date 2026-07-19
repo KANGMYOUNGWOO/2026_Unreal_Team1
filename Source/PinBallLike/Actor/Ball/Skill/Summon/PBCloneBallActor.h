@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "PBSummonedBallActor.generated.h"
+#include "PBCloneBallActor.generated.h"
 
 class APBBallBase;
 class UPBBaseStatComponent;
@@ -13,12 +13,12 @@ class UPBBallPhysicsComponent;
 class USphereComponent;
 
 UCLASS(Blueprintable)
-class PINBALLLIKE_API APBSummonedBallActor : public AActor
+class PINBALLLIKE_API APBCloneBallActor : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	APBSummonedBallActor();
+	APBCloneBallActor();
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Summon")
 	void InitializeFromSourceBall(APBBallBase* InSourceBall);

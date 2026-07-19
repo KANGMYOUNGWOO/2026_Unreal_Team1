@@ -4,6 +4,7 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
+#include "PinBallLike/Table/StatusEffect/PBStatusEffectAssetIds.h"
 
 APBStrengthBuffSkillActor::APBStrengthBuffSkillActor()
 {
@@ -55,7 +56,7 @@ APBCombatPartyController* APBStrengthBuffSkillActor::GetPartyController() const
 bool APBStrengthBuffSkillActor::ApplyBuffToParty()
 {
 	APBCombatPartyController* PartyController = GetPartyController();
-	if (!IsValid(PartyController) || StatusEffectId.IsNone())
+	if (!IsValid(PartyController))
 	{
 		return false;
 	}
@@ -66,7 +67,8 @@ bool APBStrengthBuffSkillActor::ApplyBuffToParty()
 		UPBStatusEffectComponent* StatusEffectComponent = IsValid(PartyBall)
 			? PartyBall->GetStatusEffectComponent()
 			: nullptr;
-		if (!StatusEffectComponent || !StatusEffectComponent->ApplyStatusEffect(StatusEffectId))
+		if (!StatusEffectComponent
+			|| !StatusEffectComponent->ApplyStatusEffect(PBStatusEffectAssetIds::StatusEffect::Strength))
 		{
 			continue;
 		}
@@ -86,7 +88,7 @@ void APBStrengthBuffSkillActor::RemoveAppliedBuffs()
 	{
 		if (StatusEffectComponent.IsValid())
 		{
-			StatusEffectComponent->RemoveStatusEffect(StatusEffectId);
+			StatusEffectComponent->RemoveStatusEffect(PBStatusEffectAssetIds::StatusEffect::Strength);
 		}
 	}
 
@@ -108,10 +110,10 @@ void APBStrengthBuffSkillActor::UnbindStatusEffectEvents()
 
 void APBStrengthBuffSkillActor::RemoveInactiveComponents()
 {
-	AppliedStatusEffectComponents.RemoveAll([this](const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent)
+	AppliedStatusEffectComponents.RemoveAll([](const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent)
 	{
 		return !StatusEffectComponent.IsValid()
-			|| !StatusEffectComponent->HasStatusEffect(StatusEffectId);
+			|| !StatusEffectComponent->HasStatusEffect(PBStatusEffectAssetIds::StatusEffect::Strength);
 	});
 }
 
@@ -119,7 +121,7 @@ void APBStrengthBuffSkillActor::HandleStatusEffectRemoved(
 	const FName RemovedStatusEffectId,
 	const int32 StackCount)
 {
-	if (RemovedStatusEffectId != StatusEffectId)
+	if (RemovedStatusEffectId != PBStatusEffectAssetIds::StatusEffect::Strength)
 	{
 		return;
 	}

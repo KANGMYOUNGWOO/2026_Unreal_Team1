@@ -14,6 +14,10 @@ namespace PBStatusEffectAssetIds
 
 	namespace StatusEffect
 	{
-
+		inline const FName Burn(TEXT("Burn"));
+		inline const FName Shield(TEXT("Shield"));
+		inline const FName Strength(TEXT("Strength"));
+		inline const FName BounceUp(TEXT("BounceUp"));
+		inline const FName ZeroGravity(TEXT("ZeroGravity"));
 	}
 }

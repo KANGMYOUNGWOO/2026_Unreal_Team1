@@ -5,7 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
-#include "PinBallLike/Actor/Ball/Skill/Summon/PBSummonedBallActor.h"
+#include "PinBallLike/Actor/Ball/Skill/Summon/PBCloneBallActor.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
 #include "TimerManager.h"
@@ -25,8 +25,9 @@ void APBSummonBallSkillActor::InitializeSkill(
 	Super::InitializeSkill(InOwnerBall, InSkillData);
 
 	SummonedBallDamage = FMath::Max(GetSkillDamageAmount(), 1);
-	SummonedBallDuration = FMath::Max(InSkillData.Duration, 0.0f);
-	SummonedBallCount = FMath::Max(InSkillData.Value, 1);
+	SummonedBallGroggy = GetSkillGroggyAmount();
+	SummonedBallDuration = FMath::Max(InSkillData.LifeValue, 0.0f);
+	SummonedBallCount = FMath::Max(InSkillData.EffectValue, 1);
 }
 
 void APBSummonBallSkillActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -89,7 +90,7 @@ bool APBSummonBallSkillActor::SpawnSummonedBalls()
 
 		UE_LOG(LogTemp, Warning, TEXT("SPAWN %d"), SummonedBallCount);
 		
-		APBSummonedBallActor* SummonedBall = World->SpawnActorDeferred<APBSummonedBallActor>(
+		APBCloneBallActor* SummonedBall = World->SpawnActorDeferred<APBCloneBallActor>(
 			SummonedBallClass,
 			SpawnTransform,
 			OwnerBall,
@@ -107,6 +108,7 @@ bool APBSummonBallSkillActor::SpawnSummonedBalls()
 			SummonedBall->FindComponentByClass<UPBBaseStatComponent>())
 		{
 			StatComponent->SetStat(PBStatNames::Attack, SummonedBallDamage);
+			StatComponent->SetStat(PBStatNames::StaggerPower, SummonedBallGroggy);
 		}
 
 		SummonedBall->SetLifeSpan(SummonedBallDuration);
@@ -125,7 +127,7 @@ bool APBSummonBallSkillActor::SpawnSummonedBalls()
 
 void APBSummonBallSkillActor::DestroySummonedBalls()
 {
-	for (const TWeakObjectPtr<APBSummonedBallActor>& SummonedBall : SummonedBalls)
+	for (const TWeakObjectPtr<APBCloneBallActor>& SummonedBall : SummonedBalls)
 	{
 		if (SummonedBall.IsValid())
 		{

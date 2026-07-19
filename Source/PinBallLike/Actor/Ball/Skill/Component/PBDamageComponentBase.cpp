@@ -11,6 +11,11 @@ UPBDamageComponentBase::UPBDamageComponentBase()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
+void UPBDamageComponentBase::SetGroggyAmount(const int32 InGroggyAmount)
+{
+	GroggyAmount = FMath::Max(InGroggyAmount, 0);
+}
+
 bool UPBDamageComponentBase::CanApplyDamage(AActor* Target, const int32 DamageAmount) const
 {
 	if (!IsValid(Target) || Target == GetOwner() || DamageAmount <= 0)
@@ -52,6 +57,11 @@ bool UPBDamageComponentBase::ApplyDamage(AActor* Target, const int32 DamageAmoun
 		if (!IBossInterface::Execute_DamageToBoss(Target, FinalDamageAmount))
 		{
 			return false;
+		}
+
+		if (GroggyAmount > 0)
+		{
+			IBossInterface::Execute_IncreaseGroggy(Target, GroggyAmount);
 		}
 	}
 	else

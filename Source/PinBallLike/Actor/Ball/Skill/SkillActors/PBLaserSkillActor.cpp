@@ -16,8 +16,8 @@ APBLaserSkillActor::APBLaserSkillActor()
 
 	LaserCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LaserCollision"));
 	LaserCollision->SetupAttachment(Root);
+	LaserCollision->SetCollisionProfileName(SkillCollisionProfileName);
 	LaserCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	LaserCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
 	LaserCollision->SetGenerateOverlapEvents(true);
 
 	TimedAreaDamageComponent = CreateDefaultSubobject<UPBTimedAreaDamageComponent>(TEXT("TimedAreaDamageComponent"));
@@ -30,11 +30,12 @@ void APBLaserSkillActor::InitializeSkill(
 	Super::InitializeSkill(InOwnerBall, InSkillData);
 
 	BindDamageEvents(TimedAreaDamageComponent);
+	TimedAreaDamageComponent->SetGroggyAmount(GetSkillGroggyAmount());
 	TimedAreaDamageComponent->InitializeDamageArea(LaserCollision, OwnerBall);
 	TimedAreaDamageComponent->ConfigureDamage(
 		GetSkillDamageAmount(),
-		InSkillData.Duration,
-		InSkillData.Value);
+		InSkillData.LifeValue,
+		InSkillData.EffectValue);
 }
 
 void APBLaserSkillActor::Tick(const float DeltaTime)

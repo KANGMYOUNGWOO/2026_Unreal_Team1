@@ -19,8 +19,8 @@ public:
 	// Sets default values for this actor's properties
 	AProjectileBase();
 
-	void ActivateProjectile();
-	void DeactivateProjectile();
+	virtual void ActivateProjectile();
+	virtual void DeactivateProjectile();
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
