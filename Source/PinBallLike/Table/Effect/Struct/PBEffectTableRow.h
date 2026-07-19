@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "GameplayTagContainer.h"
 #include "PBEffectTableRow.generated.h"
 
 USTRUCT(BlueprintType)
@@ -17,6 +18,9 @@ struct PINBALLLIKE_API FPBEffectTableRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
 	FName TargetFilter = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
+	FGameplayTag TriggerTag;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
 	FName Description = NAME_None;

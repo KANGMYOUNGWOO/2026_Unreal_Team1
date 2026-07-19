@@ -15,6 +15,7 @@ public class PinballLikeEditor : ModuleRules
                 "PinBallLike",
                 "GoogleSheetLoader",
                 "Paper2D",
+                "GameplayTags",
             }
         );
 

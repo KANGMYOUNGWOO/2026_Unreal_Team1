@@ -120,7 +120,7 @@ bool UPBBallDeckSynergyService::BuildSynergyStatesFromBallIds(
 			if (*CurrentCount >= TierRow.RequiredCount && TierRow.RequiredCount >= State.ActiveRequiredCount)
 			{
 				State.ActiveRequiredCount = TierRow.RequiredCount;
-				State.ActiveSynergyEffectId = TierRow.SynergyEffectId;
+				State.ActiveEffectSetId = TierRow.EffectSetId;
 			}
 		}
 

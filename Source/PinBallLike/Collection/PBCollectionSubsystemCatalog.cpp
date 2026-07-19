@@ -14,9 +14,6 @@
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicModifierRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectModifierRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectTriggerRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
 #include "PinBallLike/Utils/PBTextFormatUtils.h"
@@ -306,51 +303,51 @@ TArray<FPBCollectionSynergyDisplayData> UPBCollectionSubsystem::GetSynergyCatalo
 		{
 			FPBCollectionSynergyTierDisplayData& TierData = DisplayData.Tiers.AddDefaulted_GetRef();
 			TierData.RequiredCount = TierRow.RequiredCount;
-			TierData.EffectId = TierRow.SynergyEffectId;
+			TierData.EffectId = TierRow.EffectSetId;
 			TierData.TierDescription = FText::Format(
 				LOCTEXT("SynergyTierCount", "{0}개 구성"),
 				FText::AsNumber(TierRow.RequiredCount));
 
-			FPBSynergyEffectRow EffectRow;
-			if (!TableData->FindSynergyEffectRow(TierRow.SynergyEffectId, EffectRow))
-			{
-				TierData.EffectSummary = LOCTEXT("MissingSynergyEffect", "효과 정보를 찾을 수 없습니다.");
-				continue;
-			}
-
-			TierData.bHasValidEffect = true;
-			TierData.EffectSummary = FText::Format(
-				LOCTEXT("SynergyEffectSummary", "중첩 {0} / 지속 {1} ({2}) / 간격 {3}초"),
-				GetEnumDisplayText(EffectRow.StackType),
-				GetEnumDisplayText(EffectRow.DurationPolicy),
-				FText::AsNumber(EffectRow.DurationValue),
-				FText::AsNumber(EffectRow.Interval));
-
-			TArray<FPBSynergyEffectModifierRow> ModifierRows;
-			TableData->GetSynergyEffectModifierRows(TierRow.SynergyEffectId, ModifierRows);
-			TArray<FString> ModifierLines;
-			for (const FPBSynergyEffectModifierRow& Modifier : ModifierRows)
-			{
-				ModifierLines.Add(FString::Printf(
-					TEXT("%s %g%s"),
-					*GetEnumDisplayText(Modifier.ModifyType).ToString(),
-					Modifier.Value,
-					Modifier.bScaleWithStack ? TEXT(" (중첩 비례)") : TEXT("")));
-			}
-			TierData.ModifierSummary = JoinLines(ModifierLines);
-
-			TArray<FPBSynergyEffectTriggerRow> TriggerRows;
-			TableData->GetSynergyEffectTriggerRows(TierRow.SynergyEffectId, TriggerRows);
-			TArray<FString> TriggerLines;
-			for (const FPBSynergyEffectTriggerRow& Trigger : TriggerRows)
-			{
-				TriggerLines.Add(FString::Printf(
-					TEXT("발동 확률 %g%% / 값 %g%s"),
-					Trigger.ProcChance,
-					Trigger.Value,
-					Trigger.bScaleWithStack ? TEXT(" (중첩 비례)") : TEXT("")));
-			}
-			TierData.TriggerSummary = JoinLines(TriggerLines);
+			// FPBSynergyEffectRow EffectRow;
+			// if (!TableData->FindSynergyEffectRow(TierRow.SynergyEffectId, EffectRow))
+			// {
+			// 	TierData.EffectSummary = LOCTEXT("MissingSynergyEffect", "효과 정보를 찾을 수 없습니다.");
+			// 	continue;
+			// }
+			//
+			// TierData.bHasValidEffect = true;
+			// TierData.EffectSummary = FText::Format(
+			// 	LOCTEXT("SynergyEffectSummary", "중첩 {0} / 지속 {1} ({2}) / 간격 {3}초"),
+			// 	GetEnumDisplayText(EffectRow.StackType),
+			// 	GetEnumDisplayText(EffectRow.DurationPolicy),
+			// 	FText::AsNumber(EffectRow.DurationValue),
+			// 	FText::AsNumber(EffectRow.Interval));
+			//
+			// TArray<FPBSynergyEffectModifierRow> ModifierRows;
+			// TableData->GetSynergyEffectModifierRows(TierRow.SynergyEffectId, ModifierRows);
+			// TArray<FString> ModifierLines;
+			// for (const FPBSynergyEffectModifierRow& Modifier : ModifierRows)
+			// {
+			// 	ModifierLines.Add(FString::Printf(
+			// 		TEXT("%s %g%s"),
+			// 		*GetEnumDisplayText(Modifier.ModifyType).ToString(),
+			// 		Modifier.Value,
+			// 		Modifier.bScaleWithStack ? TEXT(" (중첩 비례)") : TEXT("")));
+			// }
+			// TierData.ModifierSummary = JoinLines(ModifierLines);
+			//
+			// TArray<FPBSynergyEffectTriggerRow> TriggerRows;
+			// TableData->GetSynergyEffectTriggerRows(TierRow.SynergyEffectId, TriggerRows);
+			// TArray<FString> TriggerLines;
+			// for (const FPBSynergyEffectTriggerRow& Trigger : TriggerRows)
+			// {
+			// 	TriggerLines.Add(FString::Printf(
+			// 		TEXT("발동 확률 %g%% / 값 %g%s"),
+			// 		Trigger.ProcChance,
+			// 		Trigger.Value,
+			// 		Trigger.bScaleWithStack ? TEXT(" (중첩 비례)") : TEXT("")));
+			// }
+			// TierData.TriggerSummary = JoinLines(TriggerLines);
 		}
 	}
 

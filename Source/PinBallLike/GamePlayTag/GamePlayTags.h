@@ -24,4 +24,12 @@ namespace GameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Boss_Dead);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_UI_Choice_Exit);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(TriggerEvent_Battle_Started);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(TriggerEvent_Battle_PartyBuilt);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(TriggerEvent_Battle_PartySwitched);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(TriggerEvent_Battle_EnemyHit);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(TriggerEvent_Battle_AfterDamage);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(TriggerEvent_Battle_Revived);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(TriggerEvent_Shop_Opened);
 }

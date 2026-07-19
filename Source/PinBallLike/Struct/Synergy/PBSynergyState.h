@@ -18,7 +18,7 @@ struct PINBALLLIKE_API FPBSynergyState
 	int32 ActiveRequiredCount = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Synergy|State")
-	FName ActiveSynergyEffectId = NAME_None;
+	FName ActiveEffectSetId = NAME_None;
 
 	bool IsValid() const
 	{
@@ -30,6 +30,6 @@ struct PINBALLLIKE_API FPBSynergyState
 		return SynergyId == Other.SynergyId
 			&& CurrentCount == Other.CurrentCount
 			&& ActiveRequiredCount == Other.ActiveRequiredCount
-			&& ActiveSynergyEffectId == Other.ActiveSynergyEffectId;
+			&& ActiveEffectSetId == Other.ActiveEffectSetId;
 	}
 };

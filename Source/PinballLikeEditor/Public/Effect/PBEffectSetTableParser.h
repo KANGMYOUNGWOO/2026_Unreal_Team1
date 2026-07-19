@@ -2,10 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "PBTableParserBase.h"
-#include "PBSynergyEffectTriggerTableParser.generated.h"
+#include "PBEffectSetTableParser.generated.h"
 
 UCLASS()
-class PINBALLLIKEEDITOR_API UPBSynergyEffectTriggerTableParser : public UPBTableParserBase
+class PINBALLLIKEEDITOR_API UPBEffectSetTableParser : public UPBTableParserBase
 {
 	GENERATED_BODY()
 

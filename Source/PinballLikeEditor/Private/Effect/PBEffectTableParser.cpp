@@ -1,5 +1,6 @@
 #include "Effect/PBEffectTableParser.h"
 
+#include "GameplayTagsManager.h"
 #include "PBSheetParserUtils.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
 
@@ -21,6 +22,11 @@ bool UPBEffectTableParser::ParseRow(const FName RowName, const TMap<FString, FSt
 	NewRow.EffectType = ParseNameValue(RowData.FindRef(TEXT("EffectType")));
 	NewRow.TargetType = ParseNameValue(RowData.FindRef(TEXT("TargetType")));
 	NewRow.TargetFilter = ParseNameValue(RowData.FindRef(TEXT("TargetFilter")));
+	const FName TriggerTagName = ParseNameValue(RowData.FindRef(TEXT("TriggerTag")));
+	if (!TriggerTagName.IsNone())
+	{
+		NewRow.TriggerTag = UGameplayTagsManager::Get().RequestGameplayTag(TriggerTagName, false);
+	}
 	NewRow.Description = ParseNameValue(RowData.FindRef(TEXT("Description")));
 	NewRow.LinkedStatusEffectId = ParseNameValue(RowData.FindRef(TEXT("LinkedStatusEffectId")));
 
