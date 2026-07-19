@@ -54,7 +54,6 @@ bool UPBBossTableParser::ParseRow(const FName RowName, const TMap<FString, FStri
 	NewRow.EnrageHPRatioPercent = FMath::Clamp(ParseIntValue(RowData.FindRef(TEXT("EnrageHPRatioPercent")), 40), 0, 100);
 	NewRow.DefaultHitPointName = FName(*TrimCell(RowData.FindRef(TEXT("DefaultHitPointName"))));
 	NewRow.DamageCooldownSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("DamageCooldownSeconds")), 0.25f), 0.0f);
-	NewRow.MinPatternIntervalSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("MinPatternIntervalSeconds")), 2.0f), 0.0f);
 	NewRow.PatternCheckIntervalSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("PatternCheckIntervalSeconds")), 0.25f), 0.1f);
 
 	if (NewRow.DefaultHitPointName.IsNone())
@@ -101,7 +100,6 @@ UPBBossDataAsset* UPBBossTableParser::SetupBossDataAsset(
 	BossDataAsset->EnrageHPRatioPercent = FMath::Clamp(ParseIntValue(RowData.FindRef(TEXT("EnrageHPRatioPercent")), 40), 0, 100);
 	BossDataAsset->DefaultHitPointName = FName(*TrimCell(RowData.FindRef(TEXT("DefaultHitPointName"))));
 	BossDataAsset->DamageCooldownSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("DamageCooldownSeconds")), 0.25f), 0.0f);
-	BossDataAsset->MinPatternIntervalSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("MinPatternIntervalSeconds")), 2.0f), 0.0f);
 	BossDataAsset->PatternCheckIntervalSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("PatternCheckIntervalSeconds")), 0.25f), 0.1f);
 	if (BossDataAsset->DefaultHitPointName.IsNone())
 	{

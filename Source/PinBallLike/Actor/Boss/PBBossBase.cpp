@@ -366,7 +366,6 @@ void APBBossBase::InitializeFromBossDataAsset(const UPBBossDataAsset* BossDataAs
 			BossDataAsset->PatternDatas,
 			BossDataAsset->EnragedPatternDatas,
 			BossDataAsset->EnragedEntryPatternDatas,
-			BossDataAsset->MinPatternIntervalSeconds,
 			BossDataAsset->PatternCheckIntervalSeconds);
 	}
 

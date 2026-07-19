@@ -71,7 +71,6 @@ public:
 		const TArray<FPBBossPatternData>& NewPatternDatas,
 		const TArray<FPBBossPatternData>& NewEnragedPatternDatas,
 		const TArray<FPBBossPatternData>& NewEnragedEntryPatternDatas,
-		float NewMinPatternIntervalSeconds,
 		float NewPatternCheckIntervalSeconds);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
@@ -82,9 +81,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
 	TArray<FPBBossPatternData> EnragedEntryPatternDatas;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (ClampMin = "0"))
-	float MinPatternIntervalSeconds = 2.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (ClampMin = "0.1"))
 	float PatternCheckIntervalSeconds = 0.25f;
@@ -113,7 +109,6 @@ public:
 private:
 	// 설정된 패턴 클래스들로 패턴 인스턴스를 생성합니다.
 	void InitializePatterns();
-	void ResetPatternStartTime();
 	void RegisterBattlePhaseListener();
 	void UnregisterBattlePhaseListener();
 	void HandleBattlePhaseChangedMessage(FGameplayTag Channel, const FPBBattlePhaseChangedMessage& Message);
@@ -165,7 +160,6 @@ private:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBBossPatternBase>> EnragedEntryPatternInstances;
 
-	float NextPatternAllowedTime = 0.0f;
 	float PatternSystemPausedTime = 0.0f;
 	bool IsCombatPhaseActive = false;
 	FTimerHandle PatternCheckTimerHandle;

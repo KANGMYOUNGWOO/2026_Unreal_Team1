@@ -34,9 +34,6 @@ struct PINBALLLIKE_API FPBBossTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Table", meta = (ClampMin = "0"))
 	float DamageCooldownSeconds = 0.25f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Table", meta = (ClampMin = "0"))
-	float MinPatternIntervalSeconds = 2.0f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Table", meta = (ClampMin = "0.1"))
 	float PatternCheckIntervalSeconds = 0.25f;
 

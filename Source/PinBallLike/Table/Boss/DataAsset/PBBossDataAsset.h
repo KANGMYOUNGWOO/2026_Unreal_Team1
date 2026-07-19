@@ -55,9 +55,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|HitPoint")
 	TArray<FPBBossHitPointData> HitPointDatas;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern", meta = (ClampMin = "0"))
-	float MinPatternIntervalSeconds = 2.0f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern", meta = (ClampMin = "0.1"))
 	float PatternCheckIntervalSeconds = 0.25f;
 
