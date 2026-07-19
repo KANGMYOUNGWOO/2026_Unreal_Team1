@@ -189,13 +189,14 @@ FVector UPBTimedAreaDamageComponent::CalculateHitLocation(const AActor* Target) 
 		return DamageArea ? DamageArea->GetComponentLocation() : FVector::ZeroVector;
 	}
 
-	FVector HitLocation = Target->GetActorLocation();
-	const UPrimitiveComponent* TargetCollision = Cast<UPrimitiveComponent>(Target->GetRootComponent());
-	if (IsValid(TargetCollision) && DamageArea)
+	FVector HitLocation = DamageArea
+		? DamageArea->GetComponentLocation()
+		: Target->GetActorLocation();
+	if (DamageArea)
 	{
 		FVector ClosestPoint;
-		if (TargetCollision->GetClosestPointOnCollision(
-			DamageArea->GetComponentLocation(),
+		if (DamageArea->GetClosestPointOnCollision(
+			Target->GetActorLocation(),
 			ClosestPoint) >= 0.0f)
 		{
 			HitLocation = ClosestPoint;

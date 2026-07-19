@@ -1,4 +1,4 @@
-#include "PBStrengthBuffSkillActor.h"
+#include "PBBounceBuffSkillActor.h"
 
 #include "Components/SceneComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
@@ -6,7 +6,7 @@
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
 #include "PinBallLike/Table/StatusEffect/PBStatusEffectAssetIds.h"
 
-APBStrengthBuffSkillActor::APBStrengthBuffSkillActor()
+APBBounceBuffSkillActor::APBBounceBuffSkillActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -14,13 +14,13 @@ APBStrengthBuffSkillActor::APBStrengthBuffSkillActor()
 	SetRootComponent(Root);
 }
 
-void APBStrengthBuffSkillActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void APBBounceBuffSkillActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UnbindStatusEffectEvents();
 	Super::EndPlay(EndPlayReason);
 }
 
-void APBStrengthBuffSkillActor::EnterActiveState()
+void APBBounceBuffSkillActor::EnterActiveState()
 {
 	if (!ApplyBuffToParty())
 	{
@@ -31,29 +31,27 @@ void APBStrengthBuffSkillActor::EnterActiveState()
 	Super::EnterActiveState();
 }
 
-void APBStrengthBuffSkillActor::EnterFinishingState()
+void APBBounceBuffSkillActor::EnterFinishingState()
 {
 	UnbindStatusEffectEvents();
 	Super::EnterFinishingState();
 }
 
-void APBStrengthBuffSkillActor::EnterStoppingState()
+void APBBounceBuffSkillActor::EnterStoppingState()
 {
 	UnbindStatusEffectEvents();
-
-	// TODO: 시전자 사망시 버프 제거 할건지에 대한 고민 필요
 	RemoveAppliedBuffs();
 	Super::EnterStoppingState();
 }
 
-APBCombatPartyController* APBStrengthBuffSkillActor::GetPartyController() const
+APBCombatPartyController* APBBounceBuffSkillActor::GetPartyController() const
 {
 	return IsValid(OwnerBall)
 		? Cast<APBCombatPartyController>(OwnerBall->GetOwner())
 		: nullptr;
 }
 
-bool APBStrengthBuffSkillActor::ApplyBuffToParty()
+bool APBBounceBuffSkillActor::ApplyBuffToParty()
 {
 	APBCombatPartyController* PartyController = GetPartyController();
 	if (!IsValid(PartyController))
@@ -68,34 +66,34 @@ bool APBStrengthBuffSkillActor::ApplyBuffToParty()
 			? PartyBall->GetStatusEffectComponent()
 			: nullptr;
 		if (!StatusEffectComponent
-			|| !StatusEffectComponent->ApplyStatusEffect(PBStatusEffectAssetIds::StatusEffect::Strength))
+			|| !StatusEffectComponent->ApplyStatusEffect(PBStatusEffectAssetIds::StatusEffect::BounceUp))
 		{
 			continue;
 		}
 
 		StatusEffectComponent->OnStatusEffectRemoved.AddUniqueDynamic(
 			this,
-			&APBStrengthBuffSkillActor::HandleStatusEffectRemoved);
+			&APBBounceBuffSkillActor::HandleStatusEffectRemoved);
 		AppliedStatusEffectComponents.Add(StatusEffectComponent);
 	}
 
 	return !AppliedStatusEffectComponents.IsEmpty();
 }
 
-void APBStrengthBuffSkillActor::RemoveAppliedBuffs()
+void APBBounceBuffSkillActor::RemoveAppliedBuffs()
 {
 	for (const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent : AppliedStatusEffectComponents)
 	{
 		if (StatusEffectComponent.IsValid())
 		{
-			StatusEffectComponent->RemoveStatusEffect(PBStatusEffectAssetIds::StatusEffect::Strength);
+			StatusEffectComponent->RemoveStatusEffect(PBStatusEffectAssetIds::StatusEffect::BounceUp);
 		}
 	}
 
 	AppliedStatusEffectComponents.Reset();
 }
 
-void APBStrengthBuffSkillActor::UnbindStatusEffectEvents()
+void APBBounceBuffSkillActor::UnbindStatusEffectEvents()
 {
 	for (const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent : AppliedStatusEffectComponents)
 	{
@@ -103,25 +101,25 @@ void APBStrengthBuffSkillActor::UnbindStatusEffectEvents()
 		{
 			StatusEffectComponent->OnStatusEffectRemoved.RemoveDynamic(
 				this,
-				&APBStrengthBuffSkillActor::HandleStatusEffectRemoved);
+				&APBBounceBuffSkillActor::HandleStatusEffectRemoved);
 		}
 	}
 }
 
-void APBStrengthBuffSkillActor::RemoveInactiveComponents()
+void APBBounceBuffSkillActor::RemoveInactiveComponents()
 {
 	AppliedStatusEffectComponents.RemoveAll([](const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent)
 	{
 		return !StatusEffectComponent.IsValid()
-			|| !StatusEffectComponent->HasStatusEffect(PBStatusEffectAssetIds::StatusEffect::Strength);
+			|| !StatusEffectComponent->HasStatusEffect(PBStatusEffectAssetIds::StatusEffect::BounceUp);
 	});
 }
 
-void APBStrengthBuffSkillActor::HandleStatusEffectRemoved(
+void APBBounceBuffSkillActor::HandleStatusEffectRemoved(
 	const FName RemovedStatusEffectId,
 	const int32 StackCount)
 {
-	if (RemovedStatusEffectId != PBStatusEffectAssetIds::StatusEffect::Strength)
+	if (RemovedStatusEffectId != PBStatusEffectAssetIds::StatusEffect::BounceUp)
 	{
 		return;
 	}

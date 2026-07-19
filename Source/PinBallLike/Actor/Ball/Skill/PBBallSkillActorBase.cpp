@@ -1,5 +1,6 @@
 #include "PBBallSkillActorBase.h"
 
+#include "Components/SceneComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Ball/Skill/Component/PBTimedAreaDamageComponent.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
@@ -9,6 +10,8 @@
 #include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 #include "EngineUtils.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
+
+const FName APBBallSkillActorBase::SkillCollisionProfileName(TEXT("Skill"));
 
 void APBBallSkillActorBase::InitializeSkill(
 	APBBallBase* InOwnerBall,
@@ -25,11 +28,12 @@ void APBBallSkillActorBase::InitializeSkill(
 		: 0;
 	SkillDamageAmount = FMath::Max(
 		0,
-		FMath::RoundToInt(static_cast<float>(BallAttackPower) * SkillData.DamageMultiplier));
+		FMath::RoundToInt(static_cast<float>(BallAttackPower) * SkillData.PowerValue));
 
 	if (OwnerBall)
 	{
 		AttachToActor(OwnerBall, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		GetRootComponent()->SetAbsolute(false, true, false);
 		SetActorRelativeScale3D(FVector::OneVector);
 		SetActorLocation(OwnerBall->GetActorLocation());
 	}
@@ -186,7 +190,12 @@ void APBBallSkillActorBase::OnStopped_Implementation()
 
 void APBBallSkillActorBase::BindDamageEvents(UPBTimedAreaDamageComponent* DamageComponent)
 {
-	UnbindDamageEvents();
+	if (BoundDamageComponent)
+	{
+		BoundDamageComponent->OnAreaDamageApplied.RemoveAll(this);
+		BoundDamageComponent->OnEffectFinished.RemoveAll(this);
+	}
+
 	BoundDamageComponent = DamageComponent;
 
 	if (!BoundDamageComponent)
@@ -237,12 +246,11 @@ void APBBallSkillActorBase::HandleOwnerBallDestroyed(AActor* DestroyedActor)
 
 void APBBallSkillActorBase::UnbindDamageEvents()
 {
-	if (!BoundDamageComponent)
+	if (BoundDamageComponent)
 	{
-		return;
+		BoundDamageComponent->OnAreaDamageApplied.RemoveAll(this);
+		BoundDamageComponent->OnEffectFinished.RemoveAll(this);
+		BoundDamageComponent = nullptr;
 	}
 
-	BoundDamageComponent->OnAreaDamageApplied.RemoveAll(this);
-	BoundDamageComponent->OnEffectFinished.RemoveAll(this);
-	BoundDamageComponent = nullptr;
 }

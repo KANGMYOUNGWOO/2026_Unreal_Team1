@@ -1,4 +1,4 @@
-#include "PBStrengthBuffSkillActor.h"
+#include "PBZeroGravityBuffSkillActor.h"
 
 #include "Components/SceneComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
@@ -6,7 +6,7 @@
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
 #include "PinBallLike/Table/StatusEffect/PBStatusEffectAssetIds.h"
 
-APBStrengthBuffSkillActor::APBStrengthBuffSkillActor()
+APBZeroGravityBuffSkillActor::APBZeroGravityBuffSkillActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -14,13 +14,13 @@ APBStrengthBuffSkillActor::APBStrengthBuffSkillActor()
 	SetRootComponent(Root);
 }
 
-void APBStrengthBuffSkillActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void APBZeroGravityBuffSkillActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UnbindStatusEffectEvents();
 	Super::EndPlay(EndPlayReason);
 }
 
-void APBStrengthBuffSkillActor::EnterActiveState()
+void APBZeroGravityBuffSkillActor::EnterActiveState()
 {
 	if (!ApplyBuffToParty())
 	{
@@ -31,29 +31,27 @@ void APBStrengthBuffSkillActor::EnterActiveState()
 	Super::EnterActiveState();
 }
 
-void APBStrengthBuffSkillActor::EnterFinishingState()
+void APBZeroGravityBuffSkillActor::EnterFinishingState()
 {
 	UnbindStatusEffectEvents();
 	Super::EnterFinishingState();
 }
 
-void APBStrengthBuffSkillActor::EnterStoppingState()
+void APBZeroGravityBuffSkillActor::EnterStoppingState()
 {
 	UnbindStatusEffectEvents();
-
-	// TODO: 시전자 사망시 버프 제거 할건지에 대한 고민 필요
 	RemoveAppliedBuffs();
 	Super::EnterStoppingState();
 }
 
-APBCombatPartyController* APBStrengthBuffSkillActor::GetPartyController() const
+APBCombatPartyController* APBZeroGravityBuffSkillActor::GetPartyController() const
 {
 	return IsValid(OwnerBall)
 		? Cast<APBCombatPartyController>(OwnerBall->GetOwner())
 		: nullptr;
 }
 
-bool APBStrengthBuffSkillActor::ApplyBuffToParty()
+bool APBZeroGravityBuffSkillActor::ApplyBuffToParty()
 {
 	APBCombatPartyController* PartyController = GetPartyController();
 	if (!IsValid(PartyController))
@@ -68,34 +66,34 @@ bool APBStrengthBuffSkillActor::ApplyBuffToParty()
 			? PartyBall->GetStatusEffectComponent()
 			: nullptr;
 		if (!StatusEffectComponent
-			|| !StatusEffectComponent->ApplyStatusEffect(PBStatusEffectAssetIds::StatusEffect::Strength))
+			|| !StatusEffectComponent->ApplyStatusEffect(PBStatusEffectAssetIds::StatusEffect::ZeroGravity))
 		{
 			continue;
 		}
 
 		StatusEffectComponent->OnStatusEffectRemoved.AddUniqueDynamic(
 			this,
-			&APBStrengthBuffSkillActor::HandleStatusEffectRemoved);
+			&APBZeroGravityBuffSkillActor::HandleStatusEffectRemoved);
 		AppliedStatusEffectComponents.Add(StatusEffectComponent);
 	}
 
 	return !AppliedStatusEffectComponents.IsEmpty();
 }
 
-void APBStrengthBuffSkillActor::RemoveAppliedBuffs()
+void APBZeroGravityBuffSkillActor::RemoveAppliedBuffs()
 {
 	for (const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent : AppliedStatusEffectComponents)
 	{
 		if (StatusEffectComponent.IsValid())
 		{
-			StatusEffectComponent->RemoveStatusEffect(PBStatusEffectAssetIds::StatusEffect::Strength);
+			StatusEffectComponent->RemoveStatusEffect(PBStatusEffectAssetIds::StatusEffect::ZeroGravity);
 		}
 	}
 
 	AppliedStatusEffectComponents.Reset();
 }
 
-void APBStrengthBuffSkillActor::UnbindStatusEffectEvents()
+void APBZeroGravityBuffSkillActor::UnbindStatusEffectEvents()
 {
 	for (const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent : AppliedStatusEffectComponents)
 	{
@@ -103,25 +101,25 @@ void APBStrengthBuffSkillActor::UnbindStatusEffectEvents()
 		{
 			StatusEffectComponent->OnStatusEffectRemoved.RemoveDynamic(
 				this,
-				&APBStrengthBuffSkillActor::HandleStatusEffectRemoved);
+				&APBZeroGravityBuffSkillActor::HandleStatusEffectRemoved);
 		}
 	}
 }
 
-void APBStrengthBuffSkillActor::RemoveInactiveComponents()
+void APBZeroGravityBuffSkillActor::RemoveInactiveComponents()
 {
 	AppliedStatusEffectComponents.RemoveAll([](const TWeakObjectPtr<UPBStatusEffectComponent>& StatusEffectComponent)
 	{
 		return !StatusEffectComponent.IsValid()
-			|| !StatusEffectComponent->HasStatusEffect(PBStatusEffectAssetIds::StatusEffect::Strength);
+			|| !StatusEffectComponent->HasStatusEffect(PBStatusEffectAssetIds::StatusEffect::ZeroGravity);
 	});
 }
 
-void APBStrengthBuffSkillActor::HandleStatusEffectRemoved(
+void APBZeroGravityBuffSkillActor::HandleStatusEffectRemoved(
 	const FName RemovedStatusEffectId,
 	const int32 StackCount)
 {
-	if (RemovedStatusEffectId != PBStatusEffectAssetIds::StatusEffect::Strength)
+	if (RemovedStatusEffectId != PBStatusEffectAssetIds::StatusEffect::ZeroGravity)
 	{
 		return;
 	}

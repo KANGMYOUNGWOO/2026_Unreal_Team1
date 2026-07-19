@@ -5,7 +5,7 @@
 #include "PBSummonBallSkillActor.generated.h"
 
 class APBBallBase;
-class APBSummonedBallActor;
+class APBCloneBallActor;
 class USceneComponent;
 
 UCLASS(Blueprintable)
@@ -29,7 +29,7 @@ protected:
 	TObjectPtr<USceneComponent> Root;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ball|Skill|Summon")
-	TSubclassOf<APBSummonedBallActor> SummonedBallClass;
+	TSubclassOf<APBCloneBallActor> SummonedBallClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ball|Skill|Summon", meta = (ClampMin = "0.0", Units = "cm"))
 	float SpawnRadius = 60.0f;
@@ -44,10 +44,11 @@ private:
 	void HandleDurationFinished();
 
 	UPROPERTY(Transient)
-	TArray<TWeakObjectPtr<APBSummonedBallActor>> SummonedBalls;
+	TArray<TWeakObjectPtr<APBCloneBallActor>> SummonedBalls;
 
 	FTimerHandle DurationTimerHandle;
 	int32 SummonedBallDamage = 0;
+	int32 SummonedBallGroggy = 0;
 	float SummonedBallDuration = 0.0f;
 	int32 SummonedBallCount = 0;
 };
