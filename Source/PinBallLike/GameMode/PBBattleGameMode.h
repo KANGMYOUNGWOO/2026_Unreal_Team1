@@ -43,8 +43,8 @@ public:
 
 protected:
 	UFUNCTION(BlueprintNativeEvent, Category = "Battle|Flow")
-	void HandleReward();
-	virtual void HandleReward_Implementation();
+	void HandleBattleExit();
+	virtual void HandleBattleExit_Implementation();
 
 private:
 	APBBattleGameState* GetBattleGameState() const;
@@ -60,6 +60,8 @@ private:
 	void EnterBallDeployment();
 	void EnterBattle();
 	void EnterBossDead();
+	void EnterReward();
+	void HandleRewardPopupClosed(bool bConfirmed);
 	void ApplyActiveSynergyEffectsForBattle();
 	void TriggerPartySwitchEffects();
 
@@ -130,5 +132,6 @@ private:
 	UPROPERTY()
 	TObjectPtr<APBBossSpawner> BossSpawner;
 
+	bool bRewardSequenceStarted = false;
 	bool bStartPlayCompleted = false;
 };

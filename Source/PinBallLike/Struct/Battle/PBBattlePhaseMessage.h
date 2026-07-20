@@ -14,7 +14,8 @@ enum class EPBBattleLevelPhase : uint8
 	BallDeployment UMETA(DisplayName = "Ball Deployment"),
 	Combat UMETA(DisplayName = "Combat"),
 	BossDead UMETA(DisplayName = "Boss Dead"),
-	Reward UMETA(DisplayName = "Reward")
+	Reward UMETA(DisplayName = "Reward"),
+	BattleExit UMETA(DisplayName = "Battle Exit")
 };
 
 UENUM(BlueprintType)

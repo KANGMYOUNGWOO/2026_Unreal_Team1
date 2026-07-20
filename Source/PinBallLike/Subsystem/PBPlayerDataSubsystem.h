@@ -59,6 +59,12 @@ public:
 	TArray<FName> GetEquippedBumperRowIds() const;
 #pragma endregion 
 
+	UFUNCTION(BlueprintPure, Category = "PlayerData")
+	int32 GetCurrentGold() const { return Gold; }
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerData")
+	void GainGold(int32 Amount);
+
 private:
 	void InitializeDefaultBumpers();
 	bool LoadBumperLoadout();
@@ -74,6 +80,9 @@ private:
 
 	bool bBumperPersistenceInitialized = false;
 	bool bLoadedBumperLoadoutNeedsResave = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
+	int32 Gold = 1000;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 InitialBattleLaunchCount = 5;
