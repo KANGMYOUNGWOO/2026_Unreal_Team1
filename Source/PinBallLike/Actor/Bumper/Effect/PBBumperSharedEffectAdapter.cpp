@@ -5,20 +5,31 @@
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Struct/Effect/PBEffectTypes.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
 
 namespace
 {
-	const TSet<FName>& GetSupportedEffectTypes()
+	const TSet<FName>& GetHandlerCompatibleEffectTypes()
 	{
 		static const TSet<FName> SupportedTypes =
 		{
-			TEXT("ResourceCostStatBuff"),
-			TEXT("ComboExtraDamage"),
-			TEXT("PostDamageHeal"),
-			TEXT("StatBuff"),
-			TEXT("VelocityScaledDamage")
+			PBEffectTypes::EffectType::ResourceCostStatBuff,
+			PBEffectTypes::EffectType::ComboExtraDamage,
+			PBEffectTypes::EffectType::PostDamageHeal,
+			PBEffectTypes::EffectType::StatBuff
 		};
 		return SupportedTypes;
+	}
+
+	const TSet<FName>& GetBumperExtensionEffectTypes()
+	{
+		static const TSet<FName> ExtensionTypes =
+		{
+			TEXT("VelocityScaledDamage")
+		};
+		return ExtensionTypes;
 	}
 
 	const UPBTableDataSubsystem* ResolveTableSubsystem(const UObject* WorldContext)
@@ -32,14 +43,15 @@ namespace
 }
 
 bool PBBumperSharedEffectAdapter::ValidateContract(
-	const FPBGameplayEffectRow& EffectRow,
+	const FPBEffectTableRow& EffectRow,
 	const FName ExpectedEffectType,
 	const FName ExpectedTargetType,
 	const FName ExpectedTargetFilter,
 	FString& OutError)
 {
 	OutError.Reset();
-	if (!GetSupportedEffectTypes().Contains(EffectRow.EffectType))
+	if (!IsHandlerCompatibleEffectType(EffectRow.EffectType)
+		&& !IsBumperExtensionEffectType(EffectRow.EffectType))
 	{
 		OutError = FString::Printf(
 			TEXT("EffectType '%s' is not supported by the bumper adapter."),
@@ -73,6 +85,16 @@ bool PBBumperSharedEffectAdapter::ValidateContract(
 	}
 
 	return true;
+}
+
+bool PBBumperSharedEffectAdapter::IsHandlerCompatibleEffectType(const FName EffectType)
+{
+	return GetHandlerCompatibleEffectTypes().Contains(EffectType);
+}
+
+bool PBBumperSharedEffectAdapter::IsBumperExtensionEffectType(const FName EffectType)
+{
+	return GetBumperExtensionEffectTypes().Contains(EffectType);
 }
 
 bool FPBBumperSharedEffectDefinition::TryGetFloat(const FName Key, float& OutValue) const
@@ -138,11 +160,11 @@ bool PBBumperSharedEffectAdapter::Resolve(
 		return false;
 	}
 
-	FPBGameplayEffectRow EffectRow;
-	if (!TableSubsystem->FindGameplayEffectRow(SharedEffectId, EffectRow))
+	FPBEffectTableRow EffectRow;
+	if (!TableSubsystem->FindEffectRow(SharedEffectId, EffectRow))
 	{
 		OutError = FString::Printf(
-			TEXT("Gameplay Effect row '%s' is missing."),
+			TEXT("Effect row '%s' is missing from the canonical Effect table."),
 			*SharedEffectId.ToString());
 		return false;
 	}
@@ -157,8 +179,8 @@ bool PBBumperSharedEffectAdapter::Resolve(
 		return false;
 	}
 
-	TArray<FPBGameplayEffectParamRow> ParamRows;
-	if (!TableSubsystem->GetGameplayEffectParamRows(SharedEffectId, ParamRows))
+	TArray<FPBEffectParamRow> ParamRows;
+	if (!TableSubsystem->GetEffectParamRows(SharedEffectId, ParamRows))
 	{
 		OutError = FString::Printf(
 			TEXT("Gameplay Effect parameters for '%s' are missing."),
@@ -170,7 +192,10 @@ bool PBBumperSharedEffectAdapter::Resolve(
 	OutDefinition.EffectType = EffectRow.EffectType;
 	OutDefinition.TargetType = EffectRow.TargetType;
 	OutDefinition.TargetFilter = EffectRow.TargetFilter;
-	for (const FPBGameplayEffectParamRow& ParamRow : ParamRows)
+	OutDefinition.ContractKind = IsBumperExtensionEffectType(EffectRow.EffectType)
+		? EPBBumperSharedEffectContractKind::BumperExtension
+		: EPBBumperSharedEffectContractKind::HandlerCompatible;
+	for (const FPBEffectParamRow& ParamRow : ParamRows)
 	{
 		if (OutDefinition.Parameters.Contains(ParamRow.ParamKey))
 		{
