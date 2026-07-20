@@ -403,7 +403,7 @@ void APBBattleGameMode::LoadBalls()
 	const FGuid RequestId = BallDeckSubsystem->LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate::CreateUObject(
 		this,
 		&APBBattleGameMode::HandleBallDataLoaded));
-	if (!RequestId.IsValid())
+	if (!RequestId.IsValid() && !bBallDataLoaded)
 	{
 		MarkDataLoaded(EPBBattlePreparationType::Ball, false);
 	}
