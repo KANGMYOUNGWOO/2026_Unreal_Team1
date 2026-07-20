@@ -2,6 +2,7 @@
 
 #include "PBSheetParserUtils.h"
 #include "Engine/DataTable.h"
+#include "Engine/Texture2D.h"
 #include "PinBallLike/Actor/Ball/Skill/PBBallSkillActorBase.h"
 #include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
 #include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
@@ -14,6 +15,8 @@ UPBSkillTableParser::UPBSkillTableParser()
 {
 	SkillActorClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Ball/Skill");
 	SkillActorClassPreset.NameFormat = TEXT("BP_Skill_{0}");
+	SkillIconPreset.FolderPath.Path = TEXT("/Game/Resources/Skill");
+	SkillIconPreset.NameFormat = TEXT("T_{0}");
 	BallDataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Ball");
 	BallDataAssetPreset.NameFormat = TEXT("DA_{0}");
 }
@@ -64,6 +67,8 @@ void UPBSkillTableParser::UpdateLinkedBallDataAssets(const FName SkillId) const
 
 	const TSoftClassPtr<APBBallSkillActorBase> SkillActorClass =
 		FindBlueprintClass<APBBallSkillActorBase>(SkillActorClassPreset, SkillId);
+	const TSoftObjectPtr<UTexture2D> SkillIcon =
+		FindObject<UTexture2D>(SkillIconPreset, SkillId);
 
 	for (const TPair<FName, uint8*>& RowPair : BallTable->GetRowMap())
 	{
@@ -78,6 +83,7 @@ void UPBSkillTableParser::UpdateLinkedBallDataAssets(const FName SkillId) const
 		if (IsValid(BallDataAsset))
 		{
 			BallDataAsset->SkillActorClass = SkillActorClass;
+			BallDataAsset->SkillIcon = SkillIcon;
 			(void)BallDataAsset->MarkPackageDirty();
 		}
 	}

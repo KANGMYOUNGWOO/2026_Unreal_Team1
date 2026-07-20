@@ -22,6 +22,9 @@ protected:
 	FPBSheetAssetPathPreset SkillActorClassPreset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Sheet")
+	FPBSheetAssetPathPreset SkillIconPreset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Sheet")
 	FPBSheetAssetPathPreset BallDataAssetPreset;
 
 	void UpdateLinkedBallDataAssets(FName SkillId) const;

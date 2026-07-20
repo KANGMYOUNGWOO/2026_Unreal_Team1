@@ -147,6 +147,17 @@ void APBGolemBossHand::EndPatternMovementLock()
 	IsPatternMovementLocked = false;
 }
 
+void APBGolemBossHand::ResetPatternMovement(const FTransform& TargetTransform)
+{
+	if (HandMovementComponent)
+	{
+		HandMovementComponent->StopMove();
+	}
+
+	SetActorTransform(TargetTransform);
+	EndPatternMovementLock();
+}
+
 void APBGolemBossHand::ReturnToDefaultOffset(float Duration)
 {
 	if (IsPatternMovementLocked)

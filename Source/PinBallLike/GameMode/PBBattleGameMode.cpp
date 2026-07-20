@@ -16,8 +16,11 @@
 #include "PinBallLike/Struct/Effect/PBEffectContext.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBEffectSubsystem.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "TimerManager.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 
 #pragma region Lifecycle
 
@@ -41,11 +44,13 @@ void APBBattleGameMode::StartPlay()
 	RegisterBattleMessageListeners();
 	InitializeBattleCounts();
 	bStartPlayCompleted = true;
+	StartBattleDataLoadTimeout();
 	TryStartLevelPreparing();
 }
 
 void APBBattleGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	ClearBattleDataLoadTimeout();
 	UnregisterBattleMessageListeners();
 
 	Super::EndPlay(EndPlayReason);
@@ -61,6 +66,18 @@ bool APBBattleGameMode::CanLaunchBattleParty() const
 	return BattleGameState
 		&& BattleGameState->GetBattleLevelPhase() == EPBBattleLevelPhase::BallDeployment
 		&& BattleGameState->HasRemainingBattleLaunchCount();
+}
+
+void APBBattleGameMode::ReturnToMainMenu()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr)
+	{
+		GameDataLoadSubsystem->UnloadPrimaryAssets();
+	}
+
+	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/Lv_MainMenu")));
 }
 
 APBBattleGameState* APBBattleGameMode::GetBattleGameState() const
@@ -136,11 +153,10 @@ void APBBattleGameMode::HandleCurrentPhase()
 		EnterBossDead();
 		break;
 	case EPBBattleLevelPhase::Reward:
-		if (APBBumperSpawner* FoundBumperSpawner = FindBumperSpawner())
-		{
-			FoundBumperSpawner->LogBattleTelemetrySummary();
-		}
-		HandleReward();
+		EnterReward();
+		break;
+	case EPBBattleLevelPhase::BattleExit:
+		HandleBattleExit();
 		break;
 	default:
 		break;
@@ -193,6 +209,7 @@ void APBBattleGameMode::TryStartBossInfo()
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Battle preparation completed. Advance to BossIntro."));
+	ClearBattleDataLoadTimeout();
 	SetBattleLevelPhase(EPBBattleLevelPhase::BossIntro);
 }
 
@@ -215,6 +232,90 @@ void APBBattleGameMode::EnterBossDead()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BossDead."));
 	SetBattleLevelPhase(EPBBattleLevelPhase::Reward);
+}
+
+void APBBattleGameMode::EnterReward()
+{
+	if (bRewardSequenceStarted)
+	{
+		return;
+	}
+
+	bRewardSequenceStarted = true;
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter Reward."));
+
+	if (APBBumperSpawner* FoundBumperSpawner = FindBumperSpawner())
+	{
+		FoundBumperSpawner->LogBattleTelemetrySummary();
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBPlayerDataSubsystem* PlayerDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBPlayerDataSubsystem>()
+		: nullptr;
+	UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+		: nullptr;
+	if (!PlayerDataSubsystem)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[BattleFlow] PlayerDataSubsystem is unavailable. Continue to BattleExit."));
+		HandleRewardPopupClosed(false);
+		return;
+	}
+
+	// TODO: 임시 골드 보상. 추후 보상 데이터로 교체한다.
+	constexpr int32 RewardGold = 1000;
+	PlayerDataSubsystem->GainGold(RewardGold);
+	if (!UIManagerSubsystem)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[BattleFlow] UIManagerSubsystem is unavailable. Continue to BattleExit."));
+		HandleRewardPopupClosed(false);
+		return;
+	}
+
+	const FText RewardMessage = FText::Format(
+		FText::FromString(TEXT("골드 획득: {0}G\n 현재 골드 : {1}G")),
+		FText::AsNumber(RewardGold),
+		FText::AsNumber(PlayerDataSubsystem->GetCurrentGold()));
+	if (!UIManagerSubsystem->ShowSimplePopup(
+		RewardMessage,
+		FPBSimplePopupClosedDelegate::CreateUObject(
+			this,
+			&ThisClass::HandleRewardPopupClosed)))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[BattleFlow] Failed to create the reward popup. Continue to BattleExit."));
+		HandleRewardPopupClosed(false);
+	}
+}
+
+void APBBattleGameMode::HandleRewardPopupClosed(const bool bConfirmed)
+{
+	UE_LOG(LogTemp, Log,
+		TEXT("[BattleFlow] Reward popup closed. Confirmed=%s. Advance to BattleExit."),
+		bConfirmed ? TEXT("true") : TEXT("false"));
+
+	const APBBattleGameState* BattleGameState = GetBattleGameState();
+	if (!BattleGameState
+		|| BattleGameState->GetBattleLevelPhase() != EPBBattleLevelPhase::Reward)
+	{
+		return;
+	}
+
+	if (IsFinalBossDefeated)
+	{
+		ReturnToMainMenu();
+		return;
+	}
+
+	SetBattleLevelPhase(EPBBattleLevelPhase::BattleExit);
+}
+
+const TArray<FName>& APBBattleGameMode::GetBossProgressionRowNames() const
+{
+	return BossProgressionRowNames;
 }
 
 void APBBattleGameMode::ApplyActiveSynergyEffectsForBattle()
@@ -268,9 +369,9 @@ void APBBattleGameMode::TriggerPartySwitchEffects()
 	}
 }
 
-void APBBattleGameMode::HandleReward_Implementation()
+void APBBattleGameMode::HandleBattleExit_Implementation()
 {
-	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter Reward."));
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BattleExit."));
 }
 
 #pragma endregion
@@ -310,9 +411,13 @@ void APBBattleGameMode::LoadBalls()
 		return;
 	}
 
-	BallDeckSubsystem->LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate::CreateUObject(
+	const FGuid RequestId = BallDeckSubsystem->LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate::CreateUObject(
 		this,
 		&APBBattleGameMode::HandleBallDataLoaded));
+	if (!RequestId.IsValid() && !bBallDataLoaded)
+	{
+		MarkDataLoaded(EPBBattlePreparationType::Ball, false);
+	}
 }
 
 void APBBattleGameMode::LoadBoss()
@@ -332,16 +437,11 @@ void APBBattleGameMode::LoadBoss()
 		if (const UPBPlayerDataSubsystem* PlayerDataSubsystem =
 			GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
 		{
-			if (const UPBTableDataSubsystem* TableDataSubsystem =
-				GameInstance->GetSubsystem<UPBTableDataSubsystem>())
+			const TArray<FName>& BossRowNames = GetBossProgressionRowNames();
+			if (BossRowNames.IsValidIndex(PlayerDataSubsystem->GetCurrentBossIndex()))
 			{
-				TArray<FName> BossRowNames;
-				if (TableDataSubsystem->GetBossRowNames(BossRowNames)
-					&& BossRowNames.IsValidIndex(PlayerDataSubsystem->GetCurrentBossIndex()))
-				{
-					FoundBossSpawner->SetBossRowName(
-						BossRowNames[PlayerDataSubsystem->GetCurrentBossIndex()]);
-				}
+				FoundBossSpawner->SetBossRowName(
+					BossRowNames[PlayerDataSubsystem->GetCurrentBossIndex()]);
 			}
 		}
 	}
@@ -378,6 +478,12 @@ void APBBattleGameMode::MarkDataLoaded(
 	const EPBBattlePreparationType PreparationType,
 	const bool bSuccess)
 {
+	if (!bSuccess)
+	{
+		HandleBattleDataLoadFailure(PreparationType);
+		return;
+	}
+
 	switch (PreparationType)
 	{
 	case EPBBattlePreparationType::Bumper:
@@ -394,6 +500,72 @@ void APBBattleGameMode::MarkDataLoaded(
 	}
 	
 	TryStartLevelPreparing();
+}
+
+void APBBattleGameMode::StartBattleDataLoadTimeout()
+{
+	if (IsBattleDataLoaded() || IsBattleDataLoadFailureHandled)
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			BattleDataLoadTimeoutHandle,
+			this,
+			&APBBattleGameMode::HandleBattleDataLoadTimeout,
+			BattleDataLoadTimeoutSeconds,
+			false);
+	}
+}
+
+void APBBattleGameMode::ClearBattleDataLoadTimeout()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(BattleDataLoadTimeoutHandle);
+	}
+}
+
+void APBBattleGameMode::HandleBattleDataLoadTimeout()
+{
+	if (IsBattleDataLoaded() || IsBattleDataLoadFailureHandled)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Error,
+		TEXT("[BattleFlow] Battle preparation timed out. Timeout=%.1f BumperData=%s BallData=%s BossData=%s BumperPrepared=%s BossPrepared=%s"),
+		BattleDataLoadTimeoutSeconds,
+		bBumperDataLoaded ? TEXT("true") : TEXT("false"),
+		bBallDataLoaded ? TEXT("true") : TEXT("false"),
+		bBossDataLoaded ? TEXT("true") : TEXT("false"),
+		bBumperPrepared ? TEXT("true") : TEXT("false"),
+		bBossPrepared ? TEXT("true") : TEXT("false"));
+
+	HandleBattleDataLoadFailure(EPBBattlePreparationType::None);
+}
+
+void APBBattleGameMode::HandleBattleDataLoadFailure(const EPBBattlePreparationType PreparationType)
+{
+	if (IsBattleDataLoadFailureHandled)
+	{
+		return;
+	}
+
+	IsBattleDataLoadFailureHandled = true;
+	ClearBattleDataLoadTimeout();
+
+	UE_LOG(LogTemp, Error,
+		TEXT("[BattleFlow] Battle data load failed. Type=%s. Return to main menu."),
+		*UEnum::GetValueAsString(PreparationType));
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimerForNextTick(
+			FTimerDelegate::CreateUObject(this, &APBBattleGameMode::ReturnToMainMenu));
+	}
 }
 
 bool APBBattleGameMode::IsBattleDataLoaded() const
@@ -413,6 +585,7 @@ void APBBattleGameMode::ResetBattlePreparationState()
 	bBumperPrepared = false;
 	bBossPrepared = false;
 	bStartPlayCompleted = false;
+	IsBattleDataLoadFailureHandled = false;
 }
 
 APBBumperSpawner* APBBattleGameMode::FindBumperSpawner()
@@ -471,6 +644,12 @@ void APBBattleGameMode::MarkPreparationCompleted(
 	const EPBBattlePreparationType PreparationType,
 	const bool bSuccess)
 {
+	if (!bSuccess)
+	{
+		HandleBattleDataLoadFailure(PreparationType);
+		return;
+	}
+
 	switch (PreparationType)
 	{
 	case EPBBattlePreparationType::Bumper:
@@ -611,19 +790,18 @@ void APBBattleGameMode::HandleBossDeadMessage(
 		*Channel.ToString(),
 		*GetNameSafe(Message.BossActor));
 
+	IsFinalBossDefeated = false;
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
 		if (UPBPlayerDataSubsystem* PlayerDataSubsystem =
 			GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
 		{
-			if (const UPBTableDataSubsystem* TableDataSubsystem =
-				GameInstance->GetSubsystem<UPBTableDataSubsystem>())
+			const TArray<FName>& BossRowNames = GetBossProgressionRowNames();
+			if (!BossRowNames.IsEmpty())
 			{
-				TArray<FName> BossRowNames;
-				if (TableDataSubsystem->GetBossRowNames(BossRowNames))
-				{
-					PlayerDataSubsystem->AdvanceBossProgress(BossRowNames.Num());
-				}
+				IsFinalBossDefeated =
+					PlayerDataSubsystem->GetCurrentBossIndex() >= BossRowNames.Num() - 1;
+				PlayerDataSubsystem->AdvanceBossProgress(BossRowNames.Num());
 			}
 		}
 	}

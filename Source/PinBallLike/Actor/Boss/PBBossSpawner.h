@@ -53,7 +53,6 @@ private:
 	void RegisterBossDeadEvent();
 	void UnregisterBossDeadEvent();
 	void HandleBossDeadMessage(FGameplayTag Channel, const FPBBattleBossDeadMessage& Message);
-	void UnloadBossAssets();
 	bool SpawnBossWithClass(TSubclassOf<APBBossBase> BossClassToSpawn, const UPBBossDataAsset* BossDataAsset = nullptr);
 	void CompleteBossPreparation(bool IsSuccess) const;
 
@@ -81,5 +80,4 @@ private:
 	FStreamableDelegate PendingBossDataLoadedDelegate;
 	FGameplayMessageListenerHandle BossDeadListenerHandle;
 	bool IsBossDataLoaded = false;
-	bool IsBossAssetsUnloaded = true;
 };

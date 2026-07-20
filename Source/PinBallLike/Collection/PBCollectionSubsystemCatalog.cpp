@@ -521,8 +521,6 @@ TArray<FPBCollectionBossDisplayData> UPBCollectionSubsystem::GetBossCatalogEntri
 			BossRowName,
 			BossRow.DisplayName,
 			FText::GetEmpty());
-		DisplayData.MovementTypeText = GetEnumDisplayText(BossRow.BossMovementType);
-		DisplayData.Summary.Subtitle = DisplayData.MovementTypeText;
 		DisplayData.MaxHP = BossRow.MaxHP;
 		DisplayData.MaxGroggyGauge = BossRow.MaxGroggyGauge;
 		DisplayData.GroggyDurationSeconds = BossRow.GroggyDurationSeconds;

@@ -12,6 +12,7 @@ class UPBBallDeckSubsystem;
 class UPBBallStatusWidget;
 class UPanelWidget;
 class UTexture2D;
+class SWidget;
 enum class EPBBattleLevelPhase : uint8;
 struct FPBBattlePhaseChangedMessage;
 
@@ -41,6 +42,9 @@ private:
 	void UnbindDeckEvents();
 	void EnsureDeckOverviewWidget();
 	void ApplyBattlePhaseToDeckOverview(EPBBattleLevelPhase NewPhase);
+	void ApplyBattlePhaseToLoadingScreen(EPBBattleLevelPhase NewPhase);
+	void ShowBattleLoadingScreen();
+	void HideBattleLoadingScreen();
 	void RegisterBattleMessageListeners();
 	void UnregisterBattleMessageListeners();
 	void ScheduleRefreshBallPanels();
@@ -73,6 +77,7 @@ private:
 	TObjectPtr<APBCombatPartyController> PartyController;
 
 	FGameplayMessageListenerHandle BattlePhaseChangedListenerHandle;
+	TSharedPtr<SWidget> BattleLoadingScreenWidget;
 
 	bool bDeckEventsBound = false;
 };

@@ -1,6 +1,7 @@
 #include "PBBattleHUDWidget.h"
 
 #include "Components/PanelWidget.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -13,12 +14,14 @@
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/UI/Loading/PBLoadingScreen.h"
 #include "TimerManager.h"
 
 void UPBBattleHUDWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	ShowBattleLoadingScreen();
 	CacheBallPanels();
 	CacheDeckSubsystem();
 	CachePartyController();
@@ -32,12 +35,15 @@ void UPBBattleHUDWidget::NativeConstruct()
 	const APBBattleGameState* BattleGameState = World ? World->GetGameState<APBBattleGameState>() : nullptr;
 	if (BattleGameState)
 	{
-		ApplyBattlePhaseToDeckOverview(BattleGameState->GetBattleLevelPhase());
+		const EPBBattleLevelPhase CurrentPhase = BattleGameState->GetBattleLevelPhase();
+		ApplyBattlePhaseToDeckOverview(CurrentPhase);
+		ApplyBattlePhaseToLoadingScreen(CurrentPhase);
 	}
 }
 
 void UPBBattleHUDWidget::NativeDestruct()
 {
+	HideBattleLoadingScreen();
 	UnregisterBattleMessageListeners();
 	UnbindDeckEvents();
 
@@ -56,6 +62,50 @@ void UPBBattleHUDWidget::NativeDestruct()
 	}
 
 	Super::NativeDestruct();
+}
+
+void UPBBattleHUDWidget::ApplyBattlePhaseToLoadingScreen(const EPBBattleLevelPhase NewPhase)
+{
+	if (NewPhase == EPBBattleLevelPhase::DataLoading
+		|| NewPhase == EPBBattleLevelPhase::LevelPreparing)
+	{
+		ShowBattleLoadingScreen();
+		return;
+	}
+
+	HideBattleLoadingScreen();
+}
+
+void UPBBattleHUDWidget::ShowBattleLoadingScreen()
+{
+	if (BattleLoadingScreenWidget.IsValid())
+	{
+		return;
+	}
+
+	UGameViewportClient* GameViewportClient = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	if (!GameViewportClient)
+	{
+		return;
+	}
+
+	BattleLoadingScreenWidget = FPBLoadingScreen::CreateLoadingScreenWidget();
+	GameViewportClient->AddViewportWidgetContent(BattleLoadingScreenWidget.ToSharedRef(), MAX_int32);
+}
+
+void UPBBattleHUDWidget::HideBattleLoadingScreen()
+{
+	if (!BattleLoadingScreenWidget.IsValid())
+	{
+		return;
+	}
+
+	if (UGameViewportClient* GameViewportClient = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		GameViewportClient->RemoveViewportWidgetContent(BattleLoadingScreenWidget.ToSharedRef());
+	}
+
+	BattleLoadingScreenWidget.Reset();
 }
 
 void UPBBattleHUDWidget::RefreshBallPanels()
@@ -292,4 +342,5 @@ void UPBBattleHUDWidget::HandleBattlePhaseChangedMessage(
 	(void)Channel;
 	UE_LOG(LogTemp, Log, TEXT("[BattleHUD] Battle phase changed. NewPhase=%d"), static_cast<int32>(Message.NewPhase));
 	ApplyBattlePhaseToDeckOverview(Message.NewPhase);
+	ApplyBattlePhaseToLoadingScreen(Message.NewPhase);
 }

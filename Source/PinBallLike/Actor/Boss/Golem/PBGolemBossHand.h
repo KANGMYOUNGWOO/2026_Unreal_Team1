@@ -49,6 +49,7 @@ public:
 	void MoveToWorldTransformForPattern(FTransform TargetTransform, float Duration);
 	void BeginPatternMovementLock();
 	void EndPatternMovementLock();
+	void ResetPatternMovement(const FTransform& TargetTransform);
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Golem Hand")
 	void ReturnToDefaultOffset(float Duration);

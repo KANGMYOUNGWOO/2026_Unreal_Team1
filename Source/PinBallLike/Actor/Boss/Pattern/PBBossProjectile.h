@@ -24,6 +24,8 @@ public:
 	// 현재 투사체 이동 속도를 반환합니다.
 	float GetProjectileSpeed() const;
 
+	void SetProjectileDirection(const FVector& NewProjectileDirection);
+
 	void SetSourcePatternName(FName NewSourcePatternName);
 
 protected:
@@ -53,5 +55,6 @@ private:
 	void ProcessPinballOverlap(APBBallBase* Pinball);
 
 	TSet<TObjectKey<APBBallBase>> ProcessedPinballs;
+	FVector ProjectileDirection = FVector::ForwardVector;
 	FName SourcePatternName = NAME_None;
 };

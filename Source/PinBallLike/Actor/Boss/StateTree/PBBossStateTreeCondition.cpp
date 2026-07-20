@@ -37,12 +37,6 @@ bool FPBBossStateTreeCondition::TestCondition(FStateTreeExecutionContext& Contex
 	case EPBBossStateTreeConditionType::Dead:
 		IsPassed = Boss.IsDeadState();
 		break;
-	case EPBBossStateTreeConditionType::FixedBoss:
-		IsPassed = Boss.IsFixedBoss();
-		break;
-	case EPBBossStateTreeConditionType::MovableBoss:
-		IsPassed = Boss.IsMovableBoss();
-		break;
 	default:
 		IsPassed = false;
 		break;

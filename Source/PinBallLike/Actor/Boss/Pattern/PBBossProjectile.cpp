@@ -9,6 +9,10 @@
 
 APBBossProjectile::APBBossProjectile()
 {
+	if (ProjectileMovementComponent)
+	{
+		ProjectileMovementComponent->ProjectileGravityScale = 0.0f;
+	}
 }
 
 void APBBossProjectile::SetProjectileSpeed(float NewProjectileSpeed)
@@ -20,6 +24,12 @@ void APBBossProjectile::SetProjectileSpeed(float NewProjectileSpeed)
 float APBBossProjectile::GetProjectileSpeed() const
 {
 	return ProjectileSpeed;
+}
+
+void APBBossProjectile::SetProjectileDirection(const FVector& NewProjectileDirection)
+{
+	ProjectileDirection = NewProjectileDirection.GetSafeNormal();
+	ApplyProjectileSpeed();
 }
 
 void APBBossProjectile::SetSourcePatternName(FName NewSourcePatternName)
@@ -40,8 +50,8 @@ void APBBossProjectile::BeginPlay()
 	}
 
 	CheckInitialOverlappingPinballs();
-	ApplyProjectileSpeed();
 	ActivateProjectile();
+	ApplyProjectileSpeed();
 	SetLifeSpan(FMath::Max(0.1f, LifeTimeSeconds));
 }
 
@@ -70,7 +80,8 @@ void APBBossProjectile::ApplyProjectileSpeed()
 
 	ProjectileMovementComponent->InitialSpeed = ProjectileSpeed;
 	ProjectileMovementComponent->MaxSpeed = ProjectileSpeed;
-	ProjectileMovementComponent->Velocity = GetActorForwardVector() * ProjectileSpeed;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.0f;
+	ProjectileMovementComponent->Velocity = ProjectileDirection * ProjectileSpeed;
 }
 
 void APBBossProjectile::SetProjectileCollision()
