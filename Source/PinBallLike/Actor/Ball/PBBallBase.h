@@ -45,6 +45,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ball|Combat")
 	void SetCombatRole(EPBBallPartyRole NewCombatRole);
 
+	void AddBossCollisionIgnoreRequest(UObject* Requester);
+	void RemoveBossCollisionIgnoreRequest(UObject* Requester);
+
 	UFUNCTION(BlueprintPure, Category = "Ball|Combat")
 	EPBBallPartyRole GetCombatRole() const { return CombatRole; }
 
@@ -97,4 +100,14 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Ball|Data", meta = (AllowPrivateAccess = "true"))
 	FPBBallInstanceData BallInstanceData;
+
+private:
+	void RemoveInvalidBossCollisionIgnoreRequests();
+	void RefreshBossCollisionResponse();
+	bool IsOverlappingBoss() const;
+
+	TSet<TWeakObjectPtr<UObject>> BossCollisionIgnoreRequesters;
+	FTimerHandle BossCollisionRestoreTimerHandle;
+	ECollisionResponse BossCollisionResponseBeforeIgnore = ECR_Block;
+	bool bBossCollisionResponseOverridden = false;
 };

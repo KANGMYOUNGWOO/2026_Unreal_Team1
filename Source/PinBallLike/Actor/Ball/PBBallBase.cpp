@@ -11,8 +11,11 @@
 #include "Component/PBBallSkillComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
+#include "PinBallLike/Collision/PBCollisionChannels.h"
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 APBBallBase::APBBallBase()
 {
@@ -119,6 +122,101 @@ void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
 		CollisionSphere->SetGenerateOverlapEvents(bLeader);
 		CollisionSphere->SetNotifyRigidBodyCollision(bLeader);
 	}
+}
+
+void APBBallBase::AddBossCollisionIgnoreRequest(UObject* Requester)
+{
+	if (!IsValid(Requester))
+	{
+		return;
+	}
+
+	BossCollisionIgnoreRequesters.Add(TWeakObjectPtr<UObject>(Requester));
+	RefreshBossCollisionResponse();
+}
+
+void APBBallBase::RemoveBossCollisionIgnoreRequest(UObject* Requester)
+{
+	BossCollisionIgnoreRequesters.Remove(TWeakObjectPtr<UObject>(Requester));
+	RefreshBossCollisionResponse();
+}
+
+void APBBallBase::RemoveInvalidBossCollisionIgnoreRequests()
+{
+	for (auto It = BossCollisionIgnoreRequesters.CreateIterator(); It; ++It)
+	{
+		if (!It->IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+}
+
+void APBBallBase::RefreshBossCollisionResponse()
+{
+	RemoveInvalidBossCollisionIgnoreRequests();
+	if (!CollisionSphere)
+	{
+		return;
+	}
+
+	if (!BossCollisionIgnoreRequesters.IsEmpty())
+	{
+		GetWorldTimerManager().ClearTimer(BossCollisionRestoreTimerHandle);
+
+		if (!bBossCollisionResponseOverridden)
+		{
+			BossCollisionResponseBeforeIgnore =
+				CollisionSphere->GetCollisionResponseToChannel(PBCollisionChannels::Boss);
+			bBossCollisionResponseOverridden = true;
+		}
+
+		CollisionSphere->SetCollisionResponseToChannel(PBCollisionChannels::Boss, ECR_Ignore);
+		return;
+	}
+
+	if (bBossCollisionResponseOverridden)
+	{
+		if (IsOverlappingBoss())
+		{
+			if (!GetWorldTimerManager().IsTimerActive(BossCollisionRestoreTimerHandle))
+			{
+				GetWorldTimerManager().SetTimer(
+					BossCollisionRestoreTimerHandle,
+					this,
+					&APBBallBase::RefreshBossCollisionResponse,
+					0.02f,
+					true);
+			}
+			return;
+		}
+
+		GetWorldTimerManager().ClearTimer(BossCollisionRestoreTimerHandle);
+		CollisionSphere->SetCollisionResponseToChannel(
+			PBCollisionChannels::Boss,
+			BossCollisionResponseBeforeIgnore);
+		bBossCollisionResponseOverridden = false;
+	}
+}
+
+bool APBBallBase::IsOverlappingBoss() const
+{
+	const UWorld* World = GetWorld();
+	if (!World || !CollisionSphere)
+	{
+		return false;
+	}
+
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(PBCollisionChannels::Boss);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BallBossCollisionRestore), false, this);
+	return World->OverlapAnyTestByObjectType(
+		CollisionSphere->GetComponentLocation(),
+		FQuat::Identity,
+		ObjectQueryParams,
+		FCollisionShape::MakeSphere(CollisionSphere->GetScaledSphereRadius()),
+		QueryParams);
 }
 
 bool APBBallBase::TryActivateSkill()

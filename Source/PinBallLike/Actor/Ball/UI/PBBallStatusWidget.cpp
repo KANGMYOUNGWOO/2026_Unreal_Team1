@@ -121,6 +121,9 @@ void UPBBallStatusWidget::BindStatusEffectComponent()
 	StatusEffectComponent->OnStatusEffectRemoved.AddUniqueDynamic(
 		this,
 		&UPBBallStatusWidget::HandleStatusEffectRemoved);
+	StatusEffectComponent->OnStatusEffectStackChanged.AddUniqueDynamic(
+		this,
+		&UPBBallStatusWidget::HandleStatusEffectStackChanged);
 	UE_LOG(LogTemp, Log, TEXT("[BallStatusWidget] StatusEffectComponent bound. Widget=%s Ball=%s Component=%s"),
 		*GetNameSafe(this),
 		*GetNameSafe(Ball),
@@ -140,6 +143,9 @@ void UPBBallStatusWidget::UnbindStatusEffectComponent()
 	StatusEffectComponent->OnStatusEffectRemoved.RemoveDynamic(
 		this,
 		&UPBBallStatusWidget::HandleStatusEffectRemoved);
+	StatusEffectComponent->OnStatusEffectStackChanged.RemoveDynamic(
+		this,
+		&UPBBallStatusWidget::HandleStatusEffectStackChanged);
 	StatusEffectComponent = nullptr;
 }
 
@@ -308,4 +314,11 @@ void UPBBallStatusWidget::HandleStatusEffectRemoved(const FName StatusEffectId, 
 {
 	(void)StackCount;
 	RemoveStatusEffectItem(StatusEffectId);
+}
+
+void UPBBallStatusWidget::HandleStatusEffectStackChanged(
+	const FName StatusEffectId,
+	const int32 StackCount)
+{
+	UpsertStatusEffectItem(StatusEffectId, StackCount);
 }

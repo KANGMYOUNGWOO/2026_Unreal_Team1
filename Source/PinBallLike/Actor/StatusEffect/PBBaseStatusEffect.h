@@ -39,7 +39,7 @@ public:
 
 	void RefreshDuration();
 	bool IsExpired() const;
-	void TickStatusEffect(float DeltaTime);
+	virtual void TickStatusEffect(float DeltaTime);
 	void AddStack();
 
 	virtual void ExecuteStatusEffect(FName TriggerEvent);
