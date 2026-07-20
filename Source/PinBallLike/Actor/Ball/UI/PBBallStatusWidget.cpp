@@ -157,6 +157,11 @@ void UPBBallStatusWidget::RefreshStatusEffectItems()
 			*GetNameSafe(Ball));
 	}
 
+	if (!Ball)
+	{
+		return;
+	}
+
 	if (!StatusEffectComponent)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[BallStatusWidget] RefreshStatusEffectItems skipped. StatusEffectComponent is null. Widget=%s Ball=%s"),

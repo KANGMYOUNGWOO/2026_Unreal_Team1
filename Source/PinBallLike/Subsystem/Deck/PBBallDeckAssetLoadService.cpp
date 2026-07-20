@@ -125,12 +125,6 @@ const UPBBallDataAsset* UPBBallDeckAssetLoadService::GetLoadedBallDataAsset(cons
 	return GetLoadedBallDataAssetById(BallId);
 }
 
-UClass* UPBBallDeckAssetLoadService::GetLoadedBallActorClass(const int32 BallInstanceId) const
-{
-	const UPBBallDataAsset* BallDataAsset = GetLoadedBallDataAsset(BallInstanceId);
-	return BallDataAsset ? BallDataAsset->ActorClass.Get() : nullptr;
-}
-
 UTexture2D* UPBBallDeckAssetLoadService::GetLoadedBallIcon(const int32 BallInstanceId) const
 {
 	const UPBBallDataAsset* BallDataAsset = GetLoadedBallDataAsset(BallInstanceId);

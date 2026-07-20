@@ -17,8 +17,10 @@ class UPBBallEffectRuntimeComponent;
 class UPBBallHitReactionComponent;
 class UPBBallPhysicsComponent;
 class UPBBallSkillComponent;
+class UBillboardComponent;
 class USphereComponent;
 class UPBRelicCalculator;
+class UTexture2D;
 
 UCLASS()
 class PINBALLLIKE_API APBBallBase : public AActor
@@ -64,9 +66,15 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+
+	void ApplyBallVisualData();
+	UTexture2D* ResolveBallSprite() const;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Collision")
 	TObjectPtr<USphereComponent> CollisionSphere;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UBillboardComponent> BillboardComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Physics", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UPBBallPhysicsComponent> PhysicsComponent;

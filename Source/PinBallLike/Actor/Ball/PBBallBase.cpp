@@ -9,10 +9,15 @@
 #include "Component/PBBallPhysicsComponent.h"
 #include "Component/PBBallResourceComponent.h"
 #include "Component/PBBallSkillComponent.h"
+#include "Components/BillboardComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
+#include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
+#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
+#include "Engine/Texture2D.h"
 
 APBBallBase::APBBallBase()
 {
@@ -21,12 +26,18 @@ APBBallBase::APBBallBase()
 	// Collision
 	CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
 	SetRootComponent(CollisionSphere);
-	CollisionSphere->InitSphereRadius(25.0f);
+	CollisionSphere->InitSphereRadius(50.0f);
 	CollisionSphere->SetCollisionProfileName(UCollisionProfile::PhysicsActor_ProfileName);
 	CollisionSphere->SetSimulatePhysics(false);
 	CollisionSphere->SetEnableGravity(false);
 	CollisionSphere->SetGenerateOverlapEvents(true);
 	CollisionSphere->SetNotifyRigidBodyCollision(true);
+
+	// Visual
+	BillboardComponent = CreateDefaultSubobject<UBillboardComponent>(TEXT("Billboard"));
+	BillboardComponent->SetupAttachment(CollisionSphere);
+	BillboardComponent->SetUsingAbsoluteScale(true);
+	BillboardComponent->SetWorldScale3D(FVector(25.0f));
 	
 	// Stat
 	StatComponent = CreateDefaultSubobject<UPBBaseStatComponent>(TEXT("StatComponent"));
@@ -93,6 +104,7 @@ void APBBallBase::InitializeFromBallInstanceData(const FPBBallInstanceData& InBa
 	{
 		SkillComponent->InitializeSkill(BallInstanceData);
 	}
+	ApplyBallVisualData();
 }
 
 void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
@@ -160,4 +172,45 @@ void APBBallBase::RefreshRelicStats(const UPBRelicCalculator* RelicCalculator)
 void APBBallBase::BeginPlay()
 {
 	Super::BeginPlay();
+	ApplyBallVisualData();
+}
+
+void APBBallBase::ApplyBallVisualData()
+{
+	UTexture2D* BallSprite = ResolveBallSprite();
+	if (!BallSprite)
+	{
+		return;
+	}
+
+	if (!BillboardComponent)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[BallVisual] Billboard component not found. BallId=%s Actor=%s"),
+			*BallInstanceData.BallId.ToString(),
+			*GetNameSafe(this));
+		return;
+	}
+
+	BillboardComponent->SetSprite(BallSprite);
+}
+
+UTexture2D* APBBallBase::ResolveBallSprite() const
+{
+	if (BallInstanceData.BallId.IsNone())
+	{
+		return nullptr;
+	}
+
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr;
+	if (!GameDataLoadSubsystem)
+	{
+		return nullptr;
+	}
+
+	const FPrimaryAssetId BallAssetId(PBBallAssetIds::Type::BallData, BallInstanceData.BallId);
+	const UPBBallDataAsset* BallDataAsset =
+		Cast<UPBBallDataAsset>(GameDataLoadSubsystem->GetLoadedPrimaryAsset(BallAssetId));
+	return BallDataAsset ? BallDataAsset->Sprite.Get() : nullptr;
 }

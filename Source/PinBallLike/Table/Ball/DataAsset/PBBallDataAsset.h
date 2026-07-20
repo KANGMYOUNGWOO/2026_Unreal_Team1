@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PBBallDataAsset.generated.h"
 
 class UTexture2D;
@@ -23,9 +22,9 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "UI"))
 	TSoftObjectPtr<UTexture2D> Icon;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Actor", meta = (AssetBundles = "Gameplay"))
-	TSoftClassPtr<APBBallBase> ActorClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "Gameplay"))
+	TSoftObjectPtr<UTexture2D> Sprite;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Skill", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<APBBallSkillActorBase> SkillActorClass;

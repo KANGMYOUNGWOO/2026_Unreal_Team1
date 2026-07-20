@@ -30,7 +30,6 @@ public:
 	void UnloadOwnedBallIcon(FName BallId);
 
 	const UPBBallDataAsset* GetLoadedBallDataAsset(int32 BallInstanceId) const;
-	UClass* GetLoadedBallActorClass(int32 BallInstanceId) const;
 	UTexture2D* GetLoadedBallIcon(int32 BallInstanceId) const;
 
 private:

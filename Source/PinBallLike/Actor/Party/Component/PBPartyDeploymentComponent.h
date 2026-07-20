@@ -62,4 +62,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallDeckSubsystem> DeckSubsystem;
+
+	UPROPERTY(EditAnywhere, Category = "Party|Deployment")
+	TSubclassOf<APBBallBase> BallActorClass;
 };
