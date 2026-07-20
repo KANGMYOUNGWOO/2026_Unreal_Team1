@@ -44,6 +44,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.001"))
 	float UpdateIntervalSeconds = 0.016f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge|Hit", meta = (ClampMin = "0.0"))
+	float ChargeHitRadius = 300.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge|Hit", meta = (ClampMin = "0"))
+	int32 ChargeDamage = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge|Hit", meta = (ClampMin = "0.0"))
+	float ChargeBounceVelocity = 5000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge|Hit|Debug")
+	bool IsDrawChargeHitRange = true;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Charge", meta = (AllowPrivateAccess = "true"))
 	EPBBossSnakeChargePatternState ChargePatternState = EPBBossSnakeChargePatternState::None;
 
@@ -70,6 +82,18 @@ private:
 	void ClearPatternTimers();
 	void DestroyChargeTelegraph();
 	void SetPinballCollisionDamageBlocked(bool IsBlocked) const;
+	void CreateChargeHitCollision(APBBossBase* Boss);
+	void DestroyChargeHitCollision();
+	void ApplyChargeHit(class APBBallBase* Ball);
+
+	UFUNCTION()
+	void HandleChargeBeginOverlap(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComponent,
+		int32 OtherBodyIndex,
+		bool IsFromSweep,
+		const FHitResult& SweepResult);
 
 	FVector ChargeStartLocation = FVector::ZeroVector;
 	FVector ChargeEndLocation = FVector::ZeroVector;
@@ -85,6 +109,11 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<class APBBossChargeTelegraph> SpawnedChargeTelegraph;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class USphereComponent> ChargeHitCollision;
+
+	TSet<TObjectKey<class APBBallBase>> DamagedBalls;
 	FTimerHandle ChargeTimerHandle;
 	FTimerHandle ReboundTimerHandle;
 	FTimerHandle GroggyTimerHandle;

@@ -1,8 +1,14 @@
 #include "PBBossSnakeChargePattern.h"
 
+#include "Components/SphereComponent.h"
+#include "DrawDebugHelpers.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Pattern/PBBossChargeTelegraph.h"
 #include "PinBallLike/Actor/Boss/SnakeBoss.h"
+#include "PinBallLike/Interface/Damageable.h"
+#include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 bool UPBBossSnakeChargePattern::CanExecute_Implementation(APBBossBase* Boss) const
 {
@@ -37,6 +43,7 @@ void UPBBossSnakeChargePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 void UPBBossSnakeChargePattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
 {
 	ClearPatternTimers();
+	DestroyChargeHitCollision();
 	DestroyChargeTelegraph();
 	SetPinballCollisionDamageBlocked(false);
 	if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
@@ -299,6 +306,7 @@ void UPBBossSnakeChargePattern::StartCharge()
 	}
 
 	IsChargeMovementStarted = true;
+	CreateChargeHitCollision(Boss);
 
 	Boss->GetWorldTimerManager().SetTimer(
 		ChargeTimerHandle,
@@ -316,6 +324,20 @@ void UPBBossSnakeChargePattern::UpdateCharge()
 		SetChargePatternState(EPBBossSnakeChargePatternState::None);
 		FinishPattern();
 		return;
+	}
+
+	if (IsDrawChargeHitRange)
+	{
+		DrawDebugSphere(
+			Boss->GetWorld(),
+			Boss->GetActorLocation(),
+			ChargeHitRadius,
+			64,
+			FColor::Blue,
+			false,
+			UpdateIntervalSeconds * 2.0f,
+			0,
+			5.0f);
 	}
 
 	const float ChargeDistance = FMath::Min(ChargeSpeed * UpdateIntervalSeconds, ChargePathLength - ChargeProgressDistance);
@@ -368,6 +390,7 @@ void UPBBossSnakeChargePattern::FinishCharge()
 	}
 
 	Boss->GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
+	DestroyChargeHitCollision();
 	StartRebound();
 }
 
@@ -543,5 +566,82 @@ void UPBBossSnakeChargePattern::SetPinballCollisionDamageBlocked(bool IsBlocked)
 	if (APBBossBase* Boss = GetOwnerBoss())
 	{
 		Boss->SetPinballCollisionDamageBlocked(IsBlocked);
+	}
+}
+
+void UPBBossSnakeChargePattern::CreateChargeHitCollision(APBBossBase* Boss)
+{
+	DestroyChargeHitCollision();
+	if (!Boss || ChargeHitRadius <= 0.0f)
+	{
+		return;
+	}
+
+	DamagedBalls.Reset();
+	ChargeHitCollision = NewObject<USphereComponent>(Boss, TEXT("SnakeChargeHitCollision"));
+	ChargeHitCollision->InitSphereRadius(ChargeHitRadius);
+	ChargeHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	ChargeHitCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
+	ChargeHitCollision->SetGenerateOverlapEvents(true);
+	ChargeHitCollision->RegisterComponent();
+	ChargeHitCollision->AttachToComponent(Boss->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	ChargeHitCollision->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPBBossSnakeChargePattern::HandleChargeBeginOverlap);
+}
+
+void UPBBossSnakeChargePattern::DestroyChargeHitCollision()
+{
+	if (ChargeHitCollision)
+	{
+		ChargeHitCollision->DestroyComponent();
+		ChargeHitCollision = nullptr;
+	}
+	DamagedBalls.Reset();
+}
+
+void UPBBossSnakeChargePattern::HandleChargeBeginOverlap(
+	UPrimitiveComponent* OverlappedComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComponent,
+	int32 OtherBodyIndex,
+	bool IsFromSweep,
+	const FHitResult& SweepResult)
+{
+	ApplyChargeHit(Cast<APBBallBase>(OtherActor));
+}
+
+void UPBBossSnakeChargePattern::ApplyChargeHit(APBBallBase* Ball)
+{
+	APBBossBase* Boss = GetOwnerBoss();
+	if (!Boss || !Ball)
+	{
+		return;
+	}
+
+	const TObjectKey<APBBallBase> BallKey(Ball);
+	if (DamagedBalls.Contains(BallKey))
+	{
+		return;
+	}
+	DamagedBalls.Add(BallKey);
+
+	if (IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball))
+	{
+		if (!Damageable->IsDead() && ChargeDamage > 0)
+		{
+			Damageable->TakeDamage(ChargeDamage);
+			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
+			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+				*SourcePatternName.ToString(), ChargeDamage, *GetNameSafe(Ball));
+		}
+	}
+
+	if (IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball))
+	{
+		FVector BounceDirection = Ball->GetActorLocation() - Boss->GetActorLocation();
+		BounceDirection.Z = 0.0f;
+		if (ChargeBounceVelocity > 0.0f && BounceDirection.Normalize())
+		{
+			Movable->AddVelocity(BounceDirection * ChargeBounceVelocity);
+		}
 	}
 }

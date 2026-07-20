@@ -92,7 +92,6 @@ private:
 	void PrepareBumpers();
 	void PrepareBoss();
 	
-	UE_DEPRECATED(6.0, "This function is deprecated. Use NewFunction instead.")
 	void MarkPreparationCompleted(EPBBattlePreparationType PreparationType, bool bSuccess);
 	bool IsBattlePreparationCompleted() const;
 

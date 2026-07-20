@@ -199,7 +199,7 @@ void APBShopActor::CloseShop()
 {
 	if (ShopWidget)
 	{
-		ShopWidget->RemoveFromViewport();
+		ShopWidget->RemoveFromParent();
 		ShopWidget = nullptr;
 	}
 	

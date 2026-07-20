@@ -1,10 +1,18 @@
 #include "PBGolemFistLaunchPattern.h"
 
+#include "Components/SphereComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "DrawDebugHelpers.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/Golem/PBGolemBoss.h"
 #include "PinBallLike/Actor/Boss/Golem/PBGolemBossHand.h"
 #include "PinBallLike/Actor/Boss/Golem/PBGolemHandMovementComponent.h"
 #include "PinBallLike/Actor/Boss/Pattern/PBBossChargeTelegraph.h"
 #include "PinBallLike/Actor/Boss/Pattern/PBBossPatternTelegraph.h"
+#include "PinBallLike/Interface/Damageable.h"
+#include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Utils/PBInterfaceUtils.h"
+#include "TimerManager.h"
 
 bool UPBGolemFistLaunchPattern::UsesHand(EPBGolemBossHandType TargetHandType) const
 {
@@ -91,6 +99,7 @@ void UPBGolemFistLaunchPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 	}
 
 	GolemHand->BeginPatternMovementLock();
+	CreatePunchHitCollision(GolemHand);
 	GolemHand->LaunchFistAtLocationForPattern(FistTargetLocation, FistTargetDirection, LaunchDuration);
 	UE_LOG(LogTemp, Log, TEXT("[GolemFistLaunchPattern] ExecutePattern succeeded. HandType=%d TargetLocation=%s Direction=%s LaunchDuration=%.2f"),
 		static_cast<int32>(HandType),
@@ -107,6 +116,7 @@ void UPBGolemFistLaunchPattern::CancelPatternInternal_Implementation(APBBossBase
 		static_cast<int32>(HandType));
 
 	UnbindHandMoveFinished();
+	DestroyPunchHitCollision();
 	ClearFistTelegraphs();
 	FistLaunchPhase = EPBGolemFistLaunchPhase::None;
 
@@ -201,8 +211,12 @@ void UPBGolemFistLaunchPattern::HandleFistTelegraphFinished(FVector TargetLocati
 
 	UnbindFistTelegraphs();
 	ClearFistTelegraphs();
-	FistTargetLocation = TargetLocation;
-	FistTargetDirection = Direction;
+	FistTargetDirection = Direction.GetSafeNormal2D();
+	if (FistTargetDirection.IsNearlyZero())
+	{
+		FistTargetDirection = FVector::ForwardVector;
+	}
+	FistTargetLocation = TargetLocation + FistTargetDirection * PunchDistanceExtension;
 
 	if (APBBossBase* Boss = GetOwnerBoss())
 	{
@@ -253,6 +267,7 @@ void UPBGolemFistLaunchPattern::HandleHandMoveFinished()
 	switch (FistLaunchPhase)
 	{
 	case EPBGolemFistLaunchPhase::Launching:
+		DestroyPunchHitCollision();
 		if (APBGolemBossHand* GolemHand = GolemBoss->GetGolemHand(HandType))
 		{
 			GolemHand->SetIsPunching(false);
@@ -350,6 +365,7 @@ void UPBGolemFistLaunchPattern::FinishFistLaunchPattern()
 	}
 
 	ClearFistTelegraphs();
+	DestroyPunchHitCollision();
 	UnbindHandMoveFinished();
 	UnlockPatternHand();
 	FistTargetLocation = FVector::ZeroVector;
@@ -357,4 +373,130 @@ void UPBGolemFistLaunchPattern::FinishFistLaunchPattern()
 	StartHandTransform = FTransform::Identity;
 	FistLaunchPhase = EPBGolemFistLaunchPhase::None;
 	FinishPattern();
+}
+
+void UPBGolemFistLaunchPattern::CreatePunchHitCollision(APBGolemBossHand* GolemHand)
+{
+	DestroyPunchHitCollision();
+	if (!GolemHand || PunchHitRadius <= 0.0f)
+	{
+		return;
+	}
+
+	DamagedBalls.Reset();
+	PunchHitCollision = NewObject<USphereComponent>(GolemHand, TEXT("GolemPunchHitCollision"));
+	PunchHitCollision->InitSphereRadius(PunchHitRadius);
+	PunchHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	PunchHitCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
+	PunchHitCollision->SetGenerateOverlapEvents(true);
+	PunchHitCollision->RegisterComponent();
+	if (const USkeletalMeshComponent* HandMesh = GolemHand->GetHandMeshComponent())
+	{
+		PunchHitCollision->SetWorldLocation(
+			HandMesh->Bounds.Origin + FVector(0.0f, 0.0f, PunchHitZOffset));
+	}
+	PunchHitCollision->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPBGolemFistLaunchPattern::HandlePunchBeginOverlap);
+
+	GolemHand->GetWorldTimerManager().SetTimer(
+		PunchHitRangeTimerHandle,
+		this,
+		&UPBGolemFistLaunchPattern::DrawPunchHitRange,
+		0.016f,
+		true);
+}
+
+void UPBGolemFistLaunchPattern::DestroyPunchHitCollision()
+{
+	if (APBGolemBossHand* GolemHand = GetGolemHand(HandType))
+	{
+		GolemHand->GetWorldTimerManager().ClearTimer(PunchHitRangeTimerHandle);
+	}
+
+	if (PunchHitCollision)
+	{
+		PunchHitCollision->DestroyComponent();
+		PunchHitCollision = nullptr;
+	}
+	DamagedBalls.Reset();
+}
+
+void UPBGolemFistLaunchPattern::DrawPunchHitRange()
+{
+	if (!PunchHitCollision)
+	{
+		return;
+	}
+
+	if (APBGolemBossHand* GolemHand = GetGolemHand(HandType))
+	{
+		if (const USkeletalMeshComponent* HandMesh = GolemHand->GetHandMeshComponent())
+		{
+			PunchHitCollision->SetWorldLocation(
+				HandMesh->Bounds.Origin + FVector(0.0f, 0.0f, PunchHitZOffset));
+		}
+	}
+
+	if (!IsDrawPunchHitRange)
+	{
+		return;
+	}
+
+	DrawDebugSphere(
+		PunchHitCollision->GetWorld(),
+		PunchHitCollision->GetComponentLocation(),
+		PunchHitRadius,
+		64,
+		FColor::Blue,
+		false,
+		0.0f,
+		0,
+		PunchHitRangeLineThickness);
+}
+
+void UPBGolemFistLaunchPattern::HandlePunchBeginOverlap(
+	UPrimitiveComponent* OverlappedComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComponent,
+	int32 OtherBodyIndex,
+	bool IsFromSweep,
+	const FHitResult& SweepResult)
+{
+	ApplyPunchHit(Cast<APBBallBase>(OtherActor));
+}
+
+void UPBGolemFistLaunchPattern::ApplyPunchHit(APBBallBase* Ball)
+{
+	APBGolemBossHand* GolemHand = GetGolemHand(HandType);
+	if (!GolemHand || !Ball)
+	{
+		return;
+	}
+
+	const TObjectKey<APBBallBase> BallKey(Ball);
+	if (DamagedBalls.Contains(BallKey))
+	{
+		return;
+	}
+	DamagedBalls.Add(BallKey);
+
+	if (IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball))
+	{
+		if (!Damageable->IsDead() && PunchDamage > 0)
+		{
+			Damageable->TakeDamage(PunchDamage);
+			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
+			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
+				*SourcePatternName.ToString(), PunchDamage, *GetNameSafe(Ball));
+		}
+	}
+
+	if (IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(Ball))
+	{
+		FVector BounceDirection = Ball->GetActorLocation() - GolemHand->GetActorLocation();
+		BounceDirection.Z = 0.0f;
+		if (PunchBounceVelocity > 0.0f && BounceDirection.Normalize())
+		{
+			Movable->AddVelocity(BounceDirection * PunchBounceVelocity);
+		}
+	}
 }

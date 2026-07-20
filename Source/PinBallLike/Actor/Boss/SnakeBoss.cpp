@@ -28,8 +28,6 @@ namespace
 ASnakeBoss::ASnakeBoss()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	BossMovementType = EPBBossMovementType::Movable;
-
 	SnakeMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SnakeMesh"));
 	SnakeMesh->SetupAttachment(GetRootComponent());
 	SnakeMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);

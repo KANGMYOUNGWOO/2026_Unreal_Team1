@@ -3,6 +3,8 @@
 #include "Blueprint/WidgetTree.h"
 #include "PinBallLike/Actor/Boss/Golem/PBGolemBoss.h"
 #include "PinBallLike/Actor/Boss/Golem/UI/PBGolemHandStatusWidget.h"
+#include "PinBallLike/Actor/Boss/Octopus/PBOctopusBoss.h"
+#include "PinBallLike/Actor/Boss/Octopus/UI/PBOctopusTentacleStatusWidget.h"
 #include "PBBossEnrageWidget.h"
 #include "PBBossIntroWidget.h"
 #include "PBBossStatusWidget.h"
@@ -33,6 +35,11 @@ void UPBBossUILayerWidget::SetBoss(APBBossBase* NewBoss)
 		GolemHandStatusWidget->SetGolemBoss(Cast<APBGolemBoss>(NewBoss));
 	}
 
+	if (OctopusTentacleStatusWidget)
+	{
+		OctopusTentacleStatusWidget->SetOctopusBoss(Cast<APBOctopusBoss>(NewBoss));
+	}
+
 	if (BossIntroWidget)
 	{
 		BossIntroWidget->SetBoss(NewBoss);
@@ -51,6 +58,11 @@ void UPBBossUILayerWidget::ClearBoss()
 	if (GolemHandStatusWidget)
 	{
 		GolemHandStatusWidget->ClearGolemBoss();
+	}
+
+	if (OctopusTentacleStatusWidget)
+	{
+		OctopusTentacleStatusWidget->ClearOctopusBoss();
 	}
 
 	if (BossIntroWidget)
@@ -101,6 +113,11 @@ void UPBBossUILayerWidget::CacheBossWidgets()
 			if (!GolemHandStatusWidget)
 			{
 				GolemHandStatusWidget = Cast<UPBGolemHandStatusWidget>(Widget);
+			}
+
+			if (!OctopusTentacleStatusWidget)
+			{
+				OctopusTentacleStatusWidget = Cast<UPBOctopusTentacleStatusWidget>(Widget);
 			}
 
 			if (!BossEnrageWidget)

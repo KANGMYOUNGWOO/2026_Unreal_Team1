@@ -32,13 +32,6 @@ enum class EPBBossState : uint8
 	Dead
 };
 
-UENUM(BlueprintType)
-enum class EPBBossMovementType : uint8
-{
-	Fixed,
-	Movable
-};
-
 UCLASS()
 class PINBALLLIKE_API APBBossBase : public APawn, public IBossInterface
 {
@@ -102,12 +95,6 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	bool IsEnragedPhase() const;
-
-	UFUNCTION(BlueprintPure, Category = "Boss|Base Type")
-	bool IsFixedBoss() const;
-
-	UFUNCTION(BlueprintPure, Category = "Boss|Base Type")
-	bool IsMovableBoss() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss|Base State")
 	void StartIdleState();
@@ -217,9 +204,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base State")
 	EPBBossState BossState = EPBBossState::Idle;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Base Type")
-	EPBBossMovementType BossMovementType = EPBBossMovementType::Fixed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Profile")
 	FText BossName;
