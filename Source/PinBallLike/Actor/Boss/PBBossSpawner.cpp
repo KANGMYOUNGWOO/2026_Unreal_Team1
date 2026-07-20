@@ -235,7 +235,6 @@ bool APBBossSpawner::RequestBossDataAsync(FStreamableDelegate OnLoaded)
 		*MakeBossDataBundleKey().ToString());
 
 	IsBossDataLoaded = false;
-	IsBossAssetsUnloaded = false;
 	PendingBossDataLoadedDelegate = OnLoaded;
 
 	PendingBossDataLoadRequestId = CachedGameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
@@ -374,19 +373,7 @@ void APBBossSpawner::HandleBossDeadMessage(FGameplayTag Channel, const FPBBattle
 		return;
 	}
 
-	UnloadBossAssets();
 	UnregisterBossDeadEvent();
-}
-
-void APBBossSpawner::UnloadBossAssets()
-{
-	if (IsBossAssetsUnloaded || !IsValid(CachedGameDataLoadSubsystem))
-	{
-		return;
-	}
-
-	CachedGameDataLoadSubsystem->UnloadPrimaryAssetBundle(MakeBossDataBundleKey());
-	IsBossAssetsUnloaded = true;
 }
 
 void APBBossSpawner::CompleteBossPreparation(const bool IsSuccess) const
