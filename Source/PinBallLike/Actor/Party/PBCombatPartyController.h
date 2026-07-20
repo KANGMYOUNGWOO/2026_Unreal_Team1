@@ -96,4 +96,5 @@ private:
 	void UnbindRelicEvents();
 	void HandleRelicsChanged();
 	void RefreshPartyRelicStats();
+	void ApplyActiveSynergyEffects();
 };

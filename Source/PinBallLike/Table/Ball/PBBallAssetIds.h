@@ -32,8 +32,20 @@ namespace PBBallAssetIds
 	namespace Skill
 	{
 		inline const FName Circular_Blade(TEXT("Circular_Blade"));
+		inline const FName Slash(TEXT("Slash"));
+		inline const FName Sword_Storm(TEXT("Sword_Storm"));
 		inline const FName Charge_Laser(TEXT("Charge_Laser"));
-		inline const FName Buff_Test(TEXT("Buff_Test"));
-		inline const FName Summon_Test(TEXT("Summon_Test"));
+		inline const FName Magic_Arrow(TEXT("Magic_Arrow"));
+		inline const FName Revolver(TEXT("Revolver"));
+		inline const FName Summon_Clone(TEXT("Summon_Clone"));
+		inline const FName Summon_Bomb(TEXT("Summon_Bomb"));
+		inline const FName Boomerang(TEXT("Boomerang"));
+		inline const FName Saw_Blade(TEXT("Saw_Blade"));
+		inline const FName Strength_Buff(TEXT("Strength_Buff"));
+		inline const FName Speed_Buff(TEXT("Speed_Buff"));
+		inline const FName Invincible_Buff(TEXT("Invincible_Buff"));
+		inline const FName Bounce_Buff(TEXT("Bounce_Buff"));
+		inline const FName ZeroGravity_Buff(TEXT("ZeroGravity_Buff"));
+		inline const FName Weakness_Debuff(TEXT("Weakness_Debuff"));
 	}
 }

@@ -31,6 +31,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PinBall|Movement")
 	virtual void StopMovement() override;
 	UFUNCTION(BlueprintCallable, Category = "PinBall|Movement")
+	void StopMovementSmoothly(float Duration);
+	UFUNCTION(BlueprintCallable, Category = "PinBall|Movement")
 	virtual void PauseMovement() override;
 	UFUNCTION(BlueprintCallable, Category = "PinBall|Movement")
 	virtual void ResumeMovement() override;
@@ -45,6 +47,14 @@ public:
 	void SetBounceDamping(float NewBounceDamping);
 	UFUNCTION(BlueprintCallable, Category = "PinBall|Physics")
 	float GetBounceDamping() const;
+	UFUNCTION(BlueprintCallable, Category = "PinBall|Physics")
+	void SetGravityEnabled(bool bEnabled);
+	UFUNCTION(BlueprintCallable, Category = "PinBall|Physics")
+	void AddGravityDisableRequest(UObject* Requester);
+	UFUNCTION(BlueprintCallable, Category = "PinBall|Physics")
+	void RemoveGravityDisableRequest(UObject* Requester);
+	UFUNCTION(BlueprintPure, Category = "PinBall|Physics")
+	bool IsGravityEnabled();
 
 	UFUNCTION(BlueprintCallable, Category = "PinBall|Movement")
 	void SetVelocity(FVector NewVelocity);
@@ -62,6 +72,7 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 private:
+	void CancelSmoothStop();
 	float CalculateImpactDamping(FVector IncomingDirection, FVector ImpactNormal) const;
 	void ClampVelocityToSpeedRange();
 	void HandleStatChanged(FName StatName, int32 NewValue);
@@ -88,10 +99,17 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PinBall|Movement", meta = (ClampMin = "0.0", AllowPrivateAccess = "true"))
 	float XGravity = 980.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PinBall|Movement", meta = (AllowPrivateAccess = "true"))
+	bool bGravityEnabled = true;
+
+	TSet<TWeakObjectPtr<UObject>> GravityDisableRequesters;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UPrimitiveComponent> PrimitiveComponent = nullptr;
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBaseStatComponent> StatComponent = nullptr;
 
 	bool bMovementPaused = false;
+	bool bIsSmoothStopping = false;
+	float SmoothStopDeceleration = 0.0f;
 };

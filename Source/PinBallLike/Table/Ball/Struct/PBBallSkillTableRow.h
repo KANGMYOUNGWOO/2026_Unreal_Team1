@@ -16,11 +16,14 @@ struct PINBALLLIKE_API FPBBallSkillTableRow : public FTableRowBase
 	FText Description;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Skill", meta = (ClampMin = "0"))
-	float DamageMultiplier = 1.0f;
+	float PowerValue = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Skill", meta = (ClampMin = "0.01"))
-	float Duration = 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Skill", meta = (ClampMin = "0"))
+	float LifeValue = 2.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Skill", meta = (ClampMin = "1"))
-	int32 Value = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Skill", meta = (ClampMin = "0"))
+	int32 EffectValue = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Skill", meta = (ClampMin = "0"))
+	int32 GroggyValue = 0;
 };

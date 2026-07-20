@@ -79,14 +79,25 @@ bool UPBBossStatComponent::IsDead() const
 	return HPRaw <= 0;
 }
 
-int32 UPBBossStatComponent::GetHPDamageMultiplierPercent(FName HitPointName) const
+void UPBBossStatComponent::ApplyDamageTakenMultiplierPercentDelta(const int32 DeltaPercent)
 {
-	if (const FBossHitPointDamageData* HitPointData = HitPointDataMap.Find(HitPointName))
+	if (DeltaPercent == 0)
 	{
-		return HitPointData->HPDamageMultiplierPercent;
+		return;
 	}
 
-	return DefaultHPDamageMultiplierPercent;
+	DamageTakenMultiplierPercentBonus = FMath::Max(0, DamageTakenMultiplierPercentBonus + DeltaPercent);
+}
+
+int32 UPBBossStatComponent::GetHPDamageMultiplierPercent(FName HitPointName) const
+{
+	int32 DamageMultiplierPercent = DefaultHPDamageMultiplierPercent;
+	if (const FBossHitPointDamageData* HitPointData = HitPointDataMap.Find(HitPointName))
+	{
+		DamageMultiplierPercent = HitPointData->HPDamageMultiplierPercent;
+	}
+
+	return FMath::Max(0, DamageMultiplierPercent + DamageTakenMultiplierPercentBonus);
 }
 
 int32 UPBBossStatComponent::GetDisplayedHP() const

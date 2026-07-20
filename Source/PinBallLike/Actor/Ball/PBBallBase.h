@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "PinBallLike/Actor/Ball/Component/PBBallResourceComponent.h"
 #include "PinBallLike/Struct/Ball/PBBallInstanceData.h"
 #include "PinBallLike/Struct/Party/PBPartyTypes.h"
 #include "PBBallBase.generated.h"
@@ -12,6 +13,7 @@ class UPBBaseStatComponent;
 class UPBBaseResourceComponent;
 class UPBStatusEffectComponent;
 class UPBBallComboComponent;
+class UPBBallEffectRuntimeComponent;
 class UPBBallHitReactionComponent;
 class UPBBallPhysicsComponent;
 class UPBBallSkillComponent;
@@ -51,6 +53,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Ball|StatusEffect")
 	UPBStatusEffectComponent* GetStatusEffectComponent() const { return StatusEffectComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "Ball|Effect")
+	UPBBallEffectRuntimeComponent* GetEffectRuntimeComponent() const { return EffectRuntimeComponent; }
 	
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill")
 	bool TryActivateSkill();
@@ -70,10 +75,13 @@ protected:
 	TObjectPtr<UPBBaseStatComponent> StatComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Resource")
-	TObjectPtr<UPBBaseResourceComponent> ResourceComponent;
+	TObjectPtr<UPBBallResourceComponent> ResourceComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|StatusEffect")
 	TObjectPtr<UPBStatusEffectComponent> StatusEffectComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Ball|Effect")
+	TObjectPtr<UPBBallEffectRuntimeComponent> EffectRuntimeComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Combo")
 	TObjectPtr<UPBBallComboComponent> ComboComponent;

@@ -19,6 +19,8 @@ class PINBALLLIKE_API UPBDeckWidget : public UUserWidget
 	GENERATED_BODY()
 	
 public:
+	UFUNCTION(BlueprintCallable, Category = "BallDeck")
+	void RefreshBenchSlots();
 	
 protected:
 	virtual void NativeConstruct() override;
@@ -28,7 +30,6 @@ private:
 	void BuildBenchSlots();
 	void BindDeckEvents();
 	void UnbindDeckEvents();
-	void RefreshBenchSlots();
 
 	UFUNCTION()
 	void HandleBenchSlotChanged(int32 SlotIndex, int32 BallInstanceId);

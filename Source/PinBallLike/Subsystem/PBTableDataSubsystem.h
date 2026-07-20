@@ -18,14 +18,12 @@
 #include "PinBallLike/Table/Effect/Struct/PBGameplayEffectRow.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectSetRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
 #include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectModifierRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectTriggerRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectModifierRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectTriggerRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
@@ -72,14 +70,11 @@ public:
 		UDataTable* InStatusEffectTriggerTable);
 	void SetEffectTables(
 		UDataTable* InEffectTable,
+		UDataTable* InEffectSetTable,
 		UDataTable* InEffectParamTable);
 	void SetSynergyTables(
 		UDataTable* InSynergyTable,
-		UDataTable* InSynergyTierTable,
-		UDataTable* InSynergyTierEffectTable,
-		UDataTable* InSynergyEffectTable,
-		UDataTable* InSynergyEffectModifierTable,
-		UDataTable* InSynergyEffectTriggerTable);
+		UDataTable* InSynergyTierTable);
 
 	UPROPERTY(BlueprintAssignable, Category = "TableData")
 	FPBTableDataLoadEvent OnStartupGameDataLoaded;
@@ -239,11 +234,15 @@ private:
 
 public:
 	bool FindEffectRow(FName RowName, FPBEffectTableRow& OutRow) const;
+	bool GetEffectSetRows(FName EffectSetId, TArray<FPBEffectSetRow>& OutRows) const;
 	bool GetEffectParamRows(FName EffectId, TArray<FPBEffectParamRow>& OutRows) const;
 
 private:
 	UPROPERTY()
 	TObjectPtr<UDataTable> EffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> EffectSetTable;
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> EffectParamTable;
@@ -257,9 +256,6 @@ public:
 	bool FindSynergyRow(FName RowName, FPBSynergyTableRow& OutRow) const;
 	bool FindSynergyTierRow(FName RowName, FPBSynergyTierRow& OutRow) const;
 	bool GetSynergyTierRows(FName SynergyId, TArray<FPBSynergyTierRow>& OutRows) const;
-	bool FindSynergyEffectRow(FName RowName, FPBSynergyEffectRow& OutRow) const;
-	bool GetSynergyEffectModifierRows(FName SynergyEffectId, TArray<FPBSynergyEffectModifierRow>& OutRows) const;
-	bool GetSynergyEffectTriggerRows(FName SynergyEffectId, TArray<FPBSynergyEffectTriggerRow>& OutRows) const;
 
 private:
 	UPROPERTY()
@@ -267,18 +263,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> SynergyTierTable;
-
-	UPROPERTY()
-	TObjectPtr<UDataTable> SynergyTierEffectTable;
-
-	UPROPERTY()
-	TObjectPtr<UDataTable> SynergyEffectTable;
-
-	UPROPERTY()
-	TObjectPtr<UDataTable> SynergyEffectModifierTable;
-
-	UPROPERTY()
-	TObjectPtr<UDataTable> SynergyEffectTriggerTable;
 
 #pragma endregion
 };

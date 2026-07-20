@@ -4,6 +4,7 @@
 #include "PBBallHitReactionComponent.h"
 
 #include "PBBallPhysicsComponent.h"
+#include "PBBallEffectRuntimeComponent.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
@@ -73,11 +74,23 @@ void UPBBallHitReactionComponent::ProcessBallContact(const FHitResult& Hit)
 		return;
 	}
 
-	const int32 Damage = StatProvider ? StatProvider->GetStat(PBStatNames::Attack) : 0;
-	const bool bDamageApplied = IBossInterface::Execute_DamageToBoss(OtherActor, Damage);
+	const int32 BaseDamage = StatProvider ? StatProvider->GetStat(PBStatNames::Attack) : 0;
+	UPBBallEffectRuntimeComponent* EffectRuntimeComponent = Owner->FindComponentByClass<UPBBallEffectRuntimeComponent>();
+	const int32 Damage = EffectRuntimeComponent
+		? EffectRuntimeComponent->ModifyCollisionDamage(BaseDamage)
+		: BaseDamage;
+	IBossInterface::Execute_DamageToBoss(OtherActor, Damage);
 	
-	if (bDamageApplied)
+	if (Damage > 0)
 	{
+		const int32 GroggyAmount = StatProvider
+			? StatProvider->GetStat(PBStatNames::StaggerPower)
+			: 0;
+		if (GroggyAmount > 0)
+		{
+			IBossInterface::Execute_IncreaseGroggy(OtherActor, GroggyAmount);
+		}
+
 		if (UGameplayMessageSubsystem::HasInstance(this))
 		{
 			FPBDamageLogMessage Message;
@@ -90,6 +103,11 @@ void UPBBallHitReactionComponent::ProcessBallContact(const FHitResult& Hit)
 		}
 
 		ApplyManaGainOnDamage();
+	}
+
+	if (EffectRuntimeComponent)
+	{
+		EffectRuntimeComponent->HandleEnemyHit(OtherActor);
 	}
 
 	MarkContactProcessed(OtherActor);

@@ -60,6 +60,8 @@ private:
 	void EnterBallDeployment();
 	void EnterBattle();
 	void EnterBossDead();
+	void ApplyActiveSynergyEffectsForBattle();
+	void TriggerPartySwitchEffects();
 
 #pragma endregion
 	

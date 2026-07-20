@@ -1,0 +1,197 @@
+#include "PBBallResourceComponent.h"
+
+#include "PinBallLike/Struct/Common/PBResourceTypes.h"
+
+void UPBBallResourceComponent::TakeDamage(const int32 Damage)
+{
+	if (Damage <= 0)
+	{
+		return;
+	}
+
+	float RemainingDamage = static_cast<float>(Damage);
+	if (HasResource(PBResourceNames::Shield))
+	{
+		const float CurrentShield = GetResourceCurrent(PBResourceNames::Shield);
+		const float AbsorbedDamage = FMath::Min(CurrentShield, RemainingDamage);
+		if (AbsorbedDamage > 0.0f)
+		{
+			ApplyResourceDelta(PBResourceNames::Shield, -AbsorbedDamage);
+			RemainingDamage -= AbsorbedDamage;
+		}
+	}
+
+	if (RemainingDamage <= 0.0f)
+	{
+		return;
+	}
+
+	if (ConsumeDamageIgnoreCount(PBResourceNames::Health))
+	{
+		return;
+	}
+
+	const float PreviousHealth = GetResourceCurrent(PBResourceNames::Health);
+	ApplyResourceDelta(PBResourceNames::Health, -RemainingDamage);
+	if (TryReviveOnZero(PBResourceNames::Health))
+	{
+		return;
+	}
+
+	TryApplyPostDamageHeal(PBResourceNames::Health, PreviousHealth);
+}
+
+void UPBBallResourceComponent::AddDamageIgnoreCount(const FName ResourceName, const int32 Count)
+{
+	AddResourceDamageRule(EPBBallResourceDamageRuleKind::DamageIgnore, ResourceName, Count, 0.0f);
+}
+
+int32 UPBBallResourceComponent::GetDamageIgnoreCount(const FName ResourceName) const
+{
+	const FPBBallResourceDamageRule* Rule =
+		FindResourceDamageRule(EPBBallResourceDamageRuleKind::DamageIgnore, ResourceName);
+	return Rule ? FMath::Max(0, Rule->Count) : 0;
+}
+
+void UPBBallResourceComponent::AddReviveOnZeroCount(
+	const FName ResourceName,
+	const int32 Count,
+	const float ReviveValue)
+{
+	AddResourceDamageRule(EPBBallResourceDamageRuleKind::ReviveOnZero, ResourceName, Count, ReviveValue);
+}
+
+void UPBBallResourceComponent::AddPostDamageHealCount(
+	const FName ResourceName,
+	const int32 Count,
+	const float HealValue)
+{
+	AddResourceDamageRule(EPBBallResourceDamageRuleKind::PostDamageHeal, ResourceName, Count, HealValue);
+}
+
+void UPBBallResourceComponent::AddResourceDamageRule(
+	const EPBBallResourceDamageRuleKind Kind,
+	const FName ResourceName,
+	const int32 Count,
+	const float Value)
+{
+	if (ResourceName.IsNone() || Count <= 0)
+	{
+		return;
+	}
+	if (Kind != EPBBallResourceDamageRuleKind::DamageIgnore && Value <= 0.0f)
+	{
+		return;
+	}
+
+	FPBBallResourceDamageRule* Rule = FindResourceDamageRule(Kind, ResourceName);
+	if (!Rule)
+	{
+		Rule = &DamageRules.AddDefaulted_GetRef();
+		Rule->Kind = Kind;
+		Rule->ResourceName = ResourceName;
+	}
+
+	Rule->Count = FMath::Max(0, Rule->Count) + Count;
+	Rule->Value = Value;
+}
+
+FPBBallResourceDamageRule* UPBBallResourceComponent::FindResourceDamageRule(
+	const EPBBallResourceDamageRuleKind Kind,
+	const FName ResourceName)
+{
+	return DamageRules.FindByPredicate(
+		[Kind, ResourceName](const FPBBallResourceDamageRule& Rule)
+		{
+			return Rule.Kind == Kind && Rule.ResourceName == ResourceName;
+		});
+}
+
+const FPBBallResourceDamageRule* UPBBallResourceComponent::FindResourceDamageRule(
+	const EPBBallResourceDamageRuleKind Kind,
+	const FName ResourceName) const
+{
+	return DamageRules.FindByPredicate(
+		[Kind, ResourceName](const FPBBallResourceDamageRule& Rule)
+		{
+			return Rule.Kind == Kind && Rule.ResourceName == ResourceName;
+		});
+}
+
+bool UPBBallResourceComponent::ConsumeResourceDamageRule(
+	const EPBBallResourceDamageRuleKind Kind,
+	const FName ResourceName,
+	float& OutValue)
+{
+	for (int32 Index = 0; Index < DamageRules.Num(); ++Index)
+	{
+		FPBBallResourceDamageRule& Rule = DamageRules[Index];
+		if (Rule.Kind != Kind || Rule.ResourceName != ResourceName || Rule.Count <= 0)
+		{
+			continue;
+		}
+
+		OutValue = Rule.Value;
+		--Rule.Count;
+		if (Rule.Count <= 0)
+		{
+			DamageRules.RemoveAtSwap(Index);
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+bool UPBBallResourceComponent::ConsumeDamageIgnoreCount(const FName ResourceName)
+{
+	float UnusedValue = 0.0f;
+	return ConsumeResourceDamageRule(EPBBallResourceDamageRuleKind::DamageIgnore, ResourceName, UnusedValue);
+}
+
+bool UPBBallResourceComponent::TryReviveOnZero(const FName ResourceName)
+{
+	if (GetResourceCurrent(ResourceName) > 0.0f)
+	{
+		return false;
+	}
+
+	float ReviveValue = 1.0f;
+	if (!ConsumeResourceDamageRule(EPBBallResourceDamageRuleKind::ReviveOnZero, ResourceName, ReviveValue))
+	{
+		return false;
+	}
+
+	const float ClampedReviveValue = FMath::Clamp(ReviveValue, 0.0f, GetResourceMax(ResourceName));
+	if (ClampedReviveValue <= 0.0f)
+	{
+		return false;
+	}
+
+	SetResourceCurrent(ResourceName, ClampedReviveValue);
+	OnResourceRevived.Broadcast(ResourceName, GetResourceCurrent(ResourceName));
+	return true;
+}
+
+void UPBBallResourceComponent::TryApplyPostDamageHeal(
+	const FName ResourceName,
+	const float PreviousCurrent)
+{
+	const float Current = GetResourceCurrent(ResourceName);
+	if (Current <= 0.0f || Current >= PreviousCurrent)
+	{
+		return;
+	}
+
+	float Value = 1.0f;
+	if (!ConsumeResourceDamageRule(EPBBallResourceDamageRuleKind::PostDamageHeal, ResourceName, Value))
+	{
+		return;
+	}
+
+	if (Value > 0.0f)
+	{
+		ApplyResourceDelta(ResourceName, Value);
+	}
+}

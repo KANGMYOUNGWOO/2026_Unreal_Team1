@@ -4,13 +4,18 @@
 #include "PBBattleGameMode.h"
 
 #include "GameFramework/GameplayMessageSubsystem.h"
+#include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
+#include "PinBallLike/Actor/Party/PBCombatPartyController.h"
 #include "PinBallLike/Actor/Boss/PBBossSpawner.h"
 #include "PinBallLike/Actor/Bumper/PBBumperSpawner.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
+#include "PinBallLike/Struct/Effect/PBEffectContext.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/PBEffectSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 
@@ -78,6 +83,7 @@ void APBBattleGameMode::InitializeBattleCounts()
 		PlayerDataSubsystem ? PlayerDataSubsystem->GetInitialBattleLaunchCount() : 0);
 	BattleGameState->SetRemainingBattleShiftCount(
 		PlayerDataSubsystem ? PlayerDataSubsystem->GetInitialBattleShiftCount() : 0);
+	ApplyActiveSynergyEffectsForBattle();
 }
 
 void APBBattleGameMode::SetBattleLevelPhase(const EPBBattleLevelPhase NewPhase)
@@ -209,6 +215,57 @@ void APBBattleGameMode::EnterBossDead()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BossDead."));
 	SetBattleLevelPhase(EPBBattleLevelPhase::Reward);
+}
+
+void APBBattleGameMode::ApplyActiveSynergyEffectsForBattle()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	UPBEffectSubsystem* EffectSubsystem = GameInstance->GetSubsystem<UPBEffectSubsystem>();
+	if (!EffectSubsystem)
+	{
+		return;
+	}
+
+	FPBEffectContext EffectContext;
+	EffectContext.WorldContextObject = this;
+	EffectContext.SourceActor = this;
+	EffectSubsystem->NotifyTrigger(GameplayTags::TriggerEvent_Battle_Started, EffectContext);
+}
+
+void APBBattleGameMode::TriggerPartySwitchEffects()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (TActorIterator<APBCombatPartyController> It(World); It; ++It)
+	{
+		if (APBCombatPartyController* PartyController = *It)
+		{
+			if (UGameInstance* GameInstance = GetGameInstance())
+			{
+				if (UPBEffectSubsystem* EffectSubsystem = GameInstance->GetSubsystem<UPBEffectSubsystem>())
+				{
+					FPBEffectContext EffectContext;
+					EffectContext.WorldContextObject = this;
+					EffectContext.SourceActor = PartyController;
+					for (AActor* Ball : PartyController->GetValidPartyBalls())
+					{
+						EffectContext.TargetActors.Add(Ball);
+					}
+					EffectSubsystem->NotifyTrigger(GameplayTags::TriggerEvent_Battle_PartySwitched, EffectContext);
+				}
+			}
+			return;
+		}
+	}
 }
 
 void APBBattleGameMode::HandleReward_Implementation()
@@ -565,15 +622,6 @@ void APBBattleGameMode::HandleBossDeadMessage(
 				TArray<FName> BossRowNames;
 				if (TableDataSubsystem->GetBossRowNames(BossRowNames))
 				{
-					const bool IsAllBossesCleared =
-						BossRowNames.Num() > 0
-						&& PlayerDataSubsystem->GetCurrentBossIndex() >= BossRowNames.Num() - 1;
-					if (IsAllBossesCleared)
-					{
-						UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/Lv_MainMenu")));
-						return;
-					}
-
 					PlayerDataSubsystem->AdvanceBossProgress(BossRowNames.Num());
 				}
 			}
@@ -592,7 +640,7 @@ void APBBattleGameMode::HandleBossIntroCompletedMessage(
 	if (!BattleGameState
 		|| BattleGameState->GetBattleLevelPhase() != EPBBattleLevelPhase::BossIntro
 		|| !SpawnedBoss
-		|| Message.BossActor.Get() != SpawnedBoss)
+		|| Message.BossActor != SpawnedBoss)
 	{
 		return;
 	}
@@ -682,15 +730,9 @@ void APBBattleGameMode::HandlePartyShiftRequestedMessage(
 		return;
 	}
 
-	if (!BattleGameState->HasRemainingBattleShiftCount())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[BattleFlow] Ignore party shift request. No remaining shift count."));
-		return;
-	}
-
 	if (BallDeckSubsystem->RotateDeploymentSlots())
 	{
-		BattleGameState->ConsumeBattleShiftCount();
+		TriggerPartySwitchEffects();
 	}
 }
 

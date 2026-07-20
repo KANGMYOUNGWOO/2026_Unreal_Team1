@@ -91,6 +91,11 @@ void UPBShopWidget::NativeConstruct()
 			&UPBShopWidget::OnExitButtonClicked);
 	}
 	
+	if (Button_Reroll)
+	{
+		Button_Reroll->OnClicked.AddDynamic(this, &UPBShopWidget::OnRerollButtonClicked);
+	}
+	
 	UpdateSlotWidgetPositionsOnce();
 }
 
@@ -115,12 +120,23 @@ void UPBShopWidget::SetShopSlotWidgetData(TArray<const FBallDataStruct*> BallDat
 
 void UPBShopWidget::SetShopSlotWidgetData(int32 index, FText Name, int32 Price, FText Synergy)
 {
+	if (!ShopSlotWidgets.IsValidIndex(index) || !ShopSlotWidgets[index])
+	{
+		return;
+	}
+
+	ShopSlotWidgets[index]->SetVisibility(ESlateVisibility::Visible);
 	ShopSlotWidgets[index]->SetSlotInfo(Name,Price,Synergy); 
 	
 }
 
 void UPBShopWidget::UnActiveSlotWidget(int32 SlotIndex)
 {
+	if (!ShopSlotWidgets.IsValidIndex(SlotIndex) || !ShopSlotWidgets[SlotIndex])
+	{
+		return;
+	}
+
 	ShopSlotWidgets[SlotIndex]->SetVisibility(ESlateVisibility::Collapsed);
 }
 
@@ -133,6 +149,11 @@ void UPBShopWidget::OnExitButtonClicked()
 		GameplayTags::Event_UI_Choice_Exit,Message);
 	
 	//RemoveFromParent();
+}
+
+void UPBShopWidget::OnRerollButtonClicked()
+{
+	OnRerollRequested.Broadcast();
 }
 
 void UPBShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)

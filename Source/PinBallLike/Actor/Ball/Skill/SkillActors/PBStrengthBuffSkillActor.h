@@ -25,9 +25,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Skill|Party Buff")
 	TObjectPtr<USceneComponent> Root;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ball|Skill|Party Buff")
-	FName StatusEffectId = NAME_None;
-
 private:
 	APBCombatPartyController* GetPartyController() const;
 	bool ApplyBuffToParty();

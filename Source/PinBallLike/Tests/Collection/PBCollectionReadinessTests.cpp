@@ -41,9 +41,6 @@ bool FPBCollectionCatalogReadinessTest::RunTest(const FString& Parameters)
 	UDataTable* RelicModifier = MakeTable();
 	UDataTable* Synergy = MakeTable();
 	UDataTable* SynergyTier = MakeTable();
-	UDataTable* SynergyEffect = MakeTable();
-	UDataTable* SynergyModifier = MakeTable();
-	UDataTable* SynergyTrigger = MakeTable();
 
 	TableData->SetBumperTables(Bumper, Trigger, BumperEffect);
 	TableData->SetBallTables(Ball, BallStar);
@@ -52,11 +49,7 @@ bool FPBCollectionCatalogReadinessTest::RunTest(const FString& Parameters)
 	TableData->SetRelicTable(Relic, RelicModifier);
 	TableData->SetSynergyTables(
 		Synergy,
-		SynergyTier,
-		nullptr,
-		SynergyEffect,
-		SynergyModifier,
-		SynergyTrigger);
+		SynergyTier);
 
 	TestTrue(TEXT("Collection catalog readiness uses every source table required by its five tabs"),
 		TableData->IsCollectionCatalogDataReady());

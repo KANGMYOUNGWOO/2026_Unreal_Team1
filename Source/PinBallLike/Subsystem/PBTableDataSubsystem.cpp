@@ -35,7 +35,7 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	}
 
 	TArray<FSoftObjectPath> TablePaths;
-	TablePaths.Reserve(25);
+	TablePaths.Reserve(21);
 
 	// 테이블 경로는 DeveloperSettings에서 관리한다.
 	const FSoftObjectPath CollectionTablePath = Settings->CollectionTable.ToSoftObjectPath();
@@ -54,12 +54,11 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath StatusEffectModifierTablePath = Settings->StatusEffectModifierTable.ToSoftObjectPath();
 	const FSoftObjectPath StatusEffectTriggerTablePath = Settings->StatusEffectTriggerTable.ToSoftObjectPath();
 	const FSoftObjectPath EffectTablePath = Settings->EffectTable.ToSoftObjectPath();
+	const FSoftObjectPath EffectSetTablePath = Settings->EffectSetTable.ToSoftObjectPath();
 	const FSoftObjectPath EffectParamTablePath = Settings->EffectParamTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyTablePath = Settings->SynergyTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyTierTablePath = Settings->SynergyTierTable.ToSoftObjectPath();
-	const FSoftObjectPath SynergyEffectTablePath = Settings->SynergyEffectTable.ToSoftObjectPath();
-	const FSoftObjectPath SynergyEffectModifierTablePath = Settings->SynergyEffectModifierTable.ToSoftObjectPath();
-	const FSoftObjectPath SynergyEffectTriggerTablePath = Settings->SynergyEffectTriggerTable.ToSoftObjectPath();
+
 	const FSoftObjectPath ShopTablePath = Settings->ShopTable.ToSoftObjectPath();
 	const FSoftObjectPath RelicTablePath = Settings->RelicTable.ToSoftObjectPath();
     const FSoftObjectPath RelicModifierTablePath = Settings->RelicModifierTable.ToSoftObjectPath();
@@ -144,6 +143,11 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 		TablePaths.Add(EffectTablePath);
 	}
 
+	if (EffectSetTablePath.IsValid())
+	{
+		TablePaths.Add(EffectSetTablePath);
+	}
+
 	if (EffectParamTablePath.IsValid())
 	{
 		TablePaths.Add(EffectParamTablePath);
@@ -159,21 +163,6 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 		TablePaths.Add(SynergyTierTablePath);
 	}
 
-	if (SynergyEffectTablePath.IsValid())
-	{
-		TablePaths.Add(SynergyEffectTablePath);
-	}
-
-	if (SynergyEffectModifierTablePath.IsValid())
-	{
-		TablePaths.Add(SynergyEffectModifierTablePath);
-	}
-
-	if (SynergyEffectTriggerTablePath.IsValid())
-	{
-		TablePaths.Add(SynergyEffectTriggerTablePath);
-	}
-	
 	if(ShopTablePath.IsValid())
 	{
 		TablePaths.Add(ShopTablePath);
@@ -223,11 +212,11 @@ void UPBTableDataSubsystem::UnloadStartupGameData()
 	SetSkillTable(nullptr);
 	SetBossTables(nullptr, nullptr, nullptr);
 	SetStatusEffectTables(nullptr, nullptr, nullptr);
-	SetEffectTables(nullptr, nullptr);
+	SetEffectTables(nullptr, nullptr, nullptr);
 	SetRelicTable(nullptr,nullptr);
 	SetShopTable(nullptr);
 	
-	SetSynergyTables(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+	SetSynergyTables(nullptr, nullptr);
 
 	if (StartupGameDataLoadHandle.IsValid())
 	{
@@ -256,16 +245,12 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedStatusEffectModifierTable = nullptr;
 	UDataTable* LoadedStatusEffectTriggerTable = nullptr;
 	UDataTable* LoadedEffectTable = nullptr;
+	UDataTable* LoadedEffectSetTable = nullptr;
 	UDataTable* LoadedEffectParamTable = nullptr;
 	UDataTable* LoadedRelicTable = nullptr;
 	UDataTable* LoadedRelicModifierTable = nullptr;
-	
 	UDataTable* LoadedSynergyTable = nullptr;
 	UDataTable* LoadedSynergyTierTable = nullptr;
-	UDataTable* LoadedSynergyTierEffectTable = nullptr;
-	UDataTable* LoadedSynergyEffectTable = nullptr;
-	UDataTable* LoadedSynergyEffectModifierTable = nullptr;
-	UDataTable* LoadedSynergyEffectTriggerTable = nullptr;
 	UDataTable* LoadedShopTable = nullptr;
 	
 	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
@@ -288,14 +273,12 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedStatusEffectModifierTable = Cast<UDataTable>(Settings->StatusEffectModifierTable.Get());
 		LoadedStatusEffectTriggerTable = Cast<UDataTable>(Settings->StatusEffectTriggerTable.Get());
 		LoadedEffectTable = Cast<UDataTable>(Settings->EffectTable.Get());
+		LoadedEffectSetTable = Cast<UDataTable>(Settings->EffectSetTable.Get());
 		LoadedEffectParamTable = Cast<UDataTable>(Settings->EffectParamTable.Get());
 		LoadedRelicTable = Cast<UDataTable>(Settings->RelicTable.Get());
 		LoadedRelicModifierTable = Cast<UDataTable>(Settings->RelicModifierTable.Get());
 		LoadedSynergyTable = Cast<UDataTable>(Settings->SynergyTable.Get());
 		LoadedSynergyTierTable = Cast<UDataTable>(Settings->SynergyTierTable.Get());
-		LoadedSynergyEffectTable = Cast<UDataTable>(Settings->SynergyEffectTable.Get());
-		LoadedSynergyEffectModifierTable = Cast<UDataTable>(Settings->SynergyEffectModifierTable.Get());
-		LoadedSynergyEffectTriggerTable = Cast<UDataTable>(Settings->SynergyEffectTriggerTable.Get());
 		LoadedShopTable = Cast<UDataTable>(Settings->ShopTable.Get());
 	}
 
@@ -314,14 +297,10 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	SetSkillTable(LoadedSkillTable);
 	SetBossTables(LoadedBossTable, LoadedBossHitPointTable, LoadedBossPatternTable);
 	SetStatusEffectTables(LoadedStatusEffectTable, LoadedStatusEffectModifierTable, LoadedStatusEffectTriggerTable);
-	SetEffectTables(LoadedEffectTable, LoadedEffectParamTable);
+	SetEffectTables(LoadedEffectTable, LoadedEffectSetTable, LoadedEffectParamTable);
 	SetSynergyTables(
 		LoadedSynergyTable,
-		LoadedSynergyTierTable,
-		LoadedSynergyTierEffectTable,
-		LoadedSynergyEffectTable,
-		LoadedSynergyEffectModifierTable,
-		LoadedSynergyEffectTriggerTable);
+		LoadedSynergyTierTable);
 
 	SetRelicTable(LoadedRelicTable,LoadedRelicModifierTable);
 	SetShopTable(LoadedShopTable);
@@ -368,10 +347,7 @@ bool UPBTableDataSubsystem::IsCollectionCatalogDataReady() const
 		&& IsValid(RelicTable)
 		&& IsValid(RelicModifierTable)
 		&& IsValid(SynergyTable)
-		&& IsValid(SynergyTierTable)
-		&& IsValid(SynergyEffectTable)
-		&& IsValid(SynergyEffectModifierTable)
-		&& IsValid(SynergyEffectTriggerTable);
+		&& IsValid(SynergyTierTable);
 }
 
 void UPBTableDataSubsystem::SetCollectionTable(UDataTable* InCollectionTable)
@@ -501,38 +477,29 @@ void UPBTableDataSubsystem::SetStatusEffectTables(
 
 void UPBTableDataSubsystem::SetEffectTables(
 	UDataTable* InEffectTable,
+	UDataTable* InEffectSetTable,
 	UDataTable* InEffectParamTable)
 {
 	EffectTable = InEffectTable;
+	EffectSetTable = InEffectSetTable;
 	EffectParamTable = InEffectParamTable;
 
-	UE_LOG(LogTemp, Log, TEXT("[TableData] Effect tables assigned. Effect=%s Param=%s"),
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Effect tables assigned. Effect=%s Set=%s Param=%s"),
 		*GetNameSafe(EffectTable),
+		*GetNameSafe(EffectSetTable),
 		*GetNameSafe(EffectParamTable));
 }
 
 void UPBTableDataSubsystem::SetSynergyTables(
 	UDataTable* InSynergyTable,
-	UDataTable* InSynergyTierTable,
-	UDataTable* InSynergyTierEffectTable,
-	UDataTable* InSynergyEffectTable,
-	UDataTable* InSynergyEffectModifierTable,
-	UDataTable* InSynergyEffectTriggerTable)
+	UDataTable* InSynergyTierTable)
 {
 	SynergyTable = InSynergyTable;
 	SynergyTierTable = InSynergyTierTable;
-	SynergyTierEffectTable = InSynergyTierEffectTable;
-	SynergyEffectTable = InSynergyEffectTable;
-	SynergyEffectModifierTable = InSynergyEffectModifierTable;
-	SynergyEffectTriggerTable = InSynergyEffectTriggerTable;
 
-	UE_LOG(LogTemp, Log, TEXT("[TableData] Synergy tables assigned. Synergy=%s Tier=%s TierEffect=%s Effect=%s Modifier=%s Trigger=%s"),
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Synergy tables assigned. Synergy=%s Tier=%s"),
 		*GetNameSafe(SynergyTable),
-		*GetNameSafe(SynergyTierTable),
-		*GetNameSafe(SynergyTierEffectTable),
-		*GetNameSafe(SynergyEffectTable),
-		*GetNameSafe(SynergyEffectModifierTable),
-		*GetNameSafe(SynergyEffectTriggerTable));
+		*GetNameSafe(SynergyTierTable));
 }
 
 #pragma region Bumper
@@ -814,6 +781,35 @@ bool UPBTableDataSubsystem::FindEffectRow(const FName RowName, FPBEffectTableRow
 	return FindTableRow(EffectTable, RowName, OutRow, TEXT("FindEffectRow"));
 }
 
+bool UPBTableDataSubsystem::GetEffectSetRows(
+	const FName EffectSetId,
+	TArray<FPBEffectSetRow>& OutRows) const
+{
+	OutRows.Reset();
+	if (!IsValid(EffectSetTable) || EffectSetId.IsNone())
+	{
+		return false;
+	}
+
+	EffectSetTable->ForeachRow<FPBEffectSetRow>(
+		TEXT("GetEffectSetRows"),
+		[EffectSetId, &OutRows](const FName&, const FPBEffectSetRow& Row)
+		{
+			if (Row.EffectSetId == EffectSetId)
+			{
+				OutRows.Add(Row);
+			}
+		});
+
+	OutRows.Sort(
+		[](const FPBEffectSetRow& Left, const FPBEffectSetRow& Right)
+		{
+			return Left.Order < Right.Order;
+		});
+
+	return OutRows.Num() > 0;
+}
+
 bool UPBTableDataSubsystem::GetEffectParamRows(
 	const FName EffectId,
 	TArray<FPBEffectParamRow>& OutRows) const
@@ -882,57 +878,6 @@ bool UPBTableDataSubsystem::GetSynergyTierRows(
 		[](const FPBSynergyTierRow& Left, const FPBSynergyTierRow& Right)
 		{
 			return Left.RequiredCount < Right.RequiredCount;
-		});
-
-	return OutRows.Num() > 0;
-}
-
-bool UPBTableDataSubsystem::FindSynergyEffectRow(const FName RowName, FPBSynergyEffectRow& OutRow) const
-{
-	return FindTableRow(SynergyEffectTable, RowName, OutRow, TEXT("FindSynergyEffectRow"));
-}
-
-bool UPBTableDataSubsystem::GetSynergyEffectModifierRows(
-	const FName SynergyEffectId,
-	TArray<FPBSynergyEffectModifierRow>& OutRows) const
-{
-	OutRows.Reset();
-	if (!IsValid(SynergyEffectModifierTable) || SynergyEffectId.IsNone())
-	{
-		return false;
-	}
-
-	SynergyEffectModifierTable->ForeachRow<FPBSynergyEffectModifierRow>(
-		TEXT("GetSynergyEffectModifierRows"),
-		[SynergyEffectId, &OutRows](const FName& RowName, const FPBSynergyEffectModifierRow& Row)
-		{
-			if (Row.SynergyEffectId == SynergyEffectId)
-			{
-				OutRows.Add(Row);
-			}
-		});
-
-	return OutRows.Num() > 0;
-}
-
-bool UPBTableDataSubsystem::GetSynergyEffectTriggerRows(
-	const FName SynergyEffectId,
-	TArray<FPBSynergyEffectTriggerRow>& OutRows) const
-{
-	OutRows.Reset();
-	if (!IsValid(SynergyEffectTriggerTable) || SynergyEffectId.IsNone())
-	{
-		return false;
-	}
-
-	SynergyEffectTriggerTable->ForeachRow<FPBSynergyEffectTriggerRow>(
-		TEXT("GetSynergyEffectTriggerRows"),
-		[SynergyEffectId, &OutRows](const FName& RowName, const FPBSynergyEffectTriggerRow& Row)
-		{
-			if (Row.SynergyEffectId == SynergyEffectId)
-			{
-				OutRows.Add(Row);
-			}
 		});
 
 	return OutRows.Num() > 0;

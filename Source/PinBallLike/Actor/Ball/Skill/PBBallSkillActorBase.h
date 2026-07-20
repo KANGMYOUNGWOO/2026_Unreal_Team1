@@ -45,6 +45,8 @@ public:
 	EPBBallSkillActorState GetSkillState() const { return State; }
 
 protected:
+	static const FName SkillCollisionProfileName;
+
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -62,6 +64,7 @@ protected:
 	virtual bool IsTargetValid(const AActor* Target) const;
 	const FPBBallSkillTableRow& GetSkillData() const { return SkillData; }
 	int32 GetSkillDamageAmount() const { return SkillDamageAmount; }
+	int32 GetSkillGroggyAmount() const { return SkillData.GroggyValue; }
 
 	void BindDamageEvents(UPBTimedAreaDamageComponent* DamageComponent);
 

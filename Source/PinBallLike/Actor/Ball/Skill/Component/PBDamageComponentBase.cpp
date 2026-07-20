@@ -1,5 +1,7 @@
 #include "PBDamageComponentBase.h"
 
+#include "GameFramework/Actor.h"
+#include "PinBallLike/Actor/Ball/Component/PBBallEffectRuntimeComponent.h"
 #include "PinBallLike/Interface/BossInterface.h"
 #include "PinBallLike/Interface/Damageable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
@@ -7,6 +9,11 @@
 UPBDamageComponentBase::UPBDamageComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+}
+
+void UPBDamageComponentBase::SetGroggyAmount(const int32 InGroggyAmount)
+{
+	GroggyAmount = FMath::Max(InGroggyAmount, 0);
 }
 
 bool UPBDamageComponentBase::CanApplyDamage(AActor* Target, const int32 DamageAmount) const
@@ -32,16 +39,29 @@ bool UPBDamageComponentBase::CanApplyDamage(AActor* Target, const int32 DamageAm
 
 bool UPBDamageComponentBase::ApplyDamage(AActor* Target, const int32 DamageAmount)
 {
-	if (!CanApplyDamage(Target, DamageAmount))
+	AActor* SourceActor = GetOwner() ? GetOwner()->GetOwner() : nullptr;
+	const UPBBallEffectRuntimeComponent* EffectRuntimeComponent = SourceActor
+		? SourceActor->FindComponentByClass<UPBBallEffectRuntimeComponent>()
+		: nullptr;
+	const int32 FinalDamageAmount = EffectRuntimeComponent
+		? EffectRuntimeComponent->ModifySkillDamage(DamageAmount)
+		: DamageAmount;
+
+	if (!CanApplyDamage(Target, FinalDamageAmount))
 	{
 		return false;
 	}
 
 	if (Target->GetClass()->ImplementsInterface(UBossInterface::StaticClass()))
 	{
-		if (!IBossInterface::Execute_DamageToBoss(Target, DamageAmount))
+		if (!IBossInterface::Execute_DamageToBoss(Target, FinalDamageAmount))
 		{
 			return false;
+		}
+
+		if (GroggyAmount > 0)
+		{
+			IBossInterface::Execute_IncreaseGroggy(Target, GroggyAmount);
 		}
 	}
 	else
@@ -57,9 +77,9 @@ bool UPBDamageComponentBase::ApplyDamage(AActor* Target, const int32 DamageAmoun
 			return false;
 		}
 
-		Damageable->TakeDamage(DamageAmount);
+		Damageable->TakeDamage(FinalDamageAmount);
 	}
 
-	OnDamageApplied.Broadcast(Target, DamageAmount);
+	OnDamageApplied.Broadcast(Target, FinalDamageAmount);
 	return true;
 }
