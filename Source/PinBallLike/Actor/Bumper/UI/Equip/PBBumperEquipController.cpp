@@ -198,6 +198,64 @@ bool UPBBumperEquipController::UnequipBumperRow(const FName RowName)
 	return true;
 }
 
+bool UPBBumperEquipController::UnequipBumperAtSlot(const EPBBumperEquipSlot EquipSlot)
+{
+	if (!IsValid(PlayerDataSubsystem))
+	{
+		return false;
+	}
+
+	FName EquippedRowName = NAME_None;
+	if (!PlayerDataSubsystem->GetEquippedBumperAtSlot(EquipSlot, EquippedRowName)
+		|| EquippedRowName.IsNone()
+		|| !PlayerDataSubsystem->UnequipBumperAtSlot(EquipSlot))
+	{
+		return false;
+	}
+
+	SelectedBumperEquipSlot = EquipSlot;
+	SelectedBumperRowName = EquippedRowName;
+	RefreshBumperEquipState(EquippedRowName);
+	return true;
+}
+
+bool UPBBumperEquipController::CanMoveEquippedBumper(
+	const FName RowName,
+	const EPBBumperEquipSlot SourceSlot,
+	const EPBBumperEquipSlot TargetSlot) const
+{
+	if (RowName.IsNone() || !IsValid(PlayerDataSubsystem))
+	{
+		return false;
+	}
+
+	FName CurrentSourceRowName = NAME_None;
+	EPBBumperSlotType SourceSlotType;
+	EPBBumperSlotType TargetSlotType;
+	return PlayerDataSubsystem->GetEquippedBumperAtSlot(SourceSlot, CurrentSourceRowName)
+		&& CurrentSourceRowName == RowName
+		&& PBBumperEquipSlotUtils::TryGetSlotType(SourceSlot, SourceSlotType)
+		&& PBBumperEquipSlotUtils::TryGetSlotType(TargetSlot, TargetSlotType)
+		&& SourceSlotType == TargetSlotType;
+}
+
+bool UPBBumperEquipController::MoveEquippedBumper(
+	const FName RowName,
+	const EPBBumperEquipSlot SourceSlot,
+	const EPBBumperEquipSlot TargetSlot)
+{
+	if (!CanMoveEquippedBumper(RowName, SourceSlot, TargetSlot)
+		|| !PlayerDataSubsystem->MoveEquippedBumperBetweenSlots(SourceSlot, TargetSlot))
+	{
+		return false;
+	}
+
+	SelectedBumperEquipSlot = TargetSlot;
+	SelectedBumperRowName = RowName;
+	RefreshBumperEquipState(RowName);
+	return true;
+}
+
 bool UPBBumperEquipController::EquipSelectedBumper()
 {
 	return EquipBumperRow(SelectedBumperRowName);

@@ -37,6 +37,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
 	bool UnequipBumperAtSlot(EPBBumperEquipSlot EquipSlot);
 
+	UFUNCTION(BlueprintCallable, Category = "PlayerData|Bumper")
+	bool MoveEquippedBumperBetweenSlots(
+		EPBBumperEquipSlot SourceSlot,
+		EPBBumperEquipSlot TargetSlot);
+
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Bumper")
 	bool GetEquippedBumperAtSlot(EPBBumperEquipSlot EquipSlot, FName& OutBumperRowId) const;
 

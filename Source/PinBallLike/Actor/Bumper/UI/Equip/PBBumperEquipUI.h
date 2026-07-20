@@ -6,9 +6,9 @@
 #include "PBBumperEquipUI.generated.h"
 
 class UPBBumperEquipController;
+class UPBBumperEquipSlotDragHandle;
 class UPBBumperInfoPanelViewModel;
 class UPBBumperListItemObject;
-class UPBBumperDragDropOperation;
 class UDragDropOperation;
 class UBorder;
 class UButton;
@@ -60,6 +60,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
 	bool UnequipBumperRow(FName RowName);
+
+	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
+	bool UnequipBumperAtSlot(EPBBumperEquipSlot EquipSlot);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|EquipUI")
 	bool EquipSelectedBumper();
@@ -127,6 +130,14 @@ private:
 	void SetBoardSlotButtonState(UButton* Button, EPBBumperEquipSlot EquipSlot) const;
 	void SetCategoryButtonState(UButton* Button, EPBBumperSlotType SlotType) const;
 	bool CanEquipBumperRowAtSlot(FName RowName, EPBBumperEquipSlot EquipSlot) const;
+	bool CanMoveEquippedBumper(
+		FName RowName,
+		EPBBumperEquipSlot SourceSlot,
+		EPBBumperEquipSlot TargetSlot) const;
+	bool MoveEquippedBumper(
+		FName RowName,
+		EPBBumperEquipSlot SourceSlot,
+		EPBBumperEquipSlot TargetSlot);
 	bool FindBoardSlotAtScreenPosition(const FVector2D& ScreenPosition, EPBBumperEquipSlot& OutEquipSlot) const;
 	void SetHoveredDropSlot(TOptional<EPBBumperEquipSlot> EquipSlot);
 	void BroadcastSelectedSlotChanged();
@@ -273,7 +284,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBumperEquipController> EquipController;
 
-	TMap<EPBBumperEquipSlot, TWeakObjectPtr<UImage>> BoardSlotIconImages;
+	TMap<EPBBumperEquipSlot, TWeakObjectPtr<UPBBumperEquipSlotDragHandle>> BoardSlotDragHandles;
 	TMap<EPBBumperEquipSlot, TWeakObjectPtr<UTextBlock>> BoardSlotLabels;
 	TOptional<EPBBumperEquipSlot> HoveredDropSlot;
 

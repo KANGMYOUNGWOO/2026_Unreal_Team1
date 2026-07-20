@@ -104,6 +104,31 @@ bool FPBBumperIndependentEquipmentTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Right slot can be queried"),
 		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundRight, ActualRow));
 	TestEqual(TEXT("Right slot keeps the right row"), ActualRow, RightRow);
+	TestTrue(TEXT("Dragging onto the matching occupied slot swaps both Bumpers atomically"),
+		PlayerData->MoveEquippedBumperBetweenSlots(
+			EPBBumperEquipSlot::ReboundLeft,
+			EPBBumperEquipSlot::ReboundRight));
+	TestTrue(TEXT("The swap moved the right row to the left slot"),
+		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, ActualRow));
+	TestEqual(TEXT("The left slot contains the previous right row"), ActualRow, RightRow);
+	TestTrue(TEXT("The swap moved the left row to the right slot"),
+		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundRight, ActualRow));
+	TestEqual(TEXT("The right slot contains the previous left row"), ActualRow, LeftRow);
+	TestFalse(TEXT("A Bumper cannot be moved into a different slot category"),
+		PlayerData->MoveEquippedBumperBetweenSlots(
+			EPBBumperEquipSlot::ReboundRight,
+			EPBBumperEquipSlot::SideRight));
+	TestTrue(TEXT("Swapping the same pair again restores the original loadout"),
+		PlayerData->MoveEquippedBumperBetweenSlots(
+			EPBBumperEquipSlot::ReboundRight,
+			EPBBumperEquipSlot::ReboundLeft));
+	TestTrue(TEXT("The restored left slot can be queried"),
+		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, ActualRow));
+	TestEqual(TEXT("The restored left slot keeps the left row"), ActualRow, LeftRow);
+	TestTrue(TEXT("Dropping onto the same physical slot is idempotent"),
+		PlayerData->MoveEquippedBumperBetweenSlots(
+			EPBBumperEquipSlot::ReboundLeft,
+			EPBBumperEquipSlot::ReboundLeft));
 
 	TestTrue(TEXT("Compatibility query prefers the left row"),
 		PlayerData->GetEquippedBumper(EPBBumperSlotType::Rebound, ActualRow));
@@ -116,6 +141,19 @@ bool FPBBumperIndependentEquipmentTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Right slot remains equipped"),
 		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundRight, ActualRow));
 	TestEqual(TEXT("Right slot still has its original row"), ActualRow, RightRow);
+	TestTrue(TEXT("An occupied Bumper can move into an empty matching slot"),
+		PlayerData->MoveEquippedBumperBetweenSlots(
+			EPBBumperEquipSlot::ReboundRight,
+			EPBBumperEquipSlot::ReboundLeft));
+	TestFalse(TEXT("Moving to an empty slot clears the source slot"),
+		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundRight, ActualRow));
+	TestTrue(TEXT("Moving to an empty slot fills the target slot"),
+		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, ActualRow));
+	TestEqual(TEXT("The moved row remains unchanged"), ActualRow, RightRow);
+	TestTrue(TEXT("The moved Bumper can return to its original slot"),
+		PlayerData->MoveEquippedBumperBetweenSlots(
+			EPBBumperEquipSlot::ReboundLeft,
+			EPBBumperEquipSlot::ReboundRight));
 
 	TestTrue(TEXT("Compatibility query falls back to the right row"),
 		PlayerData->GetEquippedBumper(EPBBumperSlotType::Rebound, ActualRow));

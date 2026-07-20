@@ -3,11 +3,19 @@
 #include "PBBumperDragDropOperation.h"
 #include "PBBumperListItemObject.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Components/TextBlock.h"
 #include "InputCoreTypes.h"
 
 void UPBBumperCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 {
 	BumperListItem = Cast<UPBBumperListItemObject>(ListItemObject);
+	if (BumperName && IsValid(BumperListItem))
+	{
+		BumperName->SetAutoWrapText(false);
+		BumperName->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
+		BumperName->SetClipping(EWidgetClipping::ClipToBounds);
+		BumperName->SetToolTipText(BumperListItem->DisplayName);
+	}
 
 	IUserObjectListEntry::NativeOnListItemObjectSet(ListItemObject);
 }

@@ -209,6 +209,63 @@ bool UPBPlayerDataSubsystem::UnequipBumperAtSlot(const EPBBumperEquipSlot EquipS
 	return false;
 }
 
+bool UPBPlayerDataSubsystem::MoveEquippedBumperBetweenSlots(
+	const EPBBumperEquipSlot SourceSlot,
+	const EPBBumperEquipSlot TargetSlot)
+{
+	FName SourceRowId = NAME_None;
+	if (!GetEquippedBumperAtSlot(SourceSlot, SourceRowId))
+	{
+		return false;
+	}
+
+	if (SourceSlot == TargetSlot)
+	{
+		return true;
+	}
+
+	EPBBumperSlotType SourceSlotType;
+	EPBBumperSlotType TargetSlotType;
+	if (!PBBumperEquipSlotUtils::TryGetSlotType(SourceSlot, SourceSlotType)
+		|| !PBBumperEquipSlotUtils::TryGetSlotType(TargetSlot, TargetSlotType)
+		|| SourceSlotType != TargetSlotType)
+	{
+		return false;
+	}
+
+	SourceRowId = PBBumperAssetIds::NormalizeBumperRowId(SourceRowId);
+	if (SourceRowId.IsNone() || !ValidateBumperForSlot(TargetSlot, SourceRowId))
+	{
+		return false;
+	}
+
+	FName TargetRowId = NAME_None;
+	const bool bHasTargetRow = GetEquippedBumperAtSlot(TargetSlot, TargetRowId);
+	if (bHasTargetRow)
+	{
+		TargetRowId = PBBumperAssetIds::NormalizeBumperRowId(TargetRowId);
+		if (TargetRowId.IsNone()
+			|| TargetRowId == SourceRowId
+			|| !ValidateBumperForSlot(SourceSlot, TargetRowId))
+		{
+			return false;
+		}
+	}
+
+	EquippedBumperRowIds.Add(TargetSlot, SourceRowId);
+	if (bHasTargetRow)
+	{
+		EquippedBumperRowIds.Add(SourceSlot, TargetRowId);
+	}
+	else
+	{
+		EquippedBumperRowIds.Remove(SourceSlot);
+	}
+
+	SaveBumperLoadout();
+	return true;
+}
+
 bool UPBPlayerDataSubsystem::GetEquippedBumperAtSlot(
 	const EPBBumperEquipSlot EquipSlot,
 	FName& OutBumperRowId) const

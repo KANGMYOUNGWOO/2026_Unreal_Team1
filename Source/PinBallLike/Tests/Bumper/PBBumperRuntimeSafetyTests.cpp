@@ -4,6 +4,7 @@
 #include "Engine/GameInstance.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperCounterShieldComponent.h"
 #include "PinBallLike/Actor/Bumper/PBBumperSpawner.h"
+#include "PinBallLike/Actor/Bumper/UI/Equip/PBBumperDragDropOperation.h"
 #include "PinBallLike/Actor/Bumper/UI/Equip/PBBumperEquipController.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 
@@ -89,6 +90,45 @@ bool FPBBumperEquipEmptyAssetIdsTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("A catalog with no valid asset ids still reaches a ready state"),
 		Controller->bBumperListItemObjectsBuilt);
 	TestEqual(TEXT("Catalog readiness is broadcast exactly once"), CatalogReadyCount, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBBumperEquippedDragSourceTest,
+	"PinBallLike.Bumper.UI.EquippedDragTracksSourceSlot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBBumperEquippedDragSourceTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	UPBBumperDragDropOperation* DragOperation = NewObject<UPBBumperDragDropOperation>();
+	if (!TestNotNull(TEXT("Bumper drag operation can be created"), DragOperation))
+	{
+		return false;
+	}
+
+	const FName BumperRowName(TEXT("Bumper_Top_Test"));
+	DragOperation->InitializeBumperDrag(BumperRowName);
+	TestTrue(TEXT("A catalog drag remains valid"), DragOperation->IsValidBumperDrag());
+	TestFalse(TEXT("A catalog drag has no equipped source slot"), DragOperation->HasSourceEquipSlot());
+
+	DragOperation->InitializeEquippedBumperDrag(
+		BumperRowName,
+		EPBBumperEquipSlot::TopRight);
+	TestTrue(TEXT("An equipped drag records its source slot"), DragOperation->HasSourceEquipSlot());
+	TestEqual(
+		TEXT("The equipped drag preserves the physical source slot"),
+		DragOperation->SourceEquipSlot,
+		EPBBumperEquipSlot::TopRight);
+	TestEqual(
+		TEXT("The equipped drag visual preserves the pointer offset inside its source icon"),
+		DragOperation->Pivot,
+		EDragPivot::MouseDown);
+	TestEqual(
+		TEXT("The equipped drag visual has no additional pointer offset"),
+		DragOperation->Offset,
+		FVector2D::ZeroVector);
 	return true;
 }
 

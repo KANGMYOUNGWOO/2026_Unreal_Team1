@@ -6,6 +6,7 @@
 #include "PBBumperCatalogEntryWidget.generated.h"
 
 class UDragDropOperation;
+class UTextBlock;
 class UPBBumperListItemObject;
 
 UCLASS(Abstract, BlueprintType, Blueprintable)
@@ -24,6 +25,9 @@ protected:
 		const FGeometry& InGeometry,
 		const FPointerEvent& InMouseEvent,
 		UDragDropOperation*& OutOperation) override;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Bumper|ListItem", meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> BumperName;
 
 private:
 	UPROPERTY(Transient)
