@@ -135,6 +135,7 @@ private:
 #pragma region Ball
 
 public:
+	bool GetAllBallRows(TArray<FName>& OutRowNames, TArray<FPBBallTableRow>& OutRows) const;
 	bool FindBallRow(FName RowName, FPBBallTableRow& OutRow) const;
 	bool FindBallStarLevelRow(FName RowName, FPBBallStarLevelRow& OutRow) const;
 	bool FindBallStarLevelRow(FName BallId, int32 StarLevel, FName& OutRowName, FPBBallStarLevelRow& OutRow) const;

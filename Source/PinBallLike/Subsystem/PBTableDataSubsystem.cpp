@@ -592,6 +592,13 @@ bool UPBTableDataSubsystem::GetGameplayEffectParamRows(
 
 #pragma region Ball
 
+bool UPBTableDataSubsystem::GetAllBallRows(
+	TArray<FName>& OutRowNames,
+	TArray<FPBBallTableRow>& OutRows) const
+{
+	return GetAllTableRows(BallTable, OutRowNames, OutRows, TEXT("GetAllBallRows"));
+}
+
 bool UPBTableDataSubsystem::FindBallRow(FName RowName, FPBBallTableRow& OutRow) const
 {
 	return FindTableRow(BallTable, RowName, OutRow, TEXT("FindBallRow"));
