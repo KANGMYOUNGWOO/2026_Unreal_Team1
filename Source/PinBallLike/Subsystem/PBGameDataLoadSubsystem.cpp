@@ -122,6 +122,10 @@ FGuid UPBGameDataLoadSubsystem::LoadPrimaryAssetsByNamesAsync(
 
 void UPBGameDataLoadSubsystem::UnloadPrimaryAssets()
 {
+	const int32 LoadedPrimaryAssetCount = LoadedPrimaryAssets.Num();
+	const int32 LoadedBundleCount = LoadedPrimaryAssetIdsByBundle.Num();
+	const int32 ActiveLoadHandleCount = ActivePrimaryAssetLoadHandles.Num();
+
 	LoadedPrimaryAssets.Empty();
 	LoadedPrimaryAssetIdsByBundle.Empty();
 	ActivePrimaryAssetLoadRequests.Empty();
@@ -143,6 +147,12 @@ void UPBGameDataLoadSubsystem::UnloadPrimaryAssets()
 		SoftReferenceLoadHandle->ReleaseHandle();
 		SoftReferenceLoadHandle.Reset();
 	}
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[GameDataLoad] All primary assets unloaded. PrimaryAssets=%d Bundles=%d ActiveHandles=%d"),
+		LoadedPrimaryAssetCount,
+		LoadedBundleCount,
+		ActiveLoadHandleCount);
 }
 
 void UPBGameDataLoadSubsystem::UnloadPrimaryAssetBundle(const FName BundleName)
