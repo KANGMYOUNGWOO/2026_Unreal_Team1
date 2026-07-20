@@ -9,10 +9,18 @@
 #include "Component/PBBallPhysicsComponent.h"
 #include "Component/PBBallResourceComponent.h"
 #include "Component/PBBallSkillComponent.h"
+#include "Components/BillboardComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
+#include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
+#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
+#include "PinBallLike/Collision/PBCollisionChannels.h"
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
+#include "Engine/Texture2D.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 APBBallBase::APBBallBase()
 {
@@ -27,6 +35,12 @@ APBBallBase::APBBallBase()
 	CollisionSphere->SetEnableGravity(false);
 	CollisionSphere->SetGenerateOverlapEvents(true);
 	CollisionSphere->SetNotifyRigidBodyCollision(true);
+
+	// Visual
+	BillboardComponent = CreateDefaultSubobject<UBillboardComponent>(TEXT("Billboard"));
+	BillboardComponent->SetupAttachment(CollisionSphere);
+	BillboardComponent->SetUsingAbsoluteScale(true);
+	BillboardComponent->SetWorldScale3D(FVector(25.0f));
 	
 	// Stat
 	StatComponent = CreateDefaultSubobject<UPBBaseStatComponent>(TEXT("StatComponent"));
@@ -121,6 +135,101 @@ void APBBallBase::SetCombatRole(EPBBallPartyRole NewCombatRole)
 	}
 }
 
+void APBBallBase::AddBossCollisionIgnoreRequest(UObject* Requester)
+{
+	if (!IsValid(Requester))
+	{
+		return;
+	}
+
+	BossCollisionIgnoreRequesters.Add(TWeakObjectPtr<UObject>(Requester));
+	RefreshBossCollisionResponse();
+}
+
+void APBBallBase::RemoveBossCollisionIgnoreRequest(UObject* Requester)
+{
+	BossCollisionIgnoreRequesters.Remove(TWeakObjectPtr<UObject>(Requester));
+	RefreshBossCollisionResponse();
+}
+
+void APBBallBase::RemoveInvalidBossCollisionIgnoreRequests()
+{
+	for (auto It = BossCollisionIgnoreRequesters.CreateIterator(); It; ++It)
+	{
+		if (!It->IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+}
+
+void APBBallBase::RefreshBossCollisionResponse()
+{
+	RemoveInvalidBossCollisionIgnoreRequests();
+	if (!CollisionSphere)
+	{
+		return;
+	}
+
+	if (!BossCollisionIgnoreRequesters.IsEmpty())
+	{
+		GetWorldTimerManager().ClearTimer(BossCollisionRestoreTimerHandle);
+
+		if (!bBossCollisionResponseOverridden)
+		{
+			BossCollisionResponseBeforeIgnore =
+				CollisionSphere->GetCollisionResponseToChannel(PBCollisionChannels::Boss);
+			bBossCollisionResponseOverridden = true;
+		}
+
+		CollisionSphere->SetCollisionResponseToChannel(PBCollisionChannels::Boss, ECR_Ignore);
+		return;
+	}
+
+	if (bBossCollisionResponseOverridden)
+	{
+		if (IsOverlappingBoss())
+		{
+			if (!GetWorldTimerManager().IsTimerActive(BossCollisionRestoreTimerHandle))
+			{
+				GetWorldTimerManager().SetTimer(
+					BossCollisionRestoreTimerHandle,
+					this,
+					&APBBallBase::RefreshBossCollisionResponse,
+					0.02f,
+					true);
+			}
+			return;
+		}
+
+		GetWorldTimerManager().ClearTimer(BossCollisionRestoreTimerHandle);
+		CollisionSphere->SetCollisionResponseToChannel(
+			PBCollisionChannels::Boss,
+			BossCollisionResponseBeforeIgnore);
+		bBossCollisionResponseOverridden = false;
+	}
+}
+
+bool APBBallBase::IsOverlappingBoss() const
+{
+	const UWorld* World = GetWorld();
+	if (!World || !CollisionSphere)
+	{
+		return false;
+	}
+
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(PBCollisionChannels::Boss);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BallBossCollisionRestore), false, this);
+	return World->OverlapAnyTestByObjectType(
+		CollisionSphere->GetComponentLocation(),
+		FQuat::Identity,
+		ObjectQueryParams,
+		FCollisionShape::MakeSphere(CollisionSphere->GetScaledSphereRadius()),
+		QueryParams);
+}
+
 bool APBBallBase::TryActivateSkill()
 {
 	if (IsHidden() || CombatRole == EPBBallPartyRole::None)
@@ -160,4 +269,45 @@ void APBBallBase::RefreshRelicStats(const UPBRelicCalculator* RelicCalculator)
 void APBBallBase::BeginPlay()
 {
 	Super::BeginPlay();
+	ApplyBallVisualData();
+}
+
+void APBBallBase::ApplyBallVisualData()
+{
+	UTexture2D* BallSprite = ResolveBallSprite();
+	if (!BallSprite)
+	{
+		return;
+	}
+
+	if (!BillboardComponent)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[BallVisual] Billboard component not found. BallId=%s Actor=%s"),
+			*BallInstanceData.BallId.ToString(),
+			*GetNameSafe(this));
+		return;
+	}
+
+	BillboardComponent->SetSprite(BallSprite);
+}
+
+UTexture2D* APBBallBase::ResolveBallSprite() const
+{
+	if (BallInstanceData.BallId.IsNone())
+	{
+		return nullptr;
+	}
+
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr;
+	if (!GameDataLoadSubsystem)
+	{
+		return nullptr;
+	}
+
+	const FPrimaryAssetId BallAssetId(PBBallAssetIds::Type::BallData, BallInstanceData.BallId);
+	const UPBBallDataAsset* BallDataAsset =
+		Cast<UPBBallDataAsset>(GameDataLoadSubsystem->GetLoadedPrimaryAsset(BallAssetId));
+	return BallDataAsset ? BallDataAsset->Sprite.Get() : nullptr;
 }

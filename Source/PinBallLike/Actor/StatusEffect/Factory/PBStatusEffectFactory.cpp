@@ -6,6 +6,7 @@
 #include "PinBallLike/Actor/StatusEffect/Effects/PBStrengthStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBBurnStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBShieldStatusEffect.h"
+#include "PinBallLike/Actor/StatusEffect/Effects/PBPiercingStatusEffect.h"
 #include "PinBallLike/Actor/StatusEffect/Effects/PBZeroGravityStatusEffect.h"
 #include "PinBallLike/Table/StatusEffect/PBStatusEffectAssetIds.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectModifierRow.h"
@@ -78,7 +79,9 @@ TMap<FName, TSubclassOf<UPBBaseStatusEffect>>& PBStatusEffectFactory::GetStatusE
 		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Strength, UPBStrengthStatusEffect::StaticClass());
 		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Burn, UPBBurnStatusEffect::StaticClass());
 		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Shield, UPBShieldStatusEffect::StaticClass());
+		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::InvincibleSkill, UPBBaseStatusEffect::StaticClass());
 		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::ZeroGravity, UPBZeroGravityStatusEffect::StaticClass());
+		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Piercing, UPBPiercingStatusEffect::StaticClass());
 	}
 
 	return StatusEffectClassMap;

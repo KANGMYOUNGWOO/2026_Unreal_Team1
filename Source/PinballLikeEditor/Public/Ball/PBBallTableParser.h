@@ -27,9 +27,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Sheet")
 	FPBSheetAssetPathPreset IconPreset;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Sheet")
-	FPBSheetAssetPathPreset ActorPreset;
+	FPBSheetAssetPathPreset SpritePreset;
 
 	UPBBallDataAsset* SetupBallDataAsset(FName RowName) const;
 };

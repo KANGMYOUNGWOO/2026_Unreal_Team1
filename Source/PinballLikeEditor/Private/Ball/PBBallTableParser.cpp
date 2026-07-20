@@ -5,7 +5,6 @@
 
 #include "PBSheetParserUtils.h"
 #include "Engine/Texture2D.h"
-#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
 
@@ -17,8 +16,8 @@ UPBBallTableParser::UPBBallTableParser()
 	DataAssetPreset.NameFormat = TEXT("DA_{0}");
 	IconPreset.FolderPath.Path = TEXT("/Game/Resources/Ball/Icon");
 	IconPreset.NameFormat = TEXT("Icon_{0}");
-	ActorPreset.FolderPath.Path = TEXT("/Game/Blueprints/Ball/Actor");
-	ActorPreset.NameFormat = TEXT("BP_{0}");
+	SpritePreset.FolderPath.Path = TEXT("/Game/Resources/Ball/Sprite");
+	SpritePreset.NameFormat = TEXT("Sprite_{0}");
 }
 
 const TCHAR* UPBBallTableParser::GetParserName() const
@@ -62,10 +61,10 @@ UPBBallDataAsset* UPBBallTableParser::SetupBallDataAsset(const FName RowName) co
 	{
 		BallDataAsset->Icon = FindObject<UTexture2D>(IconPreset, RowName);
 	}
-	
-	if (ActorPreset.IsValid())
+
+	if (SpritePreset.IsValid())
 	{
-		BallDataAsset->ActorClass = FindBlueprintClass<APBBallBase>(ActorPreset, RowName);
+		BallDataAsset->Sprite = FindObject<UTexture2D>(SpritePreset, RowName);
 	}
 
 	(void)BallDataAsset->MarkPackageDirty();

@@ -24,6 +24,7 @@ public:
 		UPBBallPhysicsComponent* InPhysicsComponent,
 		IStatProvider* InStatProvider,
 		IDamageable* InOwnerDamageable);
+	bool ProcessBossContact(AActor* BossActor, const FVector& HitLocation, bool bDamageOwner = true);
 
 protected:
 	virtual void BeginPlay() override;

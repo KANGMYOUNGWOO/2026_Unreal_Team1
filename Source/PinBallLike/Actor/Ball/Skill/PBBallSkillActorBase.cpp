@@ -219,7 +219,7 @@ void APBBallSkillActorBase::HandleDamageApplied(
 	if (UGameplayMessageSubsystem::HasInstance(this))
 	{
 		FPBDamageLogMessage Message;
-		Message.LogType = EPBDamageLogType::Skill;
+		Message.Style = EPBDamageLogStyle::PlayerSkill;
 		Message.DamageAmount = AppliedDamage;
 		Message.HitLocation = HitLocation;
 

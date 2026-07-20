@@ -49,6 +49,9 @@ private:
 	UFUNCTION()
 	void HandleStatusEffectRemoved(FName StatusEffectId, int32 StackCount);
 
+	UFUNCTION()
+	void HandleStatusEffectStackChanged(FName StatusEffectId, int32 StackCount);
+
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallStatusViewModel> StatusViewModel;
 

@@ -12,13 +12,13 @@
 #include "PinBallLike/Struct/Ball/PBBallInstanceData.h"
 #include "PinBallLike/Struct/Deck/PBDeckOwnedBallData.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
-#include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 
 UPBPartyDeploymentComponent::UPBPartyDeploymentComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	BallActorClass = APBBallBase::StaticClass();
 }
 
 void UPBPartyDeploymentComponent::InitializeDependencies(FPBPartyDeploymentDependencies InDependencies)
@@ -206,11 +206,9 @@ APBBallBase* UPBPartyDeploymentComponent::SpawnBallFromDeckInstance(
 		return nullptr;
 	}
 
-	const UPBBallDeckAssetLoadService* AssetLoadService = DeckSubsystem->GetAssetLoadService();
-	UClass* BallActorClass = AssetLoadService ? AssetLoadService->GetLoadedBallActorClass(BallInstanceId) : nullptr;
 	if (!IsValid(BallActorClass))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PartyDeployment] SpawnBall failed. Ball actor class is not loaded. BallInstanceId=%d BallId=%s StarLevel=%d"),
+		UE_LOG(LogTemp, Warning, TEXT("[PartyDeployment] SpawnBall failed. Ball actor class is not set. BallInstanceId=%d BallId=%s StarLevel=%d"),
 			BallInstanceId,
 			*BallInstanceData->BallId.ToString(),
 			BallInstanceData->StarLevel);

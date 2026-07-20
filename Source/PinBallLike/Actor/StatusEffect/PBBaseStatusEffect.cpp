@@ -76,12 +76,29 @@ void UPBBaseStatusEffect::TickStatusEffect(const float DeltaTime)
 
 	if (StatusEffectRow.DurationPolicy == EPBStatusEffectDurationPolicy::Seconds)
 	{
-		RemainingDuration -= DeltaTime;
+		RemainingDuration = FMath::Max(0.0f, RemainingDuration - DeltaTime);
+
+		if (StatusEffectRow.StackType == EPBStatusEffectStackType::AddDuration
+			&& StatusEffectRow.DurationValue > UE_SMALL_NUMBER
+			&& RemainingDuration > 0.0f)
+		{
+			StackCount = FMath::Max(
+				1,
+				FMath::CeilToInt(RemainingDuration / StatusEffectRow.DurationValue));
+		}
 	}
 }
 
 void UPBBaseStatusEffect::AddStack()
 {
+	if (StatusEffectRow.StackType == EPBStatusEffectStackType::AddDuration
+		&& StatusEffectRow.DurationPolicy == EPBStatusEffectDurationPolicy::Seconds)
+	{
+		RemainingDuration += FMath::Max(0.0f, StatusEffectRow.DurationValue);
+		++StackCount;
+		return;
+	}
+
 	RefreshDuration();
 
 	if (StatusEffectRow.StackType != EPBStatusEffectStackType::Add)

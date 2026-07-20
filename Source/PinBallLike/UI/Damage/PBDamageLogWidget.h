@@ -15,7 +15,7 @@ class PINBALLLIKE_API UPBDamageLogWidget : public UUserWidget
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "UI|Damage Log")
-	bool ShowDamage(EPBDamageLogType InLogType, int32 Damage, FVector WorldLocation);
+	bool ShowDamage(EPBDamageLogStyle InLogType, int32 Damage, FVector WorldLocation);
 
 	UFUNCTION(BlueprintCallable, Category = "UI|Damage Log")
 	void ReleaseEntry(UUserWidget* Entry);
@@ -29,7 +29,7 @@ protected:
 	void OnEntryCreated(UUserWidget* Entry);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI|Damage Log")
-	void OnEntryActivated(UUserWidget* Entry, EPBDamageLogType InLogType, int32 Damage, FVector WorldLocation);
+	void OnEntryActivated(UUserWidget* Entry, EPBDamageLogStyle InLogType, int32 Damage, FVector WorldLocation);
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UPanelWidget> EntryContainer;

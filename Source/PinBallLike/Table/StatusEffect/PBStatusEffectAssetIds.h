@@ -19,5 +19,7 @@ namespace PBStatusEffectAssetIds
 		inline const FName Strength(TEXT("Strength"));
 		inline const FName BounceUp(TEXT("BounceUp"));
 		inline const FName ZeroGravity(TEXT("ZeroGravity"));
+		inline const FName InvincibleSkill(TEXT("InvincibleSkill"));
+		inline const FName Piercing(TEXT("Piercing"));
 	}
 }
