@@ -14,9 +14,12 @@
 #include "Engine/GameInstance.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
+#include "PinBallLike/Struct/Effect/PBEffectContext.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/PBEffectSubsystem.h"
 #include "PinBallLike/Subsystem/Relic/PBRelicSubsystem.h"
 #include "PinBallLike/Relic/PBRelicCalculator.h"
 
@@ -327,8 +330,8 @@ void APBCombatPartyController::SetPartyBalls(const TArray<TObjectPtr<APBBallBase
 	PartyBalls = InPartyBalls;
 	
 	RefreshPartyRelicStats();
-	
 	RebuildPartyRoles();
+	ApplyActiveSynergyEffects();
 }
 
 void APBCombatPartyController::RemovePartyBall(APBBallBase* Ball)
@@ -421,6 +424,32 @@ void APBCombatPartyController::RebuildPartyRoles()
 	}
 }
 
+void APBCombatPartyController::ApplyActiveSynergyEffects()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	UPBEffectSubsystem* EffectSubsystem = GameInstance->GetSubsystem<UPBEffectSubsystem>();
+	if (!EffectSubsystem)
+	{
+		return;
+	}
+
+	FPBEffectContext EffectContext;
+	EffectContext.WorldContextObject = this;
+	EffectContext.SourceActor = this;
+	EffectContext.TargetActors.Reserve(PartyBalls.Num());
+	for (AActor* Ball : GetValidPartyBalls())
+	{
+		EffectContext.TargetActors.Add(Ball);
+	}
+
+	EffectSubsystem->NotifyTrigger(GameplayTags::TriggerEvent_Battle_PartyBuilt, EffectContext);
+}
+
 void APBCombatPartyController::ApplyPartyRoles()
 {
 	if (LeaderBall)
@@ -498,7 +527,16 @@ void APBCombatPartyController::RequestUseSkill(const int32 SkillInputValue)
 		return;
 	}
 
-	Ball->TryActivateSkill();
+	UPBBaseResourceComponent* ResourceComponent = Ball->GetResourceComponent();
+	const float MaxMana = ResourceComponent
+		? ResourceComponent->GetResourceMax(PBResourceNames::Mana)
+		: 0.0f;
+	if (MaxMana > 0.0f
+		&& ResourceComponent->GetResourceCurrent(PBResourceNames::Mana) >= MaxMana
+		&& Ball->TryActivateSkill())
+	{
+		ResourceComponent->ConsumeResource(PBResourceNames::Mana, MaxMana);
+	}
 }
 
 APBBallBase* APBCombatPartyController::FindPartyBallByInstanceId(const int32 BallInstanceId) const

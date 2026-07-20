@@ -9,6 +9,7 @@ class UPBBossEnrageWidget;
 class UPBBossIntroWidget;
 class UPBBossStatusWidget;
 class UPBGolemHandStatusWidget;
+class UPBOctopusTentacleStatusWidget;
 
 UCLASS()
 class PINBALLLIKE_API UPBBossUILayerWidget : public UUserWidget
@@ -34,6 +35,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBGolemHandStatusWidget> GolemHandStatusWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBOctopusTentacleStatusWidget> OctopusTentacleStatusWidget;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBossEnrageWidget> BossEnrageWidget;

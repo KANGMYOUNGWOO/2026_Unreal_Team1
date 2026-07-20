@@ -4,9 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "PinBallLike/Actor/Bumper/Projectile/PBBumperProjectile.h"
 #include "PBTurretFireComponent.generated.h"
 
 class AProjectileBase;
+class UNiagaraSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FPBTurretProjectileSignature,
@@ -25,6 +27,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Fire")
 	AActor* FireOnce();
+
+	void ConfigureAttack(
+		AActor* InTargetActor,
+		EPBBumperProjectilePayload InPayload,
+		int32 InPower,
+		int32 InMaxShotCount,
+		UNiagaraSystem* InDeliveryVfx = nullptr,
+		UNiagaraSystem* InImpactVfx = nullptr);
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Pool")
 	void ReleaseProjectile(AActor* Projectile);
@@ -58,6 +68,7 @@ protected:
 	int32 MaxPoolSize = 20;
 
 private:
+	void HandleBumperProjectileResolved(APBBumperProjectile* Projectile, bool bApplied);
 	FTransform GetMuzzleTransform() const;
 	AProjectileBase* GetProjectileFromPool();
 	AProjectileBase* SpawnProjectileActor();
@@ -72,4 +83,16 @@ private:
 	TArray<TObjectPtr<AProjectileBase>> ActiveProjectiles;
 
 	TMap<TWeakObjectPtr<AProjectileBase>, FTimerHandle> ProjectileLifeTimerHandles;
+
+	TWeakObjectPtr<AActor> AttackTarget;
+	EPBBumperProjectilePayload AttackPayload = EPBBumperProjectilePayload::None;
+	int32 AttackPower = 0;
+	int32 MaxAttackShotCount = 0;
+	int32 FiredAttackShotCount = 0;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> DeliveryVfx;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> ImpactVfx;
 };

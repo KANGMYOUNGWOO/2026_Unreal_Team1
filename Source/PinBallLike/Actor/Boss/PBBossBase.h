@@ -32,13 +32,6 @@ enum class EPBBossState : uint8
 	Dead
 };
 
-UENUM(BlueprintType)
-enum class EPBBossMovementType : uint8
-{
-	Fixed,
-	Movable
-};
-
 UCLASS()
 class PINBALLLIKE_API APBBossBase : public APawn, public IBossInterface
 {
@@ -103,12 +96,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Base State")
 	bool IsEnragedPhase() const;
 
-	UFUNCTION(BlueprintPure, Category = "Boss|Base Type")
-	bool IsFixedBoss() const;
-
-	UFUNCTION(BlueprintPure, Category = "Boss|Base Type")
-	bool IsMovableBoss() const;
-
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Boss|Base State")
 	void StartIdleState();
 
@@ -154,7 +141,7 @@ public:
 	void NotifyBossDamaged(FName HitPointName, int32 DamageAmount);
 
 	// BossInterface를 통해 보스 데미지를 적용합니다.
-	virtual void DamageToBoss_Implementation(int32 DamageAmount) override;
+	virtual bool DamageToBoss_Implementation(int32 DamageAmount) override;
 	// BossInterface를 통해 그로기 진입 처리를 실행합니다.
 	virtual void OnGroggyTriggered_Implementation() override;
 	virtual void IncreaseGroggy_Implementation(int32 GroggyAmount) override;
@@ -217,9 +204,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Base State")
 	EPBBossState BossState = EPBBossState::Idle;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Base Type")
-	EPBBossMovementType BossMovementType = EPBBossMovementType::Fixed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Base Profile")
 	FText BossName;

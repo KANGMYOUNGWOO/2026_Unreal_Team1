@@ -3,9 +3,9 @@
 
 #include "PBTurretFireComponent.h"
 
-#include "PinBallLike/Actor/Projectile/ProjectileBase.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
+#include "PinBallLike/Actor/Projectile/ProjectileBase.h"
 #include "TimerManager.h"
 
 UPBTurretFireComponent::UPBTurretFireComponent()
@@ -56,6 +56,20 @@ AActor* UPBTurretFireComponent::FireOnce()
 	{
 		return nullptr;
 	}
+	if (ProjectileClass->IsChildOf(APBBumperProjectile::StaticClass())
+		&& (!AttackTarget.IsValid()
+			|| AttackPayload == EPBBumperProjectilePayload::None
+			|| AttackPower <= 0
+			|| (MaxAttackShotCount > 0
+				&& FiredAttackShotCount >= MaxAttackShotCount)))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Turret projectile skipped because attack payload is incomplete. Owner=%s Target=%s Power=%d"),
+			*GetNameSafe(Owner),
+			*GetNameSafe(AttackTarget.Get()),
+			AttackPower);
+		return nullptr;
+	}
 
 	AProjectileBase* Projectile = IsUseObjectPool ? GetProjectileFromPool() : SpawnProjectileActor();
 	if (!IsValid(Projectile))
@@ -64,9 +78,30 @@ AActor* UPBTurretFireComponent::FireOnce()
 	}
 
 	ActivateProjectile(Projectile, GetMuzzleTransform());
+	if (MaxAttackShotCount > 0)
+	{
+		++FiredAttackShotCount;
+	}
 
 	OnTurretProjectileFired.Broadcast(Projectile);
 	return Projectile;
+}
+
+void UPBTurretFireComponent::ConfigureAttack(
+	AActor* InTargetActor,
+	const EPBBumperProjectilePayload InPayload,
+	const int32 InPower,
+	const int32 InMaxShotCount,
+	UNiagaraSystem* InDeliveryVfx,
+	UNiagaraSystem* InImpactVfx)
+{
+	AttackTarget = InTargetActor;
+	AttackPayload = InPayload;
+	AttackPower = FMath::Max(InPower, 0);
+	MaxAttackShotCount = FMath::Max(InMaxShotCount, 0);
+	FiredAttackShotCount = 0;
+	DeliveryVfx = InDeliveryVfx;
+	ImpactVfx = InImpactVfx;
 }
 
 void UPBTurretFireComponent::ReleaseProjectile(AActor* Projectile)
@@ -148,6 +183,23 @@ void UPBTurretFireComponent::ActivateProjectile(AProjectileBase* Projectile, con
 	Projectile->SetActorEnableCollision(true);
 	Projectile->SetActorTickEnabled(true);
 
+	if (APBBumperProjectile* BumperProjectile = Cast<APBBumperProjectile>(Projectile))
+	{
+		BumperProjectile->OnProjectileResolved.RemoveAll(this);
+		BumperProjectile->ConfigureForTarget(
+			AttackTarget.Get(),
+			AttackPayload,
+			AttackPower,
+			false,
+			0.0f,
+			DeliveryVfx,
+			ImpactVfx,
+			nullptr);
+		BumperProjectile->OnProjectileResolved.AddUObject(
+			this,
+			&UPBTurretFireComponent::HandleBumperProjectileResolved);
+	}
+
 	ActiveProjectiles.AddUnique(Projectile);
 	Projectile->ActivateProjectile();
 	OnTurretProjectileActivated.Broadcast(Projectile);
@@ -184,6 +236,11 @@ void UPBTurretFireComponent::DeactivateProjectile(AProjectileBase* Projectile)
 
 	ActiveProjectiles.Remove(Projectile);
 	Projectile->DeactivateProjectile();
+	if (APBBumperProjectile* BumperProjectile = Cast<APBBumperProjectile>(Projectile))
+	{
+		BumperProjectile->OnProjectileResolved.RemoveAll(this);
+		BumperProjectile->ResetForPool();
+	}
 	OnTurretProjectileDeactivated.Broadcast(Projectile);
 
 	if (!IsUseObjectPool)
@@ -203,6 +260,18 @@ void UPBTurretFireComponent::DeactivateProjectile(AProjectileBase* Projectile)
 	}
 
 	Projectile->Destroy();
+}
+
+void UPBTurretFireComponent::HandleBumperProjectileResolved(
+	APBBumperProjectile* Projectile,
+	const bool bApplied)
+{
+	UE_LOG(LogTemp, Verbose,
+		TEXT("[Bumper] Turret projectile resolved. Owner=%s Projectile=%s Applied=%s"),
+		*GetNameSafe(GetOwner()),
+		*GetNameSafe(Projectile),
+		bApplied ? TEXT("true") : TEXT("false"));
+	ReleaseProjectile(Projectile);
 }
 
 void UPBTurretFireComponent::ClearPool()

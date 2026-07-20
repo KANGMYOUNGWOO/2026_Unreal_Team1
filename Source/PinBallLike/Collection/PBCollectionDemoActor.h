@@ -8,10 +8,6 @@
 class UPBCollectionWidget;
 class UPBUserWidget;
 
-/**
- * 도감 전용 테스트 레벨에서만 사용하는 개발 보조 액터입니다.
- * IsEditorOnly()가 true이므로 패키징된 실제 게임에는 포함되지 않습니다.
- */
 UCLASS()
 class PINBALLLIKE_API APBCollectionDemoActor : public AActor
 {
@@ -35,7 +31,6 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	/** 테스트도 실제 UI 경로를 검증하도록 WBP_CollectionWidget 계열 클래스를 지정합니다. */
 	UPROPERTY(EditAnywhere, Category = "Collection|Demo")
 	TSubclassOf<UPBCollectionWidget> CollectionWidgetClass;
 

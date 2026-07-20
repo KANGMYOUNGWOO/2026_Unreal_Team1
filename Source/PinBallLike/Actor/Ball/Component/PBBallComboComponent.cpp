@@ -3,6 +3,7 @@
 
 #include "PBBallComboComponent.h"
 
+#include "PBBallEffectRuntimeComponent.h"
 
 UPBBallComboComponent::UPBBallComboComponent()
 {
@@ -30,6 +31,12 @@ void UPBBallComboComponent::SetCombo(int32 Value)
 	CurrentCombo = NewCombo;
 	MaxCombo = FMath::Max(MaxCombo, CurrentCombo);
 	OnComboChanged.Broadcast(CurrentCombo, MaxCombo);
+
+	if (UPBBallEffectRuntimeComponent* EffectRuntimeComponent =
+		GetOwner() ? GetOwner()->FindComponentByClass<UPBBallEffectRuntimeComponent>() : nullptr)
+	{
+		EffectRuntimeComponent->HandleComboChanged(CurrentCombo, MaxCombo);
+	}
 }
 
 void UPBBallComboComponent::AddCombo(int32 Delta)

@@ -7,9 +7,9 @@
 class UPBGameDataLoadSubsystem;
 class UPBPlayerDataSubsystem;
 class UPBTableDataSubsystem;
-class UPBBumperEquipUI;
 class UTexture2D;
 enum class EPBBumperSlotType : uint8;
+enum class EPBBumperEquipSlot : uint8;
 
 namespace PBBumperEquipUIBuilder
 {
@@ -22,7 +22,6 @@ namespace PBBumperEquipUIBuilder
 		FName RowName);
 	void BuildBumperListItemObjects(
 		UObject* Outer,
-		UPBBumperEquipUI* ClickHandler,
 		const TArray<FName>& RowNames,
 		const TArray<FPBBumperTableRow>& Rows,
 		const TSet<FName>& EquippedRowIds,
@@ -45,6 +44,12 @@ namespace PBBumperEquipUIBuilder
 		const TArray<FPBBumperTableRow>& Rows,
 		FName RowName,
 		EPBBumperSlotType& OutSlotType);
+	FText GetBumperSlotTypeDisplayName(EPBBumperSlotType SlotType);
+	FText GetBumperEquipSlotDisplayName(EPBBumperEquipSlot EquipSlot);
+	FText GetBumperRoleDisplayName(EPBBumperRoleType RoleType);
+	FText GetBumperEffectTypeDisplayName(EPBBumperEffectType EffectType);
+	FText ResolveBumperTriggerDescription(const UPBTableDataSubsystem* TableDataSubsystem, const FPBBumperTableRow& Row);
+	FText ResolveBumperEffectDescription(const UPBTableDataSubsystem* TableDataSubsystem, const FPBBumperTableRow& Row);
 	FText ResolveBumperDescription(const UPBTableDataSubsystem* TableDataSubsystem, const FPBBumperTableRow& Row);
 	UTexture2D* ResolveBumperIconTexture(
 		const UPBGameDataLoadSubsystem* GameDataLoadSubsystem,

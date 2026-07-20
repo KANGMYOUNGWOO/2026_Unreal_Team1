@@ -24,7 +24,6 @@ void UPBBossPatternComponent::BeginPlay()
 	if (!BattleGameState || BattleGameState->GetBattleLevelPhase() == EPBBattleLevelPhase::Combat)
 	{
 		IsCombatPhaseActive = true;
-		ResetPatternStartTime();
 	}
 }
 
@@ -154,7 +153,6 @@ void UPBBossPatternComponent::CancelCurrentPatternInternal(bool IsApplyCooldown)
 	if (IsApplyCooldown)
 	{
 		SetPatternCooldown(CancelledPattern);
-		NextPatternAllowedTime = GetCurrentTimeSeconds() + MinPatternIntervalSeconds;
 	}
 
 	ClearCurrentPattern();
@@ -173,7 +171,6 @@ void UPBBossPatternComponent::NotifyPatternFinished(UPBBossPatternBase* Finished
 	}
 
 	SetPatternCooldown(FinishedPattern);
-	NextPatternAllowedTime = GetCurrentTimeSeconds() + MinPatternIntervalSeconds;
 
 	ClearCurrentPattern();
 	SetOwnerBossIdleIfPatternState();
@@ -195,10 +192,7 @@ void UPBBossPatternComponent::NotifyEnragedPhaseStarted()
 
 void UPBBossPatternComponent::ResetPatternCooldowns()
 {
-	const float CurrentTimeSeconds = GetCurrentTimeSeconds();
-
 	CooldownEndTimeMap.Reset();
-	NextPatternAllowedTime = CurrentTimeSeconds + MinPatternIntervalSeconds;
 
 	if (OwnerBoss && OwnerBoss->IsEnragedPhase())
 	{
@@ -229,8 +223,7 @@ bool UPBBossPatternComponent::CanStartPattern() const
 		&& !OwnerBoss->IsDead()
 		&& OwnerBoss->GetBossState() != EPBBossState::Groggy
 		&& OwnerBoss->GetBossState() != EPBBossState::Dead
-		&& IsCombatPhaseActive
-		&& GetCurrentTimeSeconds() >= NextPatternAllowedTime;
+		&& IsCombatPhaseActive;
 }
 
 UPBBossPatternBase* UPBBossPatternComponent::GetCurrentPattern() const
@@ -242,13 +235,11 @@ void UPBBossPatternComponent::ConfigurePatternData(
 	const TArray<FPBBossPatternData>& NewPatternDatas,
 	const TArray<FPBBossPatternData>& NewEnragedPatternDatas,
 	const TArray<FPBBossPatternData>& NewEnragedEntryPatternDatas,
-	float NewMinPatternIntervalSeconds,
 	float NewPatternCheckIntervalSeconds)
 {
 	PatternDatas = NewPatternDatas;
 	EnragedPatternDatas = NewEnragedPatternDatas;
 	EnragedEntryPatternDatas = NewEnragedEntryPatternDatas;
-	MinPatternIntervalSeconds = FMath::Max(0.0f, NewMinPatternIntervalSeconds);
 	PatternCheckIntervalSeconds = FMath::Max(0.1f, NewPatternCheckIntervalSeconds);
 }
 
@@ -262,11 +253,6 @@ void UPBBossPatternComponent::InitializePatterns()
 	InitializePatternDatas(PatternDatas, PatternInstances);
 	InitializePatternDatas(EnragedPatternDatas, EnragedPatternInstances);
 	InitializePatternDatas(EnragedEntryPatternDatas, EnragedEntryPatternInstances);
-}
-
-void UPBBossPatternComponent::ResetPatternStartTime()
-{
-	NextPatternAllowedTime = GetCurrentTimeSeconds() + MinPatternIntervalSeconds;
 }
 
 void UPBBossPatternComponent::RegisterBattlePhaseListener()
@@ -306,7 +292,6 @@ void UPBBossPatternComponent::HandleBattlePhaseChangedMessage(
 		return;
 	}
 
-	ResetPatternStartTime();
 	StartPatternSystem();
 }
 
@@ -407,11 +392,6 @@ void UPBBossPatternComponent::ShiftPatternTimers(float DeltaSeconds)
 	if (DeltaSeconds <= 0.0f)
 	{
 		return;
-	}
-
-	if (NextPatternAllowedTime > PatternSystemPausedTime)
-	{
-		NextPatternAllowedTime += DeltaSeconds;
 	}
 
 	for (TPair<const UPBBossPatternBase*, float>& CooldownEndTimePair : CooldownEndTimeMap)

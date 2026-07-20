@@ -25,6 +25,7 @@ FVector UPBBallPhysicsComponent::GetVelocity() const
 
 void UPBBallPhysicsComponent::AddVelocity(FVector VelocityToAdd)
 {
+	CancelSmoothStop();
 	VelocityToAdd.Z = 0.0f;
 	Velocity += VelocityToAdd;
 	Velocity.Z = 0.0f;
@@ -39,7 +40,21 @@ void UPBBallPhysicsComponent::AddImpulse(FVector Impulse)
 
 void UPBBallPhysicsComponent::StopMovement()
 {
+	CancelSmoothStop();
 	Velocity = FVector::ZeroVector;
+}
+
+void UPBBallPhysicsComponent::StopMovementSmoothly(const float Duration)
+{
+	const float CurrentSpeed = Velocity.Size2D();
+	if (Duration <= 0.0f || FMath::IsNearlyZero(CurrentSpeed))
+	{
+		StopMovement();
+		return;
+	}
+
+	bIsSmoothStopping = true;
+	SmoothStopDeceleration = CurrentSpeed / Duration;
 }
 
 void UPBBallPhysicsComponent::PauseMovement()
@@ -77,14 +92,47 @@ float UPBBallPhysicsComponent::GetBounceDamping() const
 	return BounceDamping;
 }
 
+void UPBBallPhysicsComponent::SetGravityEnabled(const bool bEnabled)
+{
+	bGravityEnabled = bEnabled;
+}
+
+void UPBBallPhysicsComponent::AddGravityDisableRequest(UObject* Requester)
+{
+	if (IsValid(Requester))
+	{
+		GravityDisableRequesters.Add(TWeakObjectPtr<UObject>(Requester));
+	}
+}
+
+void UPBBallPhysicsComponent::RemoveGravityDisableRequest(UObject* Requester)
+{
+	GravityDisableRequesters.Remove(TWeakObjectPtr<UObject>(Requester));
+}
+
+bool UPBBallPhysicsComponent::IsGravityEnabled()
+{
+	for (auto It = GravityDisableRequesters.CreateIterator(); It; ++It)
+	{
+		if (!It->IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+
+	return bGravityEnabled && GravityDisableRequesters.IsEmpty();
+}
+
 void UPBBallPhysicsComponent::SetVelocity(FVector NewVelocity)
 {
+	CancelSmoothStop();
 	NewVelocity.Z = 0.0f;
 	Velocity = NewVelocity;
 }
 
 void UPBBallPhysicsComponent::Launch(FVector Direction, const float Strength)
 {
+	CancelSmoothStop();
 	Direction.Z = 0.0f;
 	const FVector NormalizedDirection = Direction.GetSafeNormal();
 	Velocity = NormalizedDirection * FMath::Max(Strength, 0.0f);
@@ -200,7 +248,26 @@ void UPBBallPhysicsComponent::TickComponent(
 
 	// XY 평면 속도에 인공 중력을 적용한 뒤 이번 프레임 이동을 처리한다.
 	Velocity.Z = 0.0f;
-	Velocity.X -= XGravity * DeltaTime;
+	if (IsGravityEnabled())
+	{
+		Velocity.X -= XGravity * DeltaTime;
+	}
+
+	if (bIsSmoothStopping)
+	{
+		const float CurrentSpeed = Velocity.Size2D();
+		const float NewSpeed = FMath::Max(
+			CurrentSpeed - SmoothStopDeceleration * DeltaTime,
+			0.0f);
+		Velocity = CurrentSpeed > 0.0f
+			? Velocity.GetSafeNormal2D() * NewSpeed
+			: FVector::ZeroVector;
+
+		if (FMath::IsNearlyZero(NewSpeed))
+		{
+			CancelSmoothStop();
+		}
+	}
 	MoveWithSweep(DeltaTime);
 }
 
@@ -224,6 +291,12 @@ float UPBBallPhysicsComponent::CalculateImpactDamping(
 	return FMath::Lerp(1.0f, BounceDamping, ImpactStrength);
 }
 
+void UPBBallPhysicsComponent::CancelSmoothStop()
+{
+	bIsSmoothStopping = false;
+	SmoothStopDeceleration = 0.0f;
+}
+
 void UPBBallPhysicsComponent::ClampVelocityToSpeedRange()
 {
 	// 이동 방향은 유지하면서 속력만 MinSpeed와 MaxSpeed 범위로 제한한다.
@@ -236,7 +309,9 @@ void UPBBallPhysicsComponent::ClampVelocityToSpeedRange()
 		return;
 	}
 
-	const float SafeMinSpeed = FMath::Max(MinSpeed, 0.0f);
+	const float SafeMinSpeed = bIsSmoothStopping
+		? 0.0f
+		: FMath::Max(MinSpeed, 0.0f);
 	const float SafeMaxSpeed = FMath::Max(MaxSpeed, SafeMinSpeed);
 	Velocity = Velocity.GetSafeNormal2D() * FMath::Clamp(CurrentSpeed, SafeMinSpeed, SafeMaxSpeed);
 }

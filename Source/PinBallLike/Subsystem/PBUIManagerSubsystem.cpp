@@ -1,6 +1,18 @@
 #include "PBUIManagerSubsystem.h"
 
 #include "PinBallLike/UI/PBUserWidget.h"
+#include "PinBallLike/UI/Popup/PBSimplePopupWidget.h"
+#include "UObject/ConstructorHelpers.h"
+
+UPBUIManagerSubsystem::UPBUIManagerSubsystem()
+{
+	static ConstructorHelpers::FClassFinder<UPBSimplePopupWidget> PopupClassFinder(
+		TEXT("/Game/Blueprints/UI/Popup/WBP_SimplePopup"));
+	if (PopupClassFinder.Succeeded())
+	{
+		DefaultSimplePopupClass = PopupClassFinder.Class;
+	}
+}
 
 UPBUserWidget* UPBUIManagerSubsystem::PushWidget(
 	const TSubclassOf<UPBUserWidget> WidgetClass,
@@ -28,6 +40,41 @@ UPBUserWidget* UPBUIManagerSubsystem::PushWidget(
 	Widget->OnPushed();
 
 	return Widget;
+}
+
+UPBSimplePopupWidget* UPBUIManagerSubsystem::ShowSimplePopup(
+	const FText& Message,
+	FPBSimplePopupClosedDelegate ClosedCallback,
+	const int32 ZOrder)
+{
+	UPBSimplePopupWidget* Popup = PushSimplePopup(DefaultSimplePopupClass, Message, ZOrder);
+	if (IsValid(Popup))
+	{
+		Popup->SetClosedCallback(MoveTemp(ClosedCallback));
+	}
+
+	return Popup;
+}
+
+UPBSimplePopupWidget* UPBUIManagerSubsystem::ShowSimplePopupBP(
+	const FText& Message,
+	const int32 ZOrder)
+{
+	return ShowSimplePopup(Message, {}, ZOrder);
+}
+
+UPBSimplePopupWidget* UPBUIManagerSubsystem::PushSimplePopup(
+	const TSubclassOf<UPBSimplePopupWidget> PopupClass,
+	const FText& Message,
+	const int32 ZOrder)
+{
+	UPBSimplePopupWidget* Popup = Cast<UPBSimplePopupWidget>(PushWidget(PopupClass, ZOrder));
+	if (IsValid(Popup))
+	{
+		Popup->InitializePopup(Message);
+	}
+
+	return Popup;
 }
 
 bool UPBUIManagerSubsystem::RequestPopWidget()

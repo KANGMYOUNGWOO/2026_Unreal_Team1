@@ -7,6 +7,8 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "TimerManager.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
@@ -38,6 +40,11 @@ void APBModularBumperBase::BeginPlay()
 void APBModularBumperBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	ClearTriggerActors();
+	if (IsValid(BumperEffect))
+	{
+		BumperEffect->ShutdownEffect();
+		BumperEffect = nullptr;
+	}
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -82,7 +89,6 @@ void APBModularBumperBase::FinishActivation()
 		FinishedTrigger->FinishTrigger();
 	}
 
-	// 전투 흐름이 범퍼를 Disabled로 바꾼 경우, 효과 종료가 그 상태를 임의로 해제하지 않는다.
 	if (RuntimeState.CurrentState != EPBBumperState::Disabled)
 	{
 		SetBumperState(EPBBumperState::Idle);
@@ -200,6 +206,22 @@ APBBumperTriggerActorBase* APBModularBumperBase::GetActiveTriggerActor() const
 	return ActiveTriggerActor.Get();
 }
 
+EPBBumperPositionId APBModularBumperBase::GetPrimaryPositionId() const
+{
+	for (const FPBBumperTriggerSpawnInfo& SpawnInfo : TriggerSpawnInfos)
+	{
+		for (const EPBBumperPositionId PositionId : SpawnInfo.PositionIds)
+		{
+			if (PositionId != EPBBumperPositionId::None)
+			{
+				return PositionId;
+			}
+		}
+	}
+
+	return EPBBumperPositionId::None;
+}
+
 int32 APBModularBumperBase::GetPendingActivationCount() const
 {
 	return PendingActivations.Num();
@@ -233,16 +255,28 @@ void APBModularBumperBase::CreateBumperEffect()
 }
 
 void APBModularBumperBase::InitializeBumper(
+	const FName InBumperRowId,
 	const FPBBumperTableRow& InBumperData,
 	const TArray<FPBBumperTriggerSpawnInfo>& InTriggerSpawnInfos,
 	const FPBBumperEffectRow& InEffectData,
 	TSubclassOf<UPBBumperEffectBase> InEffectClass,
+	UNiagaraSystem* InActivationVfx,
+	UNiagaraSystem* InDeliveryVfx,
+	UNiagaraSystem* InImpactVfx,
+	UNiagaraSystem* InStatusVfx,
 	const TMap<EPBBumperPositionId, FTransform>& InAnchorTransforms)
 {
+	BumperRowId = InBumperRowId;
 	BumperData = InBumperData;
+	RuntimeState.MeaningfulContactCount = 0;
+	RuntimeState.ActivationCount = 0;
 	TriggerSpawnInfos = InTriggerSpawnInfos;
 	EffectData = InEffectData;
 	EffectClass = InEffectClass;
+	ActivationVfx = InActivationVfx;
+	DeliveryVfx = InDeliveryVfx;
+	ImpactVfx = InImpactVfx;
+	StatusVfx = InStatusVfx;
 	AnchorTransforms = InAnchorTransforms;
 }
 
@@ -260,7 +294,19 @@ void APBModularBumperBase::AddTriggerCount(
 		return;
 	}
 
+	const int32 PreviousTriggerCount = TriggerActor->GetCurrentTriggerCount();
 	const bool bBecameReady = TriggerActor->AddTriggerProgress(Amount);
+	if (TriggerActor->GetCurrentTriggerCount() > PreviousTriggerCount)
+	{
+		++RuntimeState.MeaningfulContactCount;
+		UE_LOG(LogTemp, Log,
+			TEXT("[BumperTelemetry] MeaningfulContact RowName=%s Position=%s Contacts=%d Progress=%d/%d"),
+			*BumperRowId.ToString(),
+			*UEnum::GetValueAsString(TriggerActor->GetPositionId()),
+			RuntimeState.MeaningfulContactCount,
+			TriggerActor->GetCurrentTriggerCount(),
+			TriggerActor->GetRequiredTriggerCount());
+	}
 	NotifyTriggerCountChanged();
 
 	UE_LOG(LogTemp, Verbose,
@@ -400,8 +446,6 @@ void APBModularBumperBase::QueueActivation(
 
 	if (EffectData.ExecutionPolicy == EPBBumperEffectExecutionPolicy::Immediate)
 	{
-		// Immediate 효과가 이 경로에 들어오면 이전 효과가 FinishEffect를 아직 호출하지 않은 것이다.
-		// 같은 Effect UObject 재진입을 막기 위해 안전하게 직렬화하고 설정 오류를 로그로 드러낸다.
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Bumper] Immediate effect request was serialized because the execution lane is busy. Bumper=%s Trigger=%s Pending=%d"),
 			*GetNameSafe(this),
@@ -452,7 +496,16 @@ void APBModularBumperBase::ExecuteActivation(AActor* InteractionActor)
 		return;
 	}
 
+	const EPBBumperPositionId ActivationPositionId = ActiveTriggerActor->GetPositionId();
 	SetBumperState(EPBBumperState::Activated);
+	++RuntimeState.ActivationCount;
+	UE_LOG(LogTemp, Log,
+		TEXT("[BumperTelemetry] Activation RowName=%s Position=%s Activations=%d Contacts=%d"),
+		*BumperRowId.ToString(),
+		*UEnum::GetValueAsString(ActivationPositionId),
+		RuntimeState.ActivationCount,
+		RuntimeState.MeaningfulContactCount);
+	SpawnActivationVfx();
 	OnMovableActorActivated(InteractionActor);
 	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
 	{
@@ -470,6 +523,28 @@ void APBModularBumperBase::ExecuteActivation(AActor* InteractionActor)
 	}
 
 	ApplyBumperEffectToActor(InteractionActor);
+}
+
+void APBModularBumperBase::SpawnActivationVfx() const
+{
+	if (!IsValid(ActivationVfx))
+	{
+		return;
+	}
+
+	const AActor* SpawnSource = ActiveTriggerActor.IsValid()
+		? static_cast<const AActor*>(ActiveTriggerActor.Get())
+		: static_cast<const AActor*>(this);
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		this,
+		ActivationVfx.Get(),
+		SpawnSource->GetActorLocation(),
+		SpawnSource->GetActorRotation(),
+		FVector::OneVector,
+		true,
+		true,
+		ENCPoolMethod::AutoRelease,
+		true);
 }
 
 void APBModularBumperBase::ScheduleNextPendingActivation()
@@ -513,7 +588,6 @@ void APBModularBumperBase::ProcessNextPendingActivation()
 		APBBumperTriggerActorBase* TriggerActor = PendingActivation.TriggerActor.Get();
 		if (!IsValid(TriggerActor) || !TriggerActor->IsTriggerReady())
 		{
-			// 대기 중 Trigger가 파괴되거나 외부 초기화된 경우 모듈 호환 UI 값도 다시 계산한다.
 			NotifyTriggerCountChanged();
 			continue;
 		}
@@ -584,7 +658,6 @@ bool APBModularBumperBase::FindBumperPositionTransform(
 void APBModularBumperBase::NotifyTriggerCountChanged()
 {
 	const int32 RequiredTriggerCount = GetRequiredTriggerCount();
-	// 기존 모듈 단위 UI가 즉시 깨지지 않도록 자식 Trigger 중 가장 높은 진행도를 호환값으로 제공한다.
 	RuntimeState.CurrentTriggerCount = GetCurrentTriggerCount();
 	OnBumperTriggerCountChanged.Broadcast(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
 	OnTriggerCountChanged(RuntimeState.CurrentTriggerCount, RequiredTriggerCount);
@@ -592,7 +665,6 @@ void APBModularBumperBase::NotifyTriggerCountChanged()
 
 void APBModularBumperBase::ApplyBumperEffectToActor_Implementation(AActor* InteractionActor)
 {
-	// 기존 Ball Blueprint 구현은 그대로 재사용하고, 일반 Actor에 구현이 없으면 실행 레인을 해제한다.
 	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
 	{
 		ApplyBumperEffect(Ball);
@@ -604,6 +676,5 @@ void APBModularBumperBase::ApplyBumperEffectToActor_Implementation(AActor* Inter
 
 void APBModularBumperBase::ApplyBumperEffect_Implementation(APBBallBase* Ball)
 {
-	// 자식에서 효과를 구현하지 않으면 즉시 Idle로 돌려 테스트하기 쉽게 둔다.
 	FinishActivation();
 }

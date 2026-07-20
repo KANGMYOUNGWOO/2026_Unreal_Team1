@@ -29,17 +29,21 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	if (!IsValid(Settings))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[TableData] Missing PBGameDataSettings."));
+		bStartupGameDataLoadCompleted = true;
+		OnStartupGameDataLoaded.Broadcast();
 		return;
 	}
 
 	TArray<FSoftObjectPath> TablePaths;
-	TablePaths.Reserve(13);
+	TablePaths.Reserve(21);
 
 	// 테이블 경로는 DeveloperSettings에서 관리한다.
 	const FSoftObjectPath CollectionTablePath = Settings->CollectionTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperTablePath = Settings->BumperTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperTriggerTablePath = Settings->BumperTriggerTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperEffectTablePath = Settings->BumperEffectTable.ToSoftObjectPath();
+	const FSoftObjectPath GameplayEffectTablePath = Settings->GameplayEffectTable.ToSoftObjectPath();
+	const FSoftObjectPath GameplayEffectParamTablePath = Settings->GameplayEffectParamTable.ToSoftObjectPath();
 	const FSoftObjectPath BallTablePath = Settings->BallTable.ToSoftObjectPath();
 	const FSoftObjectPath BallStarLevelTablePath = Settings->BallStarLevelTable.ToSoftObjectPath();
 	const FSoftObjectPath SkillTablePath = Settings->SkillTable.ToSoftObjectPath();
@@ -49,11 +53,12 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath StatusEffectTablePath = Settings->StatusEffectTable.ToSoftObjectPath();
 	const FSoftObjectPath StatusEffectModifierTablePath = Settings->StatusEffectModifierTable.ToSoftObjectPath();
 	const FSoftObjectPath StatusEffectTriggerTablePath = Settings->StatusEffectTriggerTable.ToSoftObjectPath();
+	const FSoftObjectPath EffectTablePath = Settings->EffectTable.ToSoftObjectPath();
+	const FSoftObjectPath EffectSetTablePath = Settings->EffectSetTable.ToSoftObjectPath();
+	const FSoftObjectPath EffectParamTablePath = Settings->EffectParamTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyTablePath = Settings->SynergyTable.ToSoftObjectPath();
 	const FSoftObjectPath SynergyTierTablePath = Settings->SynergyTierTable.ToSoftObjectPath();
-	const FSoftObjectPath SynergyEffectTablePath = Settings->SynergyEffectTable.ToSoftObjectPath();
-	const FSoftObjectPath SynergyEffectModifierTablePath = Settings->SynergyEffectModifierTable.ToSoftObjectPath();
-	const FSoftObjectPath SynergyEffectTriggerTablePath = Settings->SynergyEffectTriggerTable.ToSoftObjectPath();
+
 	const FSoftObjectPath ShopTablePath = Settings->ShopTable.ToSoftObjectPath();
 	const FSoftObjectPath RelicTablePath = Settings->RelicTable.ToSoftObjectPath();
     const FSoftObjectPath RelicModifierTablePath = Settings->RelicModifierTable.ToSoftObjectPath();
@@ -76,6 +81,16 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	if (BumperEffectTablePath.IsValid())
 	{
 		TablePaths.Add(BumperEffectTablePath);
+	}
+
+	if (GameplayEffectTablePath.IsValid())
+	{
+		TablePaths.Add(GameplayEffectTablePath);
+	}
+
+	if (GameplayEffectParamTablePath.IsValid())
+	{
+		TablePaths.Add(GameplayEffectParamTablePath);
 	}
 
 	if (BallTablePath.IsValid())
@@ -123,6 +138,21 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 		TablePaths.Add(StatusEffectTriggerTablePath);
 	}
 
+	if (EffectTablePath.IsValid())
+	{
+		TablePaths.Add(EffectTablePath);
+	}
+
+	if (EffectSetTablePath.IsValid())
+	{
+		TablePaths.Add(EffectSetTablePath);
+	}
+
+	if (EffectParamTablePath.IsValid())
+	{
+		TablePaths.Add(EffectParamTablePath);
+	}
+
 	if (SynergyTablePath.IsValid())
 	{
 		TablePaths.Add(SynergyTablePath);
@@ -133,21 +163,6 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 		TablePaths.Add(SynergyTierTablePath);
 	}
 
-	if (SynergyEffectTablePath.IsValid())
-	{
-		TablePaths.Add(SynergyEffectTablePath);
-	}
-
-	if (SynergyEffectModifierTablePath.IsValid())
-	{
-		TablePaths.Add(SynergyEffectModifierTablePath);
-	}
-
-	if (SynergyEffectTriggerTablePath.IsValid())
-	{
-		TablePaths.Add(SynergyEffectTriggerTablePath);
-	}
-	
 	if(ShopTablePath.IsValid())
 	{
 		TablePaths.Add(ShopTablePath);
@@ -166,6 +181,8 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	if (TablePaths.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[TableData] No startup table paths are configured."));
+		bStartupGameDataLoadCompleted = true;
+		OnStartupGameDataLoaded.Broadcast();
 		return;
 	}
 
@@ -175,22 +192,31 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 			this,
 			&UPBTableDataSubsystem::OnStartupGameDataLoadedInternal,
 			TablePaths));
+	if (!StartupGameDataLoadHandle.IsValid() && !bStartupGameDataLoadCompleted)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[TableData] Failed to create the startup table load request."));
+		bStartupGameDataLoadCompleted = true;
+		OnStartupGameDataLoaded.Broadcast();
+	}
 }
 
 void UPBTableDataSubsystem::UnloadStartupGameData()
 {
+	bStartupGameDataLoadCompleted = false;
 	LoadedStartupTables.Empty();
 
 	SetCollectionTable(nullptr);
 	SetBumperTables(nullptr, nullptr, nullptr);
+	SetGameplayEffectTables(nullptr, nullptr);
 	SetBallTables(nullptr, nullptr);
 	SetSkillTable(nullptr);
 	SetBossTables(nullptr, nullptr, nullptr);
 	SetStatusEffectTables(nullptr, nullptr, nullptr);
+	SetEffectTables(nullptr, nullptr, nullptr);
 	SetRelicTable(nullptr,nullptr);
 	SetShopTable(nullptr);
 	
-	SetSynergyTables(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+	SetSynergyTables(nullptr, nullptr);
 
 	if (StartupGameDataLoadHandle.IsValid())
 	{
@@ -207,6 +233,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedBumperTable = nullptr;
 	UDataTable* LoadedBumperTriggerTable = nullptr;
 	UDataTable* LoadedBumperEffectTable = nullptr;
+	UDataTable* LoadedGameplayEffectTable = nullptr;
+	UDataTable* LoadedGameplayEffectParamTable = nullptr;
 	UDataTable* LoadedBallTable = nullptr;
 	UDataTable* LoadedBallStarLevelTable = nullptr;
 	UDataTable* LoadedSkillTable = nullptr;
@@ -216,15 +244,13 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedStatusEffectTable = nullptr;
 	UDataTable* LoadedStatusEffectModifierTable = nullptr;
 	UDataTable* LoadedStatusEffectTriggerTable = nullptr;
+	UDataTable* LoadedEffectTable = nullptr;
+	UDataTable* LoadedEffectSetTable = nullptr;
+	UDataTable* LoadedEffectParamTable = nullptr;
 	UDataTable* LoadedRelicTable = nullptr;
 	UDataTable* LoadedRelicModifierTable = nullptr;
-	
 	UDataTable* LoadedSynergyTable = nullptr;
 	UDataTable* LoadedSynergyTierTable = nullptr;
-	UDataTable* LoadedSynergyTierEffectTable = nullptr;
-	UDataTable* LoadedSynergyEffectTable = nullptr;
-	UDataTable* LoadedSynergyEffectModifierTable = nullptr;
-	UDataTable* LoadedSynergyEffectTriggerTable = nullptr;
 	UDataTable* LoadedShopTable = nullptr;
 	
 	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
@@ -235,6 +261,8 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedBumperTable = Cast<UDataTable>(Settings->BumperTable.Get());
 		LoadedBumperTriggerTable = Cast<UDataTable>(Settings->BumperTriggerTable.Get());
 		LoadedBumperEffectTable = Cast<UDataTable>(Settings->BumperEffectTable.Get());
+		LoadedGameplayEffectTable = Cast<UDataTable>(Settings->GameplayEffectTable.Get());
+		LoadedGameplayEffectParamTable = Cast<UDataTable>(Settings->GameplayEffectParamTable.Get());
 		LoadedBallTable = Cast<UDataTable>(Settings->BallTable.Get());
 		LoadedBallStarLevelTable = Cast<UDataTable>(Settings->BallStarLevelTable.Get());
 		LoadedSkillTable = Cast<UDataTable>(Settings->SkillTable.Get());
@@ -244,13 +272,13 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedStatusEffectTable = Cast<UDataTable>(Settings->StatusEffectTable.Get());
 		LoadedStatusEffectModifierTable = Cast<UDataTable>(Settings->StatusEffectModifierTable.Get());
 		LoadedStatusEffectTriggerTable = Cast<UDataTable>(Settings->StatusEffectTriggerTable.Get());
+		LoadedEffectTable = Cast<UDataTable>(Settings->EffectTable.Get());
+		LoadedEffectSetTable = Cast<UDataTable>(Settings->EffectSetTable.Get());
+		LoadedEffectParamTable = Cast<UDataTable>(Settings->EffectParamTable.Get());
 		LoadedRelicTable = Cast<UDataTable>(Settings->RelicTable.Get());
 		LoadedRelicModifierTable = Cast<UDataTable>(Settings->RelicModifierTable.Get());
 		LoadedSynergyTable = Cast<UDataTable>(Settings->SynergyTable.Get());
 		LoadedSynergyTierTable = Cast<UDataTable>(Settings->SynergyTierTable.Get());
-		LoadedSynergyEffectTable = Cast<UDataTable>(Settings->SynergyEffectTable.Get());
-		LoadedSynergyEffectModifierTable = Cast<UDataTable>(Settings->SynergyEffectModifierTable.Get());
-		LoadedSynergyEffectTriggerTable = Cast<UDataTable>(Settings->SynergyEffectTriggerTable.Get());
 		LoadedShopTable = Cast<UDataTable>(Settings->ShopTable.Get());
 	}
 
@@ -264,17 +292,15 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 
 	SetCollectionTable(LoadedCollectionTable);
 	SetBumperTables(LoadedBumperTable, LoadedBumperTriggerTable, LoadedBumperEffectTable);
+	SetGameplayEffectTables(LoadedGameplayEffectTable, LoadedGameplayEffectParamTable);
 	SetBallTables(LoadedBallTable, LoadedBallStarLevelTable);
 	SetSkillTable(LoadedSkillTable);
 	SetBossTables(LoadedBossTable, LoadedBossHitPointTable, LoadedBossPatternTable);
 	SetStatusEffectTables(LoadedStatusEffectTable, LoadedStatusEffectModifierTable, LoadedStatusEffectTriggerTable);
+	SetEffectTables(LoadedEffectTable, LoadedEffectSetTable, LoadedEffectParamTable);
 	SetSynergyTables(
 		LoadedSynergyTable,
-		LoadedSynergyTierTable,
-		LoadedSynergyTierEffectTable,
-		LoadedSynergyEffectTable,
-		LoadedSynergyEffectModifierTable,
-		LoadedSynergyEffectTriggerTable);
+		LoadedSynergyTierTable);
 
 	SetRelicTable(LoadedRelicTable,LoadedRelicModifierTable);
 	SetShopTable(LoadedShopTable);
@@ -283,10 +309,31 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		IsTableDataReady() ? TEXT("true") : TEXT("false"),
 		LoadedStartupTables.Num());
 
+	bStartupGameDataLoadCompleted = true;
 	OnStartupGameDataLoaded.Broadcast();
 }
 
 bool UPBTableDataSubsystem::IsTableDataReady() const
+{
+	return IsValid(BumperTable)
+		&& IsValid(BumperTriggerTable)
+		&& IsValid(BumperEffectTable)
+		&& IsValid(GameplayEffectTable)
+		&& IsValid(GameplayEffectParamTable)
+		&& IsValid(BallTable)
+		&& IsValid(BallStarLevelTable)
+		&& IsValid(SkillTable)
+		&& IsValid(BossTable)
+		&& IsValid(BossHitPointTable)
+		&& IsValid(BossPatternTable);
+}
+
+bool UPBTableDataSubsystem::IsBumperTableReady() const
+{
+	return IsValid(BumperTable);
+}
+
+bool UPBTableDataSubsystem::IsCollectionCatalogDataReady() const
 {
 	return IsValid(BumperTable)
 		&& IsValid(BumperTriggerTable)
@@ -296,7 +343,11 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 		&& IsValid(SkillTable)
 		&& IsValid(BossTable)
 		&& IsValid(BossHitPointTable)
-		&& IsValid(BossPatternTable);
+		&& IsValid(BossPatternTable)
+		&& IsValid(RelicTable)
+		&& IsValid(RelicModifierTable)
+		&& IsValid(SynergyTable)
+		&& IsValid(SynergyTierTable);
 }
 
 void UPBTableDataSubsystem::SetCollectionTable(UDataTable* InCollectionTable)
@@ -349,6 +400,19 @@ void UPBTableDataSubsystem::SetBumperTables(
 		*GetNameSafe(BumperTable),
 		*GetNameSafe(BumperTriggerTable),
 		*GetNameSafe(BumperEffectTable));
+}
+
+void UPBTableDataSubsystem::SetGameplayEffectTables(
+	UDataTable* InGameplayEffectTable,
+	UDataTable* InGameplayEffectParamTable)
+{
+	GameplayEffectTable = InGameplayEffectTable;
+	GameplayEffectParamTable = InGameplayEffectParamTable;
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[TableData] Gameplay effect tables assigned. Effect=%s Param=%s"),
+		*GetNameSafe(GameplayEffectTable),
+		*GetNameSafe(GameplayEffectParamTable));
 }
 
 void UPBTableDataSubsystem::SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable)
@@ -411,28 +475,31 @@ void UPBTableDataSubsystem::SetStatusEffectTables(
 		*GetNameSafe(StatusEffectTriggerTable));
 }
 
+void UPBTableDataSubsystem::SetEffectTables(
+	UDataTable* InEffectTable,
+	UDataTable* InEffectSetTable,
+	UDataTable* InEffectParamTable)
+{
+	EffectTable = InEffectTable;
+	EffectSetTable = InEffectSetTable;
+	EffectParamTable = InEffectParamTable;
+
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Effect tables assigned. Effect=%s Set=%s Param=%s"),
+		*GetNameSafe(EffectTable),
+		*GetNameSafe(EffectSetTable),
+		*GetNameSafe(EffectParamTable));
+}
+
 void UPBTableDataSubsystem::SetSynergyTables(
 	UDataTable* InSynergyTable,
-	UDataTable* InSynergyTierTable,
-	UDataTable* InSynergyTierEffectTable,
-	UDataTable* InSynergyEffectTable,
-	UDataTable* InSynergyEffectModifierTable,
-	UDataTable* InSynergyEffectTriggerTable)
+	UDataTable* InSynergyTierTable)
 {
 	SynergyTable = InSynergyTable;
 	SynergyTierTable = InSynergyTierTable;
-	SynergyTierEffectTable = InSynergyTierEffectTable;
-	SynergyEffectTable = InSynergyEffectTable;
-	SynergyEffectModifierTable = InSynergyEffectModifierTable;
-	SynergyEffectTriggerTable = InSynergyEffectTriggerTable;
 
-	UE_LOG(LogTemp, Log, TEXT("[TableData] Synergy tables assigned. Synergy=%s Tier=%s TierEffect=%s Effect=%s Modifier=%s Trigger=%s"),
+	UE_LOG(LogTemp, Log, TEXT("[TableData] Synergy tables assigned. Synergy=%s Tier=%s"),
 		*GetNameSafe(SynergyTable),
-		*GetNameSafe(SynergyTierTable),
-		*GetNameSafe(SynergyTierEffectTable),
-		*GetNameSafe(SynergyEffectTable),
-		*GetNameSafe(SynergyEffectModifierTable),
-		*GetNameSafe(SynergyEffectTriggerTable));
+		*GetNameSafe(SynergyTierTable));
 }
 
 #pragma region Bumper
@@ -485,9 +552,52 @@ bool UPBTableDataSubsystem::FindLinkedBumperEffectRow(
 	return FindBumperEffectRow(BumperRow.EffectID, OutRow);
 }
 
+bool UPBTableDataSubsystem::FindGameplayEffectRow(
+	const FName RowName,
+	FPBGameplayEffectRow& OutRow) const
+{
+	return FindTableRow(
+		GameplayEffectTable,
+		RowName,
+		OutRow,
+		TEXT("FindGameplayEffectRow"));
+}
+
+bool UPBTableDataSubsystem::GetGameplayEffectParamRows(
+	const FName EffectId,
+	TArray<FPBGameplayEffectParamRow>& OutRows) const
+{
+	OutRows.Reset();
+	if (!IsValid(GameplayEffectParamTable) || EffectId.IsNone())
+	{
+		return false;
+	}
+
+	TArray<FPBGameplayEffectParamRow*> Rows;
+	GameplayEffectParamTable->GetAllRows<FPBGameplayEffectParamRow>(
+		TEXT("GetGameplayEffectParamRows"),
+		Rows);
+	for (const FPBGameplayEffectParamRow* Row : Rows)
+	{
+		if (Row && Row->EffectId == EffectId && !Row->ParamKey.IsNone())
+		{
+			OutRows.Add(*Row);
+		}
+	}
+
+	return !OutRows.IsEmpty();
+}
+
 #pragma endregion
 
 #pragma region Ball
+
+bool UPBTableDataSubsystem::GetAllBallRows(
+	TArray<FName>& OutRowNames,
+	TArray<FPBBallTableRow>& OutRows) const
+{
+	return GetAllTableRows(BallTable, OutRowNames, OutRows, TEXT("GetAllBallRows"));
+}
 
 bool UPBTableDataSubsystem::FindBallRow(FName RowName, FPBBallTableRow& OutRow) const
 {
@@ -671,6 +781,67 @@ bool UPBTableDataSubsystem::GetStatusEffectTriggerRows(
 
 #pragma endregion
 
+#pragma region Effect
+
+bool UPBTableDataSubsystem::FindEffectRow(const FName RowName, FPBEffectTableRow& OutRow) const
+{
+	return FindTableRow(EffectTable, RowName, OutRow, TEXT("FindEffectRow"));
+}
+
+bool UPBTableDataSubsystem::GetEffectSetRows(
+	const FName EffectSetId,
+	TArray<FPBEffectSetRow>& OutRows) const
+{
+	OutRows.Reset();
+	if (!IsValid(EffectSetTable) || EffectSetId.IsNone())
+	{
+		return false;
+	}
+
+	EffectSetTable->ForeachRow<FPBEffectSetRow>(
+		TEXT("GetEffectSetRows"),
+		[EffectSetId, &OutRows](const FName&, const FPBEffectSetRow& Row)
+		{
+			if (Row.EffectSetId == EffectSetId)
+			{
+				OutRows.Add(Row);
+			}
+		});
+
+	OutRows.Sort(
+		[](const FPBEffectSetRow& Left, const FPBEffectSetRow& Right)
+		{
+			return Left.Order < Right.Order;
+		});
+
+	return OutRows.Num() > 0;
+}
+
+bool UPBTableDataSubsystem::GetEffectParamRows(
+	const FName EffectId,
+	TArray<FPBEffectParamRow>& OutRows) const
+{
+	OutRows.Reset();
+	if (!IsValid(EffectParamTable) || EffectId.IsNone())
+	{
+		return false;
+	}
+
+	EffectParamTable->ForeachRow<FPBEffectParamRow>(
+		TEXT("GetEffectParamRows"),
+		[EffectId, &OutRows](const FName& RowName, const FPBEffectParamRow& Row)
+		{
+			if (Row.EffectId == EffectId)
+			{
+				OutRows.Add(Row);
+			}
+		});
+
+	return OutRows.Num() > 0;
+}
+
+#pragma endregion
+
 #pragma region Synergy
 
 bool UPBTableDataSubsystem::GetAllSynergyRows(
@@ -714,57 +885,6 @@ bool UPBTableDataSubsystem::GetSynergyTierRows(
 		[](const FPBSynergyTierRow& Left, const FPBSynergyTierRow& Right)
 		{
 			return Left.RequiredCount < Right.RequiredCount;
-		});
-
-	return OutRows.Num() > 0;
-}
-
-bool UPBTableDataSubsystem::FindSynergyEffectRow(const FName RowName, FPBSynergyEffectRow& OutRow) const
-{
-	return FindTableRow(SynergyEffectTable, RowName, OutRow, TEXT("FindSynergyEffectRow"));
-}
-
-bool UPBTableDataSubsystem::GetSynergyEffectModifierRows(
-	const FName SynergyEffectId,
-	TArray<FPBSynergyEffectModifierRow>& OutRows) const
-{
-	OutRows.Reset();
-	if (!IsValid(SynergyEffectModifierTable) || SynergyEffectId.IsNone())
-	{
-		return false;
-	}
-
-	SynergyEffectModifierTable->ForeachRow<FPBSynergyEffectModifierRow>(
-		TEXT("GetSynergyEffectModifierRows"),
-		[SynergyEffectId, &OutRows](const FName& RowName, const FPBSynergyEffectModifierRow& Row)
-		{
-			if (Row.SynergyEffectId == SynergyEffectId)
-			{
-				OutRows.Add(Row);
-			}
-		});
-
-	return OutRows.Num() > 0;
-}
-
-bool UPBTableDataSubsystem::GetSynergyEffectTriggerRows(
-	const FName SynergyEffectId,
-	TArray<FPBSynergyEffectTriggerRow>& OutRows) const
-{
-	OutRows.Reset();
-	if (!IsValid(SynergyEffectTriggerTable) || SynergyEffectId.IsNone())
-	{
-		return false;
-	}
-
-	SynergyEffectTriggerTable->ForeachRow<FPBSynergyEffectTriggerRow>(
-		TEXT("GetSynergyEffectTriggerRows"),
-		[SynergyEffectId, &OutRows](const FName& RowName, const FPBSynergyEffectTriggerRow& Row)
-		{
-			if (Row.SynergyEffectId == SynergyEffectId)
-			{
-				OutRows.Add(Row);
-			}
 		});
 
 	return OutRows.Num() > 0;

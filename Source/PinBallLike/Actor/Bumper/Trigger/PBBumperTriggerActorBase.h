@@ -11,6 +11,7 @@
 
 class APBBallBase;
 class APBModularBumperBase;
+class UCameraShakeBase;
 class USceneComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
@@ -23,10 +24,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	EPBBumperTriggerProgressState, PreviousState,
 	EPBBumperTriggerProgressState, NewState);
 
-/**
- * 물리 범퍼 한 개의 판정과 독립 진행도를 담당한다.
- * 효과 실행 순서와 보상 적용은 OwnerBumper에 남겨 Trigger가 게임 보상 규칙을 소유하지 않게 한다.
- */
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API APBBumperTriggerActorBase : public AActor
 {
@@ -77,7 +74,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger")
 	void FinishTrigger();
 
-	/** 이 Trigger 인스턴스의 Count만 전달하므로 다른 위치의 게이지와 값이 섞이지 않는다. */
 	UPROPERTY(BlueprintAssignable, Category = "Bumper|Trigger|Event")
 	FPBBumperTriggerProgressChangedSignature OnTriggerProgressChanged;
 
@@ -90,12 +86,13 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Trigger", meta = (BlueprintProtected = "true"))
 	void IncreaseTrigger(AActor* InteractionActor, const FHitResult& TriggerHit);
 
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Feedback|Camera", meta = (BlueprintProtected = "true"))
+	bool PlayImpactCameraShake(float ScaleMultiplier = 1.0f);
+
 #pragma region Blueprint Events
-	/** 새 이동 Actor 구현에서 사용하는 일반 이벤트다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Trigger")
 	void OnMovableActorTriggered(AActor* InteractionActor, const FHitResult& TriggerHit);
 
-	/** 기존 Ball 기반 Blueprint 그래프의 핀 호환을 위해 유지한다. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Bumper|Trigger")
 	void OnTriggerActivated(APBBallBase* Ball, const FHitResult& TriggerHit);
 #pragma endregion
@@ -105,6 +102,17 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	EPBBumperTriggerType TriggerType = EPBBumperTriggerType::HitCount;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Feedback|Camera")
+	TSubclassOf<UCameraShakeBase> ImpactCameraShakeClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Feedback|Camera",
+		meta = (ClampMin = "0.0", UIMin = "0.0", UIMax = "2.0"))
+	float ImpactCameraShakeScale = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Feedback|Camera",
+		meta = (ClampMin = "0.0", Units = "s"))
+	float MinimumImpactCameraShakeInterval = 0.08f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	EPBBumperState CurrentState = EPBBumperState::Idle;
@@ -131,4 +139,6 @@ private:
 	void ResetTriggerProgress();
 	void SetTriggerProgressState(EPBBumperTriggerProgressState NewState);
 	void NotifyTriggerProgressChanged();
+
+	double LastImpactCameraShakeTime = -1.0;
 };

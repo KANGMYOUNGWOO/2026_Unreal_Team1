@@ -41,10 +41,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Battle|Flow")
 	bool CanLaunchBattleParty() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Battle|Flow")
+	void ReturnToMainMenu();
+
 protected:
 	UFUNCTION(BlueprintNativeEvent, Category = "Battle|Flow")
-	void HandleReward();
-	virtual void HandleReward_Implementation();
+	void HandleBattleExit();
+	virtual void HandleBattleExit_Implementation();
 
 private:
 	APBBattleGameState* GetBattleGameState() const;
@@ -60,6 +63,11 @@ private:
 	void EnterBallDeployment();
 	void EnterBattle();
 	void EnterBossDead();
+	void EnterReward();
+	void HandleRewardPopupClosed(bool bConfirmed);
+	void ApplyActiveSynergyEffectsForBattle();
+	void TriggerPartySwitchEffects();
+	const TArray<FName>& GetBossProgressionRowNames() const;
 
 #pragma endregion
 	
@@ -73,11 +81,29 @@ private:
 	void HandleBallDataLoaded();
 	void HandleBossDataLoaded();
 	void MarkDataLoaded(EPBBattlePreparationType PreparationType, bool bSuccess);
+	void StartBattleDataLoadTimeout();
+	void ClearBattleDataLoadTimeout();
+	void HandleBattleDataLoadTimeout();
+	void HandleBattleDataLoadFailure(EPBBattlePreparationType PreparationType);
 	bool IsBattleDataLoaded() const;
 	
 	bool bBumperDataLoaded = false;
 	bool bBallDataLoaded = false;
 	bool bBossDataLoaded = false;
+	bool IsBattleDataLoadFailureHandled = false;
+	FTimerHandle BattleDataLoadTimeoutHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Battle|Loading", meta = (ClampMin = "1.0"))
+	float BattleDataLoadTimeoutSeconds = 30.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Battle|Boss")
+	TArray<FName> BossProgressionRowNames =
+	{
+		TEXT("Snake"),
+		TEXT("Golem"),
+		TEXT("Turtle"),
+		TEXT("Octopus")
+	};
 
 #pragma endregion 
 	
@@ -90,7 +116,6 @@ private:
 	void PrepareBumpers();
 	void PrepareBoss();
 	
-	UE_DEPRECATED(6.0, "This function is deprecated. Use NewFunction instead.")
 	void MarkPreparationCompleted(EPBBattlePreparationType PreparationType, bool bSuccess);
 	bool IsBattlePreparationCompleted() const;
 
@@ -128,5 +153,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<APBBossSpawner> BossSpawner;
 
+	bool bRewardSequenceStarted = false;
 	bool bStartPlayCompleted = false;
+	bool IsFinalBossDefeated = false;
 };

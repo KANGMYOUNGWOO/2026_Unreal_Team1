@@ -5,10 +5,6 @@
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "PBCollectionTableRow.generated.h"
 
-/**
- * Collection DataTable의 한 행입니다.
- * 도감 고정 데이터만 담당하며, 발견/해금/완료 같은 플레이어 진행도는 별도 저장소에서 관리합니다.
- */
 USTRUCT(BlueprintType)
 struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 {
@@ -56,7 +52,6 @@ struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Filter", meta = (ClampMin = "0"))
 	int32 StarGrade = 0;
 
-	/** 세미콜론으로 구분한 태그 문자열입니다. 예: Bumper;Support;UI */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Filter")
 	FString Tags;
 
@@ -87,10 +82,10 @@ struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 		EntryData.SourceTableName = SourceTableName;
 		EntryData.SourceRowName = SourceRowName;
 		EntryData.DisplayName = DisplayName;
-		EntryData.LockedName = LockedName.IsEmpty() ? FText::FromString(TEXT("???")) : LockedName;
+		EntryData.LockedName = DisplayName;
 		EntryData.ShortDescription = ShortDescription;
 		EntryData.DetailDescription = DetailDescription;
-		EntryData.UnlockConditionText = UnlockConditionText;
+		EntryData.UnlockConditionText = FText::GetEmpty();
 		EntryData.AttackTypeId = AttackTypeId;
 		EntryData.RoleId = RoleId;
 		EntryData.AttributeId = AttributeId;
@@ -99,7 +94,7 @@ struct PINBALLLIKE_API FPBCollectionTableRow : public FTableRowBase
 		EntryData.IconAssetKey = IconAssetKey;
 		EntryData.PreviewAssetKey = PreviewAssetKey;
 		EntryData.AssetBundleName = AssetBundleName;
-		EntryData.bHiddenUntilDiscovered = bHiddenUntilDiscovered;
+		EntryData.bHiddenUntilDiscovered = false;
 		EntryData.AccentColor = AccentColor;
 
 		TArray<FString> TagTokens;

@@ -10,7 +10,6 @@
 
 APBGolemBoss::APBGolemBoss()
 {
-	BossMovementType = EPBBossMovementType::Fixed;
 	LeftHandClass = APBGolemBossHand::StaticClass();
 	RightHandClass = APBGolemBossHand::StaticClass();
 

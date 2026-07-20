@@ -25,6 +25,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Damage")
 	bool ApplyDamage(AActor* Target, int32 DamageAmount);
 
+	void SetGroggyAmount(int32 InGroggyAmount);
+
 	UPROPERTY(BlueprintAssignable, Category = "Damage")
 	FPBDamageAppliedSignature OnDamageApplied;
+
+private:
+	int32 GroggyAmount = 0;
 };

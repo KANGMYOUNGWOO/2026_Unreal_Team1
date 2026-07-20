@@ -4,8 +4,15 @@
 #include "PBSummonBumperEffect.h"
 
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBBumperSummonActor.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
+
+EPBBumperSummonAnchorType UPBSummonBumperEffect::GetSpawnAnchorType() const
+{
+	return SpawnAnchorType;
+}
 
 void UPBSummonBumperEffect::Initialize(APBModularBumperBase* InOwnerBumper)
 {
@@ -44,11 +51,10 @@ void UPBSummonBumperEffect::FinishEffect()
 	Super::FinishEffect();
 }
 
-void UPBSummonBumperEffect::BeginDestroy()
+void UPBSummonBumperEffect::ShutdownEffect()
 {
 	DestroySummonActor();
-
-	Super::BeginDestroy();
+	Super::ShutdownEffect();
 }
 
 void UPBSummonBumperEffect::HandleSummonActionFinished(APBBumperSummonActor* SummonActor)
@@ -58,16 +64,12 @@ void UPBSummonBumperEffect::HandleSummonActionFinished(APBBumperSummonActor* Sum
 		return;
 	}
 
+	StopStatusVfx(SummonActor);
 	FinishEffect();
 }
 
 bool UPBSummonBumperEffect::EnsureSummonActor(APBModularBumperBase* Bumper)
 {
-	if (IsValid(SpawnedSummonActor))
-	{
-		return true;
-	}
-
 	if (!IsValid(Bumper) || !SummonActorClass)
 	{
 		return false;
@@ -79,7 +81,13 @@ bool UPBSummonBumperEffect::EnsureSummonActor(APBModularBumperBase* Bumper)
 		return false;
 	}
 
-	const FTransform SpawnTransform = SpawnOffset * Bumper->GetActorTransform();
+	bool bUsesSummonAnchor = false;
+	const FTransform SpawnTransform = ResolveSpawnTransform(Bumper, bUsesSummonAnchor);
+	if (IsValid(SpawnedSummonActor))
+	{
+		UpdateSummonActorTransform(Bumper, SpawnTransform, bUsesSummonAnchor);
+		return true;
+	}
 
 	FActorSpawnParameters SpawnParameters;
 	SpawnParameters.Owner = Bumper;
@@ -96,7 +104,7 @@ bool UPBSummonBumperEffect::EnsureSummonActor(APBModularBumperBase* Bumper)
 		return false;
 	}
 
-	SpawnedSummonActor->AttachToActor(Bumper, FAttachmentTransformRules::KeepWorldTransform);
+	UpdateSummonActorTransform(Bumper, SpawnTransform, bUsesSummonAnchor);
 	SpawnedSummonActor->OnSummonActionFinished.AddUniqueDynamic(
 		this,
 		&UPBSummonBumperEffect::HandleSummonActionFinished);
@@ -104,10 +112,132 @@ bool UPBSummonBumperEffect::EnsureSummonActor(APBModularBumperBase* Bumper)
 	return true;
 }
 
+FTransform UPBSummonBumperEffect::ResolveSpawnTransform(
+	APBModularBumperBase* Bumper,
+	bool& bOutUsesSummonAnchor)
+{
+	bOutUsesSummonAnchor = false;
+	const FTransform FallbackTransform = SpawnOffset * Bumper->GetActorTransform();
+	if (SpawnAnchorType == EPBBumperSummonAnchorType::None)
+	{
+		return FallbackTransform;
+	}
+
+	UWorld* World = Bumper->GetWorld();
+	if (!IsValid(World))
+	{
+		return FallbackTransform;
+	}
+
+	const EPBBumperPositionId SourcePositionId = ResolveSourcePositionId(Bumper);
+	APBBumperSummonAnchor* ExactAnchor = nullptr;
+	APBBumperSummonAnchor* SharedAnchor = nullptr;
+	int32 ExactAnchorCount = 0;
+	int32 SharedAnchorCount = 0;
+
+	for (TActorIterator<APBBumperSummonAnchor> It(World); It; ++It)
+	{
+		APBBumperSummonAnchor* Anchor = *It;
+		if (!IsValid(Anchor) || Anchor->GetAnchorType() != SpawnAnchorType)
+		{
+			continue;
+		}
+
+		const EPBBumperPositionId AnchorPositionId = Anchor->GetSourcePositionId();
+		if (SourcePositionId != EPBBumperPositionId::None
+			&& AnchorPositionId == SourcePositionId)
+		{
+			ExactAnchor = Anchor;
+			++ExactAnchorCount;
+		}
+		else if (AnchorPositionId == EPBBumperPositionId::None)
+		{
+			SharedAnchor = Anchor;
+			++SharedAnchorCount;
+		}
+	}
+
+	APBBumperSummonAnchor* ResolvedAnchor = nullptr;
+	if (ExactAnchorCount == 1)
+	{
+		ResolvedAnchor = ExactAnchor;
+	}
+	else if (ExactAnchorCount == 0 && SharedAnchorCount == 1)
+	{
+		ResolvedAnchor = SharedAnchor;
+	}
+
+	if (IsValid(ResolvedAnchor))
+	{
+		bHasReportedAnchorResolutionFailure = false;
+		bOutUsesSummonAnchor = true;
+		return SpawnOffset * ResolvedAnchor->GetActorTransform();
+	}
+
+	if (!bHasReportedAnchorResolutionFailure)
+	{
+		const TCHAR* FailureReason = ExactAnchorCount > 1
+			? TEXT("duplicate position-specific Anchors")
+			: SharedAnchorCount > 1
+				? TEXT("duplicate shared Anchors")
+				: TEXT("no matching Anchor");
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Bumper] Summon Anchor resolution failed; using the Bumper-relative fallback. Bumper=%s AnchorType=%d SourcePosition=%d Reason=%s"),
+			*GetNameSafe(Bumper),
+			static_cast<int32>(SpawnAnchorType),
+			static_cast<int32>(SourcePositionId),
+			FailureReason);
+		bHasReportedAnchorResolutionFailure = true;
+	}
+
+	return FallbackTransform;
+}
+
+EPBBumperPositionId UPBSummonBumperEffect::ResolveSourcePositionId(
+	const APBModularBumperBase* Bumper) const
+{
+	if (!IsValid(Bumper))
+	{
+		return EPBBumperPositionId::None;
+	}
+
+	const APBBumperTriggerActorBase* ActiveTrigger = Bumper->GetActiveTriggerActor();
+	if (IsValid(ActiveTrigger)
+		&& ActiveTrigger->GetPositionId() != EPBBumperPositionId::None)
+	{
+		return ActiveTrigger->GetPositionId();
+	}
+
+	return Bumper->GetPrimaryPositionId();
+}
+
+void UPBSummonBumperEffect::UpdateSummonActorTransform(
+	APBModularBumperBase* Bumper,
+	const FTransform& SpawnTransform,
+	const bool bUsesSummonAnchor) const
+{
+	if (!IsValid(SpawnedSummonActor) || !IsValid(Bumper))
+	{
+		return;
+	}
+
+	if (bUsesSummonAnchor)
+	{
+		SpawnedSummonActor->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	}
+	else if (SpawnedSummonActor->GetAttachParentActor() != Bumper)
+	{
+		SpawnedSummonActor->AttachToActor(Bumper, FAttachmentTransformRules::KeepWorldTransform);
+	}
+
+	SpawnedSummonActor->SetActorTransform(SpawnTransform);
+}
+
 void UPBSummonBumperEffect::DeactivateSummonActor() const
 {
 	if (IsValid(SpawnedSummonActor))
 	{
+		StopStatusVfx(SpawnedSummonActor);
 		SpawnedSummonActor->DeactivateSummon();
 	}
 }

@@ -4,9 +4,15 @@
 #include "PBBumperTriggerActorBase.h"
 
 #include "Components/SceneComponent.h"
+#include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Bumper/Feedback/PBBumperImpactCameraShake.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Struct/Battle/PBBumperTriggeredMessage.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
 APBBumperTriggerActorBase::APBBumperTriggerActorBase()
@@ -15,6 +21,7 @@ APBBumperTriggerActorBase::APBBumperTriggerActorBase()
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
+	ImpactCameraShakeClass = UPBBumperImpactCameraShake::StaticClass();
 }
 
 void APBBumperTriggerActorBase::InitializeTrigger(
@@ -27,6 +34,7 @@ void APBBumperTriggerActorBase::InitializeTrigger(
 	RequiredTriggerCount = FMath::Max(InRequiredTriggerCount, 1);
 	CurrentTriggerCount = 0;
 	ProgressState = EPBBumperTriggerProgressState::Charging;
+	LastImpactCameraShakeTime = -1.0;
 }
 
 APBModularBumperBase* APBBumperTriggerActorBase::GetOwnerBumper() const
@@ -126,15 +134,68 @@ void APBBumperTriggerActorBase::IncreaseTrigger(
 		return;
 	}
 
+	if (UGameplayMessageSubsystem::HasInstance(this))
+	{
+		FPBBumperTriggeredMessage Message;
+		Message.Bumper = OwnerBumper.Get();
+		Message.TriggerLocation = TriggerHit.ImpactPoint;
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_Battle_Bumper_Triggered,
+			Message);
+	}
+
 	// 자식 액터가 감지한 판정을 범퍼 본체의 카운트 증가 흐름으로 전달한다.
 	OwnerBumper->HandleTriggerActorActivated(this, InteractionActor, TriggerHit);
 	OnMovableActorTriggered(InteractionActor, TriggerHit);
 
-	// 이미 제작된 Blueprint의 Ball 타입 이벤트는 실제 Ball일 때 계속 호출한다.
 	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
 	{
 		OnTriggerActivated(Ball, TriggerHit);
 	}
+}
+
+bool APBBumperTriggerActorBase::PlayImpactCameraShake(const float ScaleMultiplier)
+{
+	if (!ImpactCameraShakeClass
+		|| ImpactCameraShakeScale <= 0.0f
+		|| ScaleMultiplier <= 0.0f)
+	{
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return false;
+	}
+
+	const double CurrentTime = World->GetTimeSeconds();
+	const double MinimumInterval = FMath::Max(MinimumImpactCameraShakeInterval, 0.0f);
+	if (LastImpactCameraShakeTime >= 0.0
+		&& CurrentTime - LastImpactCameraShakeTime < MinimumInterval)
+	{
+		return false;
+	}
+
+	const float FinalScale = ImpactCameraShakeScale * ScaleMultiplier;
+	bool bStartedAnyShake = false;
+	for (FConstPlayerControllerIterator Iterator = World->GetPlayerControllerIterator(); Iterator; ++Iterator)
+	{
+		APlayerController* PlayerController = Iterator->Get();
+		if (!IsValid(PlayerController))
+		{
+			continue;
+		}
+
+		PlayerController->ClientStartCameraShake(ImpactCameraShakeClass, FinalScale);
+		bStartedAnyShake = true;
+	}
+
+	if (bStartedAnyShake)
+	{
+		LastImpactCameraShakeTime = CurrentTime;
+	}
+	return bStartedAnyShake;
 }
 
 bool APBBumperTriggerActorBase::AddTriggerProgress(const int32 Amount)

@@ -104,23 +104,22 @@ void UPBBossSnakeProjectilePattern::FireProjectile()
 	}
 
 	FVector SpawnLocation = GetProjectileSpawnLocation();
-	FRotator SpawnRotation = GetProjectileSpawnRotation(SpawnLocation);
+	FVector ProjectileDirection = GetProjectileDirection(SpawnLocation);
+	FRotator SpawnRotation = ProjectileDirection.Rotation();
 
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.Owner = Boss;
-	SpawnParameters.Instigator = Boss;
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	APBBossProjectile* Projectile = World->SpawnActor<APBBossProjectile>(
+	APBBossProjectile* Projectile = World->SpawnActorDeferred<APBBossProjectile>(
 		ProjectileClass,
-		SpawnLocation,
-		SpawnRotation,
-		SpawnParameters);
+		FTransform(SpawnRotation, SpawnLocation),
+		Boss,
+		Boss,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 	if (Projectile)
 	{
+		Projectile->SetProjectileDirection(ProjectileDirection);
 		Projectile->SetProjectileSpeed(ProjectileSpeed);
 		Projectile->SetSourcePatternName(PatternName.IsNone() ? GetClass()->GetFName() : PatternName);
+		Projectile->FinishSpawning(FTransform(SpawnRotation, SpawnLocation));
 	}
 
 	++FiredProjectileCount;
@@ -174,19 +173,19 @@ FVector UPBBossSnakeProjectilePattern::GetProjectileSpawnLocation() const
 	return Boss->GetActorLocation() + Boss->GetActorTransform().TransformVectorNoScale(SpawnOffset);
 }
 
-FRotator UPBBossSnakeProjectilePattern::GetProjectileSpawnRotation(const FVector& SpawnLocation) const
+FVector UPBBossSnakeProjectilePattern::GetProjectileDirection(const FVector& SpawnLocation) const
 {
 	AActor* PinballActor = FindPinballActor();
 	if (!PinballActor)
 	{
-		return GetOwnerBoss() ? GetOwnerBoss()->GetActorRotation() : FRotator::ZeroRotator;
+		return GetOwnerBoss() ? GetOwnerBoss()->GetActorForwardVector() : FVector::ForwardVector;
 	}
 
 	const FVector Direction = PinballActor->GetActorLocation() - SpawnLocation;
 	if (Direction.IsNearlyZero())
 	{
-		return GetOwnerBoss() ? GetOwnerBoss()->GetActorRotation() : FRotator::ZeroRotator;
+		return GetOwnerBoss() ? GetOwnerBoss()->GetActorForwardVector() : FVector::ForwardVector;
 	}
 
-	return Direction.Rotation();
+	return Direction.GetSafeNormal();
 }

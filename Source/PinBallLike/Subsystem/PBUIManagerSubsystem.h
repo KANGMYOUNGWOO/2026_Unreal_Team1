@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PinBallLike/UI/Popup/PBSimplePopupWidget.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBUIManagerSubsystem.generated.h"
 
@@ -12,9 +13,21 @@ class PINBALLLIKE_API UPBUIManagerSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
+	UPBUIManagerSubsystem();
+
 	// Widget을 생성하고 Viewport와 Stack에 추가한다.
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	UPBUserWidget* PushWidget(TSubclassOf<UPBUserWidget> WidgetClass, int32 ZOrder = 0);
+
+	UPBSimplePopupWidget* ShowSimplePopup(
+		const FText& Message,
+		FPBSimplePopupClosedDelegate ClosedCallback = {},
+		int32 ZOrder = 100);
+
+	UFUNCTION(BlueprintCallable, Category = "UI", meta = (DisplayName = "Show Simple Popup"))
+	UPBSimplePopupWidget* ShowSimplePopupBP(
+		const FText& Message,
+		int32 ZOrder = 100);
 
 	// Top Widget에 닫기 요청을 보낸다. 실제 제거는 Widget의 CompletePop 호출 후 처리된다.
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -33,9 +46,17 @@ public:
 	UPBUserWidget* GetTopWidget() const;
 
 private:
+	UPBSimplePopupWidget* PushSimplePopup(
+		TSubclassOf<UPBSimplePopupWidget> PopupClass,
+		const FText& Message,
+		int32 ZOrder);
+
 	// bForceRemove가 true면 닫기 요청 여부와 Top Widget 여부를 무시하고 제거한다.
 	bool RemoveWidgetFromStack(UPBUserWidget* Widget, bool bForceRemove);
 	void CleanInvalidWidgetsFromStack();
+
+	UPROPERTY()
+	TSubclassOf<UPBSimplePopupWidget> DefaultSimplePopupClass;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBUserWidget>> WidgetStack;

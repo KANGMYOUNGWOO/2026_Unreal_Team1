@@ -1,40 +1,50 @@
 #include "PBBattleHUDWidget.h"
 
 #include "Components/PanelWidget.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Ball/UI/PBBallStatusWidget.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
-#include "PinBallLike/Actor/Synergy/UI/PBSynergyPanelWidget.h"
+#include "PinBallLike/GameState/PBBattleGameState.h"
+#include "PinBallLike/Deck/UI/View/PBDeckOverviewWidget.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
-#include "PinBallLike/Subsystem/Deck/PBBallDeckSynergyService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
-#include "PinBallLike/UI/ViewModel/PBBattleHUDViewModel.h"
+#include "PinBallLike/UI/Loading/PBLoadingScreen.h"
 #include "TimerManager.h"
 
 void UPBBattleHUDWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	ShowBattleLoadingScreen();
 	CacheBallPanels();
 	CacheDeckSubsystem();
 	CachePartyController();
-	EnsureBattleHUDViewModel();
 	BindDeckEvents();
-	BindSynergyEvents();
+	EnsureDeckOverviewWidget();
 	RegisterBattleMessageListeners();
 	ScheduleRefreshBallPanels();
-	ScheduleRefreshSynergyPanels();
+	RefreshDeckOverview();
+
+	const UWorld* World = GetWorld();
+	const APBBattleGameState* BattleGameState = World ? World->GetGameState<APBBattleGameState>() : nullptr;
+	if (BattleGameState)
+	{
+		const EPBBattleLevelPhase CurrentPhase = BattleGameState->GetBattleLevelPhase();
+		ApplyBattlePhaseToDeckOverview(CurrentPhase);
+		ApplyBattlePhaseToLoadingScreen(CurrentPhase);
+	}
 }
 
 void UPBBattleHUDWidget::NativeDestruct()
 {
+	HideBattleLoadingScreen();
 	UnregisterBattleMessageListeners();
-	UnbindSynergyEvents();
 	UnbindDeckEvents();
 
 	for (UPBBallStatusWidget* BallPanel : BallPanels)
@@ -46,16 +56,56 @@ void UPBBattleHUDWidget::NativeDestruct()
 	}
 	BallPanels.Reset();
 
-	if (SynergyPanelContainer)
+	if (DeckOverviewWidget)
 	{
-		SynergyPanelContainer->ClearChildren();
-	}
-	if (BattleHUDViewModel)
-	{
-		BattleHUDViewModel->ClearSynergyViewData();
+		DeckOverviewWidget->ShutdownOverview();
 	}
 
 	Super::NativeDestruct();
+}
+
+void UPBBattleHUDWidget::ApplyBattlePhaseToLoadingScreen(const EPBBattleLevelPhase NewPhase)
+{
+	if (NewPhase == EPBBattleLevelPhase::DataLoading
+		|| NewPhase == EPBBattleLevelPhase::LevelPreparing)
+	{
+		ShowBattleLoadingScreen();
+		return;
+	}
+
+	HideBattleLoadingScreen();
+}
+
+void UPBBattleHUDWidget::ShowBattleLoadingScreen()
+{
+	if (BattleLoadingScreenWidget.IsValid())
+	{
+		return;
+	}
+
+	UGameViewportClient* GameViewportClient = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	if (!GameViewportClient)
+	{
+		return;
+	}
+
+	BattleLoadingScreenWidget = FPBLoadingScreen::CreateLoadingScreenWidget();
+	GameViewportClient->AddViewportWidgetContent(BattleLoadingScreenWidget.ToSharedRef(), MAX_int32);
+}
+
+void UPBBattleHUDWidget::HideBattleLoadingScreen()
+{
+	if (!BattleLoadingScreenWidget.IsValid())
+	{
+		return;
+	}
+
+	if (UGameViewportClient* GameViewportClient = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		GameViewportClient->RemoveViewportWidgetContent(BattleLoadingScreenWidget.ToSharedRef());
+	}
+
+	BattleLoadingScreenWidget.Reset();
 }
 
 void UPBBattleHUDWidget::RefreshBallPanels()
@@ -77,51 +127,39 @@ void UPBBattleHUDWidget::RefreshBallPanels()
 
 void UPBBattleHUDWidget::RefreshSynergyPanels()
 {
-	if (!SynergyPanelContainer)
+	EnsureDeckOverviewWidget();
+	if (DeckOverviewWidget)
+	{
+		DeckOverviewWidget->RefreshSynergyPanels();
+	}
+}
+
+void UPBBattleHUDWidget::EnsureDeckOverviewWidget()
+{
+	if (DeckOverviewWidget)
 	{
 		return;
 	}
 
-	EnsureBattleHUDViewModel();
-	if (!BattleHUDViewModel)
+	UE_LOG(LogTemp, Warning, TEXT("[BattleHUD] DeckOverviewWidget is not bound."));
+}
+
+void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(const EPBBattleLevelPhase NewPhase)
+{
+	EnsureDeckOverviewWidget();
+	if (!DeckOverviewWidget)
 	{
-		SynergyPanelContainer->ClearChildren();
 		return;
 	}
 
-	BindSynergyEvents();
-	UPBBallDeckSynergyService* SynergyService = GetSynergyService();
-	if (!SynergyService)
+	if (NewPhase == EPBBattleLevelPhase::BallDeployment)
 	{
-		SynergyPanelContainer->ClearChildren();
-		return;
+		RefreshDeckOverview();
+		DeckOverviewWidget->OpenDeployment();
 	}
-
-	SynergyService->RefreshSynergyStatesFromPlacedDeck();
-	BattleHUDViewModel->SetSynergyStates(SynergyService->GetActiveSynergyStates());
-	const TArray<FPBSynergyViewData>& ViewDataList = BattleHUDViewModel->GetActiveSynergyViewData();
-
-	SynergyPanelContainer->ClearChildren();
-
-	UClass* WidgetClass = SynergyPanelWidgetClass.Get();
-	if (!WidgetClass)
+	else if (NewPhase == EPBBattleLevelPhase::Combat)
 	{
-		WidgetClass = UPBSynergyPanelWidget::StaticClass();
-	}
-
-	for (const FPBSynergyViewData& ViewData : ViewDataList)
-	{
-		UPBSynergyPanelWidget* SynergyPanel = CreateWidget<UPBSynergyPanelWidget>(this, WidgetClass);
-		if (!SynergyPanel)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[BattleHUD] Failed to create synergy panel. WidgetClass=%s SynergyId=%s"),
-				*GetNameSafe(WidgetClass),
-				*ViewData.SynergyId.ToString());
-			continue;
-		}
-
-		SynergyPanel->InitializeSynergyPanel(ViewData);
-		SynergyPanelContainer->AddChild(SynergyPanel);
+		DeckOverviewWidget->CloseAll();
 	}
 }
 
@@ -152,11 +190,6 @@ void UPBBattleHUDWidget::CacheDeckSubsystem()
 
 	const UGameInstance* GameInstance = GetGameInstance();
 	DeckSubsystem = GameInstance ? GameInstance->GetSubsystem<UPBBallDeckSubsystem>() : nullptr;
-}
-
-UPBBallDeckSynergyService* UPBBattleHUDWidget::GetSynergyService() const
-{
-	return DeckSubsystem ? DeckSubsystem->GetSynergyService() : nullptr;
 }
 
 void UPBBattleHUDWidget::CachePartyController()
@@ -216,42 +249,6 @@ void UPBBattleHUDWidget::UnbindDeckEvents()
 	bDeckEventsBound = false;
 }
 
-void UPBBattleHUDWidget::BindSynergyEvents()
-{
-	if (bSynergyEventsBound)
-	{
-		return;
-	}
-
-	UPBBallDeckSynergyService* SynergyService = GetSynergyService();
-	if (!SynergyService)
-	{
-		return;
-	}
-
-	SynergyStatesChangedHandle = SynergyService->OnSynergyStatesChanged.AddUObject(
-		this,
-		&UPBBattleHUDWidget::HandleSynergyStatesChanged);
-	bSynergyEventsBound = SynergyStatesChangedHandle.IsValid();
-}
-
-void UPBBattleHUDWidget::UnbindSynergyEvents()
-{
-	if (!bSynergyEventsBound)
-	{
-		return;
-	}
-
-	UPBBallDeckSynergyService* SynergyService = GetSynergyService();
-	if (SynergyService && SynergyStatesChangedHandle.IsValid())
-	{
-		SynergyService->OnSynergyStatesChanged.Remove(SynergyStatesChangedHandle);
-	}
-
-	SynergyStatesChangedHandle.Reset();
-	bSynergyEventsBound = false;
-}
-
 void UPBBattleHUDWidget::RegisterBattleMessageListeners()
 {
 	if (!UGameplayMessageSubsystem::HasInstance(this) || BattlePhaseChangedListenerHandle.IsValid())
@@ -284,26 +281,12 @@ void UPBBattleHUDWidget::ScheduleRefreshBallPanels()
 	}
 }
 
-void UPBBattleHUDWidget::ScheduleRefreshSynergyPanels()
+void UPBBattleHUDWidget::RefreshDeckOverview()
 {
-	if (UWorld* World = GetWorld())
+	EnsureDeckOverviewWidget();
+	if (DeckOverviewWidget)
 	{
-		World->GetTimerManager().SetTimerForNextTick(
-			FTimerDelegate::CreateUObject(this, &UPBBattleHUDWidget::RefreshSynergyPanels));
-	}
-}
-
-void UPBBattleHUDWidget::EnsureBattleHUDViewModel()
-{
-	CacheDeckSubsystem();
-	if (!BattleHUDViewModel)
-	{
-		BattleHUDViewModel = NewObject<UPBBattleHUDViewModel>(this);
-	}
-
-	if (BattleHUDViewModel)
-	{
-		BattleHUDViewModel->Initialize(this);
+		DeckOverviewWidget->RefreshAll();
 	}
 }
 
@@ -345,19 +328,11 @@ void UPBBattleHUDWidget::HandleDeploymentSlotChanged(const int32 SlotIndex, cons
 	(void)SlotIndex;
 	(void)BallInstanceId;
 	ScheduleRefreshBallPanels();
-	ScheduleRefreshSynergyPanels();
 }
 
 void UPBBattleHUDWidget::HandleDeploymentChanged()
 {
 	ScheduleRefreshBallPanels();
-	ScheduleRefreshSynergyPanels();
-}
-
-void UPBBattleHUDWidget::HandleSynergyStatesChanged(const TArray<FPBSynergyState>& SynergyStates)
-{
-	(void)SynergyStates;
-	ScheduleRefreshSynergyPanels();
 }
 
 void UPBBattleHUDWidget::HandleBattlePhaseChangedMessage(
@@ -365,9 +340,7 @@ void UPBBattleHUDWidget::HandleBattlePhaseChangedMessage(
 	const FPBBattlePhaseChangedMessage& Message)
 {
 	(void)Channel;
-	if (Message.NewPhase == EPBBattleLevelPhase::BallDeployment)
-	{
-		ScheduleRefreshBallPanels();
-		ScheduleRefreshSynergyPanels();
-	}
+	UE_LOG(LogTemp, Log, TEXT("[BattleHUD] Battle phase changed. NewPhase=%d"), static_cast<int32>(Message.NewPhase));
+	ApplyBattlePhaseToDeckOverview(Message.NewPhase);
+	ApplyBattlePhaseToLoadingScreen(Message.NewPhase);
 }

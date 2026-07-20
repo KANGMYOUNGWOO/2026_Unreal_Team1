@@ -33,6 +33,11 @@ public :
 	
 	int32 GetShopItemPrice(int32 SlotIndex) const;
 	FName GetShopItemRowName(int32 SlotIndex) const;
+	const TArray<FName>& GetCurrentShopItemBallIds() const;
+	bool IsShopItemSold(int32 SlotIndex) const;
+	void ApplyShopPriceDiscount(FName ModifyType, float Value);
+	void ApplyShopRerollDiscount(FName ModifyType, float Value);
+	void RefreshActiveSynergyDiscounts();
 private :
 	
 	int32 CurrentGold;
@@ -47,7 +52,13 @@ private:
 	int RerollChance;
 	UPROPERTY()
 	TArray<FName> CurrentShopItemRowNames;
+	int32 BaseRerollCost = 30;
 	int32 CurrentRerollCost = 30;
+	float ShopPriceDiscountPercent = 0.0f;
+	float ShopPriceDiscountAmount = 0.0f;
+	float ShopRerollDiscountPercent = 0.0f;
+	float ShopRerollDiscountAmount = 0.0f;
 	
+	int32 CalculateDiscountedPrice(int32 BasePrice, float DiscountAmount, float DiscountPercent) const;
 	
 };

@@ -8,6 +8,7 @@
 #include "PBBumperTableParser.generated.h"
 
 class UPBBumperDataAsset;
+class UNiagaraSystem;
 
 UCLASS()
 class PINBALLLIKEEDITOR_API UPBBumperTableParser : public UPBTableParserBase
@@ -28,5 +29,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
 	FPBSheetAssetPathPreset IconPreset;
 
-	UPBBumperDataAsset* SetupBumperDataAsset(FName RowName) const;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset TriggerClassPreset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset EffectClassPreset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Sheet")
+	FPBSheetAssetPathPreset ActivationVfxPreset;
+
+	UPBBumperDataAsset* SetupBumperDataAsset(FName RowName, FName TriggerId, FName EffectId) const;
+	bool ResolveEffectVfx(FName EffectId, struct FPBBumperEffectRow& OutEffectRow) const;
+	TSoftObjectPtr<UNiagaraSystem> ResolveVfx(FName VfxId) const;
 };

@@ -6,7 +6,10 @@
 #include "PBBallItemWidget.h"
 #include "PBBallDragDropOperation.h"
 #include "Components/Overlay.h"
+#include "Engine/World.h"
 #include "PinBallLike/Deck/UI/ViewModel/PBBallSlotViewModel.h"
+#include "PinBallLike/GameState/PBBattleGameState.h"
+#include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "View/MVVMView.h"
 
@@ -119,11 +122,39 @@ bool UPBBallSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDro
 		return false;
 	}
 
-	return DeckSubsystem->MoveBallBetweenSlots(
+	const bool bConsumesBattleShiftCount =
+		BallDragDropOperation->SourceSlotType != SlotType;
+	APBBattleGameState* BattleGameState = GetWorld()
+		? GetWorld()->GetGameState<APBBattleGameState>()
+		: nullptr;
+	if (bConsumesBattleShiftCount
+		&& BattleGameState
+		&& BattleGameState->GetBattleLevelPhase() == EPBBattleLevelPhase::BallDeployment
+		&& !BattleGameState->HasRemainingBattleShiftCount())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[BallDeck] Move rejected. No remaining battle shift count. SourceType=%d SourceIndex=%d TargetType=%d TargetIndex=%d"),
+			static_cast<int32>(BallDragDropOperation->SourceSlotType),
+			BallDragDropOperation->SourceSlotIndex,
+			static_cast<int32>(SlotType),
+			SlotIndex);
+		return false;
+	}
+
+	const bool bMoved = DeckSubsystem->MoveBallBetweenSlots(
 		BallDragDropOperation->SourceSlotType,
 		BallDragDropOperation->SourceSlotIndex,
 		SlotType,
 		SlotIndex);
+
+	if (bMoved
+		&& bConsumesBattleShiftCount
+		&& BattleGameState
+		&& BattleGameState->GetBattleLevelPhase() == EPBBattleLevelPhase::BallDeployment)
+	{
+		BattleGameState->ConsumeBattleShiftCount();
+	}
+
+	return bMoved;
 }
 
 UPBBallItemWidget* UPBBallSlotWidget::CreateBallItem()

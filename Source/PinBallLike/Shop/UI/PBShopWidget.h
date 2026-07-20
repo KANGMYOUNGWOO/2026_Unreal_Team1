@@ -15,6 +15,9 @@ class UTextBlock;
 class UButton;
 struct FBallDataStruct;
 class UPBShopViewModel;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBShopRerollRequested);
+
 class UPBPurchaseConfirmWidget;
 
 UCLASS()
@@ -58,6 +61,13 @@ public :
 	UPROPERTY(meta = (BindWidget) )
 	TObjectPtr<UButton> ExitButton;
 	
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> Button_Reroll;
+
+	UPROPERTY(BlueprintAssignable, Category="Shop|Event")
+	FPBShopRerollRequested OnRerollRequested;
+	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ReRollButton;
 	
@@ -84,6 +94,9 @@ private:
 	
 	UFUNCTION()
 	void OnExitButtonClicked();
+	
+	UFUNCTION()
+	void OnRerollButtonClicked();
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> ShopCanvas;

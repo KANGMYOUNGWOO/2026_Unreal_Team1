@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "PinBallLike/Struct/Collection/PBCollectionMessage.h"
+#include "PinBallLike/Struct/Collection/PBCollectionTabTypes.h"
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBCollectionSubsystem.generated.h"
@@ -14,10 +15,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	const FPBCollectionNotificationMessage&,
 	Message);
 
-/**
- * DT_Collection의 고정 데이터와 플레이어별 도감 진행도의 런타임 사본을 관리합니다.
- * 영구 저장과 전투 판정은 소유하지 않으며, 저장 계층과 게임플레이 시스템이 사용할 API만 제공합니다.
- */
 UCLASS()
 class PINBALLLIKE_API UPBCollectionSubsystem : public UGameInstanceSubsystem
 {
@@ -27,27 +24,26 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	/** 목록 또는 상세 화면을 다시 그려야 할 때 발생합니다. NAME_None은 전체 갱신을 뜻합니다. */
 	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
 	FPBCollectionEntryChangedSignature OnCollectionEntryChanged;
 
-	/** 저장 계층이 변경된 진행도를 감지할 때 사용합니다. NAME_None은 전체 스냅샷 변경을 뜻합니다. */
 	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
 	FPBCollectionProgressChangedSignature OnCollectionProgressChanged;
 
-	/** DT_Collection을 읽어 실제 도감 항목을 준비한 뒤 발생합니다. */
 	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
 	FPBCollectionDataReadySignature OnCollectionDataReady;
 
 	UPROPERTY(BlueprintAssignable, Category = "Collection|Event")
 	FPBCollectionNotificationRequestedSignature OnCollectionNotificationRequested;
 
-	/** 준비된 DT_Collection을 다시 읽습니다. 기존 플레이어 진행도는 유지합니다. */
 	UFUNCTION(BlueprintCallable, Category = "Collection|Data")
 	bool ReloadCollectionData();
 
 	UFUNCTION(BlueprintPure, Category = "Collection|Data")
 	bool IsDataReady() const { return bIsDataReady; }
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Data")
+	bool HasDataLoadCompleted() const;
 
 	UFUNCTION(BlueprintPure, Category = "Collection|Query")
 	TArray<FPBCollectionDisplayData> GetDisplayEntries(EPBCollectionCategory Category) const;
@@ -64,29 +60,43 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Collection|Query")
 	TArray<int32> GetAvailableStarGrades() const;
 
-	/** 원본 시스템 식별자와 연결된 모든 도감 ID를 반환합니다. */
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionBallDisplayData> GetBallCatalogEntries() const;
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionSynergyDisplayData> GetSynergyCatalogEntries() const;
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionRelicDisplayData> GetRelicCatalogEntries() const;
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionBumperDisplayData> GetBumperCatalogEntries() const;
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
+	TArray<FPBCollectionBossDisplayData> GetBossCatalogEntries() const;
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Validation")
+	TArray<FPBCollectionValidationIssue> GetCatalogValidationIssues() const;
+
 	UFUNCTION(BlueprintPure, Category = "Collection|Source")
 	TArray<FName> FindCollectionIdsBySourceId(FName SourceId) const;
 
-	/** 원본 테이블 종류와 RowName이 모두 일치하는 도감 ID를 반환합니다. */
 	UFUNCTION(BlueprintPure, Category = "Collection|Source")
 	TArray<FName> FindCollectionIdsBySourceRow(FName SourceTableName, FName SourceRowName) const;
 
-	UFUNCTION(BlueprintCallable, Category = "Collection|Progress")
+	UFUNCTION(BlueprintCallable, Category = "Collection|Progress", meta = (DeprecatedFunction, DeprecationMessage = "도감은 모든 항목을 항상 공개하므로 진행도를 사용하지 않습니다."))
 	bool DiscoverEntry(FName CollectionId);
 
-	UFUNCTION(BlueprintCallable, Category = "Collection|Progress")
+	UFUNCTION(BlueprintCallable, Category = "Collection|Progress", meta = (DeprecatedFunction, DeprecationMessage = "도감은 모든 항목을 항상 공개하므로 해금 API를 사용하지 않습니다."))
 	bool UnlockEntry(FName CollectionId);
 
-	UFUNCTION(BlueprintCallable, Category = "Collection|Progress")
+	UFUNCTION(BlueprintCallable, Category = "Collection|Progress", meta = (DeprecatedFunction, DeprecationMessage = "도감은 완료 상태를 저장하지 않습니다."))
 	bool CompleteEntry(FName CollectionId, const FString& CompletedByCharacterName);
 
-	/** 도감의 NEW 표시를 해제합니다. 상태 자체는 변경하지 않습니다. */
-	UFUNCTION(BlueprintCallable, Category = "Collection|Progress")
+	UFUNCTION(BlueprintCallable, Category = "Collection|Progress", meta = (DeprecatedFunction, DeprecationMessage = "도감은 NEW 상태를 저장하지 않습니다."))
 	bool MarkEntryAsSeen(FName CollectionId);
 
-	/** 게임플레이에서 발생한 누적 기록을 한 번에 반영합니다. 모든 증분 값은 0 이상으로 보정됩니다. */
-	UFUNCTION(BlueprintCallable, Category = "Collection|Progress")
+	UFUNCTION(BlueprintCallable, Category = "Collection|Progress", meta = (DeprecatedFunction, DeprecationMessage = "도감은 플레이 기록을 저장하지 않습니다."))
 	bool UpdateEntryStatistics(
 		FName CollectionId,
 		int32 AcquireDelta,
@@ -95,12 +105,10 @@ public:
 		int32 BestComboCandidate,
 		int32 TotalDamageDelta);
 
-	/** SaveGame 또는 PlayerData에 저장할 현재 진행도 사본을 반환합니다. */
-	UFUNCTION(BlueprintPure, Category = "Collection|Persistence")
+	UFUNCTION(BlueprintPure, Category = "Collection|Persistence", meta = (DeprecatedFunction, DeprecationMessage = "도감 진행도 저장은 사용하지 않습니다."))
 	TArray<FPBCollectionProgressData> GetProgressSnapshot() const;
 
-	/** 저장 계층에서 불러온 진행도를 적용합니다. 이 과정에서는 해금 알림을 발생시키지 않습니다. */
-	UFUNCTION(BlueprintCallable, Category = "Collection|Persistence")
+	UFUNCTION(BlueprintCallable, Category = "Collection|Persistence", meta = (DeprecatedFunction, DeprecationMessage = "도감 진행도 저장은 사용하지 않습니다."))
 	void ApplyProgressSnapshot(const TArray<FPBCollectionProgressData>& ProgressSnapshot);
 
 	UFUNCTION(BlueprintPure, Category = "Collection|Text")
@@ -118,38 +126,26 @@ private:
 
 	bool BuildEntriesFromCollectionTable(TArray<FPBCollectionEntryData>& OutEntries) const;
 	void RebuildLookupIndexes();
-	void ReconcileProgressWithEntries();
-	void NotifyProgressChanged(FName CollectionId);
-	static void SanitizeProgressData(FPBCollectionProgressData& ProgressData);
 
 	const FPBCollectionEntryData* FindEntryData(FName CollectionId) const;
-	FPBCollectionProgressData* FindProgressData(FName CollectionId);
-	const FPBCollectionProgressData* FindProgressData(FName CollectionId) const;
 
-	FPBCollectionDisplayData MakeDisplayData(
-		const FPBCollectionEntryData& EntryData,
-		const FPBCollectionProgressData& ProgressData) const;
-	void BroadcastProgressNotification(
-		const FPBCollectionEntryData& EntryData,
-		EPBCollectionState PreviousState,
-		EPBCollectionState NewState);
+	FPBCollectionDisplayData MakeDisplayData(const FPBCollectionEntryData& EntryData) const;
+	const FPBCollectionEntryData* FindEntryDataBySourceRow(
+		EPBCollectionCategory Category,
+		FName SourceRowName) const;
+	FPBCollectionItemSummary MakeItemSummary(
+		EPBCollectionCategory Category,
+		FName SourceRowName,
+		const FText& SourceDisplayName,
+		const FText& SourceDescription,
+		int32 DefaultSortOrder = 0) const;
 	bool DoesEntryMatchQuery(
 		const FPBCollectionEntryData& EntryData,
-		const FPBCollectionProgressData& ProgressData,
 		const FPBCollectionQuery& Query) const;
-	FText BuildRecordText(const FPBCollectionProgressData& ProgressData) const;
-
-	static bool HasTimestamp(const FDateTime& Timestamp);
-	static FDateTime MakeNow();
-	static FString FormatTimestamp(const FDateTime& Timestamp);
 
 	UPROPERTY()
 	TArray<FPBCollectionEntryData> Entries;
 
-	UPROPERTY()
-	TMap<FName, FPBCollectionProgressData> ProgressMap;
-
-	/** Entries에서 재생성하는 런타임 전용 인덱스입니다. 저장 대상이 아닙니다. */
 	TMap<FName, int32> EntryIndexByCollectionId;
 	TMap<FName, TArray<FName>> CollectionIdsBySourceId;
 	TMap<FName, TArray<FName>> CollectionIdsBySourceRowName;

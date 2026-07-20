@@ -30,6 +30,12 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Bumper|Table")
 	TSoftObjectPtr<UDataTable> BumperEffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> GameplayEffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> GameplayEffectParamTable;
 	
 #pragma endregion
 	
@@ -99,6 +105,19 @@ public:
 
 #pragma endregion
 
+#pragma region Effect
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> EffectTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> EffectSetTable;
+
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Effect|Table")
+	TSoftObjectPtr<UDataTable> EffectParamTable;
+
+#pragma endregion
+
 #pragma region Synergy
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
@@ -106,15 +125,6 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
 	TSoftObjectPtr<UDataTable> SynergyTierTable;
-
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
-	TSoftObjectPtr<UDataTable> SynergyEffectTable;
-
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
-	TSoftObjectPtr<UDataTable> SynergyEffectModifierTable;
-
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
-	TSoftObjectPtr<UDataTable> SynergyEffectTriggerTable;
 
 #pragma endregion
 };

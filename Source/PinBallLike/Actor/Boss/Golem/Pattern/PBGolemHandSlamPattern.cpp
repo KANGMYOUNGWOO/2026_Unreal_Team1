@@ -75,14 +75,9 @@ void UPBGolemHandSlamPattern::CancelPatternInternal_Implementation(APBBossBase* 
 
 	if (APBGolemBoss* GolemBoss = GetGolemBoss(Boss))
 	{
-		ReturnHandToStartTransform(GolemBoss);
-	}
-
-	if (APBGolemBoss* GolemBoss = GetGolemBoss(Boss))
-	{
 		if (APBGolemBossHand* GolemHand = GolemBoss->GetGolemHand(HandType))
 		{
-			GolemHand->EndPatternMovementLock();
+			GolemHand->ResetPatternMovement(StartHandTransform);
 		}
 	}
 }

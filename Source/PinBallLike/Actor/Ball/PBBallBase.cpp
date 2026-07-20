@@ -5,9 +5,10 @@
 #include  "PinBallLike/Relic/PBRelicCalculator.h"
 #include "Component/PBBallHitReactionComponent.h"
 #include "Component/PBBallComboComponent.h"
+#include "Component/PBBallEffectRuntimeComponent.h"
 #include "Component/PBBallPhysicsComponent.h"
+#include "Component/PBBallResourceComponent.h"
 #include "Component/PBBallSkillComponent.h"
-#include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
 #include "Components/SphereComponent.h"
@@ -31,10 +32,13 @@ APBBallBase::APBBallBase()
 	StatComponent = CreateDefaultSubobject<UPBBaseStatComponent>(TEXT("StatComponent"));
 	
 	// Resource
-	ResourceComponent = CreateDefaultSubobject<UPBBaseResourceComponent>(TEXT("ResourceComponent"));
+	ResourceComponent = CreateDefaultSubobject<UPBBallResourceComponent>(TEXT("ResourceComponent"));
 
 	// StatusEffect
 	StatusEffectComponent = CreateDefaultSubobject<UPBStatusEffectComponent>(TEXT("StatusEffectComponent"));
+
+	// Effect
+	EffectRuntimeComponent = CreateDefaultSubobject<UPBBallEffectRuntimeComponent>(TEXT("EffectRuntimeComponent"));
 	
 	// Combo
 	ComboComponent = CreateDefaultSubobject<UPBBallComboComponent>(TEXT("ComboComponent"));

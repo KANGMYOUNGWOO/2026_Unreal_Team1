@@ -14,14 +14,16 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectParamRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectRow.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectSetRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
 #include "PinBallLike/Table/Shop/Struct/PBShopTableRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectModifierRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectRow.h"
 #include "PinBallLike/Table/StatusEffect/Struct/PBStatusEffectTriggerRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectModifierRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectRow.h"
-#include "PinBallLike/Table/Synergy/Struct/PBSynergyEffectTriggerRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
@@ -44,7 +46,10 @@ public:
 	// DeveloperSettings에 등록된 테이블을 비동기로 준비한다.
 	void LoadStartupGameDataAsync();
 	void UnloadStartupGameData();
+	bool HasStartupGameDataLoadCompleted() const { return bStartupGameDataLoadCompleted; }
 	bool IsTableDataReady() const;
+	bool IsBumperTableReady() const;
+	bool IsCollectionCatalogDataReady() const;
 
 	// 로딩 Subsystem이 준비한 테이블을 주입한다. 이 Subsystem은 조회 책임만 가진다.
 	void SetCollectionTable(UDataTable* InCollectionTable);
@@ -53,6 +58,7 @@ public:
 	void GetAllCollectionRows(TArray<FPBCollectionTableRow>& OutRows) const;
 
 	void SetBumperTables(UDataTable* InBumperTable, UDataTable* InBumperTriggerTable, UDataTable* InBumperEffectTable);
+	void SetGameplayEffectTables(UDataTable* InGameplayEffectTable, UDataTable* InGameplayEffectParamTable);
 	void SetBallTables(UDataTable* InBallTable, UDataTable* InBallStarLevelTable);
 	void SetSkillTable(UDataTable* InSkillTable);
 	void SetBossTables(UDataTable* InBossTable, UDataTable* InBossHitPointTable, UDataTable* InBossPatternTable);
@@ -62,13 +68,13 @@ public:
 		UDataTable* InStatusEffectTable,
 		UDataTable* InStatusEffectModifierTable,
 		UDataTable* InStatusEffectTriggerTable);
+	void SetEffectTables(
+		UDataTable* InEffectTable,
+		UDataTable* InEffectSetTable,
+		UDataTable* InEffectParamTable);
 	void SetSynergyTables(
 		UDataTable* InSynergyTable,
-		UDataTable* InSynergyTierTable,
-		UDataTable* InSynergyTierEffectTable,
-		UDataTable* InSynergyEffectTable,
-		UDataTable* InSynergyEffectModifierTable,
-		UDataTable* InSynergyEffectTriggerTable);
+		UDataTable* InSynergyTierTable);
 
 	UPROPERTY(BlueprintAssignable, Category = "TableData")
 	FPBTableDataLoadEvent OnStartupGameDataLoaded;
@@ -80,6 +86,7 @@ private:
 	TObjectPtr<UDataTable> CollectionTable;
 
 	TSharedPtr<FStreamableHandle> StartupGameDataLoadHandle;
+	bool bStartupGameDataLoadCompleted = false;
 
 	UPROPERTY()
 	TArray<TObjectPtr<UDataTable>> LoadedStartupTables;
@@ -104,6 +111,8 @@ public:
 	bool FindBumperEffectRow(FName RowName, FPBBumperEffectRow& OutRow) const;
 	bool FindLinkedBumperTriggerRow(FName BumperRowName, FPBBumperTriggerRow& OutRow) const;
 	bool FindLinkedBumperEffectRow(FName BumperRowName, FPBBumperEffectRow& OutRow) const;
+	bool FindGameplayEffectRow(FName RowName, FPBGameplayEffectRow& OutRow) const;
+	bool GetGameplayEffectParamRows(FName EffectId, TArray<FPBGameplayEffectParamRow>& OutRows) const;
 private:
 
 	UPROPERTY()
@@ -115,11 +124,18 @@ private:
 	UPROPERTY()
 	TObjectPtr<UDataTable> BumperEffectTable;
 
+	UPROPERTY()
+	TObjectPtr<UDataTable> GameplayEffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> GameplayEffectParamTable;
+
 #pragma endregion
 
 #pragma region Ball
 
 public:
+	bool GetAllBallRows(TArray<FName>& OutRowNames, TArray<FPBBallTableRow>& OutRows) const;
 	bool FindBallRow(FName RowName, FPBBallTableRow& OutRow) const;
 	bool FindBallStarLevelRow(FName RowName, FPBBallStarLevelRow& OutRow) const;
 	bool FindBallStarLevelRow(FName BallId, int32 StarLevel, FName& OutRowName, FPBBallStarLevelRow& OutRow) const;
@@ -215,6 +231,25 @@ private:
 
 #pragma endregion
 
+#pragma region Effect
+
+public:
+	bool FindEffectRow(FName RowName, FPBEffectTableRow& OutRow) const;
+	bool GetEffectSetRows(FName EffectSetId, TArray<FPBEffectSetRow>& OutRows) const;
+	bool GetEffectParamRows(FName EffectId, TArray<FPBEffectParamRow>& OutRows) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDataTable> EffectTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> EffectSetTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> EffectParamTable;
+
+#pragma endregion
+
 #pragma region Synergy
 
 public:
@@ -222,9 +257,6 @@ public:
 	bool FindSynergyRow(FName RowName, FPBSynergyTableRow& OutRow) const;
 	bool FindSynergyTierRow(FName RowName, FPBSynergyTierRow& OutRow) const;
 	bool GetSynergyTierRows(FName SynergyId, TArray<FPBSynergyTierRow>& OutRows) const;
-	bool FindSynergyEffectRow(FName RowName, FPBSynergyEffectRow& OutRow) const;
-	bool GetSynergyEffectModifierRows(FName SynergyEffectId, TArray<FPBSynergyEffectModifierRow>& OutRows) const;
-	bool GetSynergyEffectTriggerRows(FName SynergyEffectId, TArray<FPBSynergyEffectTriggerRow>& OutRows) const;
 
 private:
 	UPROPERTY()
@@ -232,18 +264,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> SynergyTierTable;
-
-	UPROPERTY()
-	TObjectPtr<UDataTable> SynergyTierEffectTable;
-
-	UPROPERTY()
-	TObjectPtr<UDataTable> SynergyEffectTable;
-
-	UPROPERTY()
-	TObjectPtr<UDataTable> SynergyEffectModifierTable;
-
-	UPROPERTY()
-	TObjectPtr<UDataTable> SynergyEffectTriggerTable;
 
 #pragma endregion
 };

@@ -34,6 +34,12 @@ public:
 	// 히트 포인트 배율을 반영해 보스 체력 데미지를 적용합니다.
 	void ApplyBossDamage(FName HitPointName, int32 DamageAmount);
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Stat Damage")
+	void ApplyDamageTakenMultiplierPercentDelta(int32 DeltaPercent);
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Stat Damage")
+	int32 GetDamageTakenMultiplierPercentBonus() const { return DamageTakenMultiplierPercentBonus; }
+
 	UFUNCTION(BlueprintCallable, Category = "Boss|Stat State")
 	// 현재 체력이 0 이하인지 확인합니다.
 	bool IsDead() const;
@@ -52,6 +58,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Stat Damage")
 	TMap<FName, FBossHitPointDamageData> HitPointDataMap;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Stat Damage")
+	int32 DamageTakenMultiplierPercentBonus = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Stat State", meta = (ClampMin = "0", ClampMax = "100"))
 	int32 EnrageHPRatioPercent = 40;

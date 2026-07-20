@@ -1,5 +1,7 @@
 ﻿using UnrealBuildTool;
 
+using System.IO;
+
 public class PinballLikeEditor : ModuleRules
 {
     public PinballLikeEditor(ReadOnlyTargetRules Target) : base(Target)
@@ -13,6 +15,7 @@ public class PinballLikeEditor : ModuleRules
                 "PinBallLike",
                 "GoogleSheetLoader",
                 "Paper2D",
+                "GameplayTags",
             }
         );
 
@@ -22,9 +25,28 @@ public class PinballLikeEditor : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "UnrealEd",
+                "AdvancedPreviewScene",
+                "AssetTools",
+                "BlueprintEditorLibrary",
+                "HTTP",
+                "ImageCore",
+                "Json",
+                "KismetCompiler",
+                "MaterialEditor",
+                "Niagara",
+                "NiagaraEditor",
+                "NiagaraShader",
+                "RenderCore",
                 "Slate",
                 "SlateCore"
             }
+        );
+
+        PrivateIncludePaths.Add(
+            Path.Combine(EngineDirectory, "Plugins", "FX", "Niagara", "Source", "Niagara", "Internal")
+        );
+        PrivateIncludePaths.Add(
+            Path.Combine(EngineDirectory, "Plugins", "FX", "Niagara", "Source", "NiagaraShader", "Internal")
         );
     }
 }
