@@ -17,7 +17,7 @@ UPBSkillTableParser::UPBSkillTableParser()
 	SkillActorClassPreset.NameFormat = TEXT("BP_Skill_{0}");
 	SkillIconPreset.FolderPath.Path = TEXT("/Game/Resources/Skill");
 	SkillIconPreset.NameFormat = TEXT("T_{0}");
-	BallDataAssetPreset.FolderPath.Path = TEXT("/Game/Blueprints/Ball/DataAsset");
+	BallDataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Ball");
 	BallDataAssetPreset.NameFormat = TEXT("DA_{0}");
 }
 
