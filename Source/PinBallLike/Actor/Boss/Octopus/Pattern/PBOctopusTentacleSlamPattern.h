@@ -25,12 +25,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Slam", meta = (ClampMin = "0.01"))
 	float SlamDuration = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Slam Telegraph", meta = (ClampMin = "0.0"))
-	float TelegraphDuration = 1.5f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Slam Telegraph")
-	TSubclassOf<APBOctopusTentacleSlamTelegraph> TelegraphClass;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Slam Damage", meta = (ClampMin = "0"))
 	int32 SlamDamage = 1;
 
@@ -43,6 +37,7 @@ protected:
 private:
 	void BeginSlamAfterTelegraph();
 	float SpawnSlamTelegraph(APBBossBase* Boss, const FVector& SlamDirection);
+	const FPBBossPatternTelegraphData* FindSlamTelegraphData() const;
 	void StartDamageWindow();
 	void FinishDamageWindow();
 	void CompleteSlamPattern();

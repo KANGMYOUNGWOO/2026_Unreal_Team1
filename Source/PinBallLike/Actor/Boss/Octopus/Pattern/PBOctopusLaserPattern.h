@@ -37,6 +37,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Laser", meta = (ClampMin = "0.0", Units = "cm/s"))
 	float BounceVelocity = 1500.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Laser", meta = (ClampMin = "0"))
+	int32 LaserDamage = 1;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Laser", meta = (ClampMin = "0.0", Units = "s"))
 	float LaserGrowthDuration = 1.0f;
 

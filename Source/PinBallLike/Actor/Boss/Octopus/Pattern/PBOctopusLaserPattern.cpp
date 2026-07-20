@@ -62,7 +62,8 @@ void UPBOctopusLaserPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 	SpawnedLaserWall->InitializeLaserWall(
 		SpawnedLaserWall->GetActorForwardVector(),
 		BounceVelocity,
-		SourcePatternName);
+		SourcePatternName,
+		LaserDamage);
 
 	if (LaserDuration <= 0.0f)
 	{
@@ -129,7 +130,8 @@ void UPBOctopusLaserPattern::UpdateLaserSweep()
 	SpawnedLaserWall->InitializeLaserWall(
 		SpawnedLaserWall->GetActorForwardVector(),
 		BounceVelocity,
-		SourcePatternName);
+		SourcePatternName,
+		LaserDamage);
 }
 
 void UPBOctopusLaserPattern::ClearLaserTimers()

@@ -16,7 +16,11 @@ public:
 	APBGolemLaserWall();
 
 	UFUNCTION(BlueprintCallable, Category = "Boss|Golem|Laser")
-	void InitializeLaserWall(FVector InLaunchDirection, float InBounceVelocity, FName InSourcePatternName);
+	void InitializeLaserWall(
+		FVector InLaunchDirection,
+		float InBounceVelocity,
+		FName InSourcePatternName,
+		int32 InDamageAmount = 1);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Golem|Laser")
@@ -27,6 +31,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem|Laser", meta = (ClampMin = "0.0", Units = "cm/s"))
 	float BounceVelocity = 1500.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem|Laser", meta = (ClampMin = "0"))
+	int32 DamageAmount = 1;
 
 private:
 	void BounceBall(AActor* OtherActor, const FHitResult& Hit);

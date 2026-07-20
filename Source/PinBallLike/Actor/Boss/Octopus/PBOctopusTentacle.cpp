@@ -72,7 +72,7 @@ void APBOctopusTentacle::InitializeTentacle(APBOctopusBoss* NewOwnerBoss)
 
 void APBOctopusTentacle::ApplyTentacleDamage(int32 DamageAmount)
 {
-	if (!IsTentacleAvailable() || DamageAmount <= 0)
+	if (!IsTentacleAvailable() || IsSlamActiveValue || DamageAmount <= 0)
 	{
 		return;
 	}

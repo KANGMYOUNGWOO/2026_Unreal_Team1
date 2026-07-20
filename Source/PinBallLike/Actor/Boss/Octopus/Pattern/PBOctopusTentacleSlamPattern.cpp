@@ -144,7 +144,8 @@ float UPBOctopusTentacleSlamPattern::SpawnSlamTelegraph(
 	}
 
 	UWorld* World = Boss ? Boss->GetWorld() : nullptr;
-	if (!World || TelegraphDuration <= 0.0f)
+	const FPBBossPatternTelegraphData* TelegraphData = FindSlamTelegraphData();
+	if (!World || !TelegraphData)
 	{
 		return 0.0f;
 	}
@@ -179,11 +180,8 @@ float UPBOctopusTentacleSlamPattern::SpawnSlamTelegraph(
 	SpawnParameters.Owner = Boss;
 	SpawnParameters.Instigator = Boss;
 	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	UClass* SpawnClass = TelegraphClass
-		? TelegraphClass.Get()
-		: APBOctopusTentacleSlamTelegraph::StaticClass();
 	ActiveTelegraph = World->SpawnActor<APBOctopusTentacleSlamTelegraph>(
-		SpawnClass,
+		TelegraphData->TelegraphClass.Get(),
 		TelegraphLocation,
 		FRotator::ZeroRotator,
 		SpawnParameters);
@@ -197,8 +195,18 @@ float UPBOctopusTentacleSlamPattern::SpawnSlamTelegraph(
 		TargetBall,
 		TentacleLength,
 		TentacleWidth,
-		TelegraphDuration);
-	return TelegraphDuration;
+		TelegraphData->DurationSeconds);
+	return TelegraphData->DurationSeconds;
+}
+
+const FPBBossPatternTelegraphData* UPBOctopusTentacleSlamPattern::FindSlamTelegraphData() const
+{
+	return TelegraphDataList.FindByPredicate([](const FPBBossPatternTelegraphData& TelegraphData)
+	{
+		return TelegraphData.TelegraphClass
+			&& TelegraphData.TelegraphClass->IsChildOf(APBOctopusTentacleSlamTelegraph::StaticClass())
+			&& TelegraphData.DurationSeconds > 0.0f;
+	});
 }
 
 void UPBOctopusTentacleSlamPattern::StartDamageWindow()
