@@ -35,7 +35,10 @@ FText JoinTexts(const TArray<FText>& Texts)
 void UPBCollectionBallTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!PrepareCatalogRefresh(BallTileView, LOCTEXT("BallLoading", "볼 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(
+		BallTileView,
+		EPBCollectionCategory::Ball,
+		LOCTEXT("BallLoading", "볼 데이터를 준비하는 중입니다.")))
 	{
 		CatalogData.Reset();
 		ShowDetails(INDEX_NONE);
@@ -102,7 +105,10 @@ void UPBCollectionBallTabWidget::ShowDetails(const int32 DataIndex) const
 void UPBCollectionSynergyTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!PrepareCatalogRefresh(SynergyListView, LOCTEXT("SynergyLoading", "시너지 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(
+		SynergyListView,
+		EPBCollectionCategory::Synergy,
+		LOCTEXT("SynergyLoading", "시너지 데이터를 준비하는 중입니다.")))
 	{
 		CatalogData.Reset();
 		ShowDetails(INDEX_NONE);
@@ -175,7 +181,10 @@ void UPBCollectionSynergyTabWidget::ShowDetails(const int32 DataIndex) const
 void UPBCollectionRelicTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!PrepareCatalogRefresh(RelicTileView, LOCTEXT("RelicLoading", "유물 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(
+		RelicTileView,
+		EPBCollectionCategory::Relic,
+		LOCTEXT("RelicLoading", "유물 데이터를 준비하는 중입니다.")))
 	{
 		CatalogData.Reset();
 		ShowDetails(INDEX_NONE);
@@ -233,7 +242,10 @@ void UPBCollectionRelicTabWidget::ShowDetails(const int32 DataIndex) const
 void UPBCollectionBumperTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!PrepareCatalogRefresh(BumperTileView, LOCTEXT("BumperLoading", "범퍼 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(
+		BumperTileView,
+		EPBCollectionCategory::Bumper,
+		LOCTEXT("BumperLoading", "범퍼 데이터를 준비하는 중입니다.")))
 	{
 		CatalogData.Reset();
 		ShowDetails(INDEX_NONE);
@@ -312,7 +324,10 @@ void UPBCollectionBumperTabWidget::ShowDetails(const int32 DataIndex) const
 void UPBCollectionBossTabWidget::RefreshTab()
 {
 	UPBCollectionSubsystem* Subsystem = GetCollectionSubsystem();
-	if (!PrepareCatalogRefresh(BossSelector, LOCTEXT("BossLoading", "보스 데이터를 준비하는 중입니다.")))
+	if (!PrepareCatalogRefresh(
+		BossSelector,
+		EPBCollectionCategory::Boss,
+		LOCTEXT("BossLoading", "보스 데이터를 준비하는 중입니다.")))
 	{
 		CatalogData.Reset();
 		ShowDetails(INDEX_NONE);

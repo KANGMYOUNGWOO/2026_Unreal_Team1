@@ -36,8 +36,11 @@ protected:
 	virtual void NativeDestruct() override;
 
 	UPBCollectionSubsystem* GetCollectionSubsystem() const;
-	bool IsCatalogDataReady(const FText& LoadingText) const;
-	bool PrepareCatalogRefresh(UListView* ListView, const FText& LoadingText) const;
+	bool IsCatalogDataReady(EPBCollectionCategory Category, const FText& LoadingText) const;
+	bool PrepareCatalogRefresh(
+		UListView* ListView,
+		EPBCollectionCategory Category,
+		const FText& LoadingText) const;
 	bool MatchesSearch(const FPBCollectionItemSummary& Summary, const TArray<FText>& AdditionalTexts = {}) const;
 	int32 PopulateCatalogItems(
 		UListView* ListView,

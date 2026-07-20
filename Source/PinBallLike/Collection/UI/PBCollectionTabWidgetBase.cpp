@@ -88,9 +88,11 @@ void UPBCollectionTabWidgetBase::RefreshTab()
 {
 }
 
-bool UPBCollectionTabWidgetBase::IsCatalogDataReady(const FText& LoadingText) const
+bool UPBCollectionTabWidgetBase::IsCatalogDataReady(
+	const EPBCollectionCategory Category,
+	const FText& LoadingText) const
 {
-	if (!TabController || !TabController->IsCatalogDataReady())
+	if (!TabController || !TabController->IsCatalogDataReady(Category))
 	{
 		const FText StatusTextValue = TabController && TabController->HasDataLoadCompleted()
 			? NSLOCTEXT("PBCollection", "CatalogLoadFailed", "도감 데이터 일부를 불러오지 못했습니다.")
@@ -103,6 +105,7 @@ bool UPBCollectionTabWidgetBase::IsCatalogDataReady(const FText& LoadingText) co
 
 bool UPBCollectionTabWidgetBase::PrepareCatalogRefresh(
 	UListView* ListView,
+	const EPBCollectionCategory Category,
 	const FText& LoadingText) const
 {
 	if (!ListView)
@@ -112,7 +115,7 @@ bool UPBCollectionTabWidgetBase::PrepareCatalogRefresh(
 			*GetNameSafe(this));
 		return false;
 	}
-	if (IsCatalogDataReady(LoadingText))
+	if (IsCatalogDataReady(Category, LoadingText))
 	{
 		return true;
 	}

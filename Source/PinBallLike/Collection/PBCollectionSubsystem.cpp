@@ -67,7 +67,7 @@ bool UPBCollectionSubsystem::ReloadCollectionData()
 	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
 		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
 		: nullptr;
-	bIsDataReady = IsValid(TableDataSubsystem) && TableDataSubsystem->IsCollectionCatalogDataReady();
+	bIsDataReady = IsValid(TableDataSubsystem) && TableDataSubsystem->IsAnyCollectionCatalogDataReady();
 	if (!bIsDataReady)
 	{
 		if (IsValid(TableDataSubsystem) && TableDataSubsystem->HasStartupGameDataLoadCompleted())
@@ -87,6 +87,16 @@ bool UPBCollectionSubsystem::ReloadCollectionData()
 	OnCollectionDataReady.Broadcast(true);
 	OnCollectionEntryChanged.Broadcast(NAME_None);
 	return true;
+}
+
+bool UPBCollectionSubsystem::IsCategoryDataReady(const EPBCollectionCategory Category) const
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
+		: nullptr;
+	return IsValid(TableDataSubsystem)
+		&& TableDataSubsystem->IsCollectionCatalogDataReady(Category);
 }
 
 bool UPBCollectionSubsystem::HasDataLoadCompleted() const

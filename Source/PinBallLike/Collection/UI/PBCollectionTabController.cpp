@@ -89,9 +89,9 @@ void UPBCollectionTabController::SetSortMode(const EPBCollectionSortMode InSortM
 	}
 }
 
-bool UPBCollectionTabController::IsCatalogDataReady() const
+bool UPBCollectionTabController::IsCatalogDataReady(const EPBCollectionCategory Category) const
 {
-	return IsValid(CollectionSubsystem) && CollectionSubsystem->IsDataReady();
+	return IsValid(CollectionSubsystem) && CollectionSubsystem->IsCategoryDataReady(Category);
 }
 
 bool UPBCollectionTabController::HasDataLoadCompleted() const

@@ -27,7 +27,7 @@ public:
 	EPBCollectionSortMode GetSortMode() const { return SortMode; }
 
 	UPBCollectionSubsystem* GetCollectionSubsystem() const { return CollectionSubsystem; }
-	bool IsCatalogDataReady() const;
+	bool IsCatalogDataReady(EPBCollectionCategory Category) const;
 	bool HasDataLoadCompleted() const;
 	bool MatchesSearch(
 		const FPBCollectionItemSummary& Summary,

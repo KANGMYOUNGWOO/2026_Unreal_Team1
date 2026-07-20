@@ -42,8 +42,6 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath BumperTablePath = Settings->BumperTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperTriggerTablePath = Settings->BumperTriggerTable.ToSoftObjectPath();
 	const FSoftObjectPath BumperEffectTablePath = Settings->BumperEffectTable.ToSoftObjectPath();
-	const FSoftObjectPath GameplayEffectTablePath = Settings->GameplayEffectTable.ToSoftObjectPath();
-	const FSoftObjectPath GameplayEffectParamTablePath = Settings->GameplayEffectParamTable.ToSoftObjectPath();
 	const FSoftObjectPath BallTablePath = Settings->BallTable.ToSoftObjectPath();
 	const FSoftObjectPath BallStarLevelTablePath = Settings->BallStarLevelTable.ToSoftObjectPath();
 	const FSoftObjectPath SkillTablePath = Settings->SkillTable.ToSoftObjectPath();
@@ -81,16 +79,6 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	if (BumperEffectTablePath.IsValid())
 	{
 		TablePaths.Add(BumperEffectTablePath);
-	}
-
-	if (GameplayEffectTablePath.IsValid())
-	{
-		TablePaths.Add(GameplayEffectTablePath);
-	}
-
-	if (GameplayEffectParamTablePath.IsValid())
-	{
-		TablePaths.Add(GameplayEffectParamTablePath);
 	}
 
 	if (BallTablePath.IsValid())
@@ -233,8 +221,6 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedBumperTable = nullptr;
 	UDataTable* LoadedBumperTriggerTable = nullptr;
 	UDataTable* LoadedBumperEffectTable = nullptr;
-	UDataTable* LoadedGameplayEffectTable = nullptr;
-	UDataTable* LoadedGameplayEffectParamTable = nullptr;
 	UDataTable* LoadedBallTable = nullptr;
 	UDataTable* LoadedBallStarLevelTable = nullptr;
 	UDataTable* LoadedSkillTable = nullptr;
@@ -261,8 +247,6 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedBumperTable = Cast<UDataTable>(Settings->BumperTable.Get());
 		LoadedBumperTriggerTable = Cast<UDataTable>(Settings->BumperTriggerTable.Get());
 		LoadedBumperEffectTable = Cast<UDataTable>(Settings->BumperEffectTable.Get());
-		LoadedGameplayEffectTable = Cast<UDataTable>(Settings->GameplayEffectTable.Get());
-		LoadedGameplayEffectParamTable = Cast<UDataTable>(Settings->GameplayEffectParamTable.Get());
 		LoadedBallTable = Cast<UDataTable>(Settings->BallTable.Get());
 		LoadedBallStarLevelTable = Cast<UDataTable>(Settings->BallStarLevelTable.Get());
 		LoadedSkillTable = Cast<UDataTable>(Settings->SkillTable.Get());
@@ -292,7 +276,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 
 	SetCollectionTable(LoadedCollectionTable);
 	SetBumperTables(LoadedBumperTable, LoadedBumperTriggerTable, LoadedBumperEffectTable);
-	SetGameplayEffectTables(LoadedGameplayEffectTable, LoadedGameplayEffectParamTable);
+	SetGameplayEffectTables(nullptr, nullptr);
 	SetBallTables(LoadedBallTable, LoadedBallStarLevelTable);
 	SetSkillTable(LoadedSkillTable);
 	SetBossTables(LoadedBossTable, LoadedBossHitPointTable, LoadedBossPatternTable);
@@ -318,14 +302,15 @@ bool UPBTableDataSubsystem::IsTableDataReady() const
 	return IsValid(BumperTable)
 		&& IsValid(BumperTriggerTable)
 		&& IsValid(BumperEffectTable)
-		&& IsValid(GameplayEffectTable)
-		&& IsValid(GameplayEffectParamTable)
 		&& IsValid(BallTable)
 		&& IsValid(BallStarLevelTable)
 		&& IsValid(SkillTable)
 		&& IsValid(BossTable)
 		&& IsValid(BossHitPointTable)
-		&& IsValid(BossPatternTable);
+		&& IsValid(BossPatternTable)
+		&& IsValid(EffectTable)
+		&& IsValid(EffectSetTable)
+		&& IsValid(EffectParamTable);
 }
 
 bool UPBTableDataSubsystem::IsBumperTableReady() const
@@ -335,19 +320,53 @@ bool UPBTableDataSubsystem::IsBumperTableReady() const
 
 bool UPBTableDataSubsystem::IsCollectionCatalogDataReady() const
 {
-	return IsValid(BumperTable)
-		&& IsValid(BumperTriggerTable)
-		&& IsValid(BumperEffectTable)
-		&& IsValid(BallTable)
-		&& IsValid(BallStarLevelTable)
-		&& IsValid(SkillTable)
-		&& IsValid(BossTable)
-		&& IsValid(BossHitPointTable)
-		&& IsValid(BossPatternTable)
-		&& IsValid(RelicTable)
-		&& IsValid(RelicModifierTable)
-		&& IsValid(SynergyTable)
-		&& IsValid(SynergyTierTable);
+	return IsCollectionCatalogDataReady(EPBCollectionCategory::Ball)
+		&& IsCollectionCatalogDataReady(EPBCollectionCategory::Synergy)
+		&& IsCollectionCatalogDataReady(EPBCollectionCategory::Relic)
+		&& IsCollectionCatalogDataReady(EPBCollectionCategory::Bumper)
+		&& IsCollectionCatalogDataReady(EPBCollectionCategory::Boss);
+}
+
+bool UPBTableDataSubsystem::IsCollectionCatalogDataReady(const EPBCollectionCategory Category) const
+{
+	switch (Category)
+	{
+	case EPBCollectionCategory::Ball:
+		return IsValid(BallTable)
+			&& IsValid(BallStarLevelTable)
+			&& IsValid(SkillTable);
+	case EPBCollectionCategory::Synergy:
+		return IsValid(SynergyTable)
+			&& IsValid(SynergyTierTable)
+			&& IsValid(EffectTable)
+			&& IsValid(EffectSetTable)
+			&& IsValid(EffectParamTable);
+	case EPBCollectionCategory::Relic:
+		return IsValid(RelicTable)
+			&& IsValid(RelicModifierTable);
+	case EPBCollectionCategory::Bumper:
+		return IsValid(BumperTable)
+			&& IsValid(BumperTriggerTable)
+			&& IsValid(BumperEffectTable);
+	case EPBCollectionCategory::Boss:
+		return IsValid(BossTable)
+			&& IsValid(BossHitPointTable)
+			&& IsValid(BossPatternTable);
+	case EPBCollectionCategory::All:
+		return IsCollectionCatalogDataReady();
+	case EPBCollectionCategory::Achievement:
+	default:
+		return false;
+	}
+}
+
+bool UPBTableDataSubsystem::IsAnyCollectionCatalogDataReady() const
+{
+	return IsCollectionCatalogDataReady(EPBCollectionCategory::Ball)
+		|| IsCollectionCatalogDataReady(EPBCollectionCategory::Synergy)
+		|| IsCollectionCatalogDataReady(EPBCollectionCategory::Relic)
+		|| IsCollectionCatalogDataReady(EPBCollectionCategory::Bumper)
+		|| IsCollectionCatalogDataReady(EPBCollectionCategory::Boss);
 }
 
 void UPBTableDataSubsystem::SetCollectionTable(UDataTable* InCollectionTable)
