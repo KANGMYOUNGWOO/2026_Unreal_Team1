@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "PBSummonedBallActor.h"
+#include "PBCloneBallActor.h"
 
 #include "Components/SphereComponent.h"
 #include "Engine/CollisionProfile.h"
@@ -10,7 +10,7 @@
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
 
-APBSummonedBallActor::APBSummonedBallActor()
+APBCloneBallActor::APBCloneBallActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -32,7 +32,7 @@ APBSummonedBallActor::APBSummonedBallActor()
 	HitReactionComponent->InitializeDependencies(PhysicsComponent.Get(), StatComponent.Get(), nullptr);
 }
 
-void APBSummonedBallActor::InitializeFromSourceBall(APBBallBase* InSourceBall)
+void APBCloneBallActor::InitializeFromSourceBall(APBBallBase* InSourceBall)
 {
 	if (!IsValid(InSourceBall))
 	{
@@ -56,7 +56,7 @@ void APBSummonedBallActor::InitializeFromSourceBall(APBBallBase* InSourceBall)
 	}
 }
 
-void APBSummonedBallActor::BeginPlay()
+void APBCloneBallActor::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -71,7 +71,7 @@ void APBSummonedBallActor::BeginPlay()
 	}
 }
 
-void APBSummonedBallActor::CopyStat(
+void APBCloneBallActor::CopyStat(
 	const UPBBaseStatComponent* SourceStatComponent,
 	const FName StatName)
 {

@@ -16,8 +16,8 @@ APBCircularBladeActor::APBCircularBladeActor()
 	AttackSphere = CreateDefaultSubobject<USphereComponent>(TEXT("AttackSphere"));
 	AttackSphere->SetupAttachment(Root);
 	AttackSphere->InitSphereRadius(100.0f);
+	AttackSphere->SetCollisionProfileName(SkillCollisionProfileName);
 	AttackSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	AttackSphere->SetCollisionResponseToAllChannels(ECR_Overlap);
 	AttackSphere->SetGenerateOverlapEvents(true);
 
 	TimedAreaDamageComponent = CreateDefaultSubobject<UPBTimedAreaDamageComponent>(TEXT("TimedAreaDamageComponent"));
@@ -31,13 +31,14 @@ void APBCircularBladeActor::InitializeSkill(
 	if (TimedAreaDamageComponent)
 	{
 		BindDamageEvents(TimedAreaDamageComponent);
+		TimedAreaDamageComponent->SetGroggyAmount(GetSkillGroggyAmount());
 		TimedAreaDamageComponent->InitializeDamageArea(
 			AttackSphere,
 			OwnerBall);
 		TimedAreaDamageComponent->ConfigureDamage(
 			GetSkillDamageAmount(),
-			InSkillData.Duration,
-			InSkillData.Value);
+			InSkillData.LifeValue,
+			InSkillData.EffectValue);
 	}
 }
 

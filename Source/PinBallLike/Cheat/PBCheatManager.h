@@ -48,6 +48,12 @@ public:
 	void RegenMana();
 
 	UFUNCTION(exec)
+	void ShowBallStatEffect();
+
+	UFUNCTION(exec)
+	void ShowPopup();
+
+	UFUNCTION(exec)
 	void DamageGolemHand(FName HandName, int32 DamageAmount);
 
 	UFUNCTION(exec)
