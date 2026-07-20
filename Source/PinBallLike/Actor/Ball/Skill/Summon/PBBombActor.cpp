@@ -162,7 +162,7 @@ void APBBombActor::ApplyExplosionDamage()
 		if (UGameplayMessageSubsystem::HasInstance(this))
 		{
 			FPBDamageLogMessage Message;
-			Message.LogType = EPBDamageLogType::Skill;
+			Message.Style = EPBDamageLogStyle::PlayerSkill;
 			Message.DamageAmount = DamageAmount;
 			Message.HitLocation = HitLocation;
 			UGameplayMessageSubsystem::Get(this).BroadcastMessage(

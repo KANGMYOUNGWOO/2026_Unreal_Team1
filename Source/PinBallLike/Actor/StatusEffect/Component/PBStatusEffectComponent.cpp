@@ -35,7 +35,15 @@ void UPBStatusEffectComponent::TickComponent(
 				return ActiveStatusEffect.Get() == StatusEffect;
 			}))
 		{
+			const int32 PreviousStackCount = StatusEffect->GetStackCount();
 			StatusEffect->TickStatusEffect(DeltaTime);
+			if (!StatusEffect->IsExpired()
+				&& PreviousStackCount != StatusEffect->GetStackCount())
+			{
+				OnStatusEffectStackChanged.Broadcast(
+					StatusEffect->GetStatusEffectId(),
+					StatusEffect->GetStackCount());
+			}
 		}
 	}
 
@@ -73,6 +81,30 @@ bool UPBStatusEffectComponent::ApplyStatusEffect(const FName StatusEffectId)
 	ActiveStatusEffects.Add(NewStatusEffect);
 	NewStatusEffect->ExecuteStatusEffect(PBStatusEffectTriggerEvents::Applied);
 	OnStatusEffectApplied.Broadcast(StatusEffectId, NewStatusEffect->GetStackCount());
+	return true;
+}
+
+bool UPBStatusEffectComponent::ApplyStatusEffectStacks(
+	const FName StatusEffectId,
+	const int32 StackCount)
+{
+	if (StackCount <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[StatusEffect] Apply stacks failed. StackCount must be greater than zero. StatusEffectId=%s StackCount=%d Owner=%s"),
+			*StatusEffectId.ToString(),
+			StackCount,
+			*GetNameSafe(GetOwner()));
+		return false;
+	}
+
+	for (int32 StackIndex = 0; StackIndex < StackCount; ++StackIndex)
+	{
+		if (!ApplyStatusEffect(StatusEffectId))
+		{
+			return false;
+		}
+	}
+
 	return true;
 }
 

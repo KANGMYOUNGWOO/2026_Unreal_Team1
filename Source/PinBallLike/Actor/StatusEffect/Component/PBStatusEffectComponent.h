@@ -25,8 +25,16 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "StatusEffect")
 	FPBStatusEffectChangedSignature OnStatusEffectRemoved;
 
+	UPROPERTY(BlueprintAssignable, Category = "StatusEffect")
+	FPBStatusEffectChangedSignature OnStatusEffectStackChanged;
+
 	UFUNCTION(BlueprintCallable, Category = "StatusEffect")
 	bool ApplyStatusEffect(FName StatusEffectId);
+
+	UFUNCTION(BlueprintCallable, Category = "StatusEffect")
+	bool ApplyStatusEffectStacks(
+		FName StatusEffectId,
+		UPARAM(meta = (ClampMin = "1")) int32 StackCount);
 
 	UFUNCTION(BlueprintCallable, Category = "StatusEffect")
 	bool RemoveStatusEffect(FName StatusEffectId);

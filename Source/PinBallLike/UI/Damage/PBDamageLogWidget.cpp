@@ -32,7 +32,7 @@ void UPBDamageLogWidget::NativeDestruct()
 }
 
 bool UPBDamageLogWidget::ShowDamage(
-	const EPBDamageLogType InLogType,
+	const EPBDamageLogStyle InLogType,
 	const int32 Damage,
 	const FVector WorldLocation)
 {
@@ -61,7 +61,7 @@ void UPBDamageLogWidget::HandleDamageLogRequested(
 	FGameplayTag,
 	const FPBDamageLogMessage& Message)
 {
-	ShowDamage(Message.LogType, Message.DamageAmount, Message.HitLocation);
+	ShowDamage(Message.Style, Message.DamageAmount, Message.HitLocation);
 }
 
 void UPBDamageLogWidget::InitializePool()

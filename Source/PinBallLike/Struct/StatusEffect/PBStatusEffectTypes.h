@@ -8,7 +8,8 @@ enum class EPBStatusEffectStackType : uint8
 {
 	Replace,
 	Add,
-	HighestOnly
+	HighestOnly,
+	AddDuration
 };
 
 UENUM(BlueprintType)
