@@ -78,6 +78,7 @@ TMap<FName, TSubclassOf<UPBBaseStatusEffect>>& PBStatusEffectFactory::GetStatusE
 		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Strength, UPBStrengthStatusEffect::StaticClass());
 		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Burn, UPBBurnStatusEffect::StaticClass());
 		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::Shield, UPBShieldStatusEffect::StaticClass());
+		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::InvincibleSkill, UPBBaseStatusEffect::StaticClass());
 		StatusEffectClassMap.Add(PBStatusEffectAssetIds::StatusEffect::ZeroGravity, UPBZeroGravityStatusEffect::StaticClass());
 	}
 

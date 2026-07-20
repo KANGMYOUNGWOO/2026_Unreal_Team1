@@ -1,10 +1,25 @@
 #include "PBBallResourceComponent.h"
 
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
+#include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
+#include "PinBallLike/Table/StatusEffect/PBStatusEffectAssetIds.h"
 
 void UPBBallResourceComponent::TakeDamage(const int32 Damage)
 {
 	if (Damage <= 0)
+	{
+		return;
+	}
+
+	const AActor* OwnerActor = GetOwner();
+	const UPBStatusEffectComponent* StatusEffectComponent = IsValid(OwnerActor)
+		? OwnerActor->FindComponentByClass<UPBStatusEffectComponent>()
+		: nullptr;
+	if (StatusEffectComponent
+		&& StatusEffectComponent->HasStatusEffect(PBStatusEffectAssetIds::StatusEffect::InvincibleSkill))
 	{
 		return;
 	}
@@ -33,6 +48,21 @@ void UPBBallResourceComponent::TakeDamage(const int32 Damage)
 
 	const float PreviousHealth = GetResourceCurrent(PBResourceNames::Health);
 	ApplyResourceDelta(PBResourceNames::Health, -RemainingDamage);
+	const float CurrentHealth = GetResourceCurrent(PBResourceNames::Health);
+	const int32 AppliedDamage = FMath::RoundToInt(PreviousHealth - CurrentHealth);
+	if (AppliedDamage > 0 && UGameplayMessageSubsystem::HasInstance(this))
+	{
+		FPBDamageLogMessage Message;
+		Message.Style = EPBDamageLogStyle::EnemyAttack;
+		Message.DamageAmount = AppliedDamage;
+		Message.HitLocation = IsValid(OwnerActor)
+			? OwnerActor->GetActorLocation() + FVector(0.0f, -100.0f, 0.0f)
+			: FVector::ZeroVector;
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_UI_DamageLog_Requested,
+			Message);
+	}
+
 	if (TryReviveOnZero(PBResourceNames::Health))
 	{
 		return;

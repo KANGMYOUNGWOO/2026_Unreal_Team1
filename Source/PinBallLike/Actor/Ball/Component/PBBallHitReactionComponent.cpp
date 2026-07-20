@@ -62,16 +62,23 @@ void UPBBallHitReactionComponent::HandleMovementHit(const FHitResult& Hit)
 
 void UPBBallHitReactionComponent::ProcessBallContact(const FHitResult& Hit)
 {
+	ProcessBossContact(Hit.GetActor(), Hit.ImpactPoint, true);
+}
+
+bool UPBBallHitReactionComponent::ProcessBossContact(
+	AActor* BossActor,
+	const FVector& HitLocation,
+	const bool bDamageOwner)
+{
 	AActor* Owner = GetOwner();
-	AActor* OtherActor = Hit.GetActor();
-	if (!Owner || !OtherActor || OtherActor == Owner || WasContactProcessedThisFrame(OtherActor))
+	if (!Owner || !BossActor || BossActor == Owner || WasContactProcessedThisFrame(BossActor))
 	{
-		return;
+		return false;
 	}
 	
-	if (!OtherActor->GetClass()->ImplementsInterface(UBossInterface::StaticClass()))
+	if (!BossActor->GetClass()->ImplementsInterface(UBossInterface::StaticClass()))
 	{
-		return;
+		return false;
 	}
 
 	const int32 BaseDamage = StatProvider ? StatProvider->GetStat(PBStatNames::Attack) : 0;
@@ -79,24 +86,24 @@ void UPBBallHitReactionComponent::ProcessBallContact(const FHitResult& Hit)
 	const int32 Damage = EffectRuntimeComponent
 		? EffectRuntimeComponent->ModifyCollisionDamage(BaseDamage)
 		: BaseDamage;
-	IBossInterface::Execute_DamageToBoss(OtherActor, Damage);
+	const bool bAppliedDamage = IBossInterface::Execute_DamageToBoss(BossActor, Damage);
 	
-	if (Damage > 0)
+	if (bAppliedDamage)
 	{
 		const int32 GroggyAmount = StatProvider
 			? StatProvider->GetStat(PBStatNames::StaggerPower)
 			: 0;
 		if (GroggyAmount > 0)
 		{
-			IBossInterface::Execute_IncreaseGroggy(OtherActor, GroggyAmount);
+			IBossInterface::Execute_IncreaseGroggy(BossActor, GroggyAmount);
 		}
 
 		if (UGameplayMessageSubsystem::HasInstance(this))
 		{
 			FPBDamageLogMessage Message;
-			Message.LogType = EPBDamageLogType::Ball;
+			Message.Style = EPBDamageLogStyle::PlayerAttack;
 			Message.DamageAmount = Damage;
-			Message.HitLocation = Hit.ImpactPoint;
+			Message.HitLocation = HitLocation;
 			UGameplayMessageSubsystem::Get(this).BroadcastMessage(
 				GameplayTags::Event_UI_DamageLog_Requested,
 				Message);
@@ -107,15 +114,17 @@ void UPBBallHitReactionComponent::ProcessBallContact(const FHitResult& Hit)
 
 	if (EffectRuntimeComponent)
 	{
-		EffectRuntimeComponent->HandleEnemyHit(OtherActor);
+		EffectRuntimeComponent->HandleEnemyHit(BossActor);
 	}
 
-	MarkContactProcessed(OtherActor);
+	MarkContactProcessed(BossActor);
 
-	if (OwnerDamageable && !OwnerDamageable->IsDead())
+	if (bDamageOwner && OwnerDamageable && !OwnerDamageable->IsDead())
 	{
 		OwnerDamageable->TakeDamage(1);
 	}
+
+	return true;
 }
 
 void UPBBallHitReactionComponent::ApplyManaGainOnDamage()
