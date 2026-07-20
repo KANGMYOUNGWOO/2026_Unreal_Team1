@@ -41,6 +41,7 @@ private:
 	FText BuildTierEffectText(const FPBSynergyTierRow& TierRow) const;
 	FText BuildEffectSetText(FName EffectSetId) const;
 	FText BuildEffectText(FName EffectId, const FPBEffectTableRow& EffectRow) const;
+	UTexture2D* ResolveSynergyIcon(FName SynergyId) const;
 	UTexture2D* ResolveBallIcon(FName BallId) const;
 	FString FindEffectParamValue(const TArray<FPBEffectParamRow>& ParamRows, FName ParamKey) const;
 	FName FindEffectParamName(const TArray<FPBEffectParamRow>& ParamRows, FName ParamKey) const;

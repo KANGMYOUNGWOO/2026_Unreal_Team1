@@ -12,6 +12,8 @@
 #include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectSetRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
+#include "PinBallLike/Table/Synergy/DataAsset/PBSynergyDataAsset.h"
+#include "PinBallLike/Table/Synergy/PBSynergyAssetIds.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
 
@@ -96,6 +98,7 @@ FPBSynergyViewData UPBDeckOverviewViewModel::BuildSynergyViewData(
 	ViewData.CurrentCount = SynergyState.CurrentCount;
 	ViewData.CurrentCountText = FText::AsNumber(SynergyState.CurrentCount);
 	ViewData.CountListText = BuildSynergyCountListText(SynergyState.SynergyId, SynergyState.CurrentCount);
+	ViewData.Icon = ResolveSynergyIcon(SynergyState.SynergyId);
 	ViewData.TierViewDataList = BuildTierViewDataList(SynergyState.SynergyId, SynergyState.CurrentCount);
 	ViewData.BallIconViewDataList = BuildBallIconViewDataList(SynergyState.SynergyId);
 	return ViewData;
@@ -220,6 +223,32 @@ bool UPBDeckOverviewViewModel::DoesBallMatchSynergy(
 		? FName(*ClassEnum->GetNameStringByValue(static_cast<int64>(BallRow.ClassType)))
 		: NAME_None;
 	return ClassSynergyId == SynergyId;
+}
+
+UTexture2D* UPBDeckOverviewViewModel::ResolveSynergyIcon(const FName SynergyId) const
+{
+	if (SynergyId.IsNone())
+	{
+		return nullptr;
+	}
+
+	FAssetData SynergyAssetData;
+	const FPrimaryAssetId SynergyAssetId(PBSynergyAssetIds::Type::SynergyData, SynergyId);
+	if (UAssetManager::Get().GetPrimaryAssetData(SynergyAssetId, SynergyAssetData))
+	{
+		const UPBSynergyDataAsset* SynergyDataAsset = Cast<UPBSynergyDataAsset>(SynergyAssetData.GetAsset());
+		if (SynergyDataAsset)
+		{
+			if (UTexture2D* Icon = SynergyDataAsset->Icon.LoadSynchronous())
+			{
+				return Icon;
+			}
+		}
+	}
+
+	const FString IconName = FString::Printf(TEXT("Icon_%s"), *SynergyId.ToString());
+	const FString IconPath = FString::Printf(TEXT("/Game/Resources/Synergy/%s.%s"), *IconName, *IconName);
+	return Cast<UTexture2D>(FSoftObjectPath(IconPath).TryLoad());
 }
 
 UTexture2D* UPBDeckOverviewViewModel::ResolveBallIcon(const FName BallId) const
