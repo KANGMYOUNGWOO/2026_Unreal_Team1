@@ -125,13 +125,8 @@ void UPBGolemFistLaunchPattern::CancelPatternInternal_Implementation(APBBossBase
 		if (APBGolemBossHand* GolemHand = GolemBoss->GetGolemHand(HandType))
 		{
 			GolemHand->SetIsPunching(false);
+			GolemHand->ResetPatternMovement(StartHandTransform);
 		}
-
-		ReturnHandToStartTransform(GolemBoss);
-		UnlockPatternHand();
-		UE_LOG(LogTemp, Log, TEXT("[GolemFistLaunchPattern] CancelPatternInternal return requested. HandType=%d ReturnDuration=%.2f"),
-			static_cast<int32>(HandType),
-			ReturnDuration);
 	}
 }
 
