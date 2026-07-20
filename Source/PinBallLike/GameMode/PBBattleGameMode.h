@@ -80,11 +80,20 @@ private:
 	void HandleBallDataLoaded();
 	void HandleBossDataLoaded();
 	void MarkDataLoaded(EPBBattlePreparationType PreparationType, bool bSuccess);
+	void StartBattleDataLoadTimeout();
+	void ClearBattleDataLoadTimeout();
+	void HandleBattleDataLoadTimeout();
+	void HandleBattleDataLoadFailure(EPBBattlePreparationType PreparationType);
 	bool IsBattleDataLoaded() const;
 	
 	bool bBumperDataLoaded = false;
 	bool bBallDataLoaded = false;
 	bool bBossDataLoaded = false;
+	bool IsBattleDataLoadFailureHandled = false;
+	FTimerHandle BattleDataLoadTimeoutHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Battle|Loading", meta = (ClampMin = "1.0"))
+	float BattleDataLoadTimeoutSeconds = 30.0f;
 
 #pragma endregion 
 	

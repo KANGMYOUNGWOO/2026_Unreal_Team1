@@ -226,7 +226,9 @@ FGuid UPBGameDataLoadSubsystem::CreatePrimaryAssetLoadRequest(
 	Request.OnLoaded = OnLoaded;
 
 	StartPrimaryAssetLoadRequest(Request);
-	return Request.RequestId;
+	return ActivePrimaryAssetLoadRequests.Contains(Request.RequestId)
+		? Request.RequestId
+		: FGuid();
 }
 
 void UPBGameDataLoadSubsystem::StartPrimaryAssetLoadRequest(const FPBPrimaryAssetLoadRequest& Request)

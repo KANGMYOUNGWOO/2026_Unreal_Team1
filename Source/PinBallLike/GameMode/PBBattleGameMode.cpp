@@ -44,11 +44,13 @@ void APBBattleGameMode::StartPlay()
 	RegisterBattleMessageListeners();
 	InitializeBattleCounts();
 	bStartPlayCompleted = true;
+	StartBattleDataLoadTimeout();
 	TryStartLevelPreparing();
 }
 
 void APBBattleGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	ClearBattleDataLoadTimeout();
 	UnregisterBattleMessageListeners();
 
 	Super::EndPlay(EndPlayReason);
@@ -207,6 +209,7 @@ void APBBattleGameMode::TryStartBossInfo()
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Battle preparation completed. Advance to BossIntro."));
+	ClearBattleDataLoadTimeout();
 	SetBattleLevelPhase(EPBBattleLevelPhase::BossIntro);
 }
 
@@ -397,9 +400,13 @@ void APBBattleGameMode::LoadBalls()
 		return;
 	}
 
-	BallDeckSubsystem->LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate::CreateUObject(
+	const FGuid RequestId = BallDeckSubsystem->LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate::CreateUObject(
 		this,
 		&APBBattleGameMode::HandleBallDataLoaded));
+	if (!RequestId.IsValid())
+	{
+		MarkDataLoaded(EPBBattlePreparationType::Ball, false);
+	}
 }
 
 void APBBattleGameMode::LoadBoss()
@@ -465,6 +472,12 @@ void APBBattleGameMode::MarkDataLoaded(
 	const EPBBattlePreparationType PreparationType,
 	const bool bSuccess)
 {
+	if (!bSuccess)
+	{
+		HandleBattleDataLoadFailure(PreparationType);
+		return;
+	}
+
 	switch (PreparationType)
 	{
 	case EPBBattlePreparationType::Bumper:
@@ -481,6 +494,72 @@ void APBBattleGameMode::MarkDataLoaded(
 	}
 	
 	TryStartLevelPreparing();
+}
+
+void APBBattleGameMode::StartBattleDataLoadTimeout()
+{
+	if (IsBattleDataLoaded() || IsBattleDataLoadFailureHandled)
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			BattleDataLoadTimeoutHandle,
+			this,
+			&APBBattleGameMode::HandleBattleDataLoadTimeout,
+			BattleDataLoadTimeoutSeconds,
+			false);
+	}
+}
+
+void APBBattleGameMode::ClearBattleDataLoadTimeout()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(BattleDataLoadTimeoutHandle);
+	}
+}
+
+void APBBattleGameMode::HandleBattleDataLoadTimeout()
+{
+	if (IsBattleDataLoaded() || IsBattleDataLoadFailureHandled)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Error,
+		TEXT("[BattleFlow] Battle preparation timed out. Timeout=%.1f BumperData=%s BallData=%s BossData=%s BumperPrepared=%s BossPrepared=%s"),
+		BattleDataLoadTimeoutSeconds,
+		bBumperDataLoaded ? TEXT("true") : TEXT("false"),
+		bBallDataLoaded ? TEXT("true") : TEXT("false"),
+		bBossDataLoaded ? TEXT("true") : TEXT("false"),
+		bBumperPrepared ? TEXT("true") : TEXT("false"),
+		bBossPrepared ? TEXT("true") : TEXT("false"));
+
+	HandleBattleDataLoadFailure(EPBBattlePreparationType::None);
+}
+
+void APBBattleGameMode::HandleBattleDataLoadFailure(const EPBBattlePreparationType PreparationType)
+{
+	if (IsBattleDataLoadFailureHandled)
+	{
+		return;
+	}
+
+	IsBattleDataLoadFailureHandled = true;
+	ClearBattleDataLoadTimeout();
+
+	UE_LOG(LogTemp, Error,
+		TEXT("[BattleFlow] Battle data load failed. Type=%s. Return to main menu."),
+		*UEnum::GetValueAsString(PreparationType));
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimerForNextTick(
+			FTimerDelegate::CreateUObject(this, &APBBattleGameMode::ReturnToMainMenu));
+	}
 }
 
 bool APBBattleGameMode::IsBattleDataLoaded() const
@@ -500,6 +579,7 @@ void APBBattleGameMode::ResetBattlePreparationState()
 	bBumperPrepared = false;
 	bBossPrepared = false;
 	bStartPlayCompleted = false;
+	IsBattleDataLoadFailureHandled = false;
 }
 
 APBBumperSpawner* APBBattleGameMode::FindBumperSpawner()
@@ -558,6 +638,12 @@ void APBBattleGameMode::MarkPreparationCompleted(
 	const EPBBattlePreparationType PreparationType,
 	const bool bSuccess)
 {
+	if (!bSuccess)
+	{
+		HandleBattleDataLoadFailure(PreparationType);
+		return;
+	}
+
 	switch (PreparationType)
 	{
 	case EPBBattlePreparationType::Bumper:
