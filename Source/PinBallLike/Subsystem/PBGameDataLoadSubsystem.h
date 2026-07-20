@@ -127,6 +127,9 @@ private:
 	void CompletePrimaryAssetLoad(
 		const FPBPrimaryAssetLoadRequest& Request,
 		const TArray<FPrimaryAssetId>& LoadedAssetIds);
+	bool ArePrimaryAssetsLoadedForBundle(
+		FName BundleKey,
+		const TArray<FPrimaryAssetId>& AssetIds) const;
 	FName MakePrimaryAssetBundleKey(const TArray<FName>& BundleNames) const;
 	void RemoveLoadedPrimaryAssetsForBundle(FName BundleName);
 	bool IsPrimaryAssetLoadedByOtherBundle(FName BundleName, FPrimaryAssetId PrimaryAssetId) const;

@@ -304,7 +304,18 @@ void APBBattleGameMode::HandleRewardPopupClosed(const bool bConfirmed)
 		return;
 	}
 
+	if (IsFinalBossDefeated)
+	{
+		ReturnToMainMenu();
+		return;
+	}
+
 	SetBattleLevelPhase(EPBBattleLevelPhase::BattleExit);
+}
+
+const TArray<FName>& APBBattleGameMode::GetBossProgressionRowNames() const
+{
+	return BossProgressionRowNames;
 }
 
 void APBBattleGameMode::ApplyActiveSynergyEffectsForBattle()
@@ -426,16 +437,11 @@ void APBBattleGameMode::LoadBoss()
 		if (const UPBPlayerDataSubsystem* PlayerDataSubsystem =
 			GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
 		{
-			if (const UPBTableDataSubsystem* TableDataSubsystem =
-				GameInstance->GetSubsystem<UPBTableDataSubsystem>())
+			const TArray<FName>& BossRowNames = GetBossProgressionRowNames();
+			if (BossRowNames.IsValidIndex(PlayerDataSubsystem->GetCurrentBossIndex()))
 			{
-				TArray<FName> BossRowNames;
-				if (TableDataSubsystem->GetBossRowNames(BossRowNames)
-					&& BossRowNames.IsValidIndex(PlayerDataSubsystem->GetCurrentBossIndex()))
-				{
-					FoundBossSpawner->SetBossRowName(
-						BossRowNames[PlayerDataSubsystem->GetCurrentBossIndex()]);
-				}
+				FoundBossSpawner->SetBossRowName(
+					BossRowNames[PlayerDataSubsystem->GetCurrentBossIndex()]);
 			}
 		}
 	}
@@ -784,36 +790,23 @@ void APBBattleGameMode::HandleBossDeadMessage(
 		*Channel.ToString(),
 		*GetNameSafe(Message.BossActor));
 
-	bool IsFinalBossDefeated = false;
+	IsFinalBossDefeated = false;
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
 		if (UPBPlayerDataSubsystem* PlayerDataSubsystem =
 			GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
 		{
-			if (const UPBTableDataSubsystem* TableDataSubsystem =
-				GameInstance->GetSubsystem<UPBTableDataSubsystem>())
+			const TArray<FName>& BossRowNames = GetBossProgressionRowNames();
+			if (!BossRowNames.IsEmpty())
 			{
-				TArray<FName> BossRowNames;
-				if (TableDataSubsystem->GetBossRowNames(BossRowNames))
-				{
-					IsFinalBossDefeated = !BossRowNames.IsEmpty()
-						&& PlayerDataSubsystem->GetCurrentBossIndex() >= BossRowNames.Num() - 1;
-					PlayerDataSubsystem->AdvanceBossProgress(BossRowNames.Num());
-				}
+				IsFinalBossDefeated =
+					PlayerDataSubsystem->GetCurrentBossIndex() >= BossRowNames.Num() - 1;
+				PlayerDataSubsystem->AdvanceBossProgress(BossRowNames.Num());
 			}
 		}
 	}
 
 	SetBattleLevelPhase(EPBBattleLevelPhase::BossDead);
-
-	if (IsFinalBossDefeated)
-	{
-		if (UWorld* World = GetWorld())
-		{
-			World->GetTimerManager().SetTimerForNextTick(
-				FTimerDelegate::CreateUObject(this, &APBBattleGameMode::ReturnToMainMenu));
-		}
-	}
 }
 
 void APBBattleGameMode::HandleBossIntroCompletedMessage(

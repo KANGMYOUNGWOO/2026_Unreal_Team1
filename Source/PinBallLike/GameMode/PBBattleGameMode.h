@@ -67,6 +67,7 @@ private:
 	void HandleRewardPopupClosed(bool bConfirmed);
 	void ApplyActiveSynergyEffectsForBattle();
 	void TriggerPartySwitchEffects();
+	const TArray<FName>& GetBossProgressionRowNames() const;
 
 #pragma endregion
 	
@@ -94,6 +95,15 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Battle|Loading", meta = (ClampMin = "1.0"))
 	float BattleDataLoadTimeoutSeconds = 30.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Battle|Boss")
+	TArray<FName> BossProgressionRowNames =
+	{
+		TEXT("Snake"),
+		TEXT("Golem"),
+		TEXT("Turtle"),
+		TEXT("Octopus")
+	};
 
 #pragma endregion 
 	
@@ -145,4 +155,5 @@ private:
 
 	bool bRewardSequenceStarted = false;
 	bool bStartPlayCompleted = false;
+	bool IsFinalBossDefeated = false;
 };

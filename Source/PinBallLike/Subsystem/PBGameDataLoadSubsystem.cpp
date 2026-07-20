@@ -225,6 +225,12 @@ FGuid UPBGameDataLoadSubsystem::CreatePrimaryAssetLoadRequest(
 	Request.BundleKey = MakePrimaryAssetBundleKey(BundleNames);
 	Request.OnLoaded = OnLoaded;
 
+	if (ArePrimaryAssetsLoadedForBundle(Request.BundleKey, Request.AssetIds))
+	{
+		CompletePrimaryAssetLoad(Request, Request.AssetIds);
+		return Request.RequestId;
+	}
+
 	StartPrimaryAssetLoadRequest(Request);
 	return ActivePrimaryAssetLoadRequests.Contains(Request.RequestId)
 		? Request.RequestId
@@ -345,6 +351,28 @@ void UPBGameDataLoadSubsystem::CompletePrimaryAssetLoad(
 	Request.OnLoaded.ExecuteIfBound();
 	OnPrimaryAssetLoadCompleted.Broadcast(Result);
 	OnPrimaryAssetsLoaded.Broadcast();
+}
+
+bool UPBGameDataLoadSubsystem::ArePrimaryAssetsLoadedForBundle(
+	const FName BundleKey,
+	const TArray<FPrimaryAssetId>& AssetIds) const
+{
+	const TArray<FPrimaryAssetId>* LoadedBundleAssetIds = LoadedPrimaryAssetIdsByBundle.Find(BundleKey);
+	if (!LoadedBundleAssetIds)
+	{
+		return false;
+	}
+
+	for (const FPrimaryAssetId& AssetId : AssetIds)
+	{
+		const TObjectPtr<UObject>* LoadedAsset = LoadedPrimaryAssets.Find(AssetId);
+		if (!LoadedBundleAssetIds->Contains(AssetId) || !LoadedAsset || !IsValid(LoadedAsset->Get()))
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 FName UPBGameDataLoadSubsystem::MakePrimaryAssetBundleKey(const TArray<FName>& BundleNames) const
