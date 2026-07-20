@@ -15,7 +15,7 @@ class UTextBlock;
 class UButton;
 struct FBallDataStruct;
 class UPBShopViewModel;
-
+class UPBPurchaseConfirmWidget;
 
 UCLASS()
 class PINBALLLIKE_API UPBShopWidget : public UUserWidget
@@ -52,8 +52,14 @@ public :
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidget), Category="Shop|Widget")
 	TObjectPtr<UTextBlock> GoldTextBlock;
 	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UPBPurchaseConfirmWidget> ConfirmWidget;
+	
 	UPROPERTY(meta = (BindWidget) )
 	TObjectPtr<UButton> ExitButton;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> ReRollButton;
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void BP_SetShopViewModel(UPBShopViewModel* InViewModel);
@@ -72,6 +78,8 @@ public:
 	
 	void UnActiveSlotWidget(int32 SlotIndex);
 
+	void SetPurchaseConfirmInfo(int32 Index, FText Name, int32 Price, FText Synergy , UTexture2D* Icon);
+	
 private:
 	
 	UFUNCTION()

@@ -197,6 +197,14 @@ void APBShopActor::BuyItem(int32 SlotIndex)
 	RefreshViewModel();
 }
 
+void APBShopActor::ShoPPurchaseConfirm(int SlotIndex)
+{
+	if (ShopWidget)
+	{
+		ShopWidget->SetPurchaseConfirmInfo();
+	}
+}
+
 void APBShopActor::OpenAbility()
 {
 	OpenShop();

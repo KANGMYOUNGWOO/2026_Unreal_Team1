@@ -78,17 +78,7 @@ void APBShopItemActor::HandleClicked(UPrimitiveComponent* TouchedComponent, FKey
 	UE_LOG(LogTemp, Warning, TEXT("Clicked"));
 	if (PurchaseHandler)
 	{
-		bool IsSuccess = PurchaseHandler->BuyItem(SlotIndex);
-		UE_LOG(LogTemp, Warning, TEXT("Purch"));
-		if (IsSuccess)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("suc"));
-			Destroy();
-			
-			//SetActorHiddenInGame(!IsSuccess);
-			//SetActorEnableCollision(!IsSuccess);
-			//SetActorTickEnabled(!IsSuccess);
-		}
+		PurchaseHandler->RequestPurchase(SlotIndex);
 	}
 }
 
@@ -110,6 +100,10 @@ void APBShopItemActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+void APBShopItemActor::OnPurchase()
+{
+	Destroy();
+}
 FVector APBShopItemActor::GetUIWorldLocation() const
 {
 	FVector Origin;

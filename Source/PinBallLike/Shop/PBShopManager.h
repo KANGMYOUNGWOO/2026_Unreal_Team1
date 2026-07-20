@@ -22,6 +22,7 @@ public :
 	TArray<FName> OpenShop();
 	
 	bool BuyItem(int32 SlotIndex) override;
+	void RequestPurchase(int32 SlotIndex) override;
 	
     int32 GetCurrentGold() const;
 	

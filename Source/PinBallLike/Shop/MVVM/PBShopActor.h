@@ -34,8 +34,9 @@ public:
 	void CloseShop();
 	
 	void BuyItem(int32 SlotIndex) override;
-	
+	void ShoPPurchaseConfirm(int SlotIndex) override;
 	void OpenAbility() override;
+	void ShowNotEnoughGoldPopup() override;
 	
 	bool ApplyViewModelToWidget(UUserWidget* Widget);
 	

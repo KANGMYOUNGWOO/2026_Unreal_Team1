@@ -15,7 +15,7 @@
 
 TArray<FName> UPBShopManager::OpenShop()
 {
-    CurrentGold = 1000;
+   
 
     GenerateShopItems(8);
 
@@ -244,6 +244,70 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
 
     return true;
 }
+
+void UPBShopManager::RequestPurchase(int32 SlotIndex)
+{
+ 
+    if (!CurrentShopItemBallIds.IsValidIndex(SlotIndex))
+    {
+        return;
+    }
+
+    if (ShopItemIsSold[SlotIndex])
+    {
+        return;
+    }
+
+    UGameInstance* GI =
+        UGameplayStatics::GetGameInstance(GetWorld());
+
+    if (!GI)
+    {
+        return;
+    }
+
+    UPBTableDataSubsystem* TableSub =
+        GI->GetSubsystem<UPBTableDataSubsystem>();
+
+    UPBBallDeckSubsystem* DeckSubsystem =
+        GI->GetSubsystem<UPBBallDeckSubsystem>();
+
+    if (!TableSub || !DeckSubsystem)
+    {
+        return;
+    }
+
+    //------------------------------------------------------
+    // ShopRow 가져오기
+    //------------------------------------------------------
+
+    FPBShopTableRow ShopRow;
+
+    if (!TableSub->FindShopRow(
+        CurrentShopItemRowNames[SlotIndex],
+        ShopRow))
+    {
+        return;
+    }
+
+    const int32 Price = ShopRow.BuyPrice;
+
+    //------------------------------------------------------
+    // 골드 검사
+    //------------------------------------------------------
+
+    if (CurrentGold < Price)
+    {
+       ShopActorHandler->ShowNotEnoughGoldPopup();
+        return;
+    }
+    
+    if (ShopActorHandler)
+    {
+        ShopActorHandler-> ShoPPurchaseConfirm(SlotIndex);
+    }
+}
+
 
 ////////////////////////////////////////////////////////////
 // Reroll

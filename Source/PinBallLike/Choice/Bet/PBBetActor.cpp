@@ -35,6 +35,7 @@ void APBBetActor::OpenAbility()
 	PC->bEnableClickEvents = true;
 	PC->bEnableMouseOverEvents = true;
 	
+	BindWidget(BetWidget);
 	BetWidget->PlayIntroAnimation();
 }
 
@@ -70,15 +71,33 @@ void APBBetActor::BindWidget(UPBBettingWidget* InWidget)
 	BettingWidget->OnBetSelected.AddUniqueDynamic(
 		this,
 		&APBBetActor::HandleBetSelected);
-	
 
+	BettingWidget->OnBetResultAnimationsFinished.AddUniqueDynamic(
+		this,
+		&APBBetActor::HandleBetResultAnimationsFinished);
 }
 
 void APBBetActor::HandleBetSelected(int32 SelectedIndex)
 {
-	const FPBBettingResult Result = ResolveBet(SelectedIndex);
+	const FPBBettingResult Result =
+		ResolveBet(SelectedIndex);
 
-	FinishBet(Result);
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT(
+			"Bet Result | Selected: %d | Winner: %d | Win: %s"),
+		Result.SelectedIndex,
+		Result.WinnerIndex,
+		Result.bWin ? TEXT("True") : TEXT("False"));
+
+	if (!IsValid(BettingWidget))
+	{
+		FinishBet();
+		return;
+	}
+
+	BettingWidget->PlayBetResultAnimations(Result);
 }
 
 FPBBettingResult APBBetActor::ResolveBet(int32 SelectedIndex)
@@ -96,17 +115,8 @@ FPBBettingResult APBBetActor::ResolveBet(int32 SelectedIndex)
 	return Result;
 }
 
-void APBBetActor::FinishBet(const FPBBettingResult& Result)
+void APBBetActor::FinishBet()
 {
-	UE_LOG(
-	   LogTemp,
-	   Warning,
-	   TEXT(
-		   "Bet Result | Selected: %d | Winner: %d | Win: %s"),
-	   Result.SelectedIndex,
-	   Result.WinnerIndex,
-	   Result.bWin ? TEXT("True") : TEXT("False"));
-
 	FPBChoiceType Message;
 	Message.Exit = 1;
 
@@ -126,6 +136,11 @@ APBBetActor::APBBetActor()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
+}
+
+void APBBetActor::HandleBetResultAnimationsFinished()
+{
+	FinishBet();
 }
 
 // Called when the game starts or when spawned

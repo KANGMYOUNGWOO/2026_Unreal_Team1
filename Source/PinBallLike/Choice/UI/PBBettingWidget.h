@@ -2,17 +2,20 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "PinBallLike/Struct/Choice/PBBettingResult.h"
 #include "PBBettingWidget.generated.h"
 
 class UButton;
-class UTextBlock;
-class UImage;
 class UWidgetAnimation;
+
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FOnBetSelected,
 	int32,
 	SelectedIndex);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(
+	FOnBetResultAnimationsFinished);
 
 UCLASS()
 class PINBALLLIKE_API UPBBettingWidget : public UUserWidget
@@ -20,40 +23,45 @@ class PINBALLLIKE_API UPBBettingWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	virtual void NativeConstruct() override;
-
-	UPROPERTY(BlueprintAssignable, Category = "Betting")
+	UPROPERTY(BlueprintAssignable, Category = "Bet")
 	FOnBetSelected OnBetSelected;
 
-	void PlayIntroAnimation();
-	
-private:
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UButton> ExitButton;
+	// 결과 연출이 전부 끝났음을 Actor에 알림
+	UPROPERTY(BlueprintAssignable, Category = "Bet")
+	FOnBetResultAnimationsFinished OnBetResultAnimationsFinished;
 
-	UPROPERTY(meta=(BindWidget))
+	void PlayIntroAnimation();
+
+	void PlayBetResultAnimations(const FPBBettingResult& Result);
+
+protected:
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
+
+private:
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> NationButton1;
 
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> NationButton2;
-
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> BetText;
-
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> NationText1;
-
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> NationText2;
-
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UImage> Flag1;
-
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UImage> Flag2;
 
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> IntroAnim;
+
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> BetResultLeftWin;
+
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> BetResultRightWin;
+
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> BetWin;
+
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> BetLose;
+
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> BetResultProgress;
 	
 	UFUNCTION()
 	void OnNationButton1Clicked();
@@ -62,7 +70,22 @@ private:
 	void OnNationButton2Clicked();
 
 	UFUNCTION()
-	void OnExitButtonClicked();
+	void OnProgressAnimationFinished();
+	// 왼쪽/오른쪽 승리 애니메이션 종료
+	UFUNCTION()
+	void OnWinnerAnimationFinished();
+
+	// 플레이어 승리/패배 애니메이션 종료
+	UFUNCTION()
+	void OnFinalResultAnimationFinished();
+
+	void SetBetButtonsEnabled(bool bEnabled);
+
+	bool bPlayerWon = false;
+
+	FPBBettingResult CachedResult;
 	
-	
+	FWidgetAnimationDynamicEvent WinnerAnimationFinishedEvent;
+	FWidgetAnimationDynamicEvent FinalAnimationFinishedEvent;
+	FWidgetAnimationDynamicEvent BetProgressAnimationFinishedEvent;
 };

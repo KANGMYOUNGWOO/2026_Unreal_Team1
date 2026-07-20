@@ -3,6 +3,7 @@
 
 #include "PBShopWidget.h"
 
+#include "PBPurchaseConfirmWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components//Button.h"
 #include "Components/CanvasPanelSlot.h"
@@ -122,6 +123,11 @@ void UPBShopWidget::SetShopSlotWidgetData(int32 index, FText Name, int32 Price, 
 void UPBShopWidget::UnActiveSlotWidget(int32 SlotIndex)
 {
 	ShopSlotWidgets[SlotIndex]->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UPBShopWidget::SetPurchaseConfirmInfo(int32 Index, FText Name, int32 Price, FText Synergy, UTexture2D* Icon)
+{
+	ConfirmWidget->SetInfo(Index,Name,Price,Synergy,Icon);
 }
 
 void UPBShopWidget::OnExitButtonClicked()
