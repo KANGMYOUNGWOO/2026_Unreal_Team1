@@ -5,12 +5,8 @@
 #include "Bumper/PBBumperTableParser.h"
 #include "Bumper/PBBumperTriggerTableParser.h"
 #include "Bumper/PBBumperEffectTableParser.h"
-#include "Effect/PBGameplayEffectParamTableParser.h"
-#include "Effect/PBGameplayEffectTableParser.h"
 #include "Engine/Blueprint.h"
 #include "Engine/DataTable.h"
-#include "Factories/DataAssetFactory.h"
-#include "Factories/DataTableFactory.h"
 #include "GoogleSheetConfig.h"
 #include "HttpManager.h"
 #include "HttpModule.h"
@@ -24,11 +20,14 @@
 #include "PinBallLike/Actor/Bumper/Effect/PBCounterShieldBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBGateSupportFieldBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBKineticShellBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBBumperSharedEffectAdapter.h"
 #include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
+#include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
-#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectParamRow.h"
-#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
 #include "UObject/SavePackage.h"
 #include "UObject/UObjectIterator.h"
 #include "UObject/UnrealType.h"
@@ -36,7 +35,21 @@
 namespace
 {
 	constexpr double SheetFetchTimeoutSeconds = 60.0;
-	const TCHAR* SharedEffectSheetId = TEXT("1rvssGjKqKdvHaZ4fKKAI9zJZm5zMuBMYTsCV1l8Mld4");
+	namespace DataPath
+	{
+		constexpr const TCHAR* CollectionTable = TEXT("/Game/Data/Tables/DT_Collection");
+		constexpr const TCHAR* BumperTable = TEXT("/Game/Data/Tables/Bumper/DT_Bumper");
+		constexpr const TCHAR* BumperTriggerTable = TEXT("/Game/Data/Tables/Bumper/DT_BumperTrigger");
+		constexpr const TCHAR* BumperEffectTable = TEXT("/Game/Data/Tables/Bumper/DT_BumperEffect");
+		constexpr const TCHAR* SharedEffectTable = TEXT("/Game/Data/Tables/Effect/DT_Effect");
+		constexpr const TCHAR* SharedEffectParamTable = TEXT("/Game/Data/Tables/Effect/DT_EffectParam");
+
+		constexpr const TCHAR* BumperLoader = TEXT("/Game/Data/Loaders/Bumper/GSC_Bumper");
+		constexpr const TCHAR* BumperTriggerLoader = TEXT("/Game/Data/Loaders/Bumper/GSC_BumperTrigger");
+		constexpr const TCHAR* BumperEffectLoader = TEXT("/Game/Data/Loaders/Bumper/GSC_BumperEffect");
+		constexpr const TCHAR* SharedEffectLoader = TEXT("/Game/Data/Loaders/Effect/GSC_Effect");
+		constexpr const TCHAR* SharedEffectParamLoader = TEXT("/Game/Data/Loaders/Effect/GSC_EffectParam");
+	}
 
 	struct FApprovedAssetRename
 	{
@@ -314,81 +327,6 @@ namespace
 				false);
 	}
 
-	UDataTable* EnsureDataTable(
-		IAssetTools& AssetTools,
-		const FString& PackagePath,
-		UScriptStruct* RowStruct)
-	{
-		if (UDataTable* ExistingTable = Cast<UDataTable>(LoadAsset(PackagePath)))
-		{
-			if (ExistingTable->GetRowStruct() != RowStruct)
-			{
-				UE_LOG(LogTemp, Error,
-					TEXT("[BumperSync] DataTable row struct mismatch. Table=%s Expected=%s Actual=%s"),
-					*PackagePath,
-					*GetNameSafe(RowStruct),
-					*GetNameSafe(ExistingTable->GetRowStruct()));
-				return nullptr;
-			}
-			return ExistingTable;
-		}
-
-		UDataTableFactory* Factory = NewObject<UDataTableFactory>();
-		Factory->Struct = RowStruct;
-		UDataTable* NewTable = Cast<UDataTable>(AssetTools.CreateAsset(
-			FPackageName::GetLongPackageAssetName(PackagePath),
-			FPackageName::GetLongPackagePath(PackagePath),
-			UDataTable::StaticClass(),
-			Factory));
-		if (IsValid(NewTable))
-		{
-			NewTable->MarkPackageDirty();
-		}
-		return NewTable;
-	}
-
-	template <typename TParser>
-	UGoogleSheetConfig* EnsureSheetConfig(
-		IAssetTools& AssetTools,
-		const FString& PackagePath,
-		const FString& PageName,
-		const FString& RangeTo,
-		UDataTable* TargetTable)
-	{
-		UGoogleSheetConfig* Config = Cast<UGoogleSheetConfig>(LoadAsset(PackagePath));
-		if (!IsValid(Config))
-		{
-			UDataAssetFactory* Factory = NewObject<UDataAssetFactory>();
-			Factory->DataAssetClass = UGoogleSheetConfig::StaticClass();
-			Config = Cast<UGoogleSheetConfig>(AssetTools.CreateAsset(
-				FPackageName::GetLongPackageAssetName(PackagePath),
-				FPackageName::GetLongPackagePath(PackagePath),
-				UGoogleSheetConfig::StaticClass(),
-				Factory));
-		}
-		if (!IsValid(Config) || !IsValid(TargetTable))
-		{
-			return nullptr;
-		}
-
-		Config->Modify();
-		Config->SheetURL = SharedEffectSheetId;
-		Config->PageName = PageName;
-		Config->RangeFrom = TEXT("A1");
-		Config->RangeTo = RangeTo;
-		Config->bAutoSaveOnComplete = false;
-
-		TParser* Parser = Cast<TParser>(Config->DataParser);
-		if (!IsValid(Parser))
-		{
-			Parser = NewObject<TParser>(Config, NAME_None, RF_Transactional);
-			Config->DataParser = Parser;
-		}
-		Parser->SetTargetTable(TargetTable);
-		Config->MarkPackageDirty();
-		return Config;
-	}
-
 	bool FetchAndWait(UGoogleSheetConfig* Config)
 	{
 		if (!IsValid(Config))
@@ -444,9 +382,9 @@ namespace
 	bool RefreshCollectionBumperMetadata()
 	{
 		UDataTable* CollectionTable = Cast<UDataTable>(
-			LoadAsset(TEXT("/Game/Data/Tables/DT_Collection")));
+			LoadAsset(DataPath::CollectionTable));
 		const UDataTable* BumperTable = Cast<UDataTable>(
-			LoadAsset(TEXT("/Game/Data/Tables/DT_Bumper")));
+			LoadAsset(DataPath::BumperTable));
 		if (!IsValid(CollectionTable) || !IsValid(BumperTable))
 		{
 			UE_LOG(LogTemp, Error, TEXT("[BumperSync] DT_Collection or DT_Bumper is unavailable."));
@@ -538,17 +476,17 @@ namespace
 	{
 		static const TSet<FString> ExactPackages =
 		{
-			TEXT("/Game/Data/Tables/Effect/DT_GameplayEffect"),
-			TEXT("/Game/Data/Tables/Effect/DT_GameplayEffectParam"),
-			TEXT("/Game/Data/Tables/DT_Trigger"),
-			TEXT("/Game/Data/Tables/DT_Effect"),
-			TEXT("/Game/Data/Tables/DT_Bumper"),
-			TEXT("/Game/Data/Tables/DT_Collection"),
-			TEXT("/Game/Data/Loaders/GSC_GameplayEffect"),
-			TEXT("/Game/Data/Loaders/GSC_GameplayEffectParam"),
-			TEXT("/Game/Data/Loaders/GSC_Trigger"),
-			TEXT("/Game/Data/Loaders/GSC_Effect"),
-			TEXT("/Game/Data/Loaders/GSC_Bumper")
+			DataPath::SharedEffectTable,
+			DataPath::SharedEffectParamTable,
+			DataPath::BumperTriggerTable,
+			DataPath::BumperEffectTable,
+			DataPath::BumperTable,
+			DataPath::CollectionTable,
+			DataPath::SharedEffectLoader,
+			DataPath::SharedEffectParamLoader,
+			DataPath::BumperTriggerLoader,
+			DataPath::BumperEffectLoader,
+			DataPath::BumperLoader
 		};
 		if (ExactPackages.Contains(PackageName)
 			|| PackageName.StartsWith(TEXT("/Game/Data/DataAssets/Bumper/")))
@@ -616,6 +554,158 @@ namespace
 			PackagesToSave.Num());
 		return true;
 	}
+
+	template <typename RowType>
+	const UDataTable* LoadTypedTable(const TCHAR* PackagePath, const TCHAR* Label)
+	{
+		const UDataTable* Table = Cast<UDataTable>(LoadAsset(PackagePath));
+		if (!IsValid(Table))
+		{
+			UE_LOG(LogTemp, Error, TEXT("[BumperSync] %s table is unavailable: %s"), Label, PackagePath);
+			return nullptr;
+		}
+		if (Table->GetRowStruct() != RowType::StaticStruct())
+		{
+			UE_LOG(LogTemp, Error, TEXT("[BumperSync] %s table has an unexpected row struct: %s"), Label, PackagePath);
+			return nullptr;
+		}
+		return Table;
+	}
+
+	bool ValidateExistingBumperData()
+	{
+		const UDataTable* BumperTable = LoadTypedTable<FPBBumperTableRow>(DataPath::BumperTable, TEXT("Bumper"));
+		const UDataTable* TriggerTable = LoadTypedTable<FPBBumperTriggerRow>(DataPath::BumperTriggerTable, TEXT("BumperTrigger"));
+		const UDataTable* EffectTable = LoadTypedTable<FPBBumperEffectRow>(DataPath::BumperEffectTable, TEXT("BumperEffect"));
+		const UDataTable* SharedEffectTable = LoadTypedTable<FPBEffectTableRow>(DataPath::SharedEffectTable, TEXT("Effect"));
+		const UDataTable* SharedEffectParamTable = LoadTypedTable<FPBEffectParamRow>(DataPath::SharedEffectParamTable, TEXT("EffectParam"));
+		if (!BumperTable || !TriggerTable || !EffectTable || !SharedEffectTable || !SharedEffectParamTable)
+		{
+			return false;
+		}
+
+		const UGoogleSheetConfig* BumperLoader = Cast<UGoogleSheetConfig>(LoadAsset(DataPath::BumperLoader));
+		const UGoogleSheetConfig* TriggerLoader = Cast<UGoogleSheetConfig>(LoadAsset(DataPath::BumperTriggerLoader));
+		const UGoogleSheetConfig* EffectLoader = Cast<UGoogleSheetConfig>(LoadAsset(DataPath::BumperEffectLoader));
+		const UGoogleSheetConfig* SharedEffectLoader = Cast<UGoogleSheetConfig>(LoadAsset(DataPath::SharedEffectLoader));
+		const UGoogleSheetConfig* SharedEffectParamLoader = Cast<UGoogleSheetConfig>(LoadAsset(DataPath::SharedEffectParamLoader));
+		if (!IsValid(BumperLoader) || !IsValid(BumperLoader->DataParser)
+			|| !IsValid(TriggerLoader) || !IsValid(TriggerLoader->DataParser)
+			|| !IsValid(EffectLoader) || !IsValid(EffectLoader->DataParser)
+			|| !IsValid(SharedEffectLoader) || !IsValid(SharedEffectLoader->DataParser)
+			|| !IsValid(SharedEffectParamLoader) || !IsValid(SharedEffectParamLoader->DataParser))
+		{
+			UE_LOG(LogTemp, Error, TEXT("[BumperSync] One or more Bumper Loader assets are missing or invalid."));
+			return false;
+		}
+
+		bool bValid = true;
+		TSet<FName> ReferencedSharedEffectIds;
+		for (const FName BumperRowId : BumperTable->GetRowNames())
+		{
+			const FPBBumperTableRow* BumperRow = BumperTable->FindRow<FPBBumperTableRow>(
+				BumperRowId,
+				TEXT("BumperSyncValidate"),
+				false);
+			if (!BumperRow)
+			{
+				bValid = false;
+				continue;
+			}
+
+			if (BumperRow->TriggerID.IsNone()
+				|| !TriggerTable->FindRow<FPBBumperTriggerRow>(
+					BumperRow->TriggerID,
+					TEXT("BumperSyncValidate"),
+					false))
+			{
+				UE_LOG(LogTemp, Error,
+					TEXT("[BumperSync] Bumper row '%s' references a missing Trigger '%s'."),
+					*BumperRowId.ToString(),
+					*BumperRow->TriggerID.ToString());
+				bValid = false;
+			}
+
+			if (BumperRow->EffectID.IsNone()
+				|| !EffectTable->FindRow<FPBBumperEffectRow>(BumperRow->EffectID, TEXT("BumperSyncValidate"), false))
+			{
+				UE_LOG(LogTemp, Error,
+					TEXT("[BumperSync] Bumper row '%s' references a missing Effect '%s'."),
+					*BumperRowId.ToString(),
+					*BumperRow->EffectID.ToString());
+				bValid = false;
+			}
+		}
+
+		for (const FName BumperEffectRowId : EffectTable->GetRowNames())
+		{
+			const FPBBumperEffectRow* BumperEffectRow = EffectTable->FindRow<FPBBumperEffectRow>(
+				BumperEffectRowId,
+				TEXT("BumperSyncValidate"),
+				false);
+			if (!BumperEffectRow || BumperEffectRow->SharedEffectId.IsNone())
+			{
+				continue;
+			}
+
+			ReferencedSharedEffectIds.Add(BumperEffectRow->SharedEffectId);
+			const FPBEffectTableRow* SharedEffectRow = SharedEffectTable->FindRow<FPBEffectTableRow>(
+				BumperEffectRow->SharedEffectId,
+				TEXT("BumperSyncValidate"),
+				false);
+			FString ContractError;
+			if (!SharedEffectRow || !PBBumperSharedEffectAdapter::ValidateContract(
+				*SharedEffectRow,
+				NAME_None,
+				NAME_None,
+				NAME_None,
+				ContractError))
+			{
+				UE_LOG(LogTemp, Error,
+					TEXT("[BumperSync] Bumper Effect '%s' has an invalid shared Effect '%s': %s"),
+					*BumperEffectRowId.ToString(),
+					*BumperEffectRow->SharedEffectId.ToString(),
+					SharedEffectRow ? *ContractError : TEXT("row is missing"));
+				bValid = false;
+				continue;
+			}
+
+			TSet<FName> ParamKeys;
+			for (const TPair<FName, uint8*>& ParamPair : SharedEffectParamTable->GetRowMap())
+			{
+				const FPBEffectParamRow* ParamRow = reinterpret_cast<const FPBEffectParamRow*>(ParamPair.Value);
+				if (!ParamRow || ParamRow->EffectId != BumperEffectRow->SharedEffectId)
+				{
+					continue;
+				}
+				if (ParamRow->ParamKey.IsNone() || ParamKeys.Contains(ParamRow->ParamKey))
+				{
+					UE_LOG(LogTemp, Error,
+						TEXT("[BumperSync] Shared Effect '%s' has an empty or duplicate ParamKey '%s'."),
+						*BumperEffectRow->SharedEffectId.ToString(),
+						*ParamRow->ParamKey.ToString());
+					bValid = false;
+				}
+				ParamKeys.Add(ParamRow->ParamKey);
+			}
+			if (ParamKeys.IsEmpty())
+			{
+				UE_LOG(LogTemp, Error,
+					TEXT("[BumperSync] Shared Effect '%s' has no parameters."),
+					*BumperEffectRow->SharedEffectId.ToString());
+				bValid = false;
+			}
+		}
+
+		UE_LOG(LogTemp, Display,
+			TEXT("[BumperSync] ValidateOnly rows. Bumper=%d Trigger=%d Effect=%d SharedEffect=%d Result=%s"),
+			BumperTable->GetRowMap().Num(),
+			TriggerTable->GetRowMap().Num(),
+			EffectTable->GetRowMap().Num(),
+			ReferencedSharedEffectIds.Num(),
+			bValid ? TEXT("Success") : TEXT("Failure"));
+		return bValid;
+	}
 }
 
 UPBBumperDataSyncCommandlet::UPBBumperDataSyncCommandlet()
@@ -629,6 +719,11 @@ UPBBumperDataSyncCommandlet::UPBBumperDataSyncCommandlet()
 
 int32 UPBBumperDataSyncCommandlet::Main(const FString& Params)
 {
+	if (FParse::Param(*Params, TEXT("ValidateOnly")))
+	{
+		return ValidateExistingBumperData() ? 0 : 1;
+	}
+
 	const bool bMigrateLegacyAssets = FParse::Param(*Params, TEXT("MigrateLegacyAssets"));
 	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>(
 		TEXT("AssetTools")).Get();
@@ -646,52 +741,30 @@ int32 UPBBumperDataSyncCommandlet::Main(const FString& Params)
 			TEXT("[BumperSync] Legacy Blueprint rename/reparent migration skipped. Use -MigrateLegacyAssets only for the approved one-time migration."));
 	}
 
-	UDataTable* GameplayEffectTable = EnsureDataTable(
-		AssetTools,
-		TEXT("/Game/Data/Tables/Effect/DT_GameplayEffect"),
-		FPBGameplayEffectRow::StaticStruct());
-	UDataTable* GameplayEffectParamTable = EnsureDataTable(
-		AssetTools,
-		TEXT("/Game/Data/Tables/Effect/DT_GameplayEffectParam"),
-		FPBGameplayEffectParamRow::StaticStruct());
-	if (!IsValid(GameplayEffectTable) || !IsValid(GameplayEffectParamTable))
-	{
-		return 1;
-	}
-
-	UGoogleSheetConfig* GameplayEffectConfig = EnsureSheetConfig<UPBGameplayEffectTableParser>(
-		AssetTools,
-		TEXT("/Game/Data/Loaders/GSC_GameplayEffect"),
-		TEXT("Effect"),
-		TEXT("G1000"),
-		GameplayEffectTable);
-	UGoogleSheetConfig* GameplayEffectParamConfig = EnsureSheetConfig<UPBGameplayEffectParamTableParser>(
-		AssetTools,
-		TEXT("/Game/Data/Loaders/GSC_GameplayEffectParam"),
-		TEXT("EffectParam"),
-		TEXT("D2000"),
-		GameplayEffectParamTable);
-	if (!IsValid(GameplayEffectConfig) || !IsValid(GameplayEffectParamConfig))
-	{
-		return 1;
-	}
+	UGoogleSheetConfig* SharedEffectConfig = ConfigureExistingSheetConfig(
+		DataPath::SharedEffectLoader,
+		TEXT("G1000"));
+	UGoogleSheetConfig* SharedEffectParamConfig = ConfigureExistingSheetConfig(
+		DataPath::SharedEffectParamLoader,
+		TEXT("D2000"));
 
 	UGoogleSheetConfig* TriggerConfig = ConfigureExistingSheetConfig(
-		TEXT("/Game/Data/Loaders/GSC_Trigger"),
+		DataPath::BumperTriggerLoader,
 		TEXT("F1000"));
 	UGoogleSheetConfig* EffectConfig = ConfigureExistingSheetConfig(
-		TEXT("/Game/Data/Loaders/GSC_Effect"),
+		DataPath::BumperEffectLoader,
 		TEXT("O1000"));
 	UGoogleSheetConfig* BumperConfig = ConfigureExistingSheetConfig(
-		TEXT("/Game/Data/Loaders/GSC_Bumper"),
+		DataPath::BumperLoader,
 		TEXT("K1000"));
-	if (!IsValid(TriggerConfig) || !IsValid(EffectConfig) || !IsValid(BumperConfig))
+	if (!IsValid(SharedEffectConfig) || !IsValid(SharedEffectParamConfig)
+		|| !IsValid(TriggerConfig) || !IsValid(EffectConfig) || !IsValid(BumperConfig))
 	{
 		return 1;
 	}
 
-	if (!FetchAndWait(GameplayEffectConfig)
-		|| !FetchAndWait(GameplayEffectParamConfig)
+	if (!FetchAndWait(SharedEffectConfig)
+		|| !FetchAndWait(SharedEffectParamConfig)
 		|| !FetchAndWait(TriggerConfig)
 		|| !FetchAndWait(EffectConfig)
 		|| !FetchAndWait(BumperConfig)
