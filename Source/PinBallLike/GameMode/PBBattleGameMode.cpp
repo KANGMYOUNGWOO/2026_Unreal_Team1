@@ -16,8 +16,10 @@
 #include "PinBallLike/Struct/Effect/PBEffectContext.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBEffectSubsystem.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "TimerManager.h"
 
 #pragma region Lifecycle
 
@@ -61,6 +63,18 @@ bool APBBattleGameMode::CanLaunchBattleParty() const
 	return BattleGameState
 		&& BattleGameState->GetBattleLevelPhase() == EPBBattleLevelPhase::BallDeployment
 		&& BattleGameState->HasRemainingBattleLaunchCount();
+}
+
+void APBBattleGameMode::ReturnToMainMenu()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr)
+	{
+		GameDataLoadSubsystem->UnloadPrimaryAssets();
+	}
+
+	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/Lv_MainMenu")));
 }
 
 APBBattleGameState* APBBattleGameMode::GetBattleGameState() const
@@ -611,6 +625,7 @@ void APBBattleGameMode::HandleBossDeadMessage(
 		*Channel.ToString(),
 		*GetNameSafe(Message.BossActor));
 
+	bool IsFinalBossDefeated = false;
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
 		if (UPBPlayerDataSubsystem* PlayerDataSubsystem =
@@ -622,6 +637,8 @@ void APBBattleGameMode::HandleBossDeadMessage(
 				TArray<FName> BossRowNames;
 				if (TableDataSubsystem->GetBossRowNames(BossRowNames))
 				{
+					IsFinalBossDefeated = !BossRowNames.IsEmpty()
+						&& PlayerDataSubsystem->GetCurrentBossIndex() >= BossRowNames.Num() - 1;
 					PlayerDataSubsystem->AdvanceBossProgress(BossRowNames.Num());
 				}
 			}
@@ -629,6 +646,15 @@ void APBBattleGameMode::HandleBossDeadMessage(
 	}
 
 	SetBattleLevelPhase(EPBBattleLevelPhase::BossDead);
+
+	if (IsFinalBossDefeated)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimerForNextTick(
+				FTimerDelegate::CreateUObject(this, &APBBattleGameMode::ReturnToMainMenu));
+		}
+	}
 }
 
 void APBBattleGameMode::HandleBossIntroCompletedMessage(

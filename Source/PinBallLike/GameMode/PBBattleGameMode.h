@@ -41,6 +41,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Battle|Flow")
 	bool CanLaunchBattleParty() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Battle|Flow")
+	void ReturnToMainMenu();
+
 protected:
 	UFUNCTION(BlueprintNativeEvent, Category = "Battle|Flow")
 	void HandleReward();
