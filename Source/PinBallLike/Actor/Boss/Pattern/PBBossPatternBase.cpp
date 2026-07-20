@@ -5,6 +5,7 @@
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
 #include "PinBallLike/Actor/Boss/Pattern/PBBossPatternTelegraph.h"
+#include "PinBallLike/Actor/Party/PBCombatPartyController.h"
 
 void UPBBossPatternBase::InitializePattern(UPBBossPatternComponent* NewOwnerPatternComponent)
 {
@@ -108,11 +109,6 @@ AActor* UPBBossPatternBase::FindPinballActor() const
 
 AActor* UPBBossPatternBase::FindPinballActor(APBBossBase* Boss) const
 {
-	if (CachedPinballActor.IsValid())
-	{
-		return CachedPinballActor.Get();
-	}
-
 	if (!Boss)
 	{
 		return nullptr;
@@ -124,8 +120,17 @@ AActor* UPBBossPatternBase::FindPinballActor(APBBossBase* Boss) const
 		return nullptr;
 	}
 
-	CachedPinballActor = UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
-	return CachedPinballActor.Get();
+	APBCombatPartyController* PartyController = Cast<APBCombatPartyController>(
+		UGameplayStatics::GetActorOfClass(World, APBCombatPartyController::StaticClass()));
+	if (PartyController)
+	{
+		if (APBBallBase* LeaderBall = PartyController->GetLeaderBall())
+		{
+			return LeaderBall;
+		}
+	}
+
+	return UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
 }
 
 void UPBBossPatternBase::StartExecutePattern()

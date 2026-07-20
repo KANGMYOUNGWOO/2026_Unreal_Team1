@@ -48,7 +48,7 @@ private:
 	// 보스 위치와 오프셋을 기준으로 투사체 생성 위치를 계산합니다.
 	FVector GetProjectileSpawnLocation() const;
 	// 핀볼 방향을 바라보도록 투사체 생성 회전을 계산합니다.
-	FRotator GetProjectileSpawnRotation(const FVector& SpawnLocation) const;
+	FVector GetProjectileDirection(const FVector& SpawnLocation) const;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Projectile", meta = (AllowPrivateAccess = "true"))
 	FVector SpawnOffset = FVector::ZeroVector;
 
