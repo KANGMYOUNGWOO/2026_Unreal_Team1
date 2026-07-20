@@ -82,11 +82,13 @@ bool FPBCollectionTabControllerTest::RunTest(const FString& Parameters)
 	Alpha.SourceRowName = TEXT("Ball_Alpha");
 	Alpha.DisplayName = FText::FromString(TEXT("알파 볼"));
 	Alpha.Description = FText::FromString(TEXT("기본 공격형 볼"));
+	Alpha.SortOrder = 10;
 
 	FPBCollectionItemSummary Beta;
 	Beta.SourceRowName = TEXT("Ball_Beta");
 	Beta.DisplayName = FText::FromString(TEXT("베타 볼"));
 	Beta.Description = FText::FromString(TEXT("지원형 볼"));
+	Beta.SortOrder = 20;
 
 	Controller->SetSearchText(FText::FromString(TEXT("알파")));
 	TestTrue(TEXT("Search matches a display name"), Controller->MatchesSearch(Alpha));
@@ -105,17 +107,35 @@ bool FPBCollectionTabControllerTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Two list item objects are created"), Items.Num(), 2);
 
 	Controller->ResolveCatalogItem(Items[1]);
+	Controller->SetSortMode(EPBCollectionSortMode::NameDesc);
 	Items.Reset();
 	SelectedItem = nullptr;
-	const int32 RestoredDataIndex = Controller->BuildCatalogItems(
+	const int32 DescendingDataIndex = Controller->BuildCatalogItems(
 		EPBCollectionCategory::Ball,
 		{Alpha, Beta},
 		{4, 7},
 		Items,
 		SelectedItem);
-	TestEqual(TEXT("Selection is restored by source RowName"), RestoredDataIndex, 7);
-	TestTrue(TEXT("The restored item points to the selected source row"),
+	TestEqual(TEXT("Name descending keeps the selected data row"), DescendingDataIndex, 7);
+	TestTrue(TEXT("Name descending places Alpha before Beta"),
+		Items.Num() == 2 && Items[0]->Summary.SourceRowName == Alpha.SourceRowName);
+	TestTrue(TEXT("Selection is restored by source RowName after descending sort"),
 		SelectedItem && SelectedItem->Summary.SourceRowName == Beta.SourceRowName);
+
+	Controller->SetSortMode(EPBCollectionSortMode::NameAsc);
+	Items.Reset();
+	SelectedItem = nullptr;
+	const int32 AscendingDataIndex = Controller->BuildCatalogItems(
+		EPBCollectionCategory::Ball,
+		{Alpha, Beta},
+		{4, 7},
+		Items,
+		SelectedItem);
+	TestEqual(TEXT("Name ascending keeps the selected data row"), AscendingDataIndex, 7);
+	TestTrue(TEXT("Name ascending places Beta before Alpha"),
+		Items.Num() == 2 && Items[0]->Summary.SourceRowName == Beta.SourceRowName);
+	TestTrue(TEXT("Selection points to Beta after its list position changes"),
+		SelectedItem == Items[0]);
 
 	return true;
 }

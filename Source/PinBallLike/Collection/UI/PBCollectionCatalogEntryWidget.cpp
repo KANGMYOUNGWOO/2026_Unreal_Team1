@@ -36,10 +36,18 @@ void UPBCollectionCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListIte
 	if (NameText)
 	{
 		NameText->SetText(Item->Summary.DisplayName);
+		NameText->SetAutoWrapText(false);
+		NameText->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
+		NameText->SetClipping(EWidgetClipping::ClipToBounds);
+		NameText->SetToolTipText(Item->Summary.DisplayName);
 	}
 	if (SubtitleText)
 	{
 		SubtitleText->SetText(Item->Summary.Subtitle);
+		SubtitleText->SetAutoWrapText(false);
+		SubtitleText->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
+		SubtitleText->SetClipping(EWidgetClipping::ClipToBounds);
+		SubtitleText->SetToolTipText(Item->Summary.Subtitle);
 		SubtitleText->SetVisibility(Item->Summary.Subtitle.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 	}
 	if (AccentBorder)
@@ -54,6 +62,7 @@ void UPBCollectionCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListIte
 	if (CardBorder)
 	{
 		CardBorder->SetBrushColor(CardColor);
+		CardBorder->SetClipping(EWidgetClipping::ClipToBounds);
 	}
 }
 

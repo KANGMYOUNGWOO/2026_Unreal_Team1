@@ -134,6 +134,10 @@ TArray<FPBCollectionDisplayData> UPBCollectionSubsystem::GetDisplayEntriesByQuer
 			return A.DisplayName.EqualTo(B.DisplayName)
 				? A.CollectionId.ToString() < B.CollectionId.ToString()
 				: A.DisplayName.ToString() < B.DisplayName.ToString();
+		case EPBCollectionSortMode::NameDesc:
+			return A.DisplayName.EqualTo(B.DisplayName)
+				? A.CollectionId.ToString() < B.CollectionId.ToString()
+				: A.DisplayName.ToString() > B.DisplayName.ToString();
 		case EPBCollectionSortMode::StarGradeDesc:
 			return A.StarGrade != B.StarGrade
 				? A.StarGrade > B.StarGrade

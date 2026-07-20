@@ -75,6 +75,20 @@ void UPBCollectionTabController::SetSearchText(const FText& Text)
 	}
 }
 
+void UPBCollectionTabController::SetSortMode(const EPBCollectionSortMode InSortMode)
+{
+	if (SortMode == InSortMode)
+	{
+		return;
+	}
+
+	SortMode = InSortMode;
+	if (bIsActive)
+	{
+		OnRefreshRequested.Broadcast();
+	}
+}
+
 bool UPBCollectionTabController::IsCatalogDataReady() const
 {
 	return IsValid(CollectionSubsystem) && CollectionSubsystem->IsDataReady();
@@ -123,19 +137,52 @@ int32 UPBCollectionTabController::BuildCatalogItems(
 		return INDEX_NONE;
 	}
 
-	int32 SelectedItemIndex = INDEX_NONE;
+	TArray<int32> SortedSourceIndexes;
+	SortedSourceIndexes.Reserve(Summaries.Num());
 	for (int32 Index = 0; Index < Summaries.Num(); ++Index)
+	{
+		SortedSourceIndexes.Add(Index);
+	}
+
+	SortedSourceIndexes.StableSort([this, &Summaries](const int32 LeftIndex, const int32 RightIndex)
+	{
+		const FPBCollectionItemSummary& Left = Summaries[LeftIndex];
+		const FPBCollectionItemSummary& Right = Summaries[RightIndex];
+		const auto CompareDefault = [&Left, &Right]()
+		{
+			return Left.SortOrder != Right.SortOrder
+				? Left.SortOrder < Right.SortOrder
+				: Left.SourceRowName.ToString() < Right.SourceRowName.ToString();
+		};
+
+		const int32 NameComparison = Left.DisplayName.ToString().Compare(
+			Right.DisplayName.ToString(),
+			ESearchCase::IgnoreCase);
+		switch (SortMode)
+		{
+		case EPBCollectionSortMode::NameAsc:
+			return NameComparison != 0 ? NameComparison < 0 : CompareDefault();
+		case EPBCollectionSortMode::NameDesc:
+			return NameComparison != 0 ? NameComparison > 0 : CompareDefault();
+		case EPBCollectionSortMode::SortOrder:
+		default:
+			return CompareDefault();
+		}
+	});
+
+	int32 SelectedItemIndex = INDEX_NONE;
+	for (const int32 SourceIndex : SortedSourceIndexes)
 	{
 		UPBCollectionCatalogItemObject* Item = NewObject<UPBCollectionCatalogItemObject>(this);
 		Item->Category = Category;
-		Item->Summary = Summaries[Index];
-		Item->DataIndex = DataIndexes[Index];
+		Item->Summary = Summaries[SourceIndex];
+		Item->DataIndex = DataIndexes[SourceIndex];
 		CatalogItems.Add(Item);
 		OutItems.Add(Item);
 
 		if (Item->Summary.SourceRowName == SelectedSourceRowName)
 		{
-			SelectedItemIndex = Index;
+			SelectedItemIndex = OutItems.Num() - 1;
 		}
 	}
 

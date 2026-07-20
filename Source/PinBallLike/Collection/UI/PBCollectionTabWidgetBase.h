@@ -4,8 +4,10 @@
 #include "Blueprint/UserWidget.h"
 #include "PinBallLike/Struct/Collection/PBCollectionTabTypes.h"
 #include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
+#include "Types/SlateEnums.h"
 #include "PBCollectionTabWidgetBase.generated.h"
 
+class UComboBoxString;
 class UEditableTextBox;
 class UListView;
 class UPBCollectionCatalogItemObject;
@@ -55,12 +57,23 @@ protected:
 	TObjectPtr<UEditableTextBox> SearchTextBox;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Collection|Tab", meta = (BindWidgetOptional))
+	TObjectPtr<UComboBoxString> SortComboBox;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Tab", meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> StatusText;
 
 private:
 	UFUNCTION()
 	void HandleSearchTextChanged(const FText& Text);
 
+	UFUNCTION()
+	void HandleSortSelectionChanged(FString SelectedItem, ESelectInfo::Type SelectionType);
+
+	UFUNCTION()
+	UWidget* GenerateSortOptionWidget(FString Item);
+
+	void EnsureSortControl();
+	void ConfigureSortControl();
 	void HandleRefreshRequested();
 
 	UPROPERTY(Transient)
