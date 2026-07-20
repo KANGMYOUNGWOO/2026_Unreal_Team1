@@ -13,9 +13,9 @@ using namespace PBSheetParserUtils;
 
 UPBBallTableParser::UPBBallTableParser()
 {
-	DataAssetPreset.FolderPath.Path = TEXT("/Game/Blueprints/Ball/DataAsset");
+	DataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Ball");
 	DataAssetPreset.NameFormat = TEXT("DA_{0}");
-	IconPreset.FolderPath.Path = TEXT("/Game/Resources/Ball");
+	IconPreset.FolderPath.Path = TEXT("/Game/Resources/Ball/Icon");
 	IconPreset.NameFormat = TEXT("Icon_{0}");
 	ActorPreset.FolderPath.Path = TEXT("/Game/Blueprints/Ball/Actor");
 	ActorPreset.NameFormat = TEXT("BP_{0}");
