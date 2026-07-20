@@ -28,7 +28,7 @@ APBOctopusBindingZone::APBOctopusBindingZone()
 	BindingEffect->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> BindingEffectFinder(
-		TEXT("/Game/Blueprints/Boss/BossAsset/Basic_VFX/Niagara/NS_Basic_1.NS_Basic_1"));
+		TEXT("/Game/Blueprints/Boss/BossAsset/Niagara/Basic_VFX/Niagara/NS_Basic_1.NS_Basic_1"));
 	if (BindingEffectFinder.Succeeded())
 	{
 		BindingEffect->SetAsset(BindingEffectFinder.Object);
