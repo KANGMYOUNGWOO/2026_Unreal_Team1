@@ -126,23 +126,15 @@ void UPBBumperEquipSlotDragHandle::NativeOnDragCancelled(
 {
 	Super::NativeOnDragCancelled(InDragDropEvent, InOperation);
 
-	const UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
-	UPBBumperEquipUI* EquipUI = OwnerEquipUI.Get();
+	UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
 	if (!IsValid(DragOperation)
 		|| !DragOperation->HasSourceEquipSlot()
-		|| DragOperation->SourceEquipSlot != EquipSlot
-		|| InDragDropEvent.GetEffectingButton() != EKeys::LeftMouseButton
-		|| !IsValid(EquipUI))
+		|| DragOperation->SourceEquipSlot != EquipSlot)
 	{
 		return;
 	}
 
-	FName CurrentRowName = NAME_None;
-	if (EquipUI->GetEquippedBumperForEquipSlot(EquipSlot, CurrentRowName)
-		&& CurrentRowName == DragOperation->BumperRowName)
-	{
-		EquipUI->UnequipBumperAtSlot(EquipSlot);
-	}
+	DragOperation->SetResult(EPBBumperDragResult::Cancelled);
 }
 
 void UPBBumperEquipSlotDragHandle::ApplyPresentation()

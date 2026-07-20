@@ -71,9 +71,17 @@ public:
 	void GainGold(int32 Amount);
 
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+	friend class FPBBumperLoadoutTransactionTest;
+#endif
+
 	void InitializeDefaultBumpers();
 	bool LoadBumperLoadout();
-	bool SaveBumperLoadout() const;
+	bool CommitBumperLoadout(TMap<EPBBumperEquipSlot, FName>&& CandidateLoadout);
+	bool SaveBumperLoadout(const TMap<EPBBumperEquipSlot, FName>& Loadout) const;
+	bool WriteBumperLoadout(const TArray<FPBEquippedBumperSlot>& EquippedSlots) const;
+	static TArray<FPBEquippedBumperSlot> BuildEquippedBumperSlots(
+		const TMap<EPBBumperEquipSlot, FName>& Loadout);
 	bool ValidateBumperForSlot(EPBBumperEquipSlot EquipSlot, FName BumperRowId) const;
 	void SanitizeEquippedBumpers();
 
@@ -85,6 +93,10 @@ private:
 
 	bool bBumperPersistenceInitialized = false;
 	bool bLoadedBumperLoadoutNeedsResave = false;
+
+#if WITH_DEV_AUTOMATION_TESTS
+	TFunction<bool(const TArray<FPBEquippedBumperSlot>&)> BumperLoadoutWriterOverride;
+#endif
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 Gold = 1000;

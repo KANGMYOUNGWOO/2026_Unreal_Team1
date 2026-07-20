@@ -5,6 +5,19 @@
 #include "PinBallLike/Struct/Bumper/PBBumperEquipSlot.h"
 #include "PBBumperDragDropOperation.generated.h"
 
+UENUM(BlueprintType)
+enum class EPBBumperDragResult : uint8
+{
+	Pending,
+	Equipped,
+	Moved,
+	Swapped,
+	Unequipped,
+	NoChange,
+	Cancelled,
+	Failed
+};
+
 UCLASS()
 class PINBALLLIKE_API UPBBumperDragDropOperation : public UDragDropOperation
 {
@@ -22,6 +35,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper|DragDrop")
 	bool HasSourceEquipSlot() const { return bHasSourceEquipSlot; }
 
+	UFUNCTION(BlueprintPure, Category = "Bumper|DragDrop")
+	EPBBumperDragResult GetResult() const { return Result; }
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|DragDrop")
+	bool WasDropHandled() const;
+
+	void SetResult(EPBBumperDragResult InResult);
+
 	UPROPERTY(BlueprintReadOnly, Category = "Bumper|DragDrop")
 	FName BumperRowName = NAME_None;
 
@@ -31,4 +52,7 @@ public:
 private:
 	UPROPERTY()
 	bool bHasSourceEquipSlot = false;
+
+	UPROPERTY()
+	EPBBumperDragResult Result = EPBBumperDragResult::Pending;
 };

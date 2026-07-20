@@ -111,7 +111,7 @@ bool UPBBumperEquipUI::NativeOnDragOver(
 	const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
 {
-	const UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
+	UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
 	if (!IsValid(DragOperation) || !DragOperation->IsValidBumperDrag())
 	{
 		SetHoveredDropSlot(TOptional<EPBBumperEquipSlot>());
@@ -141,7 +141,7 @@ bool UPBBumperEquipUI::NativeOnDrop(
 	const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
 {
-	const UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
+	UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
 	if (!IsValid(DragOperation) || !DragOperation->IsValidBumperDrag())
 	{
 		SetHoveredDropSlot(TOptional<EPBBumperEquipSlot>());
@@ -156,9 +156,13 @@ bool UPBBumperEquipUI::NativeOnDrop(
 
 	if (!DragOperation->HasSourceEquipSlot())
 	{
-		return bHasTargetSlot
+		const bool bEquipped = bHasTargetSlot
 			&& CanEquipBumperRowAtSlot(DragOperation->BumperRowName, TargetSlot)
 			&& EquipBumperRowAtSlot(DragOperation->BumperRowName, TargetSlot);
+		DragOperation->SetResult(bEquipped
+			? EPBBumperDragResult::Equipped
+			: EPBBumperDragResult::Failed);
+		return bEquipped;
 	}
 
 	FName CurrentSourceRowName = NAME_None;
@@ -167,6 +171,7 @@ bool UPBBumperEquipUI::NativeOnDrop(
 			CurrentSourceRowName)
 		|| CurrentSourceRowName != DragOperation->BumperRowName)
 	{
+		DragOperation->SetResult(EPBBumperDragResult::Failed);
 		return true;
 	}
 
@@ -176,14 +181,27 @@ bool UPBBumperEquipUI::NativeOnDrop(
 			DragOperation->SourceEquipSlot,
 			TargetSlot))
 	{
-		MoveEquippedBumper(
+		FName TargetRowName = NAME_None;
+		const bool bTargetWasOccupied = GetEquippedBumperForEquipSlot(TargetSlot, TargetRowName)
+			&& !TargetRowName.IsNone();
+		const bool bMoved = MoveEquippedBumper(
 			DragOperation->BumperRowName,
 			DragOperation->SourceEquipSlot,
 			TargetSlot);
+		DragOperation->SetResult(!bMoved
+			? EPBBumperDragResult::Failed
+			: DragOperation->SourceEquipSlot == TargetSlot
+				? EPBBumperDragResult::NoChange
+				: bTargetWasOccupied
+					? EPBBumperDragResult::Swapped
+					: EPBBumperDragResult::Moved);
 		return true;
 	}
 
-	UnequipBumperAtSlot(DragOperation->SourceEquipSlot);
+	const bool bUnequipped = UnequipBumperAtSlot(DragOperation->SourceEquipSlot);
+	DragOperation->SetResult(bUnequipped
+		? EPBBumperDragResult::Unequipped
+		: EPBBumperDragResult::Failed);
 	return true;
 }
 
