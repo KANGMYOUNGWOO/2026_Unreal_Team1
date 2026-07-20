@@ -3,25 +3,44 @@
 void UPBSimplePopupWidget::InitializePopup(const FText& InMessage)
 {
 	Message = InMessage;
-	bConfirming = false;
+	ClosedCallback.Unbind();
+	bClosing = false;
 	OnPopupInitialized(Message);
+}
+
+void UPBSimplePopupWidget::SetClosedCallback(FPBSimplePopupClosedDelegate InCallback)
+{
+	ClosedCallback = MoveTemp(InCallback);
 }
 
 void UPBSimplePopupWidget::Confirm()
 {
-	if (bConfirming)
+	ClosePopup(true);
+}
+
+void UPBSimplePopupWidget::Cancel()
+{
+	ClosePopup(false);
+}
+
+void UPBSimplePopupWidget::ClosePopup(const bool bConfirmed)
+{
+	if (bClosing)
 	{
 		return;
 	}
 
-	bConfirming = true;
+	bClosing = true;
+	FPBSimplePopupClosedDelegate Callback = MoveTemp(ClosedCallback);
 	if (!CompletePop())
 	{
-		bConfirming = false;
+		ClosedCallback = MoveTemp(Callback);
+		bClosing = false;
 		return;
 	}
 
-	OnConfirmed.Broadcast();
+	OnClosed.Broadcast(bConfirmed);
+	Callback.ExecuteIfBound(bConfirmed);
 }
 
 void UPBSimplePopupWidget::OnPopRequested_Implementation()

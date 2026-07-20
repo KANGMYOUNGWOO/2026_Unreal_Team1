@@ -20,6 +20,7 @@
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "TimerManager.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 
 #pragma region Lifecycle
 
@@ -150,11 +151,10 @@ void APBBattleGameMode::HandleCurrentPhase()
 		EnterBossDead();
 		break;
 	case EPBBattleLevelPhase::Reward:
-		if (APBBumperSpawner* FoundBumperSpawner = FindBumperSpawner())
-		{
-			FoundBumperSpawner->LogBattleTelemetrySummary();
-		}
-		HandleReward();
+		EnterReward();
+		break;
+	case EPBBattleLevelPhase::BattleExit:
+		HandleBattleExit();
 		break;
 	default:
 		break;
@@ -231,6 +231,79 @@ void APBBattleGameMode::EnterBossDead()
 	SetBattleLevelPhase(EPBBattleLevelPhase::Reward);
 }
 
+void APBBattleGameMode::EnterReward()
+{
+	if (bRewardSequenceStarted)
+	{
+		return;
+	}
+
+	bRewardSequenceStarted = true;
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter Reward."));
+
+	if (APBBumperSpawner* FoundBumperSpawner = FindBumperSpawner())
+	{
+		FoundBumperSpawner->LogBattleTelemetrySummary();
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBPlayerDataSubsystem* PlayerDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBPlayerDataSubsystem>()
+		: nullptr;
+	UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+		: nullptr;
+	if (!PlayerDataSubsystem)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[BattleFlow] PlayerDataSubsystem is unavailable. Continue to BattleExit."));
+		HandleRewardPopupClosed(false);
+		return;
+	}
+
+	// TODO: 임시 골드 보상. 추후 보상 데이터로 교체한다.
+	constexpr int32 RewardGold = 1000;
+	PlayerDataSubsystem->GainGold(RewardGold);
+	if (!UIManagerSubsystem)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[BattleFlow] UIManagerSubsystem is unavailable. Continue to BattleExit."));
+		HandleRewardPopupClosed(false);
+		return;
+	}
+
+	const FText RewardMessage = FText::Format(
+		FText::FromString(TEXT("골드 획득: {0}G\n 현재 골드 : {1}G")),
+		FText::AsNumber(RewardGold),
+		FText::AsNumber(PlayerDataSubsystem->GetCurrentGold()));
+	if (!UIManagerSubsystem->ShowSimplePopup(
+		RewardMessage,
+		FPBSimplePopupClosedDelegate::CreateUObject(
+			this,
+			&ThisClass::HandleRewardPopupClosed)))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[BattleFlow] Failed to create the reward popup. Continue to BattleExit."));
+		HandleRewardPopupClosed(false);
+	}
+}
+
+void APBBattleGameMode::HandleRewardPopupClosed(const bool bConfirmed)
+{
+	UE_LOG(LogTemp, Log,
+		TEXT("[BattleFlow] Reward popup closed. Confirmed=%s. Advance to BattleExit."),
+		bConfirmed ? TEXT("true") : TEXT("false"));
+
+	const APBBattleGameState* BattleGameState = GetBattleGameState();
+	if (!BattleGameState
+		|| BattleGameState->GetBattleLevelPhase() != EPBBattleLevelPhase::Reward)
+	{
+		return;
+	}
+
+	SetBattleLevelPhase(EPBBattleLevelPhase::BattleExit);
+}
+
 void APBBattleGameMode::ApplyActiveSynergyEffectsForBattle()
 {
 	UGameInstance* GameInstance = GetGameInstance();
@@ -282,9 +355,9 @@ void APBBattleGameMode::TriggerPartySwitchEffects()
 	}
 }
 
-void APBBattleGameMode::HandleReward_Implementation()
+void APBBattleGameMode::HandleBattleExit_Implementation()
 {
-	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter Reward."));
+	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BattleExit."));
 }
 
 #pragma endregion

@@ -25,15 +25,12 @@
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 #include "PinBallLike/Table/Ball/PBBallAssetIds.h"
-#include "PinBallLike/UI/Popup/PBSimplePopupWidget.h"
 
 namespace
 {
 const FName LeftGolemHandName = TEXT("Left");
 const FName RightGolemHandName = TEXT("Right");
 constexpr int32 MaxBumperCheatChargeCount = 100;
-const TCHAR* SimplePopupWidgetClassPath =
-	TEXT("/Game/Blueprints/UI/Popup/WBP_SimplePopup.WBP_SimplePopup_C");
 
 void ShowSimplePopup(UWorld* World)
 {
@@ -47,21 +44,9 @@ void ShowSimplePopup(UWorld* World)
 		return;
 	}
 
-	const TSubclassOf<UPBSimplePopupWidget> PopupClass =
-		LoadClass<UPBSimplePopupWidget>(nullptr, SimplePopupWidgetClassPath);
-	if (!PopupClass)
+	if (!UIManager->ShowSimplePopup(FText::FromString(TEXT("Simple popup test."))))
 	{
-		UE_LOG(LogTemp, Warning,
-			TEXT("[Cheat] ShowPopup failed. Popup class was not found. Path=%s"),
-			SimplePopupWidgetClassPath);
-		return;
-	}
-
-	if (!UIManager->PushSimplePopup(
-		PopupClass,
-		FText::FromString(TEXT("Simple popup test."))))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[Cheat] ShowPopup failed. PushSimplePopup failed."));
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] ShowPopup failed. ShowSimplePopup failed."));
 	}
 }
 

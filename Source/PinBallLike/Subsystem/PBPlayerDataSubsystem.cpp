@@ -287,6 +287,11 @@ TArray<FName> UPBPlayerDataSubsystem::GetEquippedBumperRowIds() const
 	return BumperRowIds;
 }
 
+void UPBPlayerDataSubsystem::GainGold(int32 Amount)
+{
+	Gold = FMath::Max(Gold + Amount, 0);
+}
+
 void UPBPlayerDataSubsystem::InitializeDefaultBumpers()
 {
 	EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, PBBumperAssetIds::Bumper::Rebound_PowerPush);
