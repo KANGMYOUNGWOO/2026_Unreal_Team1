@@ -4,12 +4,12 @@
 #include "PBDamageLogMessage.generated.h"
 
 UENUM(BlueprintType)
-enum class EPBDamageLogType : uint8
+enum class EPBDamageLogStyle : uint8
 {
 	Default,
-	Skill,
-	Ball,
-	Boss
+	PlayerAttack,
+	PlayerSkill,
+	EnemyAttack
 };
 
 USTRUCT(BlueprintType)
@@ -18,7 +18,7 @@ struct PINBALLLIKE_API FPBDamageLogMessage
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadOnly, Category = "UI|Damage Log")
-	EPBDamageLogType LogType = EPBDamageLogType::Default;
+	EPBDamageLogStyle Style = EPBDamageLogStyle::Default;
 
 	UPROPERTY(BlueprintReadOnly, Category = "UI|Damage Log")
 	int32 DamageAmount = 0;
