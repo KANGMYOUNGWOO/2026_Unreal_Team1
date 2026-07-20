@@ -29,4 +29,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Skill", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<APBBallSkillActorBase> SkillActorClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Skill", meta = (AssetBundles = "UI"))
+	TSoftObjectPtr<UTexture2D> SkillIcon;
 };
