@@ -14,7 +14,7 @@ UPBOctopusInkPattern::UPBOctopusInkPattern()
 	InkWidgetClass = UPBOctopusInkOverlayWidget::StaticClass();
 
 	static ConstructorHelpers::FObjectFinder<UTexture2D> InkTextureFinder(
-		TEXT("/Game/Blueprints/Boss/BossAsset/dark_image.dark_image"));
+		TEXT("/Game/Blueprints/Boss/BossAsset/dark_image-removebg-preview.dark_image-removebg-preview"));
 	if (InkTextureFinder.Succeeded())
 	{
 		InkTexture = InkTextureFinder.Object;
