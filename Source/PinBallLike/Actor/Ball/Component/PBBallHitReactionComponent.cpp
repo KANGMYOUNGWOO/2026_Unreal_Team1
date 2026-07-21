@@ -90,14 +90,6 @@ bool UPBBallHitReactionComponent::ProcessBossContact(
 	
 	if (bAppliedDamage)
 	{
-		const int32 GroggyAmount = StatProvider
-			? StatProvider->GetStat(PBStatNames::StaggerPower)
-			: 0;
-		if (GroggyAmount > 0)
-		{
-			IBossInterface::Execute_IncreaseGroggy(BossActor, GroggyAmount);
-		}
-
 		if (UGameplayMessageSubsystem::HasInstance(this))
 		{
 			FPBDamageLogMessage Message;

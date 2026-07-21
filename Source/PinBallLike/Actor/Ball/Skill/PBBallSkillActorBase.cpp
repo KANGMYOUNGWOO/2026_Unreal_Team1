@@ -26,9 +26,7 @@ void APBBallSkillActorBase::InitializeSkill(
 	const int32 BallAttackPower = StatComponent
 		? StatComponent->GetStat(PBStatNames::Attack)
 		: 0;
-	SkillDamageAmount = FMath::Max(
-		0,
-		FMath::RoundToInt(static_cast<float>(BallAttackPower) * SkillData.PowerValue));
+	SkillDamageAmount = SkillData.CalculateBaseDamage(BallAttackPower);
 
 	if (OwnerBall)
 	{

@@ -25,7 +25,6 @@ void APBSummonBallSkillActor::InitializeSkill(
 	Super::InitializeSkill(InOwnerBall, InSkillData);
 
 	SummonedBallDamage = FMath::Max(GetSkillDamageAmount(), 1);
-	SummonedBallGroggy = GetSkillGroggyAmount();
 	SummonedBallDuration = FMath::Max(InSkillData.LifeValue, 0.0f);
 	SummonedBallCount = FMath::Max(InSkillData.EffectValue, 1);
 }
@@ -108,7 +107,6 @@ bool APBSummonBallSkillActor::SpawnSummonedBalls()
 			SummonedBall->FindComponentByClass<UPBBaseStatComponent>())
 		{
 			StatComponent->SetStat(PBStatNames::Attack, SummonedBallDamage);
-			StatComponent->SetStat(PBStatNames::StaggerPower, SummonedBallGroggy);
 		}
 
 		SummonedBall->SetLifeSpan(SummonedBallDuration);

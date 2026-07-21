@@ -9,6 +9,9 @@ struct PINBALLLIKE_API FPBBallSkillTableRow : public FTableRowBase
 {
 	GENERATED_BODY()
 
+	int32 CalculateBaseDamage(int32 BallAttackPower) const;
+	FText GetDescription(int32 BallAttackPower) const;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Skill")
 	FText DisplayName;
 
