@@ -2,7 +2,9 @@
 
 #include "Misc/AutomationTest.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperSharedEffectAdapter.h"
-#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectRow.h"
+#include "PinBallLike/Effect/Handlers/PBEffectHandler.h"
+#include "PinBallLike/Struct/Effect/PBEffectTypes.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FPBBumperSharedEffectContractTest,
@@ -13,7 +15,7 @@ bool FPBBumperSharedEffectContractTest::RunTest(const FString& Parameters)
 {
 	static_cast<void>(Parameters);
 
-	FPBGameplayEffectRow EffectRow;
+	FPBEffectTableRow EffectRow;
 	EffectRow.EffectType = TEXT("StatBuff");
 	EffectRow.TargetType = TEXT("Ball");
 	EffectRow.TargetFilter = TEXT("All");
@@ -63,6 +65,32 @@ bool FPBBumperSharedEffectContractTest::RunTest(const FString& Parameters)
 	TestTrue(
 		TEXT("Unsupported EffectType failure is explicit"),
 		Error.Contains(TEXT("not supported")));
+
+	UPBEffectHandler* Handler = NewObject<UPBEffectHandler>();
+	const FName HandlerCompatibleTypes[] =
+	{
+		PBEffectTypes::EffectType::ResourceCostStatBuff,
+		PBEffectTypes::EffectType::ComboExtraDamage,
+		PBEffectTypes::EffectType::PostDamageHeal,
+		PBEffectTypes::EffectType::StatBuff
+	};
+	for (const FName EffectType : HandlerCompatibleTypes)
+	{
+		TestTrue(
+			*FString::Printf(TEXT("Bumper shared type remains supported by UPBEffectHandler: %s"), *EffectType.ToString()),
+			Handler->IsEffectTypeSupported(EffectType));
+		TestTrue(
+			*FString::Printf(TEXT("Bumper adapter classifies the type as Handler-compatible: %s"), *EffectType.ToString()),
+			PBBumperSharedEffectAdapter::IsHandlerCompatibleEffectType(EffectType));
+	}
+
+	const FName VelocityScaledDamage(TEXT("VelocityScaledDamage"));
+	TestFalse(
+		TEXT("VelocityScaledDamage is not silently registered in the team Handler"),
+		Handler->IsEffectTypeSupported(VelocityScaledDamage));
+	TestTrue(
+		TEXT("VelocityScaledDamage remains an explicit Bumper extension"),
+		PBBumperSharedEffectAdapter::IsBumperExtensionEffectType(VelocityScaledDamage));
 
 	return true;
 }

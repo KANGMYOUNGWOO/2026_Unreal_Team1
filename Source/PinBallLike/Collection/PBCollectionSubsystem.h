@@ -43,6 +43,9 @@ public:
 	bool IsDataReady() const { return bIsDataReady; }
 
 	UFUNCTION(BlueprintPure, Category = "Collection|Data")
+	bool IsCategoryDataReady(EPBCollectionCategory Category) const;
+
+	UFUNCTION(BlueprintPure, Category = "Collection|Data")
 	bool HasDataLoadCompleted() const;
 
 	UFUNCTION(BlueprintPure, Category = "Collection|Query")

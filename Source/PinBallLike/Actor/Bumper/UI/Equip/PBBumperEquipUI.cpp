@@ -2,6 +2,7 @@
 
 #include "PBBumperDragDropOperation.h"
 #include "PBBumperEquipController.h"
+#include "PBBumperEquipSlotDragHandle.h"
 #include "PBBumperEquipUIBuilder.h"
 #include "PinBallLike/Actor/Bumper/UI/Equip/PBBumperInfoPanelViewModel.h"
 #include "PinBallLike/Actor/Bumper/UI/Equip/PBBumperListItemObject.h"
@@ -11,6 +12,7 @@
 #include "Components/Button.h"
 #include "Components/ButtonSlot.h"
 #include "Components/Image.h"
+#include "Components/ScaleBox.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -25,6 +27,29 @@ namespace
 	constexpr int32 ReboundCatalogIndex = 2;
 	constexpr int32 SpecialCatalogIndex = 3;
 	constexpr int32 BumperEquipSlotCount = 7;
+
+	FText GetCompactEquipSlotDisplayName(const EPBBumperEquipSlot EquipSlot)
+	{
+		switch (EquipSlot)
+		{
+		case EPBBumperEquipSlot::TopLeft:
+			return NSLOCTEXT("PBBumperEquipUI", "CompactTopLeft", "탑 좌");
+		case EPBBumperEquipSlot::TopRight:
+			return NSLOCTEXT("PBBumperEquipUI", "CompactTopRight", "탑 우");
+		case EPBBumperEquipSlot::SideLeft:
+			return NSLOCTEXT("PBBumperEquipUI", "CompactSideLeft", "사이드 좌");
+		case EPBBumperEquipSlot::SideRight:
+			return NSLOCTEXT("PBBumperEquipUI", "CompactSideRight", "사이드 우");
+		case EPBBumperEquipSlot::ReboundLeft:
+			return NSLOCTEXT("PBBumperEquipUI", "CompactReboundLeft", "리바운드 좌");
+		case EPBBumperEquipSlot::ReboundRight:
+			return NSLOCTEXT("PBBumperEquipUI", "CompactReboundRight", "리바운드 우");
+		case EPBBumperEquipSlot::Special:
+			return NSLOCTEXT("PBBumperEquipUI", "CompactSpecial", "스페셜");
+		default:
+			return FText::GetEmpty();
+		}
+	}
 }
 
 void UPBBumperEquipUI::NativeOnInitialized()
@@ -73,7 +98,6 @@ void UPBBumperEquipUI::NativeDestruct()
 
 	Super::NativeDestruct();
 }
-
 void UPBBumperEquipUI::NativeOnDragLeave(
 	const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
@@ -87,7 +111,7 @@ bool UPBBumperEquipUI::NativeOnDragOver(
 	const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
 {
-	const UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
+	UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
 	if (!IsValid(DragOperation) || !DragOperation->IsValidBumperDrag())
 	{
 		SetHoveredDropSlot(TOptional<EPBBumperEquipSlot>());
@@ -95,15 +119,21 @@ bool UPBBumperEquipUI::NativeOnDragOver(
 	}
 
 	EPBBumperEquipSlot TargetSlot;
-	const bool bCanDrop = FindBoardSlotAtScreenPosition(
+	const bool bHasTargetSlot = FindBoardSlotAtScreenPosition(
 		InDragDropEvent.GetScreenSpacePosition(),
-		TargetSlot)
-		&& CanEquipBumperRowAtSlot(DragOperation->BumperRowName, TargetSlot);
+		TargetSlot);
+	const bool bCanDropIntoSlot = bHasTargetSlot
+		&& (DragOperation->HasSourceEquipSlot()
+			? CanMoveEquippedBumper(
+				DragOperation->BumperRowName,
+				DragOperation->SourceEquipSlot,
+				TargetSlot)
+			: CanEquipBumperRowAtSlot(DragOperation->BumperRowName, TargetSlot));
 
-	SetHoveredDropSlot(bCanDrop
+	SetHoveredDropSlot(bCanDropIntoSlot
 		? TOptional<EPBBumperEquipSlot>(TargetSlot)
 		: TOptional<EPBBumperEquipSlot>());
-	return bCanDrop;
+	return DragOperation->HasSourceEquipSlot() || bCanDropIntoSlot;
 }
 
 bool UPBBumperEquipUI::NativeOnDrop(
@@ -111,7 +141,7 @@ bool UPBBumperEquipUI::NativeOnDrop(
 	const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
 {
-	const UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
+	UPBBumperDragDropOperation* DragOperation = Cast<UPBBumperDragDropOperation>(InOperation);
 	if (!IsValid(DragOperation) || !DragOperation->IsValidBumperDrag())
 	{
 		SetHoveredDropSlot(TOptional<EPBBumperEquipSlot>());
@@ -119,13 +149,60 @@ bool UPBBumperEquipUI::NativeOnDrop(
 	}
 
 	EPBBumperEquipSlot TargetSlot;
-	const bool bCanDrop = FindBoardSlotAtScreenPosition(
+	const bool bHasTargetSlot = FindBoardSlotAtScreenPosition(
 		InDragDropEvent.GetScreenSpacePosition(),
-		TargetSlot)
-		&& CanEquipBumperRowAtSlot(DragOperation->BumperRowName, TargetSlot);
+		TargetSlot);
 	SetHoveredDropSlot(TOptional<EPBBumperEquipSlot>());
 
-	return bCanDrop && EquipBumperRowAtSlot(DragOperation->BumperRowName, TargetSlot);
+	if (!DragOperation->HasSourceEquipSlot())
+	{
+		const bool bEquipped = bHasTargetSlot
+			&& CanEquipBumperRowAtSlot(DragOperation->BumperRowName, TargetSlot)
+			&& EquipBumperRowAtSlot(DragOperation->BumperRowName, TargetSlot);
+		DragOperation->SetResult(bEquipped
+			? EPBBumperDragResult::Equipped
+			: EPBBumperDragResult::Failed);
+		return bEquipped;
+	}
+
+	FName CurrentSourceRowName = NAME_None;
+	if (!GetEquippedBumperForEquipSlot(
+			DragOperation->SourceEquipSlot,
+			CurrentSourceRowName)
+		|| CurrentSourceRowName != DragOperation->BumperRowName)
+	{
+		DragOperation->SetResult(EPBBumperDragResult::Failed);
+		return true;
+	}
+
+	if (bHasTargetSlot
+		&& CanMoveEquippedBumper(
+			DragOperation->BumperRowName,
+			DragOperation->SourceEquipSlot,
+			TargetSlot))
+	{
+		FName TargetRowName = NAME_None;
+		const bool bTargetWasOccupied = GetEquippedBumperForEquipSlot(TargetSlot, TargetRowName)
+			&& !TargetRowName.IsNone();
+		const bool bMoved = MoveEquippedBumper(
+			DragOperation->BumperRowName,
+			DragOperation->SourceEquipSlot,
+			TargetSlot);
+		DragOperation->SetResult(!bMoved
+			? EPBBumperDragResult::Failed
+			: DragOperation->SourceEquipSlot == TargetSlot
+				? EPBBumperDragResult::NoChange
+				: bTargetWasOccupied
+					? EPBBumperDragResult::Swapped
+					: EPBBumperDragResult::Moved);
+		return true;
+	}
+
+	const bool bUnequipped = UnequipBumperAtSlot(DragOperation->SourceEquipSlot);
+	DragOperation->SetResult(bUnequipped
+		? EPBBumperDragResult::Unequipped
+		: EPBBumperDragResult::Failed);
+	return true;
 }
 
 void UPBBumperEquipUI::GetBumperListItemObjects(
@@ -233,6 +310,11 @@ bool UPBBumperEquipUI::UnequipBumperRow(const FName RowName)
 	return IsValid(EquipController) && EquipController->UnequipBumperRow(RowName);
 }
 
+bool UPBBumperEquipUI::UnequipBumperAtSlot(const EPBBumperEquipSlot EquipSlot)
+{
+	return IsValid(EquipController) && EquipController->UnequipBumperAtSlot(EquipSlot);
+}
+
 bool UPBBumperEquipUI::EquipSelectedBumper()
 {
 	return IsValid(EquipController) && EquipController->EquipSelectedBumper();
@@ -335,7 +417,7 @@ void UPBBumperEquipUI::BindBoardSlotButtons()
 
 void UPBBumperEquipUI::BuildBoardSlotPresentations()
 {
-	BoardSlotIconImages.Reset();
+	BoardSlotDragHandles.Reset();
 	BoardSlotLabels.Reset();
 
 	BuildBoardSlotPresentation(TopLeftMarker, EPBBumperEquipSlot::TopLeft);
@@ -366,35 +448,48 @@ void UPBBumperEquipUI::BuildBoardSlotPresentation(
 	UVerticalBox* CardContent = WidgetTree->ConstructWidget<UVerticalBox>(
 		UVerticalBox::StaticClass(),
 		FName(*FString::Printf(TEXT("BumperSlotCard_%s"), *SlotSuffix)));
-	USizeBox* IconSizeBox = WidgetTree->ConstructWidget<USizeBox>(
+	UPBBumperEquipSlotDragHandle* DragHandle = CreateWidget<UPBBumperEquipSlotDragHandle>(
+		this,
+		UPBBumperEquipSlotDragHandle::StaticClass(),
+		FName(*FString::Printf(TEXT("BumperSlotDragHandle_%s"), *SlotSuffix)));
+	USizeBox* LabelSizeBox = WidgetTree->ConstructWidget<USizeBox>(
 		USizeBox::StaticClass(),
-		FName(*FString::Printf(TEXT("BumperSlotIconSize_%s"), *SlotSuffix)));
-	UImage* IconImage = WidgetTree->ConstructWidget<UImage>(
-		UImage::StaticClass(),
-		FName(*FString::Printf(TEXT("BumperSlotIcon_%s"), *SlotSuffix)));
-	if (!IsValid(CardContent) || !IsValid(IconSizeBox) || !IsValid(IconImage))
+		FName(*FString::Printf(TEXT("BumperSlotLabelSize_%s"), *SlotSuffix)));
+	UScaleBox* LabelScaleBox = WidgetTree->ConstructWidget<UScaleBox>(
+		UScaleBox::StaticClass(),
+		FName(*FString::Printf(TEXT("BumperSlotLabelScale_%s"), *SlotSuffix)));
+	if (!IsValid(CardContent)
+		|| !IsValid(DragHandle)
+		|| !IsValid(LabelSizeBox)
+		|| !IsValid(LabelScaleBox))
 	{
 		Button->AddChild(Label);
 		return;
 	}
 
-	IconSizeBox->SetHeightOverride(98.0f);
-	IconSizeBox->AddChild(IconImage);
-	IconImage->SetVisibility(ESlateVisibility::Hidden);
-	IconImage->SetColorAndOpacity(FLinearColor::White);
+	Button->SetClipping(EWidgetClipping::ClipToBounds);
+	CardContent->SetClipping(EWidgetClipping::ClipToBounds);
+	DragHandle->InitializeEquipSlot(this, EquipSlot);
+	DragHandle->SetBumperPresentation(NAME_None, nullptr);
 
-	if (UVerticalBoxSlot* IconSlot = CardContent->AddChildToVerticalBox(IconSizeBox))
+	if (UVerticalBoxSlot* IconSlot = CardContent->AddChildToVerticalBox(DragHandle))
 	{
-		IconSlot->SetPadding(FMargin(6.0f, 5.0f, 6.0f, 2.0f));
-		IconSlot->SetHorizontalAlignment(HAlign_Fill);
-		IconSlot->SetVerticalAlignment(VAlign_Fill);
+		IconSlot->SetPadding(FMargin(5.0f, 4.0f, 5.0f, 1.0f));
+		IconSlot->SetHorizontalAlignment(HAlign_Center);
+		IconSlot->SetVerticalAlignment(VAlign_Center);
 	}
 
-	Label->SetAutoWrapText(true);
+	Label->SetAutoWrapText(false);
 	Label->SetJustification(ETextJustify::Center);
-	if (UVerticalBoxSlot* LabelSlot = CardContent->AddChildToVerticalBox(Label))
+	Label->SetClipping(EWidgetClipping::ClipToBounds);
+	LabelScaleBox->SetStretch(EStretch::ScaleToFit);
+	LabelScaleBox->SetStretchDirection(EStretchDirection::DownOnly);
+	LabelScaleBox->AddChild(Label);
+	LabelSizeBox->SetHeightOverride(30.0f);
+	LabelSizeBox->AddChild(LabelScaleBox);
+	if (UVerticalBoxSlot* LabelSlot = CardContent->AddChildToVerticalBox(LabelSizeBox))
 	{
-		LabelSlot->SetPadding(FMargin(5.0f, 2.0f, 5.0f, 5.0f));
+		LabelSlot->SetPadding(FMargin(4.0f, 1.0f, 4.0f, 3.0f));
 		LabelSlot->SetHorizontalAlignment(HAlign_Fill);
 		LabelSlot->SetVerticalAlignment(VAlign_Center);
 	}
@@ -406,7 +501,7 @@ void UPBBumperEquipUI::BuildBoardSlotPresentation(
 		ButtonSlot->SetVerticalAlignment(VAlign_Fill);
 	}
 
-	BoardSlotIconImages.Add(EquipSlot, IconImage);
+	BoardSlotDragHandles.Add(EquipSlot, DragHandle);
 	BoardSlotLabels.Add(EquipSlot, Label);
 }
 
@@ -598,7 +693,9 @@ void UPBBumperEquipUI::UpdateDetailPresentation(const FName RowName)
 
 	if (IsValid(DetailIconImage))
 	{
-		DetailIconImage->SetBrushFromTexture(EquipController->ResolveBumperIconTexture(RowName, *Row));
+		DetailIconImage->SetBrushFromTexture(
+			EquipController->ResolveBumperIconTexture(RowName, *Row),
+			true);
 		DetailIconImage->SetColorAndOpacity(FLinearColor::White);
 	}
 	if (IsValid(DetailNameText))
@@ -699,6 +796,7 @@ void UPBBumperEquipUI::SetBoardSlotButtonState(
 		: nullptr;
 
 	const FText SlotDisplayName = PBBumperEquipUIBuilder::GetBumperEquipSlotDisplayName(EquipSlot);
+	const FText CompactSlotDisplayName = GetCompactEquipSlotDisplayName(EquipSlot);
 	const FText EquippedDisplayName = EquippedRow
 		? EquippedRow->DisplayName
 		: bHasEquippedBumper
@@ -733,17 +831,17 @@ void UPBBumperEquipUI::SetBoardSlotButtonState(
 		SlotDisplayName,
 		EquippedDisplayName));
 
-	if (const TWeakObjectPtr<UImage>* IconReference = BoardSlotIconImages.Find(EquipSlot))
+	UTexture2D* IconTexture = EquippedRow
+		? EquipController->ResolveBumperIconTexture(EquippedRowName, *EquippedRow)
+		: nullptr;
+	if (const TWeakObjectPtr<UPBBumperEquipSlotDragHandle>* HandleReference =
+		BoardSlotDragHandles.Find(EquipSlot))
 	{
-		if (UImage* IconImage = IconReference->Get())
+		if (UPBBumperEquipSlotDragHandle* DragHandle = HandleReference->Get())
 		{
-			UTexture2D* IconTexture = EquippedRow
-				? EquipController->ResolveBumperIconTexture(EquippedRowName, *EquippedRow)
-				: nullptr;
-			IconImage->SetBrushFromTexture(IconTexture);
-			IconImage->SetVisibility(IsValid(IconTexture)
-				? ESlateVisibility::HitTestInvisible
-				: ESlateVisibility::Hidden);
+			DragHandle->SetBumperPresentation(
+				IsValid(IconTexture) ? EquippedRowName : NAME_None,
+				IconTexture);
 		}
 	}
 
@@ -751,13 +849,17 @@ void UPBBumperEquipUI::SetBoardSlotButtonState(
 	{
 		if (UTextBlock* Label = LabelReference->Get())
 		{
+			Label->SetToolTipText(FText::Format(
+				NSLOCTEXT("PBBumperEquipUI", "BoardSlotTooltipFormat", "{0}: {1}"),
+				SlotDisplayName,
+				EquippedDisplayName));
 			Label->SetText(bIsDropHovered
 				? FText::Format(
 					NSLOCTEXT("PBBumperEquipUI", "BoardSlotDropLabelFormat", "{0}\n여기에 장착"),
-					SlotDisplayName)
+					CompactSlotDisplayName)
 				: FText::Format(
 					NSLOCTEXT("PBBumperEquipUI", "BoardSlotLabelFormat", "{0}\n{1}"),
-					SlotDisplayName,
+					CompactSlotDisplayName,
 					EquippedDisplayName));
 
 			FLinearColor LabelColor = SlotColor;
@@ -777,6 +879,24 @@ bool UPBBumperEquipUI::CanEquipBumperRowAtSlot(
 {
 	return IsValid(EquipController)
 		&& EquipController->CanEquipBumperRowAtSlot(RowName, EquipSlot);
+}
+
+bool UPBBumperEquipUI::CanMoveEquippedBumper(
+	const FName RowName,
+	const EPBBumperEquipSlot SourceSlot,
+	const EPBBumperEquipSlot TargetSlot) const
+{
+	return IsValid(EquipController)
+		&& EquipController->CanMoveEquippedBumper(RowName, SourceSlot, TargetSlot);
+}
+
+bool UPBBumperEquipUI::MoveEquippedBumper(
+	const FName RowName,
+	const EPBBumperEquipSlot SourceSlot,
+	const EPBBumperEquipSlot TargetSlot)
+{
+	return IsValid(EquipController)
+		&& EquipController->MoveEquippedBumper(RowName, SourceSlot, TargetSlot);
 }
 
 bool UPBBumperEquipUI::FindBoardSlotAtScreenPosition(

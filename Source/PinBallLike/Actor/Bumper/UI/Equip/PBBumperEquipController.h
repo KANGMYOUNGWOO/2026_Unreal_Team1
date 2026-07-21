@@ -42,6 +42,15 @@ public:
 	bool EquipBumperRow(FName RowName);
 	bool EquipBumperRowAtSlot(FName RowName, EPBBumperEquipSlot EquipSlot);
 	bool UnequipBumperRow(FName RowName);
+	bool UnequipBumperAtSlot(EPBBumperEquipSlot EquipSlot);
+	bool CanMoveEquippedBumper(
+		FName RowName,
+		EPBBumperEquipSlot SourceSlot,
+		EPBBumperEquipSlot TargetSlot) const;
+	bool MoveEquippedBumper(
+		FName RowName,
+		EPBBumperEquipSlot SourceSlot,
+		EPBBumperEquipSlot TargetSlot);
 	bool EquipSelectedBumper();
 	bool UnequipSelectedBumper();
 

@@ -16,6 +16,7 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBGameplayEffectParamRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBGameplayEffectRow.h"
+#include "PinBallLike/Struct/Collection/PBCollectionTypes.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectSetRow.h"
@@ -50,6 +51,8 @@ public:
 	bool IsTableDataReady() const;
 	bool IsBumperTableReady() const;
 	bool IsCollectionCatalogDataReady() const;
+	bool IsCollectionCatalogDataReady(EPBCollectionCategory Category) const;
+	bool IsAnyCollectionCatalogDataReady() const;
 
 	// 로딩 Subsystem이 준비한 테이블을 주입한다. 이 Subsystem은 조회 책임만 가진다.
 	void SetCollectionTable(UDataTable* InCollectionTable);

@@ -39,7 +39,8 @@ enum class EPBCollectionSortMode : uint8
 	NameAsc UMETA(DisplayName = "Name Ascending"),
 	StarGradeDesc UMETA(DisplayName = "Star Grade Descending"),
 	StarGradeAsc UMETA(DisplayName = "Star Grade Ascending"),
-	StateDesc UMETA(DisplayName = "State Descending")
+	StateDesc UMETA(DisplayName = "State Descending"),
+	NameDesc UMETA(DisplayName = "Name Descending")
 };
 
 USTRUCT(BlueprintType)

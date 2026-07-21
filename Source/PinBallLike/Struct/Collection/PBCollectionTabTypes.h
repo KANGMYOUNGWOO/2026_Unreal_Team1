@@ -84,6 +84,9 @@ struct FPBCollectionSynergyTierDisplayData
 	int32 RequiredCount = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Synergy")
+	FName EffectSetId = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Synergy", meta = (DeprecatedProperty, DeprecationMessage = "EffectSetId를 사용하세요."))
 	FName EffectId = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Synergy")
@@ -100,6 +103,15 @@ struct FPBCollectionSynergyTierDisplayData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Synergy")
 	bool bHasValidEffect = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Synergy")
+	int32 DeclaredEffectCount = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Synergy")
+	int32 ResolvedEffectCount = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Synergy")
+	FText ValidationText;
 };
 
 USTRUCT(BlueprintType)

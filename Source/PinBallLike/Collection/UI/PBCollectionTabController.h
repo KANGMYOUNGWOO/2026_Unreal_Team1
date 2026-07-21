@@ -23,9 +23,11 @@ public:
 	void Activate();
 	void Deactivate();
 	void SetSearchText(const FText& Text);
+	void SetSortMode(EPBCollectionSortMode InSortMode);
+	EPBCollectionSortMode GetSortMode() const { return SortMode; }
 
 	UPBCollectionSubsystem* GetCollectionSubsystem() const { return CollectionSubsystem; }
-	bool IsCatalogDataReady() const;
+	bool IsCatalogDataReady(EPBCollectionCategory Category) const;
 	bool HasDataLoadCompleted() const;
 	bool MatchesSearch(
 		const FPBCollectionItemSummary& Summary,
@@ -55,6 +57,7 @@ private:
 
 	FString NormalizedSearchText;
 	FName SelectedSourceRowName = NAME_None;
+	EPBCollectionSortMode SortMode = EPBCollectionSortMode::SortOrder;
 	bool bInitialized = false;
 	bool bIsActive = false;
 };

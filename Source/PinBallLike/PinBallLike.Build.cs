@@ -23,7 +23,6 @@ public class PinBallLike : ModuleRules
 			"SlateCore",
 			"AssetRegistry",
 			"DeveloperSettings",
-			"GameplayTags",
 			"GameplayMessageRuntime",
 			"Niagara"
 			

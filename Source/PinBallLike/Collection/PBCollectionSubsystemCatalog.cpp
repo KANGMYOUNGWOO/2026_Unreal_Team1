@@ -1,5 +1,7 @@
 #include "PBCollectionSubsystem.h"
 
+#include "PBCollectionEffectSetProjector.h"
+
 #include "Engine/DataTable.h"
 #include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
@@ -303,51 +305,21 @@ TArray<FPBCollectionSynergyDisplayData> UPBCollectionSubsystem::GetSynergyCatalo
 		{
 			FPBCollectionSynergyTierDisplayData& TierData = DisplayData.Tiers.AddDefaulted_GetRef();
 			TierData.RequiredCount = TierRow.RequiredCount;
+			TierData.EffectSetId = TierRow.EffectSetId;
 			TierData.EffectId = TierRow.EffectSetId;
 			TierData.TierDescription = FText::Format(
 				LOCTEXT("SynergyTierCount", "{0}개 구성"),
 				FText::AsNumber(TierRow.RequiredCount));
 
-			// FPBSynergyEffectRow EffectRow;
-			// if (!TableData->FindSynergyEffectRow(TierRow.SynergyEffectId, EffectRow))
-			// {
-			// 	TierData.EffectSummary = LOCTEXT("MissingSynergyEffect", "효과 정보를 찾을 수 없습니다.");
-			// 	continue;
-			// }
-			//
-			// TierData.bHasValidEffect = true;
-			// TierData.EffectSummary = FText::Format(
-			// 	LOCTEXT("SynergyEffectSummary", "중첩 {0} / 지속 {1} ({2}) / 간격 {3}초"),
-			// 	GetEnumDisplayText(EffectRow.StackType),
-			// 	GetEnumDisplayText(EffectRow.DurationPolicy),
-			// 	FText::AsNumber(EffectRow.DurationValue),
-			// 	FText::AsNumber(EffectRow.Interval));
-			//
-			// TArray<FPBSynergyEffectModifierRow> ModifierRows;
-			// TableData->GetSynergyEffectModifierRows(TierRow.SynergyEffectId, ModifierRows);
-			// TArray<FString> ModifierLines;
-			// for (const FPBSynergyEffectModifierRow& Modifier : ModifierRows)
-			// {
-			// 	ModifierLines.Add(FString::Printf(
-			// 		TEXT("%s %g%s"),
-			// 		*GetEnumDisplayText(Modifier.ModifyType).ToString(),
-			// 		Modifier.Value,
-			// 		Modifier.bScaleWithStack ? TEXT(" (중첩 비례)") : TEXT("")));
-			// }
-			// TierData.ModifierSummary = JoinLines(ModifierLines);
-			//
-			// TArray<FPBSynergyEffectTriggerRow> TriggerRows;
-			// TableData->GetSynergyEffectTriggerRows(TierRow.SynergyEffectId, TriggerRows);
-			// TArray<FString> TriggerLines;
-			// for (const FPBSynergyEffectTriggerRow& Trigger : TriggerRows)
-			// {
-			// 	TriggerLines.Add(FString::Printf(
-			// 		TEXT("발동 확률 %g%% / 값 %g%s"),
-			// 		Trigger.ProcChance,
-			// 		Trigger.Value,
-			// 		Trigger.bScaleWithStack ? TEXT(" (중첩 비례)") : TEXT("")));
-			// }
-			// TierData.TriggerSummary = JoinLines(TriggerLines);
+			const FPBCollectionEffectSetProjection Projection =
+				FPBCollectionEffectSetProjector::Build(*TableData, TierRow.EffectSetId);
+			TierData.EffectSummary = Projection.EffectSummary;
+			TierData.ModifierSummary = Projection.ParameterSummary;
+			TierData.TriggerSummary = Projection.TargetSummary;
+			TierData.bHasValidEffect = Projection.bIsValid;
+			TierData.DeclaredEffectCount = Projection.DeclaredEffectCount;
+			TierData.ResolvedEffectCount = Projection.ResolvedEffectCount;
+			TierData.ValidationText = Projection.ValidationText;
 		}
 	}
 
@@ -770,10 +742,12 @@ TArray<FPBCollectionValidationIssue> UPBCollectionSubsystem::GetCatalogValidatio
 					EPBCollectionValidationSeverity::Error,
 					TEXT("SynergyEffect"),
 					Synergy.Summary.SourceRowName,
-					FText::Format(
-						LOCTEXT("MissingSynergyEffectIssue", "{0}개 단계가 존재하지 않는 Effect {1}을(를) 참조합니다."),
-						FText::AsNumber(Tier.RequiredCount),
-						FText::FromName(Tier.EffectId)));
+					Tier.ValidationText.IsEmpty()
+						? FText::Format(
+							LOCTEXT("MissingSynergyEffectIssue", "{0}개 단계가 유효하지 않은 EffectSet {1}을(를) 참조합니다."),
+							FText::AsNumber(Tier.RequiredCount),
+							FText::FromName(Tier.EffectSetId))
+						: Tier.ValidationText);
 			}
 		}
 	}
