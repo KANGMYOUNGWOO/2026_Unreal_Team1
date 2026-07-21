@@ -482,6 +482,7 @@ void APBModularBumperBase::StartActivation(
 	ActiveTriggerActor = TriggerActor;
 	TriggerActor->SetTriggerProgressState(EPBBumperTriggerProgressState::Executing);
 	TriggerActor->SetTriggerState(EPBBumperState::Activated);
+	TriggerActor->PlayActivationSound();
 	ExecuteActivation(InteractionActor);
 }
 

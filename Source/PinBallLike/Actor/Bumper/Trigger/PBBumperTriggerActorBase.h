@@ -11,6 +11,7 @@
 
 class APBBallBase;
 class APBModularBumperBase;
+class UPBBumperSoundComponent;
 class UCameraShakeBase;
 class USceneComponent;
 
@@ -100,6 +101,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	TObjectPtr<USceneComponent> SceneRoot;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Feedback")
+	TObjectPtr<UPBBumperSoundComponent> BumperSoundComponent;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Trigger")
 	EPBBumperTriggerType TriggerType = EPBBumperTriggerType::HitCount;
 
@@ -139,6 +143,7 @@ private:
 	void ResetTriggerProgress();
 	void SetTriggerProgressState(EPBBumperTriggerProgressState NewState);
 	void NotifyTriggerProgressChanged();
+	void PlayActivationSound();
 
 	double LastImpactCameraShakeTime = -1.0;
 };
