@@ -474,6 +474,11 @@ void APBBossBase::HandleDeadTriggered()
 {
 	UE_LOG(LogTemp, Warning, TEXT("BossBase Dead."));
 
+	if (BossPatternComponent)
+	{
+		BossPatternComponent->StopPatternSystem();
+	}
+
 	if (BossStateTreeComponent && BossStateTreeComponent->IsRunning())
 	{
 		RequestBossState(EPBBossState::Dead);
