@@ -51,7 +51,7 @@ private:
 	void RefreshBallStatus();
 	void RefreshResource(FName ResourceName);
 	void SetResourceValue(FName ResourceName, float CurrentValue, float MaxValue);
-	static float CalculateGaugePercent(float CurrentValue, float MaxValue);
+	float CalculateGaugePercent(float CurrentValue, float MaxValue) const;
 
 	void HandleResourceCurrentChanged(FName ResourceName, float CurrentValue);
 	void HandleResourceChanged(FName ResourceName);

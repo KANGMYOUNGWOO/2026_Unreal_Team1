@@ -173,6 +173,7 @@ TArray<FPBSynergyTierViewData> UPBDeckOverviewViewModel::BuildTierViewDataList(
 TArray<FPBSynergyBallIconViewData> UPBDeckOverviewViewModel::BuildBallIconViewDataList(const FName SynergyId) const
 {
 	TArray<FPBSynergyBallIconViewData> BallIconViewDataList;
+	TSet<FName> AddedBallIds;
 
 	const UPBTableDataSubsystem* TableDataSubsystem = GetTableDataSubsystem();
 	if (!TableDataSubsystem || SynergyId.IsNone())
@@ -195,10 +196,16 @@ TArray<FPBSynergyBallIconViewData> UPBDeckOverviewViewModel::BuildBallIconViewDa
 		}
 
 		const FName BallId = BallRowNames[RowIndex];
+		if (BallId.IsNone() || AddedBallIds.Contains(BallId))
+		{
+			continue;
+		}
+
 		FPBSynergyBallIconViewData BallIconViewData;
 		BallIconViewData.BallId = BallId;
 		BallIconViewData.Icon = ResolveBallIcon(BallId);
 		BallIconViewDataList.Add(BallIconViewData);
+		AddedBallIds.Add(BallId);
 	}
 
 	return BallIconViewDataList;
@@ -219,6 +226,11 @@ bool UPBDeckOverviewViewModel::DoesBallMatchSynergy(
 	}
 
 	const UEnum* ClassEnum = StaticEnum<EPBBallClassType>();
+	if (BallRow.ClassType == EPBBallClassType::None)
+	{
+		return false;
+	}
+
 	const FName ClassSynergyId = ClassEnum
 		? FName(*ClassEnum->GetNameStringByValue(static_cast<int64>(BallRow.ClassType)))
 		: NAME_None;

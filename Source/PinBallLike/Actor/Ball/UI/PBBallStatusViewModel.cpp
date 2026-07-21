@@ -146,7 +146,7 @@ void UPBBallStatusViewModel::SetResourceValue(
 	}
 }
 
-float UPBBallStatusViewModel::CalculateGaugePercent(const float CurrentValue, const float MaxValue)
+float UPBBallStatusViewModel::CalculateGaugePercent(const float CurrentValue, const float MaxValue) const
 {
 	if (MaxValue <= 0.0f)
 	{
