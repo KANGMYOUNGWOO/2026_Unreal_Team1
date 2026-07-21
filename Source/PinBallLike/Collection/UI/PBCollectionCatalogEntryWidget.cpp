@@ -12,7 +12,8 @@ namespace
 {
 const FLinearColor CardColor(0.102f, 0.127f, 0.143f, 1.0f);
 const FLinearColor SelectedCardColor(0.16f, 0.20f, 0.23f, 1.0f);
-constexpr float IconFrameThickness = 2.0f;
+const FLinearColor IconOutlineColor = FLinearColor::White;
+constexpr float IconOutlineWidth = 1.0f;
 
 FText GetCategoryGlyph(const EPBCollectionCategory Category)
 {
@@ -123,12 +124,12 @@ void UPBCollectionCatalogEntryWidget::ApplyIconTexture(UTexture2D* IconTexture)
 		return;
 	}
 
-	FSlateBrush FrameBrush;
-	FrameBrush.TintColor = FSlateColor(FLinearColor::White);
-	FrameBrush.DrawAs = ESlateBrushDrawType::RoundedBox;
+	FSlateBrush FrameBrush = DefaultGlyphBrush;
+	FrameBrush.OutlineSettings.Color = FSlateColor(IconOutlineColor);
+	FrameBrush.OutlineSettings.Width = IconOutlineWidth;
 	GlyphBorder->SetBrush(FrameBrush);
-	GlyphBorder->SetBrushColor(FLinearColor::White);
-	GlyphBorder->SetPadding(FMargin(IconFrameThickness));
+	GlyphBorder->SetBrushColor(DefaultGlyphBrushColor);
+	GlyphBorder->SetPadding(DefaultGlyphPadding);
 	GlyphBorder->SetClipping(EWidgetClipping::ClipToBounds);
 
 	FSlateBrush IconBrush;
