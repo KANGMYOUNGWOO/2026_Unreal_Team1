@@ -244,7 +244,7 @@ void UPBBossSnakeChargePattern::SpawnChargeTelegraph(APBBossBase* Boss)
 void UPBBossSnakeChargePattern::StartCharge()
 {
 	APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss)
+	if (!IsValid(Boss))
 	{
 		SetChargePatternState(EPBBossSnakeChargePatternState::None);
 		FinishPattern();
@@ -279,14 +279,14 @@ void UPBBossSnakeChargePattern::StartCharge()
 void UPBBossSnakeChargePattern::UpdateCharge()
 {
 	APBBossBase* Boss = GetOwnerBoss();
-	if (!Boss)
+	if (!IsValid(Boss))
 	{
 		SetChargePatternState(EPBBossSnakeChargePatternState::None);
 		FinishPattern();
 		return;
 	}
 
-	if (IsDrawChargeHitRange)
+	if (IsDrawChargeHitRange && IsValid(Boss->GetWorld()))
 	{
 		DrawDebugSphere(
 			Boss->GetWorld(),
