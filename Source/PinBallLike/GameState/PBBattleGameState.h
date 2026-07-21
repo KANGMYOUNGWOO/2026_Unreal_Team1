@@ -76,6 +76,9 @@ public:
 	float GetRemainingBattleDashCooldown() const;
 
 	UFUNCTION(BlueprintPure, Category = "Battle|Dash")
+	float GetBattleDashCooldownRatio() const;
+
+	UFUNCTION(BlueprintPure, Category = "Battle|Dash")
 	bool CanUseBattleDash() const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Battle|Flow")

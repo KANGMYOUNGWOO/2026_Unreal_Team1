@@ -3,6 +3,7 @@
 
 #include "PBBattleGameState.h"
 
+#include "Engine/World.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 
@@ -141,6 +142,19 @@ float APBBattleGameState::GetRemainingBattleDashCooldown() const
 bool APBBattleGameState::CanUseBattleDash() const
 {
 	return GetRemainingBattleDashCooldown() <= 0.0f;
+}
+
+float APBBattleGameState::GetBattleDashCooldownRatio() const
+{
+	if (BattleDashCooldownSeconds <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	return FMath::Clamp(
+		GetRemainingBattleDashCooldown() / BattleDashCooldownSeconds,
+		0.0f,
+		1.0f);
 }
 
 #pragma region MessageHandler
