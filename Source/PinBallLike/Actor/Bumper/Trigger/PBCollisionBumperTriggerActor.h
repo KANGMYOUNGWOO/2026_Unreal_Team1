@@ -55,7 +55,7 @@ private:
 	void SetupTriggerArea(UPrimitiveComponent* TriggerArea);
 	bool IsBallInTriggerArea(AActor* BallActor) const;
 	bool IsHitPointInsideTriggerArea(const FVector& HitPoint) const;
-	bool AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const;
+	bool QueueBounceVelocity(AActor* MovableActor, const FHitResult& Hit);
 
 	UFUNCTION()
 	void HandleComponentHit(

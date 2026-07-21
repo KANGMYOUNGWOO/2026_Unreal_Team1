@@ -5,6 +5,7 @@
 
 #include "Components/BoxComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "TimerManager.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Interface/Movable.h"
@@ -185,21 +186,23 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 	return false;
 }
 
-bool APBCollisionBumperTriggerActor::AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const
+bool APBCollisionBumperTriggerActor::QueueBounceVelocity(AActor* MovableActor, const FHitResult& Hit)
 {
-	if (!IsValid(BallActor))
+	if (!IsValid(MovableActor))
 	{
 		return false;
 	}
 
-	const IStatProvider* StatProvider = PBInterfaceUtils::FindInterface<IStatProvider>(BallActor);
-	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(BallActor);
-	if (!StatProvider || !Movable)
+	if (!PBInterfaceUtils::FindInterface<IMovable>(MovableActor))
 	{
 		return false;
 	}
 
-	const int32 BallBounce = StatProvider->GetStat(PBStatNames::Bounciness);
+	int32 BallBounce = 0;
+	if (const IStatProvider* StatProvider = PBInterfaceUtils::FindInterface<IStatProvider>(MovableActor))
+	{
+		BallBounce = StatProvider->GetStat(PBStatNames::Bounciness);
+	}
 	const float BounceForce = BallBounce + BounceVelocityStrength;
 	if (BounceForce <= 0.0f)
 	{
@@ -213,7 +216,28 @@ bool APBCollisionBumperTriggerActor::AddBounceVelocityToBall(AActor* BallActor, 
 		return false;
 	}
 
-	Movable->AddVelocity(BounceDirection * BounceForce);
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return false;
+	}
+
+	const TWeakObjectPtr<AActor> WeakMovableActor = MovableActor;
+	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(
+		this,
+		[WeakMovableActor, BounceDirection, BounceForce]()
+		{
+			AActor* ResolvedActor = WeakMovableActor.Get();
+			if (!IsValid(ResolvedActor))
+			{
+				return;
+			}
+
+			if (IMovable* ResolvedMovable = PBInterfaceUtils::FindInterface<IMovable>(ResolvedActor))
+			{
+				ResolvedMovable->AddVelocity(BounceDirection * BounceForce);
+			}
+		}));
 	return true;
 }
 
@@ -247,7 +271,7 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 		ReactionComponent->PlayImpactReaction(Hit);
 	}
 
-	if (AddBounceVelocityToBall(OtherActor, Hit))
+	if (QueueBounceVelocity(OtherActor, Hit))
 	{
 		PlayImpactCameraShake();
 	}
