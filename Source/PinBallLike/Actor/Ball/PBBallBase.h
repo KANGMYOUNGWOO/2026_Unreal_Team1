@@ -13,6 +13,7 @@ class UPBBaseStatComponent;
 class UPBBaseResourceComponent;
 class UPBStatusEffectComponent;
 class UPBBallComboComponent;
+class UPBBallDashComponent;
 class UPBBallEffectRuntimeComponent;
 class UPBBallHitReactionComponent;
 class UPBBallPhysicsComponent;
@@ -61,6 +62,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Ball|Effect")
 	UPBBallEffectRuntimeComponent* GetEffectRuntimeComponent() const { return EffectRuntimeComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "Ball|Dash")
+	UPBBallDashComponent* GetDashComponent() const { return DashComponent; }
 	
 	UFUNCTION(BlueprintCallable, Category = "Ball|Skill")
 	bool TryActivateSkill();
@@ -96,6 +100,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Combo")
 	TObjectPtr<UPBBallComboComponent> ComboComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Ball|Dash")
+	TObjectPtr<UPBBallDashComponent> DashComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Skill")
 	TObjectPtr<UPBBallSkillComponent> SkillComponent;
