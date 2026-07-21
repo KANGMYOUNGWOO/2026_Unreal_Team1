@@ -35,6 +35,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0"))
 	float ReboundSeconds = 0.25f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.0", Units = "cm"))
+	float ReturnUpwardOffset = 300.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.001"))
 	float UpdateIntervalSeconds = 0.016f;
 
@@ -89,6 +92,7 @@ private:
 
 	FVector ChargeStartLocation = FVector::ZeroVector;
 	FVector ChargeEndLocation = FVector::ZeroVector;
+	FVector ReturnEndLocation = FVector::ZeroVector;
 	FRotator ChargeStartRotation = FRotator::ZeroRotator;
 	FVector ChargeDirection = FVector::ForwardVector;
 	float ChargePathLength = 0.0f;
