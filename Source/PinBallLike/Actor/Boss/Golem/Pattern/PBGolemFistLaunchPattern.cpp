@@ -417,7 +417,7 @@ void UPBGolemFistLaunchPattern::DestroyPunchHitCollision()
 
 void UPBGolemFistLaunchPattern::DrawPunchHitRange()
 {
-	if (!PunchHitCollision)
+	if (!IsValid(PunchHitCollision))
 	{
 		return;
 	}

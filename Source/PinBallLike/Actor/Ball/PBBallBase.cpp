@@ -3,6 +3,7 @@
 
 #include "PBBallBase.h"
 #include  "PinBallLike/Relic/PBRelicCalculator.h"
+#include "Component/PBBallDashComponent.h"
 #include "Component/PBBallHitReactionComponent.h"
 #include "Component/PBBallComboComponent.h"
 #include "Component/PBBallEffectRuntimeComponent.h"
@@ -57,12 +58,16 @@ APBBallBase::APBBallBase()
 	// Combo
 	ComboComponent = CreateDefaultSubobject<UPBBallComboComponent>(TEXT("ComboComponent"));
 
+	// Dash
+	DashComponent = CreateDefaultSubobject<UPBBallDashComponent>(TEXT("DashComponent"));
+
 	// Skill
 	SkillComponent = CreateDefaultSubobject<UPBBallSkillComponent>(TEXT("SkillComponent"));
 	
 	// Physics
 	PhysicsComponent = CreateDefaultSubobject<UPBBallPhysicsComponent>(TEXT("PhysicsComponent"));
 	PhysicsComponent->InitializeDependencies(CollisionSphere.Get(), StatComponent.Get());
+	DashComponent->InitializeDependencies(PhysicsComponent.Get());
 	
 	// Hit Reaction
 	HitReactionComponent = CreateDefaultSubobject<UPBBallHitReactionComponent>(TEXT("HitReactionComponent"));

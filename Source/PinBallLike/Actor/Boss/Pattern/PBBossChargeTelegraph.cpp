@@ -85,7 +85,7 @@ void APBBossChargeTelegraph::UpdateChargeTelegraphTransform(
 	const FVector SafeDirection = NormalizeDirection2D(Direction);
 	const float SafeLength = FMath::Max(0.0f, Length);
 
-	SetActorLocation(StartLocation);
+	SetActorLocation(GetGroundedTelegraphLocation(StartLocation));
 	SetActorRotation(SafeDirection.Rotation());
 	UpdateVisualComponentRotations();
 
@@ -209,6 +209,41 @@ AActor* APBBossChargeTelegraph::FindPinballActor() const
 {
 	const UWorld* World = GetWorld();
 	return World ? UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass()) : nullptr;
+}
+
+FVector APBBossChargeTelegraph::GetGroundedTelegraphLocation(const FVector& StartLocation) const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return StartLocation;
+	}
+
+	constexpr float TraceHeight = 1000.0f;
+	constexpr float TraceDepth = 10000.0f;
+	const FVector TraceStart = StartLocation + FVector::UpVector * TraceHeight;
+	const FVector TraceEnd = StartLocation - FVector::UpVector * TraceDepth;
+
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldStatic);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(ChargeTelegraphGround), false, this);
+	QueryParams.AddIgnoredActor(ChargeStartActor);
+
+	FHitResult GroundHit;
+	if (!World->LineTraceSingleByObjectType(
+		GroundHit,
+		TraceStart,
+		TraceEnd,
+		ObjectQueryParams,
+		QueryParams))
+	{
+		return StartLocation;
+	}
+
+	FVector GroundedLocation = StartLocation;
+	GroundedLocation.Z = GroundHit.ImpactPoint.Z + GroundClearance;
+	return GroundedLocation;
 }
 
 FVector APBBossChargeTelegraph::CalculateDirectionToTarget(const FVector& TargetLocation) const

@@ -48,6 +48,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Battle|Flow")
 	bool ConsumeBattleShiftCount();
 
+	UFUNCTION(BlueprintCallable, Category = "Battle|Dash")
+	void SetBattleDashCooldownSeconds(float NewBattleDashCooldownSeconds);
+
+	UFUNCTION(BlueprintCallable, Category = "Battle|Dash")
+	bool ConsumeBattleDash();
+
 	UFUNCTION(BlueprintPure, Category = "Battle|Flow")
 	EPBBattleLevelPhase GetBattleLevelPhase() const { return CurrentPhase; }
 
@@ -62,6 +68,18 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Battle|Flow")
 	bool HasRemainingBattleShiftCount() const { return RemainingBattleShiftCount > 0; }
+
+	UFUNCTION(BlueprintPure, Category = "Battle|Dash")
+	float GetBattleDashCooldownSeconds() const { return BattleDashCooldownSeconds; }
+
+	UFUNCTION(BlueprintPure, Category = "Battle|Dash")
+	float GetRemainingBattleDashCooldown() const;
+
+	UFUNCTION(BlueprintPure, Category = "Battle|Dash")
+	float GetBattleDashCooldownRatio() const;
+
+	UFUNCTION(BlueprintPure, Category = "Battle|Dash")
+	bool CanUseBattleDash() const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Battle|Flow")
 	FPBBattleLevelPhaseChangedSignature OnBattleLevelPhaseChanged;
@@ -81,6 +99,15 @@ private:
 
 	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Flow")
 	int32 RemainingBattleShiftCount = 0;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Dash")
+	float BattleDashCooldownSeconds = 5.0f;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Dash")
+	float LastBattleDashUseTimeSeconds = 0.0f;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Dash")
+	bool bBattleDashUsed = false;
 	
 #pragma region MessageHandler
 	

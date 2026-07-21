@@ -95,11 +95,11 @@ void UPBBossTurtleSpinPattern::StartSpin()
 
 void UPBBossTurtleSpinPattern::UpdateSpin()
 {
-	if (APBTurtleBoss* Boss = GetTurtleBoss())
+	if (APBTurtleBoss* Boss = GetTurtleBoss(); IsValid(Boss))
 	{
 		Boss->AddActorLocalRotation(FRotator(0.0f, SpinRotationSpeed * 0.016f, 0.0f));
 
-		if (IsDrawSpinDamageRange)
+		if (IsDrawSpinDamageRange && IsValid(Boss->GetWorld()))
 		{
 			DrawDebugSphere(
 				Boss->GetWorld(),

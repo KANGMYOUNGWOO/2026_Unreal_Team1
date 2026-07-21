@@ -88,7 +88,12 @@ int32 UPBBallDeckSubsystem::AddOwnedBall(FName BallId, int32 StarLevel)
 
 	if (AssetLoadService && !bHadOwnedBallWithSameId)
 	{
-		AssetLoadService->LoadOwnedBallIconAsync(BallId, FStreamableDelegate());
+		AssetLoadService->LoadOwnedBallIconAsync(
+			BallId,
+			FStreamableDelegate::CreateUObject(
+				this,
+				&UPBBallDeckSubsystem::HandleOwnedBallIconLoaded,
+				BallId));
 	}
 
 	return NewInstanceId;
@@ -756,6 +761,37 @@ void UPBBallDeckSubsystem::ClearBallInstanceFromSlots(int32 BallInstanceId)
 		if (DeckSlot.BallInstanceId == BallInstanceId)
 		{
 			DeckSlot.BallInstanceId = INDEX_NONE;
+		}
+	}
+}
+
+void UPBBallDeckSubsystem::HandleOwnedBallIconLoaded(const FName BallId)
+{
+	if (BallId.IsNone())
+	{
+		return;
+	}
+
+	for (const FPBBallDeckSlot& DeckSlot : DeckSlots)
+	{
+		if (DeckSlot.BallInstanceId == INDEX_NONE)
+		{
+			continue;
+		}
+
+		const FPBDeckOwnedBallData* BallInstanceData = GetOwnedBallData(DeckSlot.BallInstanceId);
+		if (!BallInstanceData || BallInstanceData->BallId != BallId)
+		{
+			continue;
+		}
+
+		if (DeckSlot.SlotType == EPBBallDeckSlotType::Deployment)
+		{
+			OnDeploymentSlotChanged.Broadcast(DeckSlot.SlotIndex, DeckSlot.BallInstanceId);
+		}
+		else
+		{
+			OnBenchSlotChanged.Broadcast(DeckSlot.SlotIndex, DeckSlot.BallInstanceId);
 		}
 	}
 }

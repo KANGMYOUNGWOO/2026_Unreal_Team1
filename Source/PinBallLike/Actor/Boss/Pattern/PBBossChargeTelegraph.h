@@ -54,11 +54,15 @@ private:
 	void UpdateChargeStartLocation();
 	void UpdateVisualComponentRotations();
 	AActor* FindPinballActor() const;
+	FVector GetGroundedTelegraphLocation(const FVector& StartLocation) const;
 	FVector CalculateDirectionToTarget(const FVector& TargetLocation) const;
 	FVector NormalizeDirection2D(const FVector& Direction) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern|Telegraph", meta = (AllowPrivateAccess = "true"))
 	FRotator VisualRotationOffset = FRotator::ZeroRotator;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern|Telegraph", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float GroundClearance = 1.0f;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> ChargeStartActor;

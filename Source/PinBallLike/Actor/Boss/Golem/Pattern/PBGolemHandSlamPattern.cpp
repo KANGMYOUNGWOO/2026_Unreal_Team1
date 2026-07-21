@@ -228,8 +228,8 @@ void UPBGolemHandSlamPattern::DrawDebugSlamRange(float Duration) const
 	}
 
 	const APBBossBase* Boss = GetOwnerBoss();
-	UWorld* World = Boss ? Boss->GetWorld() : nullptr;
-	if (!World)
+	UWorld* World = IsValid(Boss) ? Boss->GetWorld() : nullptr;
+	if (!IsValid(World))
 	{
 		return;
 	}
