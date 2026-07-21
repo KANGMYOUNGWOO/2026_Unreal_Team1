@@ -10,6 +10,7 @@
 
 class AActor;
 struct FPBBattlePhaseChangedMessage;
+struct FPBBattleDashApprovedMessage;
 struct FPBBattlePartyLaunchApprovedMessage;
 struct FPBBattleSkillUseRequestedMessage;
 
@@ -18,6 +19,7 @@ struct FPBPartyBattleMessageDependencies
 	TFunction<void()> PrepareForDeployment;
 	TFunction<bool()> LaunchPartyFromReadyPosition;
 	TFunction<void(int32)> RequestUseSkill;
+	TFunction<void()> RequestDashToBoss;
 	TFunction<AActor*()> GetPartyActor;
 };
 
@@ -42,9 +44,11 @@ private:
 	void HandleBattlePhaseChangedMessage(FGameplayTag Channel, const FPBBattlePhaseChangedMessage& Message);
 	void HandlePartyLaunchApprovedMessage(FGameplayTag Channel, const FPBBattlePartyLaunchApprovedMessage& Message);
 	void HandleSkillUseRequestedMessage(FGameplayTag Channel, const FPBBattleSkillUseRequestedMessage& Message);
+	void HandleBattleDashApprovedMessage(FGameplayTag Channel, const FPBBattleDashApprovedMessage& Message);
 
 	FPBPartyBattleMessageDependencies Dependencies;
 	FGameplayMessageListenerHandle BattlePhaseChangedListenerHandle;
 	FGameplayMessageListenerHandle PartyLaunchApprovedListenerHandle;
 	FGameplayMessageListenerHandle SkillUseRequestedListenerHandle;
+	FGameplayMessageListenerHandle BattleDashApprovedListenerHandle;
 };

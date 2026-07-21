@@ -49,6 +49,7 @@ public:
 	TArray<APBBallBase*> GetValidPartyBalls() const;
 	void RefreshPartyOrder();
 	void RequestUseSkill(int32 SkillInputValue);
+	void RequestDashToBoss();
 	void SpawnBallDeathEffect(APBBallBase* DeadBall) const;
 	void BroadcastPartyAllBallsDead();
 	void SetPartyBalls(const TArray<TObjectPtr<APBBallBase>>& InPartyBalls);

@@ -148,6 +148,7 @@ private:
 	bool CompactDeploymentSlotsInternal();
 	void BroadcastDeploymentSlotChange(const TArray<int32>& PreviousBallInstanceIds);
 	void ClearBallInstanceFromSlots(int32 BallInstanceId);
+	void HandleOwnedBallIconLoaded(FName BallId);
 	void ResetSavedManaIfEnteringDeployment(
 		int32 BallInstanceId,
 		EPBBallDeckSlotType SourceSlotType,

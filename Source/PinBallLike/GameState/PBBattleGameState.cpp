@@ -3,6 +3,7 @@
 
 #include "PBBattleGameState.h"
 
+#include "Engine/World.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 
@@ -94,6 +95,66 @@ bool APBBattleGameState::ConsumeBattleShiftCount()
 
 	SetRemainingBattleShiftCount(RemainingBattleShiftCount - 1);
 	return true;
+}
+
+void APBBattleGameState::SetBattleDashCooldownSeconds(const float NewBattleDashCooldownSeconds)
+{
+	BattleDashCooldownSeconds = FMath::Max(0.0f, NewBattleDashCooldownSeconds);
+}
+
+bool APBBattleGameState::ConsumeBattleDash()
+{
+	if (!CanUseBattleDash())
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[BattleFlow] Cannot consume battle dash. RemainingCooldown=%.2f"),
+			GetRemainingBattleDashCooldown());
+		return false;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	LastBattleDashUseTimeSeconds = World->GetTimeSeconds();
+	bBattleDashUsed = true;
+	return true;
+}
+
+float APBBattleGameState::GetRemainingBattleDashCooldown() const
+{
+	if (!bBattleDashUsed)
+	{
+		return 0.0f;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return BattleDashCooldownSeconds;
+	}
+
+	const float ElapsedSeconds = World->GetTimeSeconds() - LastBattleDashUseTimeSeconds;
+	return FMath::Max(BattleDashCooldownSeconds - ElapsedSeconds, 0.0f);
+}
+
+bool APBBattleGameState::CanUseBattleDash() const
+{
+	return GetRemainingBattleDashCooldown() <= 0.0f;
+}
+
+float APBBattleGameState::GetBattleDashCooldownRatio() const
+{
+	if (BattleDashCooldownSeconds <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	return FMath::Clamp(
+		GetRemainingBattleDashCooldown() / BattleDashCooldownSeconds,
+		0.0f,
+		1.0f);
 }
 
 #pragma region MessageHandler

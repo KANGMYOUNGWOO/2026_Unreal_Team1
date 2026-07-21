@@ -13,6 +13,7 @@
 #include "Component/PBSnakeFormationComponent.h"
 #include "Engine/GameInstance.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Ball/Component/PBBallDashComponent.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
@@ -244,6 +245,10 @@ APBCombatPartyController::APBCombatPartyController()
 	BattleMessageDependencies.RequestUseSkill = [this](const int32 SkillInputValue)
 	{
 		RequestUseSkill(SkillInputValue);
+	};
+	BattleMessageDependencies.RequestDashToBoss = [this]()
+	{
+		RequestDashToBoss();
 	};
 	BattleMessageDependencies.GetPartyActor = [this]() -> AActor*
 	{
@@ -536,6 +541,18 @@ void APBCombatPartyController::RequestUseSkill(const int32 SkillInputValue)
 		&& Ball->TryActivateSkill())
 	{
 		ResourceComponent->ConsumeResource(PBResourceNames::Mana, MaxMana);
+	}
+}
+
+void APBCombatPartyController::RequestDashToBoss()
+{
+	APBBallBase* Ball = GetLeaderBall();
+	UPBBallDashComponent* DashComponent = IsValid(Ball)
+		? Ball->GetDashComponent()
+		: nullptr;
+	if (DashComponent)
+	{
+		DashComponent->DashToBossWithDefaultSpeed();
 	}
 }
 

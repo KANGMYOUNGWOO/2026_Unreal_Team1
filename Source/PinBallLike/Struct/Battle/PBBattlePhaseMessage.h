@@ -148,6 +148,24 @@ struct PINBALLLIKE_API FPBBattlePartyShiftRequestedMessage
 };
 
 USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleDashRequestedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	TObjectPtr<AActor> Requester = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct PINBALLLIKE_API FPBBattleDashApprovedMessage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Battle|Message")
+	float CooldownSeconds = 0.0f;
+};
+
+USTRUCT(BlueprintType)
 struct PINBALLLIKE_API FPBBattleSkillUseRequestedMessage
 {
 	GENERATED_BODY()
