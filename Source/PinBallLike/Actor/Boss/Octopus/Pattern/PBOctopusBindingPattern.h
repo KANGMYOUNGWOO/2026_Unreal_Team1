@@ -37,8 +37,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Binding", meta = (ClampMin = "0"))
 	int32 BindDamage = 1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Binding")
-	FVector ZoneEffectScale = FVector::OneVector;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Binding", meta = (ClampMin = "0.0"))
+	float ZoneEffectScale = 1.0f;
 
 private:
 	APBBossMoveArea* FindNearestMoveArea(const APBBossBase* Boss) const;

@@ -40,11 +40,12 @@ void APBOctopusBindingZone::InitializeZone(
 	const float NewZoneDuration,
 	const float NewBindDuration,
 	const int32 NewBindDamage,
-	const FVector& NewEffectScale)
+	const float NewEffectScale)
 {
 	ZoneDuration = FMath::Max(NewZoneDuration, 0.0f);
 	BindDuration = FMath::Max(NewBindDuration, 0.0f);
 	BindDamage = FMath::Max(NewBindDamage, 0);
+	const float EffectScale = FMath::Max(NewEffectScale, 0.0f);
 
 	if (BindingArea)
 	{
@@ -53,7 +54,8 @@ void APBOctopusBindingZone::InitializeZone(
 
 	if (BindingEffect)
 	{
-		BindingEffect->SetRelativeScale3D(NewEffectScale);
+		BindingEffect->SetRelativeScale3D(FVector(EffectScale));
+		BindingEffect->SetVariableFloat(TEXT("User.EmitterScale"), EffectScale);
 	}
 }
 
