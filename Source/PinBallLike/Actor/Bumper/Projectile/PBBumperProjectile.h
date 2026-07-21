@@ -83,7 +83,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Projectile|Visual",
 		meta = (ClampMin = "0.01"))
-	float CustomVisualMeshScale = 1.75f;
+	float CustomVisualMeshScale = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Projectile|Visual")
 	FRotator CustomVisualMeshRotationOffset = FRotator(0.0f, -90.0f, 0.0f);

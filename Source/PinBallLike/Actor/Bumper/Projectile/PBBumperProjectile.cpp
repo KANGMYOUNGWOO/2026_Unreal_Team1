@@ -167,6 +167,7 @@ void APBBumperProjectile::ApplyVisualMesh(UStaticMesh* InVisualMesh) const
 	if (UStaticMeshComponent* MeshComponent = ResolveVisualMeshComponent())
 	{
 		MeshComponent->SetStaticMesh(InVisualMesh);
+		MeshComponent->EmptyOverrideMaterials();
 		MeshComponent->SetRelativeRotation(CustomVisualMeshRotationOffset);
 		MeshComponent->SetRelativeScale3D(FVector(FMath::Max(CustomVisualMeshScale, 0.01f)));
 	}
