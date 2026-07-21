@@ -1,6 +1,9 @@
 #include "PBCollectionCatalogEntryWidget.h"
 
+#include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
+#include "Components/BorderSlot.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Engine/Texture2D.h"
 #include "PBCollectionCatalogItemObject.h"
@@ -9,6 +12,7 @@ namespace
 {
 const FLinearColor CardColor(0.102f, 0.127f, 0.143f, 1.0f);
 const FLinearColor SelectedCardColor(0.16f, 0.20f, 0.23f, 1.0f);
+constexpr float IconFrameThickness = 2.0f;
 
 FText GetCategoryGlyph(const EPBCollectionCategory Category)
 {
@@ -49,7 +53,16 @@ void UPBCollectionCatalogEntryWidget::NativeOnInitialized()
 	{
 		DefaultGlyphBrush = GlyphBorder->Background;
 		DefaultGlyphBrushColor = GlyphBorder->GetBrushColor();
+		DefaultGlyphPadding = GlyphBorder->GetPadding();
 		bHasDefaultGlyphStyle = true;
+
+		if (WidgetTree)
+		{
+			GlyphIconImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass());
+			GlyphIconImage->SetClipping(EWidgetClipping::ClipToBounds);
+			GlyphIconImage->SetColorAndOpacity(FLinearColor::White);
+			GlyphIconImage->SetVisibility(ESlateVisibility::Collapsed);
+		}
 	}
 }
 
@@ -84,36 +97,92 @@ void UPBCollectionCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListIte
 	{
 		AccentBorder->SetBrushColor(Item->Summary.AccentColor);
 	}
-	const bool bHasIcon = IsValid(Item->Summary.IconTexture);
-	if (GlyphBorder)
-	{
-		if (bHasIcon)
-		{
-			FSlateBrush IconBrush = DefaultGlyphBrush;
-			IconBrush.SetResourceObject(Item->Summary.IconTexture);
-			IconBrush.DrawAs = ESlateBrushDrawType::Image;
-			IconBrush.Margin = FMargin(0.0f);
-			IconBrush.SetUVRegion(MakeCenteredSquareUV(Item->Summary.IconTexture));
-			GlyphBorder->SetBrush(IconBrush);
-			GlyphBorder->SetBrushColor(FLinearColor::White);
-		}
-		else if (bHasDefaultGlyphStyle)
-		{
-			GlyphBorder->SetBrush(DefaultGlyphBrush);
-			GlyphBorder->SetBrushColor(DefaultGlyphBrushColor);
-		}
-		GlyphBorder->SetClipping(EWidgetClipping::ClipToBounds);
-	}
 	if (IconLetterText)
 	{
-		IconLetterText->SetText(GetCategoryGlyph(Item->Category));
 		IconLetterText->SetColorAndOpacity(FSlateColor(Item->Summary.AccentColor));
-		IconLetterText->SetVisibility(bHasIcon ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+	}
+	if (IsValid(Item->Summary.IconTexture))
+	{
+		ApplyIconTexture(Item->Summary.IconTexture);
+	}
+	else
+	{
+		ApplyFallbackGlyph(Item->Category);
 	}
 	if (CardBorder)
 	{
 		CardBorder->SetBrushColor(CardColor);
 		CardBorder->SetClipping(EWidgetClipping::ClipToBounds);
+	}
+}
+
+void UPBCollectionCatalogEntryWidget::ApplyIconTexture(UTexture2D* IconTexture)
+{
+	if (!IsValid(GlyphBorder) || !IsValid(GlyphIconImage) || !IsValid(IconTexture))
+	{
+		return;
+	}
+
+	FSlateBrush FrameBrush;
+	FrameBrush.TintColor = FSlateColor(FLinearColor::White);
+	FrameBrush.DrawAs = ESlateBrushDrawType::RoundedBox;
+	GlyphBorder->SetBrush(FrameBrush);
+	GlyphBorder->SetBrushColor(FLinearColor::White);
+	GlyphBorder->SetPadding(FMargin(IconFrameThickness));
+	GlyphBorder->SetClipping(EWidgetClipping::ClipToBounds);
+
+	FSlateBrush IconBrush;
+	IconBrush.SetResourceObject(IconTexture);
+	IconBrush.DrawAs = ESlateBrushDrawType::Image;
+	IconBrush.TintColor = FSlateColor(FLinearColor::White);
+	IconBrush.SetUVRegion(MakeCenteredSquareUV(IconTexture));
+	GlyphIconImage->SetBrush(IconBrush);
+	GlyphIconImage->SetColorAndOpacity(FLinearColor::White);
+	GlyphIconImage->SetRenderOpacity(1.0f);
+	GlyphIconImage->SetVisibility(ESlateVisibility::HitTestInvisible);
+	SetGlyphContent(GlyphIconImage);
+
+	if (IconLetterText)
+	{
+		IconLetterText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UPBCollectionCatalogEntryWidget::ApplyFallbackGlyph(const EPBCollectionCategory Category)
+{
+	if (GlyphIconImage)
+	{
+		GlyphIconImage->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (GlyphBorder && bHasDefaultGlyphStyle)
+	{
+		GlyphBorder->SetBrush(DefaultGlyphBrush);
+		GlyphBorder->SetBrushColor(DefaultGlyphBrushColor);
+		GlyphBorder->SetPadding(DefaultGlyphPadding);
+		GlyphBorder->SetClipping(EWidgetClipping::ClipToBounds);
+	}
+	if (IconLetterText)
+	{
+		IconLetterText->SetText(GetCategoryGlyph(Category));
+		IconLetterText->SetVisibility(ESlateVisibility::HitTestInvisible);
+		SetGlyphContent(IconLetterText);
+	}
+}
+
+void UPBCollectionCatalogEntryWidget::SetGlyphContent(UWidget* Content)
+{
+	if (!GlyphBorder || !Content || GlyphBorder->GetContent() == Content)
+	{
+		return;
+	}
+
+	GlyphBorder->ClearChildren();
+	GlyphBorder->AddChild(Content);
+	if (UBorderSlot* BorderSlot = Cast<UBorderSlot>(Content->Slot))
+	{
+		const bool bIsIcon = Content == GlyphIconImage;
+		BorderSlot->SetHorizontalAlignment(bIsIcon ? HAlign_Fill : HAlign_Center);
+		BorderSlot->SetVerticalAlignment(bIsIcon ? VAlign_Fill : VAlign_Center);
 	}
 }
 

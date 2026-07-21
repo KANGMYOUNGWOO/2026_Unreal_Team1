@@ -7,7 +7,11 @@
 #include "PBCollectionCatalogEntryWidget.generated.h"
 
 class UBorder;
+class UImage;
 class UTextBlock;
+class UTexture2D;
+class UWidget;
+enum class EPBCollectionCategory : uint8;
 
 UCLASS()
 class PINBALLLIKE_API UPBCollectionCatalogEntryWidget : public UUserWidget, public IUserObjectListEntry
@@ -37,7 +41,15 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Collection|Entry", meta = (BindWidgetOptional))
 	TObjectPtr<UBorder> GlyphBorder;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UImage> GlyphIconImage;
+
+	void ApplyIconTexture(UTexture2D* IconTexture);
+	void ApplyFallbackGlyph(EPBCollectionCategory Category);
+	void SetGlyphContent(UWidget* Content);
+
 	FSlateBrush DefaultGlyphBrush;
 	FLinearColor DefaultGlyphBrushColor = FLinearColor::White;
+	FMargin DefaultGlyphPadding;
 	bool bHasDefaultGlyphStyle = false;
 };
