@@ -3,6 +3,7 @@
 
 #include "PBBattleGameMode.h"
 
+#include "AsyncLoadingScreenLibrary.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
@@ -156,6 +157,7 @@ void APBBattleGameMode::HandleCurrentPhase()
 		EnterReward();
 		break;
 	case EPBBattleLevelPhase::BattleExit:
+		UAsyncLoadingScreenLibrary::SetEnableLoadingScreen(true);
 		HandleBattleExit();
 		break;
 	default:

@@ -5,43 +5,47 @@
 #include "PinBallLike/UI/Loading/PBLoadingScreen.h"
 #include "SLoadingScreenLayout.h"
 
-void FPBLoadingScreenController::Show(UWorld* World, const bool IsFadeIn)
+void FPBLoadingScreenController::Show(UWorld* World)
 {
-	if (LoadingScreenWidget.IsValid() || !World || !World->GetGameViewport())
-	{
-		return;
-	}
-
-	LoadingWorld = World;
-	LoadingScreenWidget = FPBLoadingScreen::CreateLoadingScreenWidget();
-	FadeAlpha = IsFadeIn ? 0.0f : 1.0f;
-	LoadingScreenWidget->SetLoadingContentOpacity(1.0f);
-	LoadingScreenWidget->SetRenderOpacity(FadeAlpha);
-	World->GetGameViewport()->AddViewportWidgetContent(LoadingScreenWidget.ToSharedRef(), MAX_int32);
-
-	if (IsFadeIn)
-	{
-		World->GetTimerManager().SetTimer(
-			FadeTimerHandle,
-			FTimerDelegate::CreateRaw(this, &FPBLoadingScreenController::UpdateFadeIn),
-			FadeUpdateIntervalSeconds,
-			true);
-	}
-}
-
-void FPBLoadingScreenController::Hide()
-{
-	if (!LoadingScreenWidget.IsValid() || !LoadingWorld.IsValid())
+	if (!EnsureLoadingScreen(World))
 	{
 		return;
 	}
 
 	ClearFadeTimer();
-	LoadingWorld->GetTimerManager().SetTimer(
-		FadeTimerHandle,
-		FTimerDelegate::CreateRaw(this, &FPBLoadingScreenController::UpdateFadeOut),
-		FadeUpdateIntervalSeconds,
-		true);
+	FadeAlpha = 1.0f;
+	FadeState = EFadeState::Visible;
+	LoadingScreenWidget->SetRenderOpacity(FadeAlpha);
+}
+
+bool FPBLoadingScreenController::EnsureLoadingScreen(UWorld* World)
+{
+	if (LoadingScreenWidget.IsValid())
+	{
+		return LoadingWorld.IsValid();
+	}
+
+	if (!World || !World->GetGameViewport())
+	{
+		return false;
+	}
+
+	LoadingWorld = World;
+	LoadingScreenWidget = FPBLoadingScreen::CreateLoadingScreenWidget();
+	World->GetGameViewport()->AddViewportWidgetContent(LoadingScreenWidget.ToSharedRef(), MAX_int32);
+	return true;
+}
+
+void FPBLoadingScreenController::Hide()
+{
+	if (!LoadingScreenWidget.IsValid()
+		|| !LoadingWorld.IsValid()
+		|| FadeState == EFadeState::FadingOut)
+	{
+		return;
+	}
+
+	StartFadeOut();
 }
 
 void FPBLoadingScreenController::Shutdown()
@@ -49,22 +53,21 @@ void FPBLoadingScreenController::Shutdown()
 	Remove();
 }
 
-void FPBLoadingScreenController::UpdateFadeIn()
+void FPBLoadingScreenController::StartFadeOut()
 {
-	if (!LoadingScreenWidget.IsValid())
+	if (!LoadingWorld.IsValid())
 	{
-		ClearFadeTimer();
 		return;
 	}
 
-	FadeAlpha = FMath::Min(
-		FadeAlpha + FadeUpdateIntervalSeconds / FadeDurationSeconds,
-		1.0f);
-	LoadingScreenWidget->SetRenderOpacity(FadeAlpha);
-	if (FadeAlpha >= 1.0f)
-	{
-		ClearFadeTimer();
-	}
+
+	ClearFadeTimer();
+	FadeState = EFadeState::FadingOut;
+	LoadingWorld->GetTimerManager().SetTimer(
+		FadeTimerHandle,
+		FTimerDelegate::CreateRaw(this, &FPBLoadingScreenController::UpdateFadeOut),
+		FadeUpdateIntervalSeconds,
+		true);
 }
 
 void FPBLoadingScreenController::UpdateFadeOut()
@@ -78,7 +81,8 @@ void FPBLoadingScreenController::UpdateFadeOut()
 	FadeAlpha = FMath::Max(
 		FadeAlpha - FadeUpdateIntervalSeconds / FadeDurationSeconds,
 		0.0f);
-	LoadingScreenWidget->SetLoadingContentOpacity(FadeAlpha);
+	LoadingScreenWidget->SetRenderOpacity(FadeAlpha);
+
 	if (FadeAlpha <= 0.0f)
 	{
 		Remove();
@@ -99,6 +103,7 @@ void FPBLoadingScreenController::Remove()
 	LoadingScreenWidget.Reset();
 	LoadingWorld.Reset();
 	FadeAlpha = 0.0f;
+	FadeState = EFadeState::Hidden;
 }
 
 void FPBLoadingScreenController::ClearFadeTimer()

@@ -21,7 +21,7 @@ void UPBBattleHUDWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	LoadingScreenController = MakeUnique<FPBLoadingScreenController>();
-	LoadingScreenController->Show(GetWorld(), false);
+	LoadingScreenController->Show(GetWorld());
 	CacheBallPanels();
 	CacheDeckSubsystem();
 	CachePartyController();
@@ -73,13 +73,7 @@ void UPBBattleHUDWidget::ApplyBattlePhaseToLoadingScreen(const EPBBattleLevelPha
 	if (NewPhase == EPBBattleLevelPhase::DataLoading
 		|| NewPhase == EPBBattleLevelPhase::LevelPreparing)
 	{
-		LoadingScreenController->Show(GetWorld(), false);
-		return;
-	}
-
-	if (NewPhase == EPBBattleLevelPhase::BattleExit)
-	{
-		LoadingScreenController->Show(GetWorld(), true);
+		LoadingScreenController->Show(GetWorld());
 		return;
 	}
 

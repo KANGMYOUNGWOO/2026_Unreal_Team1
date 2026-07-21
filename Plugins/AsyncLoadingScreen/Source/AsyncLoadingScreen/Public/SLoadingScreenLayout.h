@@ -27,16 +27,14 @@ class ASYNCLOADINGSCREEN_API SLoadingScreenLayout : public SCompoundWidget
 public:	
 	static float PointSizeToSlateUnits(float PointSize);
 	void SetIsMoviePlayerFadeEnabled(bool NewIsMoviePlayerFadeEnabled);
-	void SetLoadingContentOpacity(float NewOpacity);
 	virtual void Tick(const FGeometry& AllottedGeometry, double InCurrentTime, float InDeltaTime) override;
 protected:
 	float GetDPIScale() const;
 	void CalculateViewportSize() const;
-	void RegisterLoadingContentWidget(const TSharedRef<SWidget>& NewLoadingContentWidget);
 private:
 	static constexpr float FadeDurationSeconds = 0.75f;
 	float FadeAlpha = 0.0f;
 	bool IsMoviePlayerFadeEnabled = true;
-	TSharedPtr<SWidget> LoadingContentWidget;
+	bool IsFadeOutStarted = false;
 	mutable FIntPoint _cachedViewportSize;
 };
