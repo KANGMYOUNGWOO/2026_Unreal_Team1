@@ -199,6 +199,8 @@ protected:
 	FPBBumperRuntimeState RuntimeState;
 
 private:
+	friend class FPBBumperTriggerRuntimeStateTest;
+
 	struct FPendingBumperActivation
 	{
 		TWeakObjectPtr<APBBumperTriggerActorBase> TriggerActor;

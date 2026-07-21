@@ -34,8 +34,8 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
-#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectParamRow.h"
-#include "PinBallLike/Table/Effect/Struct/PBGameplayEffectRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
+#include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
 #include "PinBallLike/Utils/PBTextFormatUtils.h"
 #include "UObject/UnrealType.h"
 
@@ -200,15 +200,15 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 	UDataTable* BumperTable = Settings ? Settings->BumperTable.LoadSynchronous() : nullptr;
 	UDataTable* TriggerTable = Settings ? Settings->BumperTriggerTable.LoadSynchronous() : nullptr;
 	UDataTable* EffectTable = Settings ? Settings->BumperEffectTable.LoadSynchronous() : nullptr;
-	UDataTable* GameplayEffectTable = Settings ? Settings->GameplayEffectTable.LoadSynchronous() : nullptr;
-	UDataTable* GameplayEffectParamTable = Settings
-		? Settings->GameplayEffectParamTable.LoadSynchronous()
+	UDataTable* SharedEffectTable = Settings ? Settings->EffectTable.LoadSynchronous() : nullptr;
+	UDataTable* SharedEffectParamTable = Settings
+		? Settings->EffectParamTable.LoadSynchronous()
 		: nullptr;
 	if (!TestNotNull(TEXT("Bumper DataTable is configured"), BumperTable)
 		|| !TestNotNull(TEXT("Bumper Trigger DataTable is configured"), TriggerTable)
 		|| !TestNotNull(TEXT("Bumper Effect DataTable is configured"), EffectTable)
-		|| !TestNotNull(TEXT("Gameplay Effect DataTable is configured"), GameplayEffectTable)
-		|| !TestNotNull(TEXT("Gameplay Effect Param DataTable is configured"), GameplayEffectParamTable))
+		|| !TestNotNull(TEXT("Canonical Effect DataTable is configured"), SharedEffectTable)
+		|| !TestNotNull(TEXT("Canonical Effect Param DataTable is configured"), SharedEffectParamTable))
 	{
 		return false;
 	}
@@ -638,7 +638,7 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 			{
 				TestNotNull(
 					*FString::Printf(TEXT("Shared Effect row resolves: %s"), *EffectPair.Key.ToString()),
-					GameplayEffectTable->FindRow<FPBGameplayEffectRow>(
+					SharedEffectTable->FindRow<FPBEffectTableRow>(
 						EffectRow->SharedEffectId,
 						EffectPair.Key.ToString(),
 						false));
@@ -682,10 +682,10 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 			{TEXT("Value"), TEXT("25")}, {TEXT("Duration"), TEXT("8")}});
 
 	TMap<FName, TMap<FName, FString>> ActualSharedParameters;
-	for (const TPair<FName, uint8*>& ParamPair : GameplayEffectParamTable->GetRowMap())
+	for (const TPair<FName, uint8*>& ParamPair : SharedEffectParamTable->GetRowMap())
 	{
-		const FPBGameplayEffectParamRow* ParamRow =
-			reinterpret_cast<const FPBGameplayEffectParamRow*>(ParamPair.Value);
+		const FPBEffectParamRow* ParamRow =
+			reinterpret_cast<const FPBEffectParamRow*>(ParamPair.Value);
 		if (!ParamRow || !ExpectedSharedEffects.Contains(ParamRow->EffectId))
 		{
 			continue;
@@ -703,7 +703,7 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 	for (const TPair<FName, FSharedEffectExpectation>& SharedEffectExpectation : ExpectedSharedEffects)
 	{
 		const FString Context = SharedEffectExpectation.Key.ToString();
-		const FPBGameplayEffectRow* SharedEffectRow = GameplayEffectTable->FindRow<FPBGameplayEffectRow>(
+		const FPBEffectTableRow* SharedEffectRow = SharedEffectTable->FindRow<FPBEffectTableRow>(
 			SharedEffectExpectation.Key,
 			Context,
 			false);

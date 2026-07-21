@@ -235,6 +235,84 @@ bool FPBBumperIndependentEquipmentTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBBumperLoadoutTransactionTest,
+	"PinBallLike.Bumper.Equipment.PersistenceTransaction",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBBumperLoadoutTransactionTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	UGameInstance* GameInstance = NewObject<UGameInstance>();
+	UPBPlayerDataSubsystem* PlayerData = NewObject<UPBPlayerDataSubsystem>(GameInstance);
+	if (!TestNotNull(TEXT("Player data subsystem can be created for the transaction test"), PlayerData))
+	{
+		return false;
+	}
+
+	const FName LeftRow(TEXT("Test_Transaction_Left"));
+	const FName RightRow(TEXT("Test_Transaction_Right"));
+	const FName ReplacementRow(TEXT("Test_Transaction_Replacement"));
+	TestTrue(TEXT("The initial left row can be prepared without persistence"),
+		PlayerData->EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, LeftRow));
+	TestTrue(TEXT("The initial right row can be prepared without persistence"),
+		PlayerData->EquipBumperAtSlot(EPBBumperEquipSlot::ReboundRight, RightRow));
+
+	int32 WriteAttemptCount = 0;
+	PlayerData->bBumperPersistenceInitialized = true;
+	PlayerData->BumperLoadoutWriterOverride = [&WriteAttemptCount](
+		const TArray<FPBEquippedBumperSlot>&)
+	{
+		++WriteAttemptCount;
+		return false;
+	};
+
+	TestFalse(TEXT("A failed save rejects an equip transaction"),
+		PlayerData->EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, ReplacementRow));
+	TestFalse(TEXT("A failed save rejects an unequip transaction"),
+		PlayerData->UnequipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft));
+	TestFalse(TEXT("A failed save rejects a move transaction"),
+		PlayerData->MoveEquippedBumperBetweenSlots(
+			EPBBumperEquipSlot::ReboundLeft,
+			EPBBumperEquipSlot::ReboundRight));
+
+	FName ActualRow = NAME_None;
+	TestTrue(TEXT("The left slot remains readable after failed transactions"),
+		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, ActualRow));
+	TestEqual(TEXT("The left slot rolls back to its original row"), ActualRow, LeftRow);
+	TestTrue(TEXT("The right slot remains readable after failed transactions"),
+		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundRight, ActualRow));
+	TestEqual(TEXT("The right slot rolls back to its original row"), ActualRow, RightRow);
+	TestEqual(TEXT("Each state-changing request attempted one save"), WriteAttemptCount, 3);
+
+	TestTrue(TEXT("Dropping onto the same slot remains a no-op success"),
+		PlayerData->MoveEquippedBumperBetweenSlots(
+			EPBBumperEquipSlot::ReboundLeft,
+			EPBBumperEquipSlot::ReboundLeft));
+	TestEqual(TEXT("A no-op does not write the loadout"), WriteAttemptCount, 3);
+
+	PlayerData->BumperLoadoutWriterOverride = [&WriteAttemptCount](
+		const TArray<FPBEquippedBumperSlot>&)
+	{
+		++WriteAttemptCount;
+		return true;
+	};
+	TestTrue(TEXT("A successful save commits the move transaction"),
+		PlayerData->MoveEquippedBumperBetweenSlots(
+			EPBBumperEquipSlot::ReboundLeft,
+			EPBBumperEquipSlot::ReboundRight));
+	TestTrue(TEXT("The committed left slot can be queried"),
+		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, ActualRow));
+	TestEqual(TEXT("The committed left slot contains the previous right row"), ActualRow, RightRow);
+	TestTrue(TEXT("The committed right slot can be queried"),
+		PlayerData->GetEquippedBumperAtSlot(EPBBumperEquipSlot::ReboundRight, ActualRow));
+	TestEqual(TEXT("The committed right slot contains the previous left row"), ActualRow, LeftRow);
+	TestEqual(TEXT("The successful transaction performed one additional save"), WriteAttemptCount, 4);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FPBBumperLoadoutSerializationTest,
 	"PinBallLike.Bumper.Equipment.SaveGameSerialization",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

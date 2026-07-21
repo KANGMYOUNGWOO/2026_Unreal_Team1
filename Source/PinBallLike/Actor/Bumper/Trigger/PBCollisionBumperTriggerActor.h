@@ -46,6 +46,8 @@ protected:
 	float TriggerAreaHitPointTolerance = 0.5f;
 
 private:
+	friend class FPBBumperRepresentativeInputPathTest;
+
 	TMap<TWeakObjectPtr<AActor>, int32> TriggeringBallOverlapCounts;
 
 	void RegisterCollisionAreas();

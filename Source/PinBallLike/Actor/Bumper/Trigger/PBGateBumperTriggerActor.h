@@ -87,6 +87,8 @@ protected:
 	bool bIsFlagSpinReactionReady = false;
 
 private:
+	friend class FPBBumperRepresentativeInputPathTest;
+
 	TMap<TWeakObjectPtr<AActor>, int32> PassingActorOverlapCounts;
 	TMap<TWeakObjectPtr<AActor>, int32> FlagSpinActorOverlapCounts;
 
