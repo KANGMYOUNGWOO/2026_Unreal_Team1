@@ -31,6 +31,7 @@ void APBTurretSummonActor::StartActionForActor(
 	APBModularBumperBase* Bumper,
 	AActor* InteractionActor)
 {
+	APBBallBase* Ball = Cast<APBBallBase>(InteractionActor);
 	AActor* BossTarget = FindBossTarget();
 	UPBTurretFireComponent* FireComponent = FindComponentByClass<UPBTurretFireComponent>();
 	if (!IsValid(BossTarget)
@@ -56,9 +57,13 @@ void APBTurretSummonActor::StartActionForActor(
 		DeliveryVfx,
 		ImpactVfx);
 	Super::StartActionForActor(Bumper, InteractionActor);
+	if (!IsValid(Ball))
+	{
+		OnStartAction(Bumper, nullptr);
+	}
 	OnTurretActivatedForActor(Bumper, InteractionActor);
 
-	if (APBBallBase* Ball = Cast<APBBallBase>(InteractionActor))
+	if (IsValid(Ball))
 	{
 		OnTurretActivated(Bumper, Ball);
 	}

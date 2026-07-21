@@ -5,19 +5,26 @@
 #include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/TimelineComponent.h"
 #include "Engine/DataTable.h"
 #include "Engine/GameInstance.h"
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
+#include "GameFramework/GameModeBase.h"
+#include "GameFramework/WorldSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInterface.h"
 #include "TimerManager.h"
 #include "Tests/AutomationCommon.h"
 #include "PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.h"
+#include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperCounterShieldComponent.h"
 #include "PinBallLike/Actor/Bumper/Component/PBTurretFireComponent.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBGateAccelerationBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/PBBumperSpawner.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBGateAccelerationField.h"
+#include "PinBallLike/Actor/Bumper/Summon/PBTurretSummonActor.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBCollisionBumperTriggerActor.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBGateBumperTriggerActor.h"
 #include "PinBallLike/Actor/Bumper/UI/Equip/PBBumperDragDropOperation.h"
@@ -37,7 +44,9 @@ namespace
 		UClass* BumperClass,
 		TSubclassOf<APBBumperTriggerActorBase> TriggerClass,
 		const TArray<EPBBumperPositionId>& PositionIds,
-		const int32 RequiredTriggerCount)
+		const int32 RequiredTriggerCount,
+		TSubclassOf<UPBBumperEffectBase> EffectClass = nullptr,
+		const FPBBumperEffectRow EffectRow = FPBBumperEffectRow())
 	{
 		if (!IsValid(World) || !IsValid(BumperClass) || !TriggerClass || PositionIds.IsEmpty())
 		{
@@ -74,8 +83,8 @@ namespace
 			TEXT("Bumper_Runtime_Acceptance"),
 			BumperRow,
 			{SpawnInfo},
-			FPBBumperEffectRow(),
-			nullptr,
+			EffectRow,
+			EffectClass,
 			nullptr,
 			nullptr,
 			nullptr,
@@ -144,6 +153,96 @@ namespace
 		});
 		return Result;
 	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBSummonActorDestructionRecoveryTest,
+	"PinBallLike.Bumper.Runtime.SummonActorDestructionRecovery",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBSummonActorDestructionRecoveryTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	FTestWorldWrapper TestWorld;
+	if (!TestTrue(TEXT("A temporary summon recovery world can be created"),
+		TestWorld.CreateTestWorld(EWorldType::Game)))
+	{
+		return false;
+	}
+
+	UClass* BumperClass = LoadClass<APBModularBumperBase>(
+		nullptr,
+		TEXT("/Game/Blueprints/Bumper/BP_ModularBumper.BP_ModularBumper_C"));
+	if (!TestNotNull(TEXT("The production modular bumper Blueprint class resolves"), BumperClass))
+	{
+		return false;
+	}
+
+	FPBBumperEffectRow EffectRow;
+	EffectRow.Power = 25.0f;
+	EffectRow.Duration = 30.0f;
+
+	UWorld* World = TestWorld.GetTestWorld();
+	APBModularBumperBase* Bumper = SpawnRuntimeTestBumper(
+		World,
+		BumperClass,
+		APBGateBumperTriggerActor::StaticClass(),
+		{EPBBumperPositionId::GateCenterMid},
+		1,
+		UPBGateAccelerationBumperEffect::StaticClass(),
+		EffectRow);
+	AActor* GenericMovable = SpawnMovableRuntimeTestActor(World, false);
+	if (!TestNotNull(TEXT("The summon recovery bumper can be spawned"), Bumper)
+		|| !TestNotNull(TEXT("A generic IMovable can be spawned"), GenericMovable))
+	{
+		return false;
+	}
+
+	Bumper->DispatchBeginPlay();
+	const TArray<APBBumperTriggerActorBase*> Triggers =
+		FindOwnedRuntimeTestTriggers(World, Bumper);
+	if (!TestEqual(TEXT("The summon recovery bumper has one Trigger"), Triggers.Num(), 1))
+	{
+		return false;
+	}
+
+	Bumper->HandleTriggerActorActivated(Triggers[0], GenericMovable, FHitResult());
+	TestEqual(
+		TEXT("The long-running summon effect occupies the execution lane"),
+		Bumper->GetBumperState(),
+		EPBBumperState::Activated);
+
+	APBGateAccelerationField* SpawnedField = nullptr;
+	for (TActorIterator<APBGateAccelerationField> It(World); It; ++It)
+	{
+		if (IsValid(*It) && It->GetOwner() == Bumper)
+		{
+			SpawnedField = *It;
+			break;
+		}
+	}
+	if (!TestNotNull(TEXT("The active effect owns its spawned field"), SpawnedField))
+	{
+		return false;
+	}
+
+	SpawnedField->Destroy();
+	TestWorld.TickTestWorld();
+	TestEqual(
+		TEXT("Destroying an active summon releases the execution lane"),
+		Bumper->GetBumperState(),
+		EPBBumperState::Idle);
+	TestNull(
+		TEXT("Destroying an active summon clears the active Trigger"),
+		Bumper->GetActiveTriggerActor());
+
+	Bumper->HandleTriggerActorActivated(Triggers[0], GenericMovable, FHitResult());
+	TestEqual(
+		TEXT("A replacement summon can activate after recovery"),
+		Bumper->GetBumperState(),
+		EPBBumperState::Activated);
+	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -333,6 +432,124 @@ bool FPBTurretProductionAimPivotTest::RunTest(const FString& Parameters)
 		EPBBumperProjectilePayload::None,
 		0,
 		0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBTurretGenericMovableActivationTest,
+	"PinBallLike.Bumper.Runtime.TurretGenericMovableActivation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBTurretGenericMovableActivationTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	FTestWorldWrapper TestWorld;
+	if (!TestTrue(TEXT("A temporary turret action world can be created"),
+		TestWorld.CreateTestWorld(EWorldType::Game)))
+	{
+		return false;
+	}
+
+	UClass* TurretClass = LoadClass<APBTurretSummonActor>(
+		nullptr,
+		TEXT("/Game/Blueprints/Bumper/Effect/BP_TurretSummon.BP_TurretSummon_C"));
+	if (!TestNotNull(TEXT("The production turret Blueprint class resolves"), TurretClass))
+	{
+		return false;
+	}
+
+	UWorld* World = TestWorld.GetTestWorld();
+	APBTurretSummonActor* Turret = IsValid(World)
+		? World->SpawnActor<APBTurretSummonActor>(TurretClass, FTransform::Identity)
+		: nullptr;
+	APBBossBase* Boss = IsValid(World)
+		? World->SpawnActor<APBBossBase>(
+			APBBossBase::StaticClass(),
+			FTransform(FVector(1000.0f, 0.0f, 0.0f)))
+		: nullptr;
+	AActor* GenericMovable = SpawnMovableRuntimeTestActor(World, false);
+	if (!TestNotNull(TEXT("The production turret can be spawned"), Turret)
+		|| !TestNotNull(TEXT("A Boss target can be spawned"), Boss)
+		|| !TestNotNull(TEXT("A non-APBBallBase IMovable can be spawned"), GenericMovable))
+	{
+		return false;
+	}
+	if (!TestNotNull(TEXT("The turret action world has WorldSettings"),
+		World->GetWorldSettings()))
+	{
+		return false;
+	}
+	World->GetWorldSettings()->DefaultGameMode = AGameModeBase::StaticClass();
+
+	if (!TestTrue(TEXT("The turret action world can enter play"),
+		TestWorld.BeginPlayInTestWorld()))
+	{
+		return false;
+	}
+
+	Turret->SetAttackPayload(
+		EPBBumperProjectilePayload::BossDamage,
+		1,
+		1);
+	Turret->StartActionForActor(nullptr, GenericMovable);
+	TestWorld.TickTestWorld();
+
+	TInlineComponentArray<UTimelineComponent*> TimelineComponents(Turret);
+	const auto IsAnyActionTimelinePlaying = [&TimelineComponents]()
+	{
+		for (const UTimelineComponent* Timeline : TimelineComponents)
+		{
+			if (IsValid(Timeline)
+				&& !Timeline->GetName().Contains(TEXT("Reaction"))
+				&& Timeline->IsPlaying())
+			{
+				return true;
+			}
+		}
+
+		return false;
+	};
+
+	if (!TestTrue(
+		TEXT("A generic IMovable starts the production turret action timeline"),
+		IsAnyActionTimelinePlaying()))
+	{
+		return false;
+	}
+
+	for (int32 TickIndex = 0; TickIndex < 3000 && IsAnyActionTimelinePlaying(); ++TickIndex)
+	{
+		TestWorld.TickTestWorld(0.01f);
+	}
+	if (!TestFalse(
+		TEXT("The production turret action timeline finishes within 30 seconds"),
+		IsAnyActionTimelinePlaying()))
+	{
+		for (const UTimelineComponent* Timeline : TimelineComponents)
+		{
+			if (IsValid(Timeline) && Timeline->IsPlaying())
+			{
+				AddInfo(FString::Printf(
+					TEXT("Playing timeline: %s Position=%.2f Length=%.2f Looping=%s"),
+					*Timeline->GetName(),
+					Timeline->GetPlaybackPosition(),
+					Timeline->GetTimelineLength(),
+					Timeline->IsLooping() ? TEXT("true") : TEXT("false")));
+			}
+		}
+		return false;
+	}
+
+	Turret->SetAttackPayload(
+		EPBBumperProjectilePayload::BossDamage,
+		1,
+		1);
+	Turret->StartActionForActor(nullptr, GenericMovable);
+	TestWorld.TickTestWorld();
+	TestTrue(
+		TEXT("The same turret can start a second generic IMovable action"),
+		IsAnyActionTimelinePlaying());
 	return true;
 }
 

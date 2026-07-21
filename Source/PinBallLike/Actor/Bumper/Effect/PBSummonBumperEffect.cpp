@@ -68,6 +68,17 @@ void UPBSummonBumperEffect::HandleSummonActionFinished(APBBumperSummonActor* Sum
 	FinishEffect();
 }
 
+void UPBSummonBumperEffect::HandleSummonActorDestroyed(AActor* DestroyedActor)
+{
+	if (DestroyedActor != SpawnedSummonActor)
+	{
+		return;
+	}
+
+	SpawnedSummonActor = nullptr;
+	Super::FinishEffect();
+}
+
 bool UPBSummonBumperEffect::EnsureSummonActor(APBModularBumperBase* Bumper)
 {
 	if (!IsValid(Bumper) || !SummonActorClass)
@@ -108,6 +119,9 @@ bool UPBSummonBumperEffect::EnsureSummonActor(APBModularBumperBase* Bumper)
 	SpawnedSummonActor->OnSummonActionFinished.AddUniqueDynamic(
 		this,
 		&UPBSummonBumperEffect::HandleSummonActionFinished);
+	SpawnedSummonActor->OnDestroyed.AddUniqueDynamic(
+		this,
+		&UPBSummonBumperEffect::HandleSummonActorDestroyed);
 
 	return true;
 }
@@ -253,6 +267,9 @@ void UPBSummonBumperEffect::DestroySummonActor()
 	SpawnedSummonActor->OnSummonActionFinished.RemoveDynamic(
 		this,
 		&UPBSummonBumperEffect::HandleSummonActionFinished);
+	SpawnedSummonActor->OnDestroyed.RemoveDynamic(
+		this,
+		&UPBSummonBumperEffect::HandleSummonActorDestroyed);
 	SpawnedSummonActor->DeactivateSummon();
 	SpawnedSummonActor->Destroy();
 
