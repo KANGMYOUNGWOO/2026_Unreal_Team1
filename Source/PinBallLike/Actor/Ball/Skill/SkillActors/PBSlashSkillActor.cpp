@@ -5,6 +5,7 @@
 #include "PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Ball/Skill/Component/PBInstantDamageComponent.h"
+#include "PinBallLike/Actor/Party/PBCombatPartyController.h"
 #include "PinBallLike/Interface/BossInterface.h"
 
 APBSlashSkillActor::APBSlashSkillActor()
@@ -36,9 +37,6 @@ void APBSlashSkillActor::InitializeSkill(
 {
 	Super::InitializeSkill(InOwnerBall, InSkillData);
 
-	BallPhysicsComponent = IsValid(OwnerBall)
-		? OwnerBall->FindComponentByClass<UPBBallPhysicsComponent>()
-		: nullptr;
 	AttackCount = FMath::Max(InSkillData.EffectValue, 1);
 	DamageComponent->SetGroggyAmount(GetSkillGroggyAmount());
 }
@@ -46,11 +44,13 @@ void APBSlashSkillActor::InitializeSkill(
 void APBSlashSkillActor::StartCharge()
 {
 	EndAttack();
+	RestoreGravity();
 
-	if (BallPhysicsComponent.IsValid())
+	if (UPBBallPhysicsComponent* LeaderPhysicsComponent = ResolveLeaderPhysicsComponent())
 	{
-		BallPhysicsComponent->AddGravityDisableRequest(this);
-		BallPhysicsComponent->StopMovementSmoothly(0.5f);
+		GravityDisabledPhysicsComponent = LeaderPhysicsComponent;
+		LeaderPhysicsComponent->AddGravityDisableRequest(this);
+		LeaderPhysicsComponent->StopMovementSmoothly(0.5f);
 	}
 }
 
@@ -59,7 +59,8 @@ bool APBSlashSkillActor::StartAttack()
 	RestoreGravity();
 
 	AActor* Target = FindTarget();
-	if (!IsValid(OwnerBall) || !BallPhysicsComponent.IsValid() || !IsTargetValid(Target))
+	UPBBallPhysicsComponent* LeaderPhysicsComponent = ResolveLeaderPhysicsComponent();
+	if (!IsValid(OwnerBall) || !IsValid(LeaderPhysicsComponent) || !IsTargetValid(Target))
 	{
 		StopSkill();
 		return false;
@@ -76,7 +77,7 @@ bool APBSlashSkillActor::StartAttack()
 	DamagedTargets.Reset();
 	SetActorRotation(Direction.Rotation());
 	AttackBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	BallPhysicsComponent->AddVelocity(Direction * DashVelocity);
+	LeaderPhysicsComponent->AddVelocity(Direction * DashVelocity);
 
 	TArray<AActor*> OverlappingActors;
 	AttackBox->GetOverlappingActors(OverlappingActors);
@@ -159,10 +160,36 @@ FVector APBSlashSkillActor::CalculateHitLocation(const AActor* Target) const
 	return HitLocation;
 }
 
+APBBallBase* APBSlashSkillActor::ResolveLeaderBall() const
+{
+	if (!IsValid(OwnerBall))
+	{
+		return nullptr;
+	}
+
+	if (OwnerBall->GetCombatRole() == EPBBallPartyRole::Leader)
+	{
+		return OwnerBall;
+	}
+
+	const APBCombatPartyController* PartyController =
+		Cast<APBCombatPartyController>(OwnerBall->GetOwner());
+	return IsValid(PartyController) ? PartyController->GetLeaderBall() : nullptr;
+}
+
+UPBBallPhysicsComponent* APBSlashSkillActor::ResolveLeaderPhysicsComponent() const
+{
+	APBBallBase* LeaderBall = ResolveLeaderBall();
+	return IsValid(LeaderBall)
+		? LeaderBall->FindComponentByClass<UPBBallPhysicsComponent>()
+		: nullptr;
+}
+
 void APBSlashSkillActor::RestoreGravity()
 {
-	if (BallPhysicsComponent.IsValid())
+	if (GravityDisabledPhysicsComponent.IsValid())
 	{
-		BallPhysicsComponent->RemoveGravityDisableRequest(this);
+		GravityDisabledPhysicsComponent->RemoveGravityDisableRequest(this);
+		GravityDisabledPhysicsComponent.Reset();
 	}
 }
