@@ -6,6 +6,7 @@
 #include "PBBallSkillActorBase.generated.h"
 
 class APBBallBase;
+class UPBSkillFeedbackComponent;
 class UPBTimedAreaDamageComponent;
 
 UENUM(BlueprintType)
@@ -25,6 +26,8 @@ class PINBALLLIKE_API APBBallSkillActorBase : public AActor
 	GENERATED_BODY()
 
 public:
+	APBBallSkillActorBase();
+
 	virtual void InitializeSkill(
 		APBBallBase* InOwnerBall,
 		const FPBBallSkillTableRow& InSkillData);
@@ -70,6 +73,9 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Ball|Skill|Effect")
 	TObjectPtr<APBBallBase> OwnerBall;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Skill|Feedback")
+	TObjectPtr<UPBSkillFeedbackComponent> SkillFeedbackComponent;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ball|Skill|Effect")
 	void OnActivated();
