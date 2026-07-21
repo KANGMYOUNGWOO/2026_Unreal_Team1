@@ -7,6 +7,7 @@
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Effect/PBEffectContext.h"
 #include "PinBallLike/Struct/Effect/PBEffectTypes.h"
+#include "PinBallLike/Struct/Shop/PBPurChaseMessaage.h"
 #include "PinBallLike/Subsystem/PBEffectSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
@@ -19,11 +20,11 @@
 
 TArray<FName> UPBShopManager::OpenShop()
 {
-    CurrentGold = 1000;
+    
     RefreshActiveSynergyDiscounts();
 
     GenerateShopItems(8);
-
+CurrentGold = 600;
     return CurrentShopItemBallIds;
 }
 
@@ -217,6 +218,7 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
 
     if (CurrentGold < Price)
     {
+    	ShopActorHandler->BuyItem(SlotIndex,false);
         return false;
     }
 
@@ -245,7 +247,7 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
 
     if (ShopActorHandler)
     {
-        ShopActorHandler->BuyItem(SlotIndex);
+        ShopActorHandler->BuyItem(SlotIndex,true);
     }
 
     UE_LOG(
@@ -256,6 +258,70 @@ bool UPBShopManager::BuyItem(int32 SlotIndex)
 
     return true;
 }
+
+void UPBShopManager::RequestPurchase(int32 SlotIndex)
+{
+ 
+    if (!CurrentShopItemBallIds.IsValidIndex(SlotIndex))
+    {
+        return;
+    }
+
+    if (ShopItemIsSold[SlotIndex])
+    {
+        return;
+    }
+
+    UGameInstance* GI =
+        UGameplayStatics::GetGameInstance(GetWorld());
+
+    if (!GI)
+    {
+        return;
+    }
+
+    UPBTableDataSubsystem* TableSub =
+        GI->GetSubsystem<UPBTableDataSubsystem>();
+
+    UPBBallDeckSubsystem* DeckSubsystem =
+        GI->GetSubsystem<UPBBallDeckSubsystem>();
+
+    if (!TableSub || !DeckSubsystem)
+    {
+        return;
+    }
+
+    //------------------------------------------------------
+    // ShopRow 가져오기
+    //------------------------------------------------------
+
+    FPBShopTableRow ShopRow;
+
+    if (!TableSub->FindShopRow(
+        CurrentShopItemRowNames[SlotIndex],
+        ShopRow))
+    {
+        return;
+    }
+
+    const int32 Price = ShopRow.BuyPrice;
+
+    //------------------------------------------------------
+    // 골드 검사
+    //------------------------------------------------------
+
+    if (CurrentGold < Price)
+    {
+       ShopActorHandler->ShowNotEnoughGoldPopup();
+        return;
+    }
+    
+    if (ShopActorHandler)
+    {
+        ShopActorHandler-> ShoPPurchaseConfirm(SlotIndex);
+    }
+}
+
 
 ////////////////////////////////////////////////////////////
 // Reroll
@@ -297,6 +363,180 @@ bool UPBShopManager::RerollShop()
         CurrentRerollCost);
 
     return true;
+}
+
+bool UPBShopManager::BuildPurchaseConfirmData(int32 SlotIndex, FPBPurchaseConfirmData& OutData) const
+{
+  // 이전 데이터가 남지 않도록 초기화
+	OutData = FPBPurchaseConfirmData();
+
+	if (!TableDataSubsystem)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("BuildPurchaseConfirmData: TableDataSubsystem is null."));
+
+		return false;
+	}
+
+	// 전달받은 슬롯 번호가 현재 상점 배열의 유효한 인덱스인지 확인
+	if (!CurrentShopItemBallIds.IsValidIndex(SlotIndex))
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("BuildPurchaseConfirmData: Invalid SlotIndex: %d"),
+			SlotIndex);
+
+		return false;
+	}
+
+	// 현재 슬롯에 배치된 볼 ID
+	const FName BallId = CurrentShopItemBallIds[SlotIndex];
+
+	if (BallId.IsNone())
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("BuildPurchaseConfirmData: BallId is None. SlotIndex: %d"),
+			SlotIndex);
+
+		return false;
+	}
+
+	// 볼 데이터 조회
+	FPBBallTableRow BallRow;
+
+	if (!TableDataSubsystem->FindBallRow(BallId, BallRow))
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("BuildPurchaseConfirmData: Ball row not found. BallId: %s"),
+			*BallId.ToString());
+
+		return false;
+	}
+
+	// 볼 데이터에 등록된 ShopId 확인
+	if (BallRow.ShopId.IsNone())
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("BuildPurchaseConfirmData: ShopId is None. BallId: %s"),
+			*BallId.ToString());
+
+		return false;
+	}
+
+	// 상점 데이터 조회
+	FPBShopTableRow ShopRow;
+
+	if (!TableDataSubsystem->FindShopRow(BallRow.ShopId, ShopRow))
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT(
+				"BuildPurchaseConfirmData: Shop row not found. "
+				"BallId: %s, ShopId: %s"),
+			*BallId.ToString(),
+			*BallRow.ShopId.ToString());
+
+		return false;
+	}
+
+	// EPBBallClassType enum 정보를 가져온다.
+	const UEnum* BallClassEnum = StaticEnum<EPBBallClassType>();
+
+	if (!BallClassEnum)
+	{
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("BuildPurchaseConfirmData: StaticEnum<EPBBallClassType>() failed."));
+
+		return false;
+	}
+
+	/*
+	 * 예:
+	 * EPBBallClassType::Attacker
+	 *             ↓
+	 * FName("Attacker")
+	 */
+	const FString ClassTypeString =
+		BallClassEnum->GetNameStringByValue(
+			static_cast<int64>(BallRow.ClassType));
+
+	if (ClassTypeString.IsEmpty())
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT(
+				"BuildPurchaseConfirmData: Invalid ClassType value. "
+				"BallId: %s"),
+			*BallId.ToString());
+
+		return false;
+	}
+
+	const FName ClassTypeName(*ClassTypeString);
+
+	// 시너지 데이터 조회
+	FPBSynergyTableRow SynergyRow;
+
+	if (!TableDataSubsystem->FindSynergyRow(
+		ClassTypeName,
+		SynergyRow))
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT(
+				"BuildPurchaseConfirmData: Synergy row not found. "
+				"BallId: %s, ClassType: %s"),
+			*BallId.ToString(),
+			*ClassTypeName.ToString());
+
+		return false;
+	}
+
+	// 구매 확인 팝업에 전달할 데이터 구성
+	OutData.SlotIndex = SlotIndex;
+	OutData.BallId = BallId;
+
+	OutData.BallName = BallRow.DisplayName;
+	OutData.BallDescription = BallRow.DescriptionKey;
+
+	OutData.Price = ShopRow.BuyPrice;
+
+	OutData.SynergyName = SynergyRow.DisplayName;
+	FName Desc = SynergyRow.DescriptionKey;
+	FText DescText = FText::FromString(Desc.ToString());
+	OutData.SynergyDescription = DescText;
+	//FText Desc = 
+	//OutData.SynergyDescription = Desc;
+
+	return true;
+}
+
+void UPBShopManager::Initialize(UPBTableDataSubsystem* InTableDataSubsystem)
+{
+    TableDataSubsystem = InTableDataSubsystem;
+	
+	UGameplayMessageSubsystem& MessageSubsystem =
+		  UGameplayMessageSubsystem::Get(this);
+    
+	
+	PurChaseHandle =
+		MessageSubsystem.RegisterListener<FPBPurChaseMessaage>(GameplayTags::Event_UI_Shop_Purchase,
+			this,
+			&UPBShopManager::HandleBuyBall); 
 }
 
 ////////////////////////////////////////////////////////////
@@ -426,6 +666,11 @@ void UPBShopManager::RefreshActiveSynergyDiscounts()
         CurrentRerollCost);
 }
 
+void UPBShopManager::HandleBuyBall(FGameplayTag PurChase, const FPBPurChaseMessaage& Message)
+{
+	BuyItem(Message.SlotIndex);
+}
+
 int32 UPBShopManager::CalculateDiscountedPrice(
     const int32 BasePrice,
     const float DiscountAmount,
@@ -444,3 +689,4 @@ int32 UPBShopManager::CalculateDiscountedPrice(
         0,
         FMath::RoundToInt(PriceAfterAmountDiscount * (1.0f - ClampedDiscountPercent * 0.01f)));
 }
+

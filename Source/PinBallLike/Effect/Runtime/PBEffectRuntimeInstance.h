@@ -88,6 +88,28 @@ private:
 };
 
 UCLASS()
+class PINBALLLIKE_API UPBComboPeriodStatBuffEffectRuntimeInstance
+	: public UPBEffectRuntimeInstanceBase
+	, public IPBComboChangedListener
+{
+	GENERATED_BODY()
+
+public:
+	void Setup(FName InStatName, FName InModifyType, float InValue, int32 InRequiredCombo);
+	virtual IPBComboChangedListener* AsComboChangedListener() override { return this; }
+	virtual void HandleComboChanged(int32 CurrentCombo, int32 MaxCombo) override;
+
+private:
+	FName StatName = NAME_None;
+	FName ModifyType = NAME_None;
+	float Value = 0.0f;
+	int32 RequiredCombo = 0;
+	bool bApplied = false;
+	int32 LastAppliedStep = 0;
+};
+
+
+UCLASS()
 class PINBALLLIKE_API UPBSkillDamageEffectRuntimeInstance
 	: public UPBEffectRuntimeInstanceBase
 	, public IPBSkillDamageModifier

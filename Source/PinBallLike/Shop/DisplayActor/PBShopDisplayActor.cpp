@@ -118,6 +118,11 @@ void APBShopDisplayActor::ClearItems()
 	SpawnedItems.Empty();
 }
 
+void APBShopDisplayActor::ClearItems(int32 SlotIndex)
+{
+	SpawnedItems[SlotIndex]->OnPurchase();
+}
+
 // Called when the game starts or when spawned
 void APBShopDisplayActor::BeginPlay()
 {

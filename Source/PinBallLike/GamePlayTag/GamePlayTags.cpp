@@ -24,6 +24,8 @@ namespace GameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Boss_Intro_Completed, "Event.Battle.Boss.Intro.Completed");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Boss_Dead, "Event.Battle.Boss.Dead");
 	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Choice_Exit, "Event.UI.Choice.Exit");
+	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Shop_Purchase,"Event.UI.Shop.Purchase")
+	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Shop_Refuse,"Event.UI.Shop.Refuse")
 
 	UE_DEFINE_GAMEPLAY_TAG(TriggerEvent_Battle_Started, "TriggerEvent.Battle.Started");
 	UE_DEFINE_GAMEPLAY_TAG(TriggerEvent_Battle_PartyBuilt, "TriggerEvent.Battle.PartyBuilt");

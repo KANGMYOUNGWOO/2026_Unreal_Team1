@@ -9,6 +9,7 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Struct/Choice/PBChoiceType.h"
 #include "PinBallLike/Interface/PBChoiceNodeAction.h"
+#include  "PinBallLike/Struct/Shop/PBPurchaseConfirmData.h"
 #include "PBShopActor.generated.h"
 
 class UPBShopViewModel;
@@ -33,9 +34,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void CloseShop();
 	
-	void BuyItem(int32 SlotIndex) override;
-	
+	void BuyItem(int32 SlotIndex, bool IsEnough) override;
+	void ShoPPurchaseConfirm(int SlotIndex) override;
 	void OpenAbility() override;
+	void ShowNotEnoughGoldPopup() override;
 	
 	bool ApplyViewModelToWidget(UUserWidget* Widget);
 	

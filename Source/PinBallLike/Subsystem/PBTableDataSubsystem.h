@@ -29,6 +29,7 @@
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicModifierRow.h"
+#include "PinBallLike/Table/Relic/Struct/PBRelicTriggerTableRow.h"
 #include "PBTableDataSubsystem.generated.h"
 
 class UDataTable;
@@ -183,15 +184,21 @@ private:
 public:
 	bool FindRelicRow(FName RowName,FPBRelicTableRow& OutRow) const;
 	bool FindRelicModifierRow(FName RowName, FPBRelicModifierRow OutRow) const;
+	bool FindRelicTrigger(FName RowName,FPBRelicTriggerTableRow& OutRow) const;
 	
 	void GetRelicModifierRows(FName RelicId, TArray<FPBRelicModifierRow>& OutRows) const;
 	void GetAllRelicIds(TArray<FName>& OutRelicIds) const;
+	
+	
 private:
 	UPROPERTY()
 	TObjectPtr<UDataTable> RelicTable;
 	
 	UPROPERTY()
 	TObjectPtr<UDataTable> RelicModifierTable;
+	
+	UPROPERTY()
+	TObjectPtr<UDataTable> RelicTriggerTable;
 	
 #pragma  endregion 
 	
