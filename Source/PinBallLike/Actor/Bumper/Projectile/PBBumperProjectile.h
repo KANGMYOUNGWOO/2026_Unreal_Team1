@@ -75,7 +75,8 @@ protected:
 	float HomingAcceleration = 8000.0f;
 
 private:
-	bool ApplyPayload(AActor* Target) const;
+	bool ApplyPayload(AActor* Target, int32& OutAppliedDamage) const;
+	void BroadcastDamageLog(int32 AppliedDamage, const FVector& HitLocation) const;
 	void StartDeliveryVfx();
 	void StopDeliveryVfx();
 	void PlayResolvedVfx(AActor* Target) const;
