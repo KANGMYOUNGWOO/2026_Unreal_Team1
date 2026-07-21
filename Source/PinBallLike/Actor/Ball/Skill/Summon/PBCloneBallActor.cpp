@@ -8,6 +8,7 @@
 #include "PinBallLike/Actor/Ball/Component/PBBallHitReactionComponent.h"
 #include "PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
+#include "PinBallLike/Interface/BossInterface.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
 
 APBCloneBallActor::APBCloneBallActor()
@@ -55,9 +56,16 @@ void APBCloneBallActor::InitializeFromSourceBall(APBBallBase* InSourceBall)
 	}
 }
 
+void APBCloneBallActor::SetMaxHitCount(const int32 InMaxHitCount)
+{
+	MaxHitCount = FMath::Max(InMaxHitCount, 1);
+}
+
 void APBCloneBallActor::BeginPlay()
 {
 	Super::BeginPlay();
+
+	PhysicsComponent->OnBallMovementHit.AddUniqueDynamic(this, &APBCloneBallActor::HandleMovementHit);
 
 	if (IsValid(SourceBall))
 	{
@@ -67,6 +75,31 @@ void APBCloneBallActor::BeginPlay()
 	if (LifeTime > 0.0f)
 	{
 		SetLifeSpan(LifeTime);
+	}
+}
+
+void APBCloneBallActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	PhysicsComponent->OnBallMovementHit.RemoveAll(this);
+	Super::EndPlay(EndPlayReason);
+}
+
+void APBCloneBallActor::HandleMovementHit(const FHitResult& Hit)
+{
+	AActor* HitActor = Hit.GetActor();
+	if (CurrentHitCount >= MaxHitCount
+		|| !IsValid(HitActor)
+		|| !HitActor->GetClass()->ImplementsInterface(UBossInterface::StaticClass()))
+	{
+		return;
+	}
+
+	++CurrentHitCount;
+	if (CurrentHitCount >= MaxHitCount)
+	{
+		CollisionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		PhysicsComponent->PauseMovement();
+		SetLifeSpan(0.01f);
 	}
 }
 

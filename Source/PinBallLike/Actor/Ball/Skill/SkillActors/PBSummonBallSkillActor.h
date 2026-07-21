@@ -37,6 +37,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ball|Skill|Summon", meta = (ClampMin = "0.0", Units = "cm/s"))
 	float OutwardVelocity = 300.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ball|Skill|Summon", meta = (ClampMin = "1"))
+	int32 SummonedBallMaxHitCount = 4;
+
 private:
 	bool SpawnSummonedBalls();
 	void DestroySummonedBalls();
