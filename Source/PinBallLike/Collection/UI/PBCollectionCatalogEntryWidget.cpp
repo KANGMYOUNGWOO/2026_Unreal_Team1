@@ -2,6 +2,7 @@
 
 #include "Components/Border.h"
 #include "Components/TextBlock.h"
+#include "Engine/Texture2D.h"
 #include "PBCollectionCatalogItemObject.h"
 
 namespace
@@ -21,6 +22,35 @@ FText GetCategoryGlyph(const EPBCollectionCategory Category)
 	default: return FText::FromString(TEXT("C"));
 	}
 }
+
+FBox2f MakeCenteredSquareUV(const UTexture2D* Texture)
+{
+	const float Width = Texture ? static_cast<float>(Texture->GetSizeX()) : 1.0f;
+	const float Height = Texture ? static_cast<float>(Texture->GetSizeY()) : 1.0f;
+	if (Width > Height)
+	{
+		const float HorizontalInset = (1.0f - Height / Width) * 0.5f;
+		return FBox2f(FVector2f(HorizontalInset, 0.0f), FVector2f(1.0f - HorizontalInset, 1.0f));
+	}
+	if (Height > Width)
+	{
+		const float VerticalInset = (1.0f - Width / Height) * 0.5f;
+		return FBox2f(FVector2f(0.0f, VerticalInset), FVector2f(1.0f, 1.0f - VerticalInset));
+	}
+
+	return FBox2f(FVector2f::ZeroVector, FVector2f(1.0f, 1.0f));
+}
+}
+
+void UPBCollectionCatalogEntryWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+	if (GlyphBorder)
+	{
+		DefaultGlyphBrush = GlyphBorder->Background;
+		DefaultGlyphBrushColor = GlyphBorder->GetBrushColor();
+		bHasDefaultGlyphStyle = true;
+	}
 }
 
 void UPBCollectionCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
@@ -54,10 +84,31 @@ void UPBCollectionCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListIte
 	{
 		AccentBorder->SetBrushColor(Item->Summary.AccentColor);
 	}
+	const bool bHasIcon = IsValid(Item->Summary.IconTexture);
+	if (GlyphBorder)
+	{
+		if (bHasIcon)
+		{
+			FSlateBrush IconBrush = DefaultGlyphBrush;
+			IconBrush.SetResourceObject(Item->Summary.IconTexture);
+			IconBrush.DrawAs = ESlateBrushDrawType::Image;
+			IconBrush.Margin = FMargin(0.0f);
+			IconBrush.SetUVRegion(MakeCenteredSquareUV(Item->Summary.IconTexture));
+			GlyphBorder->SetBrush(IconBrush);
+			GlyphBorder->SetBrushColor(FLinearColor::White);
+		}
+		else if (bHasDefaultGlyphStyle)
+		{
+			GlyphBorder->SetBrush(DefaultGlyphBrush);
+			GlyphBorder->SetBrushColor(DefaultGlyphBrushColor);
+		}
+		GlyphBorder->SetClipping(EWidgetClipping::ClipToBounds);
+	}
 	if (IconLetterText)
 	{
 		IconLetterText->SetText(GetCategoryGlyph(Item->Category));
 		IconLetterText->SetColorAndOpacity(FSlateColor(Item->Summary.AccentColor));
+		IconLetterText->SetVisibility(bHasIcon ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 	}
 	if (CardBorder)
 	{

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/IUserObjectListEntry.h"
 #include "Blueprint/UserWidget.h"
+#include "Styling/SlateBrush.h"
 #include "PBCollectionCatalogEntryWidget.generated.h"
 
 class UBorder;
@@ -14,6 +15,7 @@ class PINBALLLIKE_API UPBCollectionCatalogEntryWidget : public UUserWidget, publ
 	GENERATED_BODY()
 
 protected:
+	virtual void NativeOnInitialized() override;
 	virtual void NativeOnListItemObjectSet(UObject* ListItemObject) override;
 	virtual void NativeOnItemSelectionChanged(bool bIsSelected) override;
 
@@ -31,4 +33,11 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Collection|Entry", meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> IconLetterText;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Collection|Entry", meta = (BindWidgetOptional))
+	TObjectPtr<UBorder> GlyphBorder;
+
+	FSlateBrush DefaultGlyphBrush;
+	FLinearColor DefaultGlyphBrushColor = FLinearColor::White;
+	bool bHasDefaultGlyphStyle = false;
 };

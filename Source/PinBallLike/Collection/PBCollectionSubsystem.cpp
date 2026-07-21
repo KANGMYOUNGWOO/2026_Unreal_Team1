@@ -1,8 +1,15 @@
 #include "PBCollectionSubsystem.h"
 
+#include "Engine/AssetManager.h"
 #include "Internationalization/Text.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
+#include "PinBallLike/Table/Boss/PBBossAssetIds.h"
+#include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
+#include "PinBallLike/Table/PBAssetBundleNames.h"
+#include "PinBallLike/Table/Synergy/PBSynergyAssetIds.h"
 
 namespace
 {
@@ -21,6 +28,7 @@ void UPBCollectionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
+	Collection.InitializeDependency(UPBGameDataLoadSubsystem::StaticClass());
 	Collection.InitializeDependency(UPBTableDataSubsystem::StaticClass());
 
 	if (UGameInstance* GameInstance = GetGameInstance())
@@ -54,6 +62,63 @@ void UPBCollectionSubsystem::Deinitialize()
 void UPBCollectionSubsystem::HandleStartupGameDataLoaded()
 {
 	ReloadCollectionData();
+}
+
+void UPBCollectionSubsystem::RequestCatalogUIAssetsAsync()
+{
+	if (bCatalogUIAssetsRequested)
+	{
+		return;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBGameDataLoadSubsystem* GameDataLoadSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>()
+		: nullptr;
+	if (!IsValid(GameDataLoadSubsystem))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Collection] Catalog UI asset load skipped. Missing GameDataLoadSubsystem."));
+		return;
+	}
+
+	TArray<FPrimaryAssetId> AssetIds;
+	const TArray<FPrimaryAssetType> AssetTypes = {
+		PBBallAssetIds::Type::BallData,
+		PBSynergyAssetIds::Type::SynergyData,
+		PBBumperAssetIds::Type::BumperData,
+		PBBossAssetIds::Type::BossData
+	};
+	for (const FPrimaryAssetType& AssetType : AssetTypes)
+	{
+		TArray<FPrimaryAssetId> TypeAssetIds;
+		UAssetManager::Get().GetPrimaryAssetIdList(AssetType, TypeAssetIds);
+		for (const FPrimaryAssetId& AssetId : TypeAssetIds)
+		{
+			AssetIds.AddUnique(AssetId);
+		}
+	}
+
+	if (AssetIds.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Collection] Catalog UI asset load skipped. No registered primary assets."));
+		return;
+	}
+
+	bCatalogUIAssetsRequested = true;
+	const FGuid RequestId = GameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
+		AssetIds,
+		{PBAssetBundleNames::UI},
+		FStreamableDelegate::CreateUObject(this, &ThisClass::HandleCatalogUIAssetsLoaded));
+	if (!RequestId.IsValid())
+	{
+		bCatalogUIAssetsRequested = false;
+	}
+}
+
+void UPBCollectionSubsystem::HandleCatalogUIAssetsLoaded()
+{
+	UE_LOG(LogTemp, Log, TEXT("[Collection] Catalog UI assets loaded. Refreshing catalog entries."));
+	OnCollectionEntryChanged.Broadcast(NAME_None);
 }
 
 bool UPBCollectionSubsystem::ReloadCollectionData()

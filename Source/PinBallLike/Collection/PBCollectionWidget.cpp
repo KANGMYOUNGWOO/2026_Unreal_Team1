@@ -2,8 +2,10 @@
 
 #include "Components/Button.h"
 #include "Components/WidgetSwitcher.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "PinBallLike/Collection/PBCollectionSubsystem.h"
 #include "PinBallLike/Collection/UI/PBCollectionTabWidgetBase.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 #include "UObject/SoftObjectPath.h"
@@ -54,6 +56,14 @@ void UPBCollectionWidget::OnPushed_Implementation()
 	if (RedirectLegacyNativeWidget())
 	{
 		return;
+	}
+
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBCollectionSubsystem* CollectionSubsystem = GameInstance->GetSubsystem<UPBCollectionSubsystem>())
+		{
+			CollectionSubsystem->RequestCatalogUIAssetsAsync();
+		}
 	}
 
 	ApplyCollectionInputMode(true);

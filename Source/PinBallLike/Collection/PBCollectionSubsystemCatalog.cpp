@@ -3,13 +3,21 @@
 #include "PBCollectionEffectSetProjector.h"
 
 #include "Engine/DataTable.h"
+#include "Engine/Texture2D.h"
 #include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
+#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallSkillTableRow.h"
 #include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossHitPointTableRow.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossPatternTableRow.h"
 #include "PinBallLike/Table/Boss/Struct/PBBossTableRow.h"
+#include "PinBallLike/Table/Boss/DataAsset/PBBossDataAsset.h"
+#include "PinBallLike/Table/Boss/PBBossAssetIds.h"
+#include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
+#include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
@@ -18,6 +26,8 @@
 #include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
+#include "PinBallLike/Table/Synergy/DataAsset/PBSynergyDataAsset.h"
+#include "PinBallLike/Table/Synergy/PBSynergyAssetIds.h"
 #include "PinBallLike/Utils/PBTextFormatUtils.h"
 
 #define LOCTEXT_NAMESPACE "PBCollectionCatalog"
@@ -120,6 +130,20 @@ bool IsCurrentCatalogCategory(const EPBCollectionCategory Category)
 		|| Category == EPBCollectionCategory::Bumper
 		|| Category == EPBCollectionCategory::Boss;
 }
+
+template <typename DataAssetType>
+const DataAssetType* ResolveLoadedPrimaryDataAsset(
+	const UPBGameDataLoadSubsystem* GameDataLoadSubsystem,
+	const FPrimaryAssetType AssetType,
+	const FName RowName)
+{
+	if (!IsValid(GameDataLoadSubsystem) || RowName.IsNone())
+	{
+		return nullptr;
+	}
+
+	return Cast<DataAssetType>(GameDataLoadSubsystem->GetLoadedPrimaryAsset(FPrimaryAssetId(AssetType, RowName)));
+}
 }
 
 const FPBCollectionEntryData* UPBCollectionSubsystem::FindEntryDataBySourceRow(
@@ -185,6 +209,9 @@ TArray<FPBCollectionBallDisplayData> UPBCollectionSubsystem::GetBallCatalogEntri
 	const UPBTableDataSubsystem* TableData = GameInstance
 		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
 		: nullptr;
+	const UPBGameDataLoadSubsystem* GameDataLoad = GameInstance
+		? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>()
+		: nullptr;
 	if (!IsValid(TableData))
 	{
 		return Result;
@@ -224,6 +251,17 @@ TArray<FPBCollectionBallDisplayData> UPBCollectionSubsystem::GetBallCatalogEntri
 			BallRowName,
 			BallRow.DisplayName,
 			BallRow.DescriptionKey);
+		if (const UPBBallDataAsset* BallDataAsset = ResolveLoadedPrimaryDataAsset<UPBBallDataAsset>(
+			GameDataLoad,
+			PBBallAssetIds::Type::BallData,
+			BallRowName))
+		{
+			DisplayData.Summary.IconTexture = BallDataAsset->BallIcon.Get();
+			if (!DisplayData.Summary.IconTexture)
+			{
+				DisplayData.Summary.IconTexture = BallDataAsset->BallSprite.Get();
+			}
+		}
 		DisplayData.PowerFlipTypeText = GetEnumDisplayText(BallRow.PowerFlipType);
 		DisplayData.RaceTypesText = JoinEnumDisplayTexts(BallRow.RaceTypes);
 		DisplayData.ClassTypeText = GetEnumDisplayText(BallRow.ClassType);
@@ -274,6 +312,9 @@ TArray<FPBCollectionSynergyDisplayData> UPBCollectionSubsystem::GetSynergyCatalo
 	const UPBTableDataSubsystem* TableData = GameInstance
 		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
 		: nullptr;
+	const UPBGameDataLoadSubsystem* GameDataLoad = GameInstance
+		? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>()
+		: nullptr;
 	if (!IsValid(TableData))
 	{
 		return Result;
@@ -298,6 +339,13 @@ TArray<FPBCollectionSynergyDisplayData> UPBCollectionSubsystem::GetSynergyCatalo
 			SynergyRow.DisplayName,
 			FText::GetEmpty(),
 			SynergyRow.SortOrder);
+		if (const UPBSynergyDataAsset* SynergyDataAsset = ResolveLoadedPrimaryDataAsset<UPBSynergyDataAsset>(
+			GameDataLoad,
+			PBSynergyAssetIds::Type::SynergyData,
+			SynergyRowName))
+		{
+			DisplayData.Summary.IconTexture = SynergyDataAsset->Icon.Get();
+		}
 		DisplayData.SynergyKindText = GetEnumDisplayText(SynergyRow.SynergyKind);
 		DisplayData.RuleTypeText = GetEnumDisplayText(SynergyRow.RuleType);
 		DisplayData.Summary.Subtitle = DisplayData.SynergyKindText;
@@ -393,6 +441,9 @@ TArray<FPBCollectionBumperDisplayData> UPBCollectionSubsystem::GetBumperCatalogE
 	const UPBTableDataSubsystem* TableData = GameInstance
 		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
 		: nullptr;
+	const UPBGameDataLoadSubsystem* GameDataLoad = GameInstance
+		? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>()
+		: nullptr;
 	if (!IsValid(TableData))
 	{
 		return Result;
@@ -416,6 +467,18 @@ TArray<FPBCollectionBumperDisplayData> UPBCollectionSubsystem::GetBumperCatalogE
 			BumperRowName,
 			BumperRow.DisplayName,
 			BumperRow.Description);
+		const UPBBumperDataAsset* BumperDataAsset = BumperRow.BumperDataAsset.Get();
+		if (!IsValid(BumperDataAsset))
+		{
+			BumperDataAsset = ResolveLoadedPrimaryDataAsset<UPBBumperDataAsset>(
+				GameDataLoad,
+				PBBumperAssetIds::Type::BumperData,
+				BumperRowName);
+		}
+		if (IsValid(BumperDataAsset))
+		{
+			DisplayData.Summary.IconTexture = BumperDataAsset->Icon.Get();
+		}
 		DisplayData.Summary.Description = PBTextFormatUtils::FormatSingleValueTemplate(
 			DisplayData.Summary.Description,
 			FText::AsNumber(BumperRow.RequiredTriggerCount));
@@ -465,6 +528,9 @@ TArray<FPBCollectionBossDisplayData> UPBCollectionSubsystem::GetBossCatalogEntri
 	const UPBTableDataSubsystem* TableData = GameInstance
 		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
 		: nullptr;
+	const UPBGameDataLoadSubsystem* GameDataLoad = GameInstance
+		? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>()
+		: nullptr;
 	if (!IsValid(TableData))
 	{
 		return Result;
@@ -496,6 +562,18 @@ TArray<FPBCollectionBossDisplayData> UPBCollectionSubsystem::GetBossCatalogEntri
 			BossRowName,
 			BossRow.DisplayName,
 			FText::GetEmpty());
+		const UPBBossDataAsset* BossDataAsset = BossRow.BossDataAsset.Get();
+		if (!IsValid(BossDataAsset))
+		{
+			BossDataAsset = ResolveLoadedPrimaryDataAsset<UPBBossDataAsset>(
+				GameDataLoad,
+				PBBossAssetIds::Type::BossData,
+				BossRowName);
+		}
+		if (IsValid(BossDataAsset))
+		{
+			DisplayData.Summary.IconTexture = BossDataAsset->BossIntroImage.Get();
+		}
 		DisplayData.MaxHP = BossRow.MaxHP;
 		DisplayData.MaxGroggyGauge = BossRow.MaxGroggyGauge;
 		DisplayData.GroggyDurationSeconds = BossRow.GroggyDurationSeconds;
