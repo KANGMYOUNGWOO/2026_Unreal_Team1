@@ -11,8 +11,7 @@ enum class EPBBossSnakeChargePatternState : uint8
 	None,
 	Aiming,
 	Charging,
-	Rebounding,
-	Groggy
+	Returning
 };
 
 UCLASS(Blueprintable)
@@ -26,8 +25,6 @@ protected:
 	virtual void ExecutePattern_Implementation(APBBossBase* Boss) override;
 	virtual void CancelPatternInternal_Implementation(APBBossBase* Boss) override;
 	virtual void ExecuteNativePattern(APBBossBase* Boss) override;
-	virtual bool PausePatternForExternalGroggy(APBBossBase* Boss) override;
-	virtual bool ResumePatternAfterExternalGroggy(APBBossBase* Boss) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0"))
 	float ChargeSpeed = 1800.0f;
@@ -37,9 +34,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0"))
 	float ReboundSeconds = 0.25f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0"))
-	float GroggySeconds = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.001"))
 	float UpdateIntervalSeconds = 0.016f;
@@ -74,11 +68,9 @@ private:
 	void UpdateCharge();
 	void MoveBossByChargeDistance(APBBossBase* Boss, float ChargeDistance);
 	void FinishCharge();
-	void StartRebound();
-	void UpdateRebound();
-	void FinishRebound();
-	void StartGroggy();
-	void FinishGroggy();
+	void StartReturn();
+	void UpdateReturn();
+	void FinishReturn();
 	void ClearPatternTimers();
 	void DestroyChargeTelegraph();
 	void SetPinballCollisionDamageBlocked(bool IsBlocked) const;
@@ -103,8 +95,6 @@ private:
 	float ChargeProgressDistance = 0.0f;
 	float ChargeAimElapsedSeconds = 0.0f;
 	float ChargeAimDurationSeconds = 0.0f;
-	float GroggyEndTimeSeconds = 0.0f;
-	float PausedGroggyRemainingSeconds = 0.0f;
 	bool IsChargeMovementStarted = false;
 
 	UPROPERTY(Transient)
@@ -115,6 +105,5 @@ private:
 
 	TSet<TObjectKey<class APBBallBase>> DamagedBalls;
 	FTimerHandle ChargeTimerHandle;
-	FTimerHandle ReboundTimerHandle;
-	FTimerHandle GroggyTimerHandle;
+	FTimerHandle ReturnTimerHandle;
 };
