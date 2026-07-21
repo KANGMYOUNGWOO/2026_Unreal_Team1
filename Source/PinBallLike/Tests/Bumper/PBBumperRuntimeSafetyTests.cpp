@@ -7,8 +7,10 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DataTable.h"
 #include "Engine/GameInstance.h"
+#include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "Materials/MaterialInterface.h"
 #include "TimerManager.h"
 #include "Tests/AutomationCommon.h"
 #include "PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.h"
@@ -356,8 +358,12 @@ bool FPBBumperProjectileVisualMeshTest::RunTest(const FString& Parameters)
 	UStaticMesh* CustomMesh = LoadObject<UStaticMesh>(
 		nullptr,
 		TEXT("/Game/Resources/Bumper/Mesh/SM_BumperProjectile_TurretRound_01.SM_BumperProjectile_TurretRound_01"));
+	UMaterialInterface* ProjectileMaterial = LoadObject<UMaterialInterface>(
+		nullptr,
+		TEXT("/Game/Resources/Bumper/Material/M_BumperProjectiles.M_BumperProjectiles"));
 	if (!TestNotNull(TEXT("The production bumper projectile class resolves"), ProjectileClass)
-		|| !TestNotNull(TEXT("The turret round mesh resolves"), CustomMesh))
+		|| !TestNotNull(TEXT("The turret round mesh resolves"), CustomMesh)
+		|| !TestNotNull(TEXT("The authored bumper projectile material resolves"), ProjectileMaterial))
 	{
 		return false;
 	}
@@ -393,8 +399,11 @@ bool FPBBumperProjectileVisualMeshTest::RunTest(const FString& Parameters)
 
 	TestTrue(TEXT("The requested projectile mesh is applied"),
 		VisualMesh->GetStaticMesh() == CustomMesh);
-	TestTrue(TEXT("A custom projectile mesh uses the configured uniform visual scale"),
-		VisualMesh->GetRelativeScale3D().Equals(FVector(1.75f), KINDA_SMALL_NUMBER));
+	TestTrue(TEXT("A custom projectile mesh uses its authored material instead of a component override"),
+		VisualMesh->GetMaterial(0) == ProjectileMaterial
+		&& CustomMesh->GetMaterial(0) == ProjectileMaterial);
+	TestTrue(TEXT("A custom projectile mesh uses its authored visual scale"),
+		VisualMesh->GetRelativeScale3D().Equals(FVector(1.0f), KINDA_SMALL_NUMBER));
 	TestTrue(TEXT("A custom projectile mesh compensates for the authored Y-forward axis"),
 		VisualMesh->GetRelativeRotation().Equals(FRotator(0.0f, -90.0f, 0.0f), KINDA_SMALL_NUMBER));
 	USphereComponent* CollisionSphere = Projectile->FindComponentByClass<USphereComponent>();
