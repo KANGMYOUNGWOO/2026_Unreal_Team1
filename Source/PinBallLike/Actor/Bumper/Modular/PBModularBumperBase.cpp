@@ -7,11 +7,11 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
-#include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
 #include "TimerManager.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
+#include "PinBallLike/Actor/Bumper/Feedback/PBBumperVfxRuntimeComponent.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBBumperPositionAnchor.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 
@@ -535,16 +535,11 @@ void APBModularBumperBase::SpawnActivationVfx() const
 	const AActor* SpawnSource = ActiveTriggerActor.IsValid()
 		? static_cast<const AActor*>(ActiveTriggerActor.Get())
 		: static_cast<const AActor*>(this);
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+	UPBBumperVfxRuntimeComponent::PlayOneShotAtLocation(
 		this,
 		ActivationVfx.Get(),
 		SpawnSource->GetActorLocation(),
-		SpawnSource->GetActorRotation(),
-		FVector::OneVector,
-		true,
-		true,
-		ENCPoolMethod::AutoRelease,
-		true);
+		SpawnSource->GetActorRotation());
 }
 
 void APBModularBumperBase::ScheduleNextPendingActivation()

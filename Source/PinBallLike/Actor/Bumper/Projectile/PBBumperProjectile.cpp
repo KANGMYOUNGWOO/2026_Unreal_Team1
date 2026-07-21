@@ -4,6 +4,7 @@
 #include "PBBumperProjectile.h"
 
 #include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "NiagaraComponent.h"
@@ -49,7 +50,8 @@ APBBumperProjectile* APBBumperProjectile::SpawnForTarget(
 	const float InLifetime,
 	UNiagaraSystem* InDeliveryVfx,
 	UNiagaraSystem* InImpactVfx,
-	UNiagaraSystem* InStatusVfx)
+	UNiagaraSystem* InStatusVfx,
+	UStaticMesh* InVisualMesh)
 {
 	UWorld* World = IsValid(WorldContext) ? WorldContext->GetWorld() : nullptr;
 	if (!IsValid(World)
@@ -84,7 +86,8 @@ APBBumperProjectile* APBBumperProjectile::SpawnForTarget(
 		InPayloadDuration,
 		InDeliveryVfx,
 		InImpactVfx,
-		InStatusVfx);
+		InStatusVfx,
+		InVisualMesh);
 	Projectile->SetLifeSpan(FMath::Max(InLifetime, 0.1f));
 	Projectile->ActivateProjectile();
 	return Projectile;
@@ -98,7 +101,8 @@ void APBBumperProjectile::ConfigureForTarget(
 	const float InPayloadDuration,
 	UNiagaraSystem* InDeliveryVfx,
 	UNiagaraSystem* InImpactVfx,
-	UNiagaraSystem* InStatusVfx)
+	UNiagaraSystem* InStatusVfx,
+	UStaticMesh* InVisualMesh)
 {
 	TargetActor = InTargetActor;
 	Payload = InPayload;
@@ -109,6 +113,7 @@ void APBBumperProjectile::ConfigureForTarget(
 	StatusVfx = InStatusVfx;
 	bDestroyOnResolved = bInDestroyOnResolved;
 	bHasResolved = false;
+	ApplyVisualMesh(InVisualMesh);
 	StartDeliveryVfx();
 
 	if (!IsValid(ProjectileMovementComponent))
@@ -130,6 +135,40 @@ void APBBumperProjectile::ConfigureForTarget(
 		{
 			SetActorRotation(Direction.Rotation());
 		}
+	}
+}
+
+UStaticMeshComponent* APBBumperProjectile::ResolveVisualMeshComponent() const
+{
+	if (!VisualMeshComponentTag.IsNone())
+	{
+		const TArray<UActorComponent*> TaggedComponents = GetComponentsByTag(
+			UStaticMeshComponent::StaticClass(),
+			VisualMeshComponentTag);
+		for (UActorComponent* TaggedComponent : TaggedComponents)
+		{
+			if (UStaticMeshComponent* MeshComponent = Cast<UStaticMeshComponent>(TaggedComponent))
+			{
+				return MeshComponent;
+			}
+		}
+	}
+
+	return FindComponentByClass<UStaticMeshComponent>();
+}
+
+void APBBumperProjectile::ApplyVisualMesh(UStaticMesh* InVisualMesh) const
+{
+	if (!IsValid(InVisualMesh))
+	{
+		return;
+	}
+
+	if (UStaticMeshComponent* MeshComponent = ResolveVisualMeshComponent())
+	{
+		MeshComponent->SetStaticMesh(InVisualMesh);
+		MeshComponent->SetRelativeRotation(CustomVisualMeshRotationOffset);
+		MeshComponent->SetRelativeScale3D(FVector(FMath::Max(CustomVisualMeshScale, 0.01f)));
 	}
 }
 

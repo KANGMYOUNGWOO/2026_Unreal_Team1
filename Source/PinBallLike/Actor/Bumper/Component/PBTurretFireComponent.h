@@ -10,6 +10,7 @@
 class AProjectileBase;
 class UNiagaraSystem;
 class USceneComponent;
+class UStaticMesh;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FPBTurretProjectileSignature,
@@ -44,6 +45,14 @@ public:
 		float YawOffsetDegrees,
 		FRotator& OutRotation);
 
+	static bool TryResolveAimRotationFromDirections(
+		const FVector& CurrentAimDirection,
+		const FVector& TargetDirection,
+		const FRotator& CurrentRotation,
+		bool bYawOnly,
+		float YawOffsetDegrees,
+		FRotator& OutRotation);
+
 	void ConfigureAttack(
 		AActor* InTargetActor,
 		EPBBumperProjectilePayload InPayload,
@@ -67,6 +76,9 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Fire")
 	TSubclassOf<AProjectileBase> ProjectileClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Fire")
+	TObjectPtr<UStaticMesh> ProjectileMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Fire")
 	FName MuzzleTag = TEXT("TurretMuzzle");
@@ -98,6 +110,7 @@ protected:
 private:
 	void HandleBumperProjectileResolved(APBBumperProjectile* Projectile, bool bApplied);
 	USceneComponent* ResolveAimPivot();
+	USceneComponent* ResolveMuzzleComponent() const;
 	FTransform GetMuzzleTransform() const;
 	AProjectileBase* GetProjectileFromPool();
 	AProjectileBase* SpawnProjectileActor();

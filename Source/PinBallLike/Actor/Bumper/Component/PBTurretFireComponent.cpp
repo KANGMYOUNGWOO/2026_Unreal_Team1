@@ -169,13 +169,25 @@ bool UPBTurretFireComponent::AimAtTarget()
 		: Owner->GetActorRotation();
 
 	FRotator AimRotation;
-	if (!TryResolveAimRotation(
-		SourceLocation,
-		Target->GetActorLocation(),
-		CurrentRotation,
-		bYawOnlyAim,
-		AimYawOffsetDegrees,
-		AimRotation))
+	const FVector TargetDirection = Target->GetActorLocation() - SourceLocation;
+	USceneComponent* MuzzleComponent = ResolveMuzzleComponent();
+	const bool bResolvedFromMuzzle = IsValid(AimPivot)
+		&& IsValid(MuzzleComponent)
+		&& TryResolveAimRotationFromDirections(
+			MuzzleComponent->GetComponentLocation() - SourceLocation,
+			TargetDirection,
+			CurrentRotation,
+			bYawOnlyAim,
+			AimYawOffsetDegrees,
+			AimRotation);
+	if (!bResolvedFromMuzzle
+		&& !TryResolveAimRotation(
+			SourceLocation,
+			Target->GetActorLocation(),
+			CurrentRotation,
+			bYawOnlyAim,
+			AimYawOffsetDegrees,
+			AimRotation))
 	{
 		return false;
 	}
@@ -188,6 +200,48 @@ bool UPBTurretFireComponent::AimAtTarget()
 	{
 		Owner->SetActorRotation(AimRotation);
 	}
+	return true;
+}
+
+bool UPBTurretFireComponent::TryResolveAimRotationFromDirections(
+	const FVector& CurrentAimDirection,
+	const FVector& TargetDirection,
+	const FRotator& CurrentRotation,
+	const bool bYawOnly,
+	const float YawOffsetDegrees,
+	FRotator& OutRotation)
+{
+	FVector CurrentDirection = CurrentAimDirection;
+	FVector DesiredDirection = TargetDirection;
+	if (bYawOnly)
+	{
+		CurrentDirection.Z = 0.0f;
+		DesiredDirection.Z = 0.0f;
+	}
+
+	if (CurrentDirection.IsNearlyZero() || DesiredDirection.IsNearlyZero())
+	{
+		return false;
+	}
+
+	CurrentDirection.Normalize();
+	DesiredDirection.Normalize();
+	if (bYawOnly)
+	{
+		const float DeltaYaw = FMath::FindDeltaAngleDegrees(
+			CurrentDirection.Rotation().Yaw,
+			DesiredDirection.Rotation().Yaw);
+		OutRotation = CurrentRotation;
+		OutRotation.Yaw = FRotator::NormalizeAxis(
+			CurrentRotation.Yaw + DeltaYaw + YawOffsetDegrees);
+		return true;
+	}
+
+	const FQuat DirectionDelta = FQuat::FindBetweenNormals(
+		CurrentDirection,
+		DesiredDirection);
+	OutRotation = (DirectionDelta * CurrentRotation.Quaternion()).Rotator();
+	OutRotation.Yaw = FRotator::NormalizeAxis(OutRotation.Yaw + YawOffsetDegrees);
 	return true;
 }
 
@@ -249,6 +303,28 @@ USceneComponent* UPBTurretFireComponent::ResolveAimPivot()
 	return nullptr;
 }
 
+USceneComponent* UPBTurretFireComponent::ResolveMuzzleComponent() const
+{
+	const AActor* Owner = GetOwner();
+	if (!IsValid(Owner) || MuzzleTag.IsNone())
+	{
+		return nullptr;
+	}
+
+	const TArray<UActorComponent*> TaggedComponents = Owner->GetComponentsByTag(
+		USceneComponent::StaticClass(),
+		MuzzleTag);
+	for (UActorComponent* TaggedComponent : TaggedComponents)
+	{
+		if (USceneComponent* MuzzleComponent = Cast<USceneComponent>(TaggedComponent))
+		{
+			return MuzzleComponent;
+		}
+	}
+
+	return nullptr;
+}
+
 void UPBTurretFireComponent::ReleaseProjectile(AActor* Projectile)
 {
 	DeactivateProjectile(Cast<AProjectileBase>(Projectile));
@@ -262,17 +338,9 @@ FTransform UPBTurretFireComponent::GetMuzzleTransform() const
 		return FTransform::Identity;
 	}
 
-	const TArray<UActorComponent*> TaggedComponents = Owner->GetComponentsByTag(
-		USceneComponent::StaticClass(),
-		MuzzleTag);
-
-	for (UActorComponent* TaggedComponent : TaggedComponents)
+	if (const USceneComponent* MuzzleComponent = ResolveMuzzleComponent())
 	{
-		const USceneComponent* MuzzleComponent = Cast<USceneComponent>(TaggedComponent);
-		if (IsValid(MuzzleComponent))
-		{
-			return MuzzleComponent->GetComponentTransform();
-		}
+		return MuzzleComponent->GetComponentTransform();
 	}
 
 	return Owner->GetActorTransform();
@@ -339,7 +407,8 @@ void UPBTurretFireComponent::ActivateProjectile(AProjectileBase* Projectile, con
 			0.0f,
 			DeliveryVfx,
 			ImpactVfx,
-			nullptr);
+			nullptr,
+			ProjectileMesh);
 		BumperProjectile->OnProjectileResolved.AddUObject(
 			this,
 			&UPBTurretFireComponent::HandleBumperProjectileResolved);

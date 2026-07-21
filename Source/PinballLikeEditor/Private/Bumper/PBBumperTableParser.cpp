@@ -20,7 +20,7 @@ UPBBumperTableParser::UPBBumperTableParser()
 {
 	DataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Bumper");
 	DataAssetPreset.NameFormat = TEXT("DA_Bumper_{0}");
-	IconPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon");
+	IconPreset.FolderPath.Path = TEXT("/Game/Resources/Bumper/Texture/Icon");
 	IconPreset.NameFormat = TEXT("T_{0}");
 	TriggerClassPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Trigger");
 	TriggerClassPreset.NameFormat = TEXT("BP_{0}");

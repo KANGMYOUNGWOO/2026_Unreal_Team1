@@ -23,6 +23,7 @@ bool UPBBumperComboArcComponent::Arm(
 	APBModularBumperBase* SourceBumper,
 	AActor* BossTarget,
 	TSubclassOf<APBBumperProjectile> ProjectileClass,
+	UStaticMesh* ProjectileMesh,
 	const int32 ComboInterval,
 	const int32 Damage,
 	const float Duration,
@@ -60,6 +61,7 @@ bool UPBBumperComboArcComponent::Arm(
 	ArmedBumper = SourceBumper;
 	ArmedBossTarget = BossTarget;
 	ArmedProjectileClass = ProjectileClass;
+	ArmedProjectileMesh = ProjectileMesh;
 	ArmedSpawnOffset = SpawnOffset;
 	ArmedComboInterval = FMath::Clamp(ComboInterval, 1, MaxComboArcInterval);
 	ArmedDamage = FMath::Clamp(Damage, 1, MaxComboArcDamage);
@@ -113,6 +115,7 @@ void UPBBumperComboArcComponent::Disarm()
 	ArmedBumper.Reset();
 	ArmedBossTarget.Reset();
 	ArmedProjectileClass = nullptr;
+	ArmedProjectileMesh = nullptr;
 	ArmedComboInterval = 0;
 	ArmedDamage = 0;
 	AccumulatedComboGain = 0;
@@ -149,7 +152,8 @@ bool UPBBumperComboArcComponent::FireArcProjectile() const
 		ArmedProjectileLifetime,
 		Bumper->GetDeliveryVfx(),
 		Bumper->GetImpactVfx(),
-		nullptr));
+		nullptr,
+		ArmedProjectileMesh));
 }
 
 void UPBBumperComboArcComponent::HandleComboChanged(

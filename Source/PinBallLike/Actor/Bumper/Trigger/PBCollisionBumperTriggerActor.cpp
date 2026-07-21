@@ -58,6 +58,7 @@ void APBCollisionBumperTriggerActor::EndPlay(const EEndPlayReason::Type EndPlayR
 	CollisionAreas.Reset();
 	TriggerAreas.Reset();
 	TriggeringBallOverlapCounts.Reset();
+	LastHitResponseTimes.Reset();
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -186,6 +187,69 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 	return false;
 }
 
+bool APBCollisionBumperTriggerActor::TryBeginHitResponse(AActor* MovableActor)
+{
+	UWorld* World = GetWorld();
+	if (!IsValid(MovableActor) || !IsValid(World))
+	{
+		return false;
+	}
+
+	const TWeakObjectPtr<AActor> MovableKey = MovableActor;
+	const double CurrentTime = World->GetTimeSeconds();
+	const double MinimumInterval = FMath::Max(MinimumHitResponseInterval, 0.0f);
+	if (const double* LastResponseTime = LastHitResponseTimes.Find(MovableKey))
+	{
+		if (CurrentTime - *LastResponseTime < MinimumInterval)
+		{
+			return false;
+		}
+	}
+
+	LastHitResponseTimes.Add(MovableKey, CurrentTime);
+	return true;
+}
+
+bool APBCollisionBumperTriggerActor::TryResolveBounceDirection(
+	const FVector& ImpactNormal,
+	const FVector& MovableLocation,
+	const FVector& ImpactPoint,
+	const FVector& IncomingVelocity,
+	FVector& OutBounceDirection)
+{
+	OutBounceDirection = FVector::ZeroVector;
+
+	FVector CandidateDirection = ImpactNormal;
+	CandidateDirection.Z = 0.0f;
+	if (!CandidateDirection.Normalize())
+	{
+		return false;
+	}
+
+	FVector OutwardReference = MovableLocation - ImpactPoint;
+	OutwardReference.Z = 0.0f;
+	if (OutwardReference.Normalize())
+	{
+		if (FVector::DotProduct(CandidateDirection, OutwardReference) < 0.0f)
+		{
+			CandidateDirection *= -1.0f;
+		}
+	}
+	else
+	{
+		FVector IncomingDirection = IncomingVelocity;
+		IncomingDirection.Z = 0.0f;
+		if (IncomingDirection.Normalize()
+			&& FVector::DotProduct(CandidateDirection, IncomingDirection) > 0.0f)
+		{
+			CandidateDirection *= -1.0f;
+		}
+	}
+
+	OutBounceDirection = CandidateDirection;
+	return true;
+}
+
 bool APBCollisionBumperTriggerActor::QueueBounceVelocity(AActor* MovableActor, const FHitResult& Hit)
 {
 	if (!IsValid(MovableActor))
@@ -193,7 +257,8 @@ bool APBCollisionBumperTriggerActor::QueueBounceVelocity(AActor* MovableActor, c
 		return false;
 	}
 
-	if (!PBInterfaceUtils::FindInterface<IMovable>(MovableActor))
+	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(MovableActor);
+	if (!Movable)
 	{
 		return false;
 	}
@@ -209,9 +274,13 @@ bool APBCollisionBumperTriggerActor::QueueBounceVelocity(AActor* MovableActor, c
 		return false;
 	}
 
-	FVector BounceDirection = Hit.ImpactNormal;
-	BounceDirection.Z = 0.0f;
-	if (!BounceDirection.Normalize())
+	FVector BounceDirection;
+	if (!TryResolveBounceDirection(
+		Hit.ImpactNormal,
+		MovableActor->GetActorLocation(),
+		Hit.ImpactPoint,
+		Movable->GetVelocity(),
+		BounceDirection))
 	{
 		return false;
 	}
@@ -262,6 +331,10 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 		? IsHitPointInsideTriggerArea(Hit.ImpactPoint)
 		: IsBallInTriggerArea(OtherActor);
 	if (!bIsInValidTriggerArea)
+	{
+		return;
+	}
+	if (!TryBeginHitResponse(OtherActor))
 	{
 		return;
 	}
@@ -326,4 +399,5 @@ void APBCollisionBumperTriggerActor::HandleTriggerEndOverlap(
 	}
 
 	TriggeringBallOverlapCounts.Remove(BallKey);
+	LastHitResponseTimes.Remove(BallKey);
 }

@@ -2,6 +2,7 @@
 
 
 #include "Bumper/PBBumperEffectTableParser.h"
+#include "Bumper/PBBumperVfxGenerationCommandlet.h"
 
 #include "PBSheetParserUtils.h"
 #include "Engine/DataTable.h"
@@ -46,10 +47,22 @@ bool UPBBumperEffectTableParser::ParseRow(const FName RowName, const TMap<FStrin
 	NewRow.Duration = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("Duration")), 0.0f), 0.0f);
 	NewRow.Count = FMath::Max(ParseIntValue(RowData.FindRef(TEXT("Count")), 0), 0);
 	NewRow.SharedEffectId = ParseNameValue(RowData.FindRef(TEXT("SharedEffectId")));
-	NewRow.ActivationVfxId = ParseNameValue(RowData.FindRef(TEXT("ActivationVfxId")));
-	NewRow.DeliveryVfxId = ParseNameValue(RowData.FindRef(TEXT("DeliveryVfxId")));
-	NewRow.ImpactVfxId = ParseNameValue(RowData.FindRef(TEXT("ImpactVfxId")));
-	NewRow.StatusVfxId = ParseNameValue(RowData.FindRef(TEXT("StatusVfxId")));
+	NewRow.ActivationVfxId = PBBumperVfxCatalog::CanonicalizeKnownVfxId(
+		RowName,
+		EPBBumperVfxStage::Activation,
+		ParseNameValue(RowData.FindRef(TEXT("ActivationVfxId"))));
+	NewRow.DeliveryVfxId = PBBumperVfxCatalog::CanonicalizeKnownVfxId(
+		RowName,
+		EPBBumperVfxStage::Delivery,
+		ParseNameValue(RowData.FindRef(TEXT("DeliveryVfxId"))));
+	NewRow.ImpactVfxId = PBBumperVfxCatalog::CanonicalizeKnownVfxId(
+		RowName,
+		EPBBumperVfxStage::Impact,
+		ParseNameValue(RowData.FindRef(TEXT("ImpactVfxId"))));
+	NewRow.StatusVfxId = PBBumperVfxCatalog::CanonicalizeKnownVfxId(
+		RowName,
+		EPBBumperVfxStage::Status,
+		ParseNameValue(RowData.FindRef(TEXT("StatusVfxId"))));
 	NewRow.Description = FText::FromString(RowData.FindRef(TEXT("Description")));
 
 	TargetTable->AddRow(RowName, NewRow);

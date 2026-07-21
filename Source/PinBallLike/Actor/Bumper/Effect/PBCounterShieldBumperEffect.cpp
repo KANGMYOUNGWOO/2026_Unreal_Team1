@@ -85,6 +85,7 @@ void UPBCounterShieldBumperEffect::ActivateEffectForActor(
 			SourceTransform,
 			BossTarget,
 			ProjectileClass,
+			ProjectileMesh,
 			CounterDamage,
 			CounterDuration,
 			ProjectileSpawnOffset,
