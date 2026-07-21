@@ -44,4 +44,5 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Ball|Combo")
 	int32 MaxCombo = 0;
+	
 };

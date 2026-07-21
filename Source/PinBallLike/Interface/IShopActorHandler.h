@@ -21,7 +21,9 @@ class PINBALLLIKE_API IIShopActorHandler
 	GENERATED_BODY()
 
 public:
-	virtual void BuyItem(int32 SlotIndex) = 0;
+	virtual void BuyItem(int32 SlotIndex,bool IsEnough) = 0;
+	virtual void ShoPPurchaseConfirm(int SlotIndex) =0;
+	virtual void ShowNotEnoughGoldPopup()=0;
 	
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:

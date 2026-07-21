@@ -60,6 +60,7 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 	const FSoftObjectPath ShopTablePath = Settings->ShopTable.ToSoftObjectPath();
 	const FSoftObjectPath RelicTablePath = Settings->RelicTable.ToSoftObjectPath();
     const FSoftObjectPath RelicModifierTablePath = Settings->RelicModifierTable.ToSoftObjectPath();
+	const FSoftObjectPath RelicTriggerTablePath = Settings->RelicTriggerTable.ToSoftObjectPath();
 	
 	if (CollectionTablePath.IsValid())
 	{
@@ -166,6 +167,11 @@ void UPBTableDataSubsystem::LoadStartupGameDataAsync()
 		TablePaths.Add(RelicModifierTablePath);
 	}
 	
+	if (RelicTriggerTablePath.IsValid())
+	{
+		TablePaths.Add(RelicTriggerTablePath);
+	}
+	
 	if (TablePaths.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[TableData] No startup table paths are configured."));
@@ -235,9 +241,11 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 	UDataTable* LoadedEffectParamTable = nullptr;
 	UDataTable* LoadedRelicTable = nullptr;
 	UDataTable* LoadedRelicModifierTable = nullptr;
+	UDataTable* LoadedRelicTriggerTable = nullptr;
 	UDataTable* LoadedSynergyTable = nullptr;
 	UDataTable* LoadedSynergyTierTable = nullptr;
 	UDataTable* LoadedShopTable = nullptr;
+	
 	
 	const UPBGameDataSettings* Settings = GetDefault<UPBGameDataSettings>();
 	if (IsValid(Settings))
@@ -261,6 +269,7 @@ void UPBTableDataSubsystem::OnStartupGameDataLoadedInternal(TArray<FSoftObjectPa
 		LoadedEffectParamTable = Cast<UDataTable>(Settings->EffectParamTable.Get());
 		LoadedRelicTable = Cast<UDataTable>(Settings->RelicTable.Get());
 		LoadedRelicModifierTable = Cast<UDataTable>(Settings->RelicModifierTable.Get());
+		
 		LoadedSynergyTable = Cast<UDataTable>(Settings->SynergyTable.Get());
 		LoadedSynergyTierTable = Cast<UDataTable>(Settings->SynergyTierTable.Get());
 		LoadedShopTable = Cast<UDataTable>(Settings->ShopTable.Get());
@@ -471,6 +480,7 @@ void UPBTableDataSubsystem::SetRelicTable(UDataTable* InRelicTable , UDataTable*
 {
 	RelicTable = InRelicTable;
 	RelicModifierTable = InRelicModifierTable;
+	
 	UE_LOG(LogTemp, Log, TEXT("[TableData] Relic tables assigned."));
 }
 
@@ -920,6 +930,11 @@ bool UPBTableDataSubsystem::FindRelicRow(FName RowName, FPBRelicTableRow& OutRow
 bool UPBTableDataSubsystem::FindRelicModifierRow(FName RowName, FPBRelicModifierRow OutRow) const
 {
 	return FindTableRow(RelicModifierTable,RowName,OutRow,TEXT("FindRelicModifierRow"));
+}
+
+bool UPBTableDataSubsystem::FindRelicTrigger(FName RowName, FPBRelicTriggerTableRow& OutRow) const
+{
+	return FindTableRow(RelicTriggerTable,RowName,OutRow,TEXT("FindRelicTriggerRow"));
 }
 
 void UPBTableDataSubsystem::GetRelicModifierRows(FName RelicId, TArray<FPBRelicModifierRow>& OutRows) const

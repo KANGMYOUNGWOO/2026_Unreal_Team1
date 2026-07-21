@@ -25,6 +25,7 @@ public:
 
 	void AddFirstAttackRule(float AttackPercent, int32 ExtraDamage);
 	void AddComboStatBuffRule(FName StatName, FName ModifyType, float Value, int32 RequiredCombo);
+	void AddComboPeriodStatBuffRule(FName StatName, FName ModifyType, float Value, int32 RequiredCombo);
 	void AddSkillDamagePercent(float Percent);
 	void AddOnHitStatStackRule(FName StatName, FName ModifyType, float Value);
 	void AddOnHitDamageIgnoreChance(FName ResourceName, int32 IgnoreCount, float ChancePercent);
@@ -36,7 +37,9 @@ public:
 	void AddFirstHitTimedStatBuffRule(FName StatName, FName ModifyType, float Value, float Duration);
 	void AddSwitchNextHitDamageRule(float AttackPercent);
 	void AddSwitchTimedStatBuffRule(FName StatName, FName ModifyType, float Value, float Duration);
-
+	
+	
+	
 	int32 ModifyCollisionDamage(int32 BaseDamage);
 	int32 ModifySkillDamage(int32 BaseDamage) const;
 	void HandleEnemyHit(AActor* EnemyActor);

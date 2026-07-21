@@ -19,9 +19,15 @@ class PINBALLLIKE_API UPBShopHoverInfoWidget : public UUserWidget
 	
 public:
 	
-	//UPROPERTY(meta = (BindWidget))
-	//TObjectPtr<UTextBlock> NameTextBlock;
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> ItemNameText;
 	
-	//UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
-	//TObjectPtr<UImage> SlotImage;
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> PriceText;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> SynergyText;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UImage> ItemIcon;
 };

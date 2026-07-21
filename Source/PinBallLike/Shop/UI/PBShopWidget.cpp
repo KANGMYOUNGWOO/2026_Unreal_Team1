@@ -3,6 +3,8 @@
 
 #include "PBShopWidget.h"
 
+#include "PBPurchaseConfirmWidget.h"
+#include "PBShopRefuseWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components//Button.h"
 #include "Components/CanvasPanelSlot.h"
@@ -138,6 +140,26 @@ void UPBShopWidget::UnActiveSlotWidget(int32 SlotIndex)
 	}
 
 	ShopSlotWidgets[SlotIndex]->SetVisibility(ESlateVisibility::Collapsed);
+	ConfirmWidget->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UPBShopWidget::RefuseWidgetSpawn()
+{
+	if (ConfirmWidget)
+	{
+		ConfirmWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	
+	if(RefuseWidget)
+	{
+		RefuseWidget->Show();
+	}
+}
+
+void UPBShopWidget::SetPurchaseConfirmInfo(const FPBPurchaseConfirmData& Data)
+{
+	ConfirmWidget->SetInfo(Data.SlotIndex, Data.BallName,Data.Price,Data.SynergyDescription,nullptr);
+	ConfirmWidget->SetVisibility(ESlateVisibility::Visible);
 }
 
 void UPBShopWidget::OnExitButtonClicked()

@@ -20,4 +20,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Relic")
 	EPBRelicRarity Rarity = EPBRelicRarity::Common;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Relic")
+	FName EffectId = NAME_None;
 };

@@ -24,6 +24,9 @@ public:
 	
 	APBBetActor();
 
+	UFUNCTION()
+	void HandleBetResultAnimationsFinished();
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -48,7 +51,7 @@ private:
 
 	FPBBettingResult ResolveBet(int32 SelectedIndex);
 
-	void FinishBet(const FPBBettingResult& Result);
+	void FinishBet();
 
 private:
 	UPROPERTY()

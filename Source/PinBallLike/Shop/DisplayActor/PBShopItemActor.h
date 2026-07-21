@@ -24,6 +24,8 @@ public:
 	
 	FVector GetUIWorldLocation() const;
 	
+	
+	
 	int32 GetSlotIndex() const
 	{
 		return SlotIndex;
@@ -59,6 +61,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	
+	void OnPurchase();
 public :
 	
 	

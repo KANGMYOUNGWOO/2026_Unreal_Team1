@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "PinBallLike/Struct/Shop/PBPurchaseConfirmData.h"
 #include "PBShopWidget.generated.h"
 
 /**
@@ -15,9 +16,13 @@ class UTextBlock;
 class UButton;
 struct FBallDataStruct;
 class UPBShopViewModel;
+class UPBShopRefuseWidget;
+class UPBDeckOverviewWidget;
+class UPBSellZoneWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBShopRerollRequested);
 
+class UPBPurchaseConfirmWidget;
 
 UCLASS()
 class PINBALLLIKE_API UPBShopWidget : public UUserWidget
@@ -54,8 +59,21 @@ public :
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidget), Category="Shop|Widget")
 	TObjectPtr<UTextBlock> GoldTextBlock;
 	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UPBPurchaseConfirmWidget> ConfirmWidget;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UPBShopRefuseWidget> RefuseWidget;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UPBDeckOverviewWidget> DeckWidget;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UPBSellZoneWidget> SellZoneWidget; 
+	
 	UPROPERTY(meta = (BindWidget) )
 	TObjectPtr<UButton> ExitButton;
+	
 	
 	
 	UPROPERTY(meta=(BindWidget))
@@ -64,8 +82,11 @@ public :
 	UPROPERTY(BlueprintAssignable, Category="Shop|Event")
 	FPBShopRerollRequested OnRerollRequested;
 	
+	//UPROPERTY(meta = (BindWidget))
+	//TObjectPtr<UButton> ReRollButton;
+	
 	UFUNCTION(BlueprintImplementableEvent)
-	void BP_SetShopViewModel(UPBShopViewModel* InViewModel);
+	void BP_SetShopViewModel(UPBShopViewModel* InViewModel);	
 	
 private:
 	void UpdateSlotWidgetPositionsOnce();
@@ -80,7 +101,11 @@ public:
 	void SetShopSlotWidgetData(int32 index, FText Name, int32 Price, FText Synergy);
 	
 	void UnActiveSlotWidget(int32 SlotIndex);
-
+ 
+	void RefuseWidgetSpawn();
+	
+	void SetPurchaseConfirmInfo(const FPBPurchaseConfirmData& Data);
+	
 private:
 	
 	UFUNCTION()

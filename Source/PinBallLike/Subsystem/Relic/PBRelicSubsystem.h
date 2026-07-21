@@ -4,6 +4,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBRelicSubsystem.generated.h"
 
+struct FPBRelicTableRow;
 class UPBRelicCalculator;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(
@@ -55,4 +56,8 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBRelicCalculator> RelicCalculator;
+	
+	bool ApplyRelicEffect(  const FName RelicId,
+	const FPBRelicTableRow& RelicRow,
+	AActor* TargetActor);
 };

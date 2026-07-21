@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include  "PinBallLike/Struct/Shop/PBPurchaseConfirmData.h"
 #include "IShopPurchaseHandler.generated.h"
 
 // This class does not need to be modified.
@@ -23,6 +24,8 @@ class PINBALLLIKE_API IIShopPurchaseHandler
 	
 public:
 	virtual bool BuyItem(int32 SlotIndex) = 0;
+	virtual void RequestPurchase(int32 SlotIndex) =0;
+	virtual bool BuildPurchaseConfirmData(int32 SlotIndex, FPBPurchaseConfirmData& OutData) const = 0;
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 
 };
