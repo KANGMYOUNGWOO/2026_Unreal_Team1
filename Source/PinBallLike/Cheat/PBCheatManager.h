@@ -33,6 +33,9 @@ public:
 	void GoBattle();
 
 	UFUNCTION(exec)
+	void SetBossIndex(int32 BossIndex);
+
+	UFUNCTION(exec)
 	void GoShop();
 
 	UFUNCTION(exec)

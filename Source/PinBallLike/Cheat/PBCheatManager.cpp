@@ -23,6 +23,7 @@
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
+#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 #include "PinBallLike/Table/Ball/PBBallAssetIds.h"
 
@@ -31,6 +32,7 @@ namespace
 const FName LeftGolemHandName = TEXT("Left");
 const FName RightGolemHandName = TEXT("Right");
 constexpr int32 MaxBumperCheatChargeCount = 100;
+constexpr int32 BossCount = 4;
 
 void ShowSimplePopup(UWorld* World)
 {
@@ -306,6 +308,30 @@ void UPBCheatManager::GoMainMenu()
 void UPBCheatManager::GoBattle()
 {
 	GoScene(2);
+}
+
+void UPBCheatManager::SetBossIndex(const int32 BossIndex)
+{
+	UGameInstance* GameInstance = GetCheatGameInstance();
+	UPBPlayerDataSubsystem* PlayerDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBPlayerDataSubsystem>()
+		: nullptr;
+	if (!PlayerDataSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] SetBossIndex failed. PlayerDataSubsystem is invalid."));
+		return;
+	}
+
+	if (!PlayerDataSubsystem->SetCurrentBossIndex(BossIndex, BossCount))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cheat] SetBossIndex failed. BossIndex=%d. Use 0~%d."),
+			BossIndex,
+			BossCount - 1);
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Cheat] SetBossIndex succeeded. BossIndex=%d."), BossIndex);
+	GoBattle();
 }
 
 void UPBCheatManager::GoShop()

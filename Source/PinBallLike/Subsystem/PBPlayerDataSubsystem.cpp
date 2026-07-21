@@ -65,6 +65,17 @@ void UPBPlayerDataSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
+bool UPBPlayerDataSubsystem::SetCurrentBossIndex(const int32 NewBossIndex, const int32 BossCount)
+{
+	if (NewBossIndex < 0 || NewBossIndex >= BossCount)
+	{
+		return false;
+	}
+
+	CurrentBossIndex = NewBossIndex;
+	return true;
+}
+
 void UPBPlayerDataSubsystem::AdvanceBossProgress(const int32 BossCount)
 {
 	if (CurrentBossIndex + 1 < BossCount)

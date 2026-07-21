@@ -27,6 +27,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
 	int32 GetCurrentBossIndex() const { return CurrentBossIndex; }
 
+	bool SetCurrentBossIndex(int32 NewBossIndex, int32 BossCount);
+
 	void AdvanceBossProgress(int32 BossCount);
 #pragma endregion
 
