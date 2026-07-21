@@ -73,6 +73,7 @@ void UPBComboArcBumperEffect::ActivateEffectForActor(
 			Bumper,
 			BossTarget,
 			ProjectileClass,
+			ProjectileMesh,
 			ComboInterval,
 			DamageAmount,
 			Duration,

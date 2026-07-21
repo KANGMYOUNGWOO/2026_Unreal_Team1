@@ -7,6 +7,7 @@
 class APBBumperProjectile;
 class APBModularBumperBase;
 class UPBBaseResourceComponent;
+class UStaticMesh;
 
 UCLASS(Transient)
 class PINBALLLIKE_API UPBBumperCounterShieldComponent : public UActorComponent
@@ -21,6 +22,7 @@ public:
 		const FTransform& SourceTransform,
 		AActor* BossTarget,
 		TSubclassOf<APBBumperProjectile> ProjectileClass,
+		UStaticMesh* ProjectileMesh,
 		int32 Damage,
 		float Duration,
 		const FVector& SpawnOffset,
@@ -47,6 +49,10 @@ private:
 	TWeakObjectPtr<APBModularBumperBase> ArmedBumper;
 	TWeakObjectPtr<AActor> ArmedBossTarget;
 	TSubclassOf<APBBumperProjectile> ArmedProjectileClass;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UStaticMesh> ArmedProjectileMesh;
+
 	FTransform ArmedSourceTransform = FTransform::Identity;
 	FVector ArmedSpawnOffset = FVector::ZeroVector;
 	int32 ArmedDamage = 0;

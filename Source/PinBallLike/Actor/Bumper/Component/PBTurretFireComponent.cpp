@@ -4,18 +4,34 @@
 #include "PBTurretFireComponent.h"
 
 #include "Components/SceneComponent.h"
+#include "Components/TimelineComponent.h"
 #include "Engine/World.h"
 #include "PinBallLike/Actor/Projectile/ProjectileBase.h"
 #include "TimerManager.h"
 
 UPBTurretFireComponent::UPBTurretFireComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.TickGroup = TG_PostUpdateWork;
 }
 
 void UPBTurretFireComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (AActor* Owner = GetOwner())
+	{
+		TArray<UActorComponent*> TimelineComponents;
+		Owner->GetComponents(UTimelineComponent::StaticClass(), TimelineComponents);
+		for (UActorComponent* TimelineComponent : TimelineComponents)
+		{
+			if (IsValid(TimelineComponent))
+			{
+				AddTickPrerequisiteComponent(TimelineComponent);
+			}
+		}
+	}
 
 	if (!IsUseObjectPool)
 	{
@@ -38,9 +54,28 @@ void UPBTurretFireComponent::BeginPlay()
 
 void UPBTurretFireComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	SetComponentTickEnabled(false);
+	AttackTarget.Reset();
+	CachedAimPivot.Reset();
 	ClearPool();
 
 	Super::EndPlay(EndPlayReason);
+}
+
+void UPBTurretFireComponent::TickComponent(
+	const float DeltaTime,
+	const ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (!bAimAtTargetBeforeFire || !AttackTarget.IsValid())
+	{
+		SetComponentTickEnabled(false);
+		return;
+	}
+
+	AimAtTarget();
 }
 
 AActor* UPBTurretFireComponent::FireOnce()
@@ -69,6 +104,11 @@ AActor* UPBTurretFireComponent::FireOnce()
 			*GetNameSafe(AttackTarget.Get()),
 			AttackPower);
 		return nullptr;
+	}
+
+	if (bAimAtTargetBeforeFire)
+	{
+		AimAtTarget();
 	}
 
 	AProjectileBase* Projectile = IsUseObjectPool ? GetProjectileFromPool() : SpawnProjectileActor();
@@ -102,6 +142,187 @@ void UPBTurretFireComponent::ConfigureAttack(
 	FiredAttackShotCount = 0;
 	DeliveryVfx = InDeliveryVfx;
 	ImpactVfx = InImpactVfx;
+
+	const bool bShouldTrackTarget = bAimAtTargetBeforeFire && AttackTarget.IsValid();
+	SetComponentTickEnabled(bShouldTrackTarget);
+	if (bShouldTrackTarget)
+	{
+		AimAtTarget();
+	}
+}
+
+bool UPBTurretFireComponent::AimAtTarget()
+{
+	AActor* Owner = GetOwner();
+	AActor* Target = AttackTarget.Get();
+	if (!IsValid(Owner) || !IsValid(Target))
+	{
+		return false;
+	}
+
+	USceneComponent* AimPivot = ResolveAimPivot();
+	const FVector SourceLocation = IsValid(AimPivot)
+		? AimPivot->GetComponentLocation()
+		: Owner->GetActorLocation();
+	const FRotator CurrentRotation = IsValid(AimPivot)
+		? AimPivot->GetComponentRotation()
+		: Owner->GetActorRotation();
+
+	FRotator AimRotation;
+	const FVector TargetDirection = Target->GetActorLocation() - SourceLocation;
+	USceneComponent* MuzzleComponent = ResolveMuzzleComponent();
+	const bool bResolvedFromMuzzle = IsValid(AimPivot)
+		&& IsValid(MuzzleComponent)
+		&& TryResolveAimRotationFromDirections(
+			MuzzleComponent->GetComponentLocation() - SourceLocation,
+			TargetDirection,
+			CurrentRotation,
+			bYawOnlyAim,
+			AimYawOffsetDegrees,
+			AimRotation);
+	if (!bResolvedFromMuzzle
+		&& !TryResolveAimRotation(
+			SourceLocation,
+			Target->GetActorLocation(),
+			CurrentRotation,
+			bYawOnlyAim,
+			AimYawOffsetDegrees,
+			AimRotation))
+	{
+		return false;
+	}
+
+	if (IsValid(AimPivot))
+	{
+		AimPivot->SetWorldRotation(AimRotation);
+	}
+	else
+	{
+		Owner->SetActorRotation(AimRotation);
+	}
+	return true;
+}
+
+bool UPBTurretFireComponent::TryResolveAimRotationFromDirections(
+	const FVector& CurrentAimDirection,
+	const FVector& TargetDirection,
+	const FRotator& CurrentRotation,
+	const bool bYawOnly,
+	const float YawOffsetDegrees,
+	FRotator& OutRotation)
+{
+	FVector CurrentDirection = CurrentAimDirection;
+	FVector DesiredDirection = TargetDirection;
+	if (bYawOnly)
+	{
+		CurrentDirection.Z = 0.0f;
+		DesiredDirection.Z = 0.0f;
+	}
+
+	if (CurrentDirection.IsNearlyZero() || DesiredDirection.IsNearlyZero())
+	{
+		return false;
+	}
+
+	CurrentDirection.Normalize();
+	DesiredDirection.Normalize();
+	if (bYawOnly)
+	{
+		const float DeltaYaw = FMath::FindDeltaAngleDegrees(
+			CurrentDirection.Rotation().Yaw,
+			DesiredDirection.Rotation().Yaw);
+		OutRotation = CurrentRotation;
+		OutRotation.Yaw = FRotator::NormalizeAxis(
+			CurrentRotation.Yaw + DeltaYaw + YawOffsetDegrees);
+		return true;
+	}
+
+	const FQuat DirectionDelta = FQuat::FindBetweenNormals(
+		CurrentDirection,
+		DesiredDirection);
+	OutRotation = (DirectionDelta * CurrentRotation.Quaternion()).Rotator();
+	OutRotation.Yaw = FRotator::NormalizeAxis(OutRotation.Yaw + YawOffsetDegrees);
+	return true;
+}
+
+bool UPBTurretFireComponent::TryResolveAimRotation(
+	const FVector& SourceLocation,
+	const FVector& TargetLocation,
+	const FRotator& CurrentRotation,
+	const bool bYawOnly,
+	const float YawOffsetDegrees,
+	FRotator& OutRotation)
+{
+	FVector Direction = TargetLocation - SourceLocation;
+	if (bYawOnly)
+	{
+		Direction.Z = 0.0f;
+	}
+
+	if (Direction.IsNearlyZero())
+	{
+		return false;
+	}
+
+	OutRotation = Direction.Rotation();
+	OutRotation.Yaw = FRotator::NormalizeAxis(OutRotation.Yaw + YawOffsetDegrees);
+	if (bYawOnly)
+	{
+		OutRotation.Pitch = CurrentRotation.Pitch;
+		OutRotation.Roll = CurrentRotation.Roll;
+	}
+
+	return true;
+}
+
+USceneComponent* UPBTurretFireComponent::ResolveAimPivot()
+{
+	if (CachedAimPivot.IsValid())
+	{
+		return CachedAimPivot.Get();
+	}
+
+	AActor* Owner = GetOwner();
+	if (!IsValid(Owner) || AimPivotTag.IsNone())
+	{
+		return nullptr;
+	}
+
+	const TArray<UActorComponent*> TaggedComponents = Owner->GetComponentsByTag(
+		USceneComponent::StaticClass(),
+		AimPivotTag);
+	for (UActorComponent* TaggedComponent : TaggedComponents)
+	{
+		if (USceneComponent* AimPivot = Cast<USceneComponent>(TaggedComponent))
+		{
+			CachedAimPivot = AimPivot;
+			return AimPivot;
+		}
+	}
+
+	return nullptr;
+}
+
+USceneComponent* UPBTurretFireComponent::ResolveMuzzleComponent() const
+{
+	const AActor* Owner = GetOwner();
+	if (!IsValid(Owner) || MuzzleTag.IsNone())
+	{
+		return nullptr;
+	}
+
+	const TArray<UActorComponent*> TaggedComponents = Owner->GetComponentsByTag(
+		USceneComponent::StaticClass(),
+		MuzzleTag);
+	for (UActorComponent* TaggedComponent : TaggedComponents)
+	{
+		if (USceneComponent* MuzzleComponent = Cast<USceneComponent>(TaggedComponent))
+		{
+			return MuzzleComponent;
+		}
+	}
+
+	return nullptr;
 }
 
 void UPBTurretFireComponent::ReleaseProjectile(AActor* Projectile)
@@ -117,17 +338,9 @@ FTransform UPBTurretFireComponent::GetMuzzleTransform() const
 		return FTransform::Identity;
 	}
 
-	const TArray<UActorComponent*> TaggedComponents = Owner->GetComponentsByTag(
-		USceneComponent::StaticClass(),
-		MuzzleTag);
-
-	for (UActorComponent* TaggedComponent : TaggedComponents)
+	if (const USceneComponent* MuzzleComponent = ResolveMuzzleComponent())
 	{
-		const USceneComponent* MuzzleComponent = Cast<USceneComponent>(TaggedComponent);
-		if (IsValid(MuzzleComponent))
-		{
-			return MuzzleComponent->GetComponentTransform();
-		}
+		return MuzzleComponent->GetComponentTransform();
 	}
 
 	return Owner->GetActorTransform();
@@ -194,7 +407,8 @@ void UPBTurretFireComponent::ActivateProjectile(AProjectileBase* Projectile, con
 			0.0f,
 			DeliveryVfx,
 			ImpactVfx,
-			nullptr);
+			nullptr,
+			ProjectileMesh);
 		BumperProjectile->OnProjectileResolved.AddUObject(
 			this,
 			&UPBTurretFireComponent::HandleBumperProjectileResolved);

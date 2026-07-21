@@ -22,6 +22,7 @@ bool UPBBumperCounterShieldComponent::Arm(
 	const FTransform& SourceTransform,
 	AActor* BossTarget,
 	TSubclassOf<APBBumperProjectile> ProjectileClass,
+	UStaticMesh* ProjectileMesh,
 	const int32 Damage,
 	const float Duration,
 	const FVector& SpawnOffset,
@@ -61,6 +62,7 @@ bool UPBBumperCounterShieldComponent::Arm(
 	ArmedBumper = SourceBumper;
 	ArmedBossTarget = BossTarget;
 	ArmedProjectileClass = ProjectileClass;
+	ArmedProjectileMesh = ProjectileMesh;
 	ArmedSourceTransform = SourceTransform;
 	ArmedSpawnOffset = SpawnOffset;
 	ArmedDamage = FMath::Clamp(Damage, 1, MaxCounterShieldDamage);
@@ -114,6 +116,7 @@ void UPBBumperCounterShieldComponent::Disarm()
 	ArmedBumper.Reset();
 	ArmedBossTarget.Reset();
 	ArmedProjectileClass = nullptr;
+	ArmedProjectileMesh = nullptr;
 	ArmedSourceTransform = FTransform::Identity;
 	ArmedSpawnOffset = FVector::ZeroVector;
 	ArmedDamage = 0;
@@ -146,7 +149,8 @@ bool UPBBumperCounterShieldComponent::FireCounterProjectile() const
 		ArmedProjectileLifetime,
 		Bumper->GetDeliveryVfx(),
 		Bumper->GetImpactVfx(),
-		nullptr));
+		nullptr,
+		ArmedProjectileMesh));
 }
 
 FVector UPBBumperCounterShieldComponent::ResolveProjectileSpawnLocation() const

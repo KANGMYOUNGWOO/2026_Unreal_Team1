@@ -5,6 +5,7 @@
 #include "PBBossTargetBumperEffectBase.generated.h"
 
 class APBBumperProjectile;
+class UStaticMesh;
 enum class EPBBumperProjectilePayload : uint8;
 
 UCLASS(Abstract)
@@ -24,6 +25,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Projectile")
 	TSubclassOf<APBBumperProjectile> ProjectileClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Projectile")
+	TObjectPtr<UStaticMesh> ProjectileMesh;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Effect|Projectile")
 	FVector ProjectileSpawnOffset = FVector(0.0f, 0.0f, 40.0f);

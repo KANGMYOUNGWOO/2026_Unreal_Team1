@@ -27,6 +27,14 @@ public:
 	void StopChannel(FName Channel);
 	void StopAll();
 
+	static UNiagaraComponent* PlayOneShotAtLocation(
+		const UObject* WorldContext,
+		UNiagaraSystem* System,
+		const FVector& WorldLocation,
+		const FRotator& WorldRotation = FRotator::ZeroRotator,
+		const FVector& Scale = FVector::OneVector,
+		float SafetyLifetime = 2.0f);
+
 	static void PlayImpact(
 		const UObject* WorldContext,
 		UNiagaraSystem* System,
