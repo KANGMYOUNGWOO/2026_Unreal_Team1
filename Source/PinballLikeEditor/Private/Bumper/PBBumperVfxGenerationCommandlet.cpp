@@ -47,8 +47,8 @@
 
 namespace
 {
-	constexpr TCHAR BumperVfxAssetFolder[] = TEXT("/Game/Blueprints/Bumper/Effect/VFX");
-	constexpr TCHAR VfxMaterialFolder[] = TEXT("/Game/Blueprints/Bumper/Effect/VFX/Materials");
+	constexpr TCHAR BumperVfxAssetFolder[] = TEXT("/Game/Resources/Bumper/VFX");
+	constexpr TCHAR VfxMaterialFolder[] = TEXT("/Game/Resources/Bumper/VFX/Materials");
 	constexpr TCHAR VfxParentMaterialName[] = TEXT("M_BumperVfxSprite");
 	constexpr TCHAR EffectTypeAssetName[] = TEXT("NET_BumperGameplay");
 	constexpr TCHAR BurstTemplatePath[] =
