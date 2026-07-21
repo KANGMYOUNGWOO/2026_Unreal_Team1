@@ -26,6 +26,8 @@
 #include "NiagaraEffectType.h"
 #include "NiagaraSpriteRendererProperties.h"
 #include "NiagaraSystem.h"
+#include "NiagaraSystemEditorData.h"
+#include "NiagaraSystemEmitterState.h"
 #include "ObjectTools.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBGateFieldTuning.h"
 #include "Serialization/JsonSerializer.h"
@@ -41,6 +43,7 @@
 #include "Stateless/Modules/NiagaraStatelessModule_ShapeLocation.h"
 #include "Stateless/Modules/NiagaraStatelessModule_SpriteRotationRate.h"
 #include "UObject/SavePackage.h"
+#include "UObject/UnrealType.h"
 
 namespace
 {
@@ -80,14 +83,6 @@ namespace
 		bool bForceReplace = false;
 	};
 
-	enum class EPBVfxStage : uint8
-	{
-		Activation,
-		Delivery,
-		Impact,
-		Status
-	};
-
 	enum class EPBVfxStyle : uint8
 	{
 		Attack,
@@ -118,7 +113,7 @@ namespace
 	struct FPBVfxRecipe
 	{
 		FString AssetName;
-		EPBVfxStage Stage = EPBVfxStage::Activation;
+		EPBBumperVfxStage Stage = EPBBumperVfxStage::Activation;
 		EPBVfxStyle Style = EPBVfxStyle::Attack;
 		FLinearColor PrimaryColor = FLinearColor::White;
 		FLinearColor AccentColor = FLinearColor::White;
@@ -202,34 +197,141 @@ namespace
 			|| FCString::Strcmp(Profile.EffectId, TEXT("Effect_ManaReactor_01")) == 0;
 	}
 
-	FString MakeStageAssetName(const FPBEffectVisualProfile& Profile, const EPBVfxStage Stage)
+	const TCHAR* GetStyleToken(const EPBVfxStyle Style)
 	{
-		if (Stage == EPBVfxStage::Activation && Profile.LegacyActivationAsset)
+		switch (Style)
 		{
-			return Profile.LegacyActivationAsset;
+		case EPBVfxStyle::Attack:
+			return TEXT("Attack");
+		case EPBVfxStyle::Groggy:
+			return TEXT("Groggy");
+		case EPBVfxStyle::Combo:
+			return TEXT("Combo");
+		case EPBVfxStyle::Mana:
+			return TEXT("Mana");
+		case EPBVfxStyle::Recovery:
+			return TEXT("Recovery");
+		case EPBVfxStyle::Shield:
+			return TEXT("Shield");
+		case EPBVfxStyle::Speed:
+			return TEXT("Speed");
+		case EPBVfxStyle::Strength:
+			return TEXT("Strength");
+		case EPBVfxStyle::Vulnerability:
+			return TEXT("Vulnerability");
+		case EPBVfxStyle::Summon:
+			return TEXT("Summon");
+		default:
+			return TEXT("Attack");
 		}
+	}
 
+	const TCHAR* GetStageToken(const EPBBumperVfxStage Stage)
+	{
 		const TCHAR* StageName = TEXT("Activation");
 		switch (Stage)
 		{
-		case EPBVfxStage::Delivery:
+		case EPBBumperVfxStage::Delivery:
 			StageName = TEXT("Delivery");
 			break;
-		case EPBVfxStage::Impact:
+		case EPBBumperVfxStage::Impact:
 			StageName = TEXT("Impact");
 			break;
-		case EPBVfxStage::Status:
+		case EPBBumperVfxStage::Status:
 			StageName = TEXT("Status");
 			break;
 		default:
 			break;
 		}
-		return FString::Printf(TEXT("NS_Bumper_%s_%s"), StageName, Profile.Token);
+		return StageName;
 	}
 
-	const TCHAR* GetCoreMaterialPath(const EPBVfxStyle Style, const EPBVfxStage Stage)
+	FLinearColor GetStylePrimaryColor(const EPBVfxStyle Style)
 	{
-		if (Stage == EPBVfxStage::Delivery)
+		switch (Style)
+		{
+		case EPBVfxStyle::Attack:
+			return FLinearColor(1.00f, 0.18f, 0.03f);
+		case EPBVfxStyle::Groggy:
+			return FLinearColor(0.50f, 0.18f, 1.00f);
+		case EPBVfxStyle::Combo:
+			return FLinearColor(1.00f, 0.58f, 0.03f);
+		case EPBVfxStyle::Mana:
+			return FLinearColor(0.04f, 0.52f, 1.00f);
+		case EPBVfxStyle::Recovery:
+			return FLinearColor(0.08f, 0.84f, 0.38f);
+		case EPBVfxStyle::Shield:
+			return FLinearColor(0.03f, 0.70f, 1.00f);
+		case EPBVfxStyle::Speed:
+			return FLinearColor(0.06f, 0.62f, 1.00f);
+		case EPBVfxStyle::Strength:
+			return FLinearColor(1.00f, 0.16f, 0.03f);
+		case EPBVfxStyle::Vulnerability:
+			return FLinearColor(0.90f, 0.04f, 0.76f);
+		case EPBVfxStyle::Summon:
+			return FLinearColor(0.48f, 0.92f, 0.10f);
+		default:
+			return FLinearColor::White;
+		}
+	}
+
+	FLinearColor GetStyleAccentColor(const EPBVfxStyle Style)
+	{
+		switch (Style)
+		{
+		case EPBVfxStyle::Attack:
+			return FLinearColor(1.00f, 0.76f, 0.18f);
+		case EPBVfxStyle::Groggy:
+			return FLinearColor(0.90f, 0.78f, 1.00f);
+		case EPBVfxStyle::Combo:
+			return FLinearColor(1.00f, 0.94f, 0.30f);
+		case EPBVfxStyle::Mana:
+			return FLinearColor(0.24f, 1.00f, 0.94f);
+		case EPBVfxStyle::Recovery:
+			return FLinearColor(0.72f, 1.00f, 0.62f);
+		case EPBVfxStyle::Shield:
+			return FLinearColor(0.78f, 0.98f, 1.00f);
+		case EPBVfxStyle::Speed:
+			return FLinearColor(0.84f, 1.00f, 1.00f);
+		case EPBVfxStyle::Strength:
+			return FLinearColor(1.00f, 0.68f, 0.12f);
+		case EPBVfxStyle::Vulnerability:
+			return FLinearColor(0.70f, 0.34f, 1.00f);
+		case EPBVfxStyle::Summon:
+			return FLinearColor(0.30f, 1.00f, 0.82f);
+		default:
+			return FLinearColor::White;
+		}
+	}
+
+	FString MakeLegacyStageAssetName(
+		const FPBEffectVisualProfile& Profile,
+		const EPBBumperVfxStage Stage)
+	{
+		if (Stage == EPBBumperVfxStage::Activation && Profile.LegacyActivationAsset)
+		{
+			return Profile.LegacyActivationAsset;
+		}
+
+		return FString::Printf(TEXT("NS_Bumper_%s_%s"), GetStageToken(Stage), Profile.Token);
+	}
+
+	FString MakeStageAssetName(
+		const FPBEffectVisualProfile& Profile,
+		const EPBBumperVfxStage Stage)
+	{
+		FString StyleToken = GetStyleToken(Profile.Style);
+		if (Stage == EPBBumperVfxStage::Status && IsGateAreaProfile(Profile))
+		{
+			StyleToken += TEXT("Area");
+		}
+
+		return FString::Printf(TEXT("NS_Bumper_%s_%s"), GetStageToken(Stage), *StyleToken);
+	}
+
+	const TCHAR* GetCoreMaterialPath(const EPBVfxStyle Style, const EPBBumperVfxStage Stage)
+	{
+		if (Stage == EPBBumperVfxStage::Delivery)
 		{
 			return Style == EPBVfxStyle::Speed ? ArrowMaterialPath : LineMaterialPath;
 		}
@@ -249,9 +351,9 @@ namespace
 		}
 	}
 
-	const TCHAR* GetSignatureMaterialPath(const EPBVfxStyle Style, const EPBVfxStage Stage)
+	const TCHAR* GetSignatureMaterialPath(const EPBVfxStyle Style, const EPBBumperVfxStage Stage)
 	{
-		if (Stage == EPBVfxStage::Delivery)
+		if (Stage == EPBBumperVfxStage::Delivery)
 		{
 			return Style == EPBVfxStyle::Speed ? ArrowMaterialPath : FlareMaterialPath;
 		}
@@ -277,20 +379,22 @@ namespace
 		}
 	}
 
-	FPBVfxRecipe MakeRecipe(const FPBEffectVisualProfile& Profile, const EPBVfxStage Stage)
+	FPBVfxRecipe MakeRecipe(const FPBEffectVisualProfile& Profile, const EPBBumperVfxStage Stage)
 	{
 		FPBVfxRecipe Recipe;
 		Recipe.AssetName = MakeStageAssetName(Profile, Stage);
 		Recipe.Stage = Stage;
 		Recipe.Style = Profile.Style;
-		Recipe.PrimaryColor = Profile.PrimaryColor;
-		Recipe.AccentColor = Profile.AccentColor;
-		Recipe.MaterialPath = GetCoreMaterialPath(Profile.Style, Stage);
-		Recipe.bVelocityAligned = Stage == EPBVfxStage::Delivery || Profile.Style == EPBVfxStyle::Speed;
+		Recipe.PrimaryColor = GetStylePrimaryColor(Profile.Style);
+		Recipe.AccentColor = GetStyleAccentColor(Profile.Style);
+		Recipe.MaterialPath = Stage == EPBBumperVfxStage::Status
+			? GetCoreMaterialPath(Profile.Style, Stage)
+			: GetSignatureMaterialPath(Profile.Style, Stage);
+		Recipe.bVelocityAligned = Stage == EPBBumperVfxStage::Delivery || Profile.Style == EPBVfxStyle::Speed;
 
 		switch (Stage)
 		{
-		case EPBVfxStage::Activation:
+		case EPBBumperVfxStage::Activation:
 			Recipe.LifetimeMin = 0.32f;
 			Recipe.LifetimeMax = 0.62f;
 			Recipe.SizeMin = 11.0f;
@@ -300,7 +404,7 @@ namespace
 			Recipe.SpawnAmount = 28;
 			Recipe.Drag = 1.8f;
 			break;
-		case EPBVfxStage::Delivery:
+		case EPBBumperVfxStage::Delivery:
 			Recipe.LifetimeMin = 0.18f;
 			Recipe.LifetimeMax = 0.42f;
 			Recipe.SizeMin = 7.0f;
@@ -311,7 +415,7 @@ namespace
 			Recipe.SpawnRate = 56.0f;
 			Recipe.Drag = 2.4f;
 			break;
-		case EPBVfxStage::Impact:
+		case EPBBumperVfxStage::Impact:
 			Recipe.LifetimeMin = 0.22f;
 			Recipe.LifetimeMax = 0.52f;
 			Recipe.SizeMin = 13.0f;
@@ -321,7 +425,7 @@ namespace
 			Recipe.SpawnAmount = 34;
 			Recipe.Drag = 2.2f;
 			break;
-		case EPBVfxStage::Status:
+		case EPBBumperVfxStage::Status:
 			Recipe.LifetimeMin = 0.75f;
 			Recipe.LifetimeMax = 1.35f;
 			Recipe.SizeMin = 11.0f;
@@ -372,7 +476,7 @@ namespace
 		case EPBVfxStyle::Speed:
 			Recipe.SpeedMin *= 1.45f;
 			Recipe.SpeedMax *= 1.55f;
-			if (Stage == EPBVfxStage::Status)
+			if (Stage == EPBBumperVfxStage::Status)
 			{
 				Recipe.SizeMin *= 1.10f;
 				Recipe.SizeMax *= 1.15f;
@@ -407,13 +511,13 @@ namespace
 		Recipe.SizeMin *= GeneralSpriteScale;
 		Recipe.SizeMax *= GeneralSpriteScale;
 		Recipe.ShapeRadius *= GeneralSpawnRadiusScale;
-		if (Stage == EPBVfxStage::Activation || Stage == EPBVfxStage::Impact)
+		if (Stage == EPBBumperVfxStage::Activation || Stage == EPBBumperVfxStage::Impact)
 		{
 			Recipe.SpeedMin *= BurstSpreadScale;
 			Recipe.SpeedMax *= BurstSpreadScale;
 		}
 
-		if (Stage == EPBVfxStage::Status && IsGateAreaProfile(Profile))
+		if (Stage == EPBBumperVfxStage::Status && IsGateAreaProfile(Profile))
 		{
 			Recipe.ShapeRadius = PBGateFieldTuning::DefaultRadius;
 			Recipe.SizeMin = 18.0f;
@@ -466,7 +570,7 @@ namespace
 		return DeletedCount == 1;
 	}
 
-	bool HasExpectedTemplateModules(UNiagaraSystem* System, const EPBVfxStage Stage)
+	bool HasExpectedTemplateModules(UNiagaraSystem* System, const EPBBumperVfxStage Stage)
 	{
 		const UNiagaraStatelessEmitter* Emitter = GetStatelessEmitter(System);
 		if (!IsValid(Emitter))
@@ -474,7 +578,7 @@ namespace
 			return false;
 		}
 
-		return Stage == EPBVfxStage::Delivery
+		return Stage == EPBBumperVfxStage::Delivery
 			? Emitter->GetModule<UNiagaraStatelessModule_ScaleSpriteSizeBySpeed>() != nullptr
 			: Emitter->GetModule<UNiagaraStatelessModule_ShapeLocation>() != nullptr;
 	}
@@ -510,9 +614,9 @@ namespace
 			return nullptr;
 		}
 
-		const TCHAR* TemplatePath = Recipe.Stage == EPBVfxStage::Delivery
-			? BurstTemplatePath
-			: LoopTemplatePath;
+		const TCHAR* TemplatePath = Recipe.Stage == EPBBumperVfxStage::Status
+			? LoopTemplatePath
+			: BurstTemplatePath;
 		UNiagaraSystem* TemplateSystem = LoadObject<UNiagaraSystem>(nullptr, TemplatePath);
 		if (!IsValid(TemplateSystem))
 		{
@@ -534,6 +638,9 @@ namespace
 		Distribution.Mode = ENiagaraDistributionMode::NonUniformRange;
 		Distribution.Min = Min;
 		Distribution.Max = Max;
+		Distribution.ChannelConstantsAndRanges = {Min.X, Min.Y, Max.X, Max.Y};
+		Distribution.ChannelCurves.Reset();
+		Distribution.UpdateValuesFromDistribution();
 	}
 
 	void SetVector3Range(
@@ -544,6 +651,39 @@ namespace
 		Distribution.Mode = ENiagaraDistributionMode::NonUniformRange;
 		Distribution.Min = Min;
 		Distribution.Max = Max;
+		Distribution.ChannelConstantsAndRanges =
+		{
+			Min.X, Min.Y, Min.Z,
+			Max.X, Max.Y, Max.Z
+		};
+		Distribution.ChannelCurves.Reset();
+		Distribution.UpdateValuesFromDistribution();
+	}
+
+	void SetColorGradient(
+		FNiagaraDistributionColor& Distribution,
+		TConstArrayView<FLinearColor> Colors,
+		const uint8 LookupValueMode)
+	{
+		Distribution.Mode = ENiagaraDistributionMode::ColorGradient;
+		Distribution.ChannelConstantsAndRanges.Reset(Colors.Num() * 4);
+		Distribution.ChannelCurves.Reset(4);
+		Distribution.ChannelCurves.AddDefaulted(4);
+
+		const float Step = Colors.Num() > 1 ? 1.0f / static_cast<float>(Colors.Num() - 1) : 0.0f;
+		for (int32 Index = 0; Index < Colors.Num(); ++Index)
+		{
+			const FLinearColor& Color = Colors[Index];
+			const float Time = Step * static_cast<float>(Index);
+			Distribution.ChannelConstantsAndRanges.Append({Color.R, Color.G, Color.B, Color.A});
+			Distribution.ChannelCurves[0].AddKey(Time, Color.R);
+			Distribution.ChannelCurves[1].AddKey(Time, Color.G);
+			Distribution.ChannelCurves[2].AddKey(Time, Color.B);
+			Distribution.ChannelCurves[3].AddKey(Time, Color.A);
+		}
+
+		Distribution.SetLookupValueMode(LookupValueMode);
+		Distribution.UpdateValuesFromDistribution();
 	}
 
 	template <typename TModule>
@@ -560,6 +700,7 @@ namespace
 		{
 			return false;
 		}
+		System->Modify();
 
 		while (System->GetEmitterHandles().Num() > 3)
 		{
@@ -591,6 +732,15 @@ namespace
 			}
 			Handle.SetIsEnabled(true, *System, false);
 		}
+
+		UNiagaraSystemEditorData* EditorData = Cast<UNiagaraSystemEditorData>(
+			System->GetEditorData());
+		if (!IsValid(EditorData))
+		{
+			return false;
+		}
+		EditorData->Modify();
+		EditorData->SynchronizeOverviewGraphWithSystem(*System);
 		return true;
 	}
 
@@ -599,7 +749,7 @@ namespace
 		FPBVfxRecipe AccentRecipe = BaseRecipe;
 		AccentRecipe.PrimaryColor = BaseRecipe.AccentColor;
 		AccentRecipe.AccentColor = BaseRecipe.PrimaryColor;
-		AccentRecipe.MaterialPath = BaseRecipe.Stage == EPBVfxStage::Delivery
+		AccentRecipe.MaterialPath = BaseRecipe.Stage == EPBBumperVfxStage::Delivery
 			? FlareMaterialPath
 			: GlowMaterialPath;
 		AccentRecipe.LifetimeMin *= 0.72f;
@@ -621,16 +771,16 @@ namespace
 		SignatureRecipe.PrimaryColor = BaseRecipe.AccentColor;
 		SignatureRecipe.AccentColor = BaseRecipe.PrimaryColor;
 		SignatureRecipe.MaterialPath = GetSignatureMaterialPath(BaseRecipe.Style, BaseRecipe.Stage);
-		SignatureRecipe.LifetimeMin *= BaseRecipe.Stage == EPBVfxStage::Status ? 1.10f : 0.78f;
-		SignatureRecipe.LifetimeMax *= BaseRecipe.Stage == EPBVfxStage::Status ? 1.22f : 0.92f;
-		SignatureRecipe.SizeMin *= BaseRecipe.Stage == EPBVfxStage::Delivery ? 0.62f : 1.85f;
-		SignatureRecipe.SizeMax *= BaseRecipe.Stage == EPBVfxStage::Delivery ? 0.82f : 2.35f;
-		SignatureRecipe.SpeedMin *= BaseRecipe.Stage == EPBVfxStage::Delivery ? 1.18f : 0.30f;
-		SignatureRecipe.SpeedMax *= BaseRecipe.Stage == EPBVfxStage::Delivery ? 1.35f : 0.42f;
+		SignatureRecipe.LifetimeMin *= BaseRecipe.Stage == EPBBumperVfxStage::Status ? 1.10f : 0.78f;
+		SignatureRecipe.LifetimeMax *= BaseRecipe.Stage == EPBBumperVfxStage::Status ? 1.22f : 0.92f;
+		SignatureRecipe.SizeMin *= BaseRecipe.Stage == EPBBumperVfxStage::Delivery ? 0.62f : 1.85f;
+		SignatureRecipe.SizeMax *= BaseRecipe.Stage == EPBBumperVfxStage::Delivery ? 0.82f : 2.35f;
+		SignatureRecipe.SpeedMin *= BaseRecipe.Stage == EPBBumperVfxStage::Delivery ? 1.18f : 0.30f;
+		SignatureRecipe.SpeedMax *= BaseRecipe.Stage == EPBBumperVfxStage::Delivery ? 1.35f : 0.42f;
 		SignatureRecipe.ShapeRadius *= 1.08f;
 		SignatureRecipe.Drag *= 1.30f;
-		SignatureRecipe.SpawnAmount = BaseRecipe.Stage == EPBVfxStage::Activation
-			|| BaseRecipe.Stage == EPBVfxStage::Impact
+		SignatureRecipe.SpawnAmount = BaseRecipe.Stage == EPBBumperVfxStage::Activation
+			|| BaseRecipe.Stage == EPBBumperVfxStage::Impact
 			? FMath::Clamp(FMath::RoundToInt(BaseRecipe.SpawnAmount * 0.16f), 3, 7)
 			: BaseRecipe.SpawnAmount;
 		SignatureRecipe.SpawnRate = FMath::Clamp(BaseRecipe.SpawnRate * 0.24f, 4.0f, 12.0f);
@@ -652,8 +802,11 @@ namespace
 
 		SpawnInfo->bEnabled = true;
 		SpawnInfo->bSpawnProbabilityEnabled = false;
-		SpawnInfo->bLoopCountLimitEnabled = false;
-		if (Recipe.Stage == EPBVfxStage::Activation || Recipe.Stage == EPBVfxStage::Impact)
+		const bool bOneShot = Recipe.Stage == EPBBumperVfxStage::Activation
+			|| Recipe.Stage == EPBBumperVfxStage::Impact;
+		SpawnInfo->bLoopCountLimitEnabled = bOneShot;
+		SpawnInfo->LoopCountLimit.InitConstant(1);
+		if (bOneShot)
 		{
 			SpawnInfo->Type = ENiagaraStatelessSpawnInfoType::Burst;
 			SpawnInfo->SpawnTime = 0.0f;
@@ -664,6 +817,46 @@ namespace
 			SpawnInfo->Type = ENiagaraStatelessSpawnInfoType::Rate;
 			SpawnInfo->Rate.InitConstant(Recipe.SpawnRate);
 		}
+		return true;
+	}
+
+	bool ConfigureEmitterLifecycle(UNiagaraStatelessEmitter* Emitter, const FPBVfxRecipe& Recipe)
+	{
+		if (!IsValid(Emitter))
+		{
+			return false;
+		}
+
+		const FStructProperty* EmitterStateProperty = FindFProperty<FStructProperty>(
+			UNiagaraStatelessEmitter::StaticClass(),
+			TEXT("EmitterState"));
+		if (!EmitterStateProperty
+			|| EmitterStateProperty->Struct != FNiagaraEmitterStateData::StaticStruct())
+		{
+			return false;
+		}
+
+		FNiagaraEmitterStateData* EmitterState =
+			EmitterStateProperty->ContainerPtrToValuePtr<FNiagaraEmitterStateData>(Emitter);
+		if (!EmitterState)
+		{
+			return false;
+		}
+
+		const bool bOneShot = Recipe.Stage == EPBBumperVfxStage::Activation
+			|| Recipe.Stage == EPBBumperVfxStage::Impact;
+		Emitter->Modify();
+		EmitterState->InactiveResponse = ENiagaraEmitterInactiveResponse::Complete;
+		EmitterState->LoopBehavior = bOneShot
+			? ENiagaraLoopBehavior::Once
+			: ENiagaraLoopBehavior::Infinite;
+		EmitterState->LoopCount = 1;
+		EmitterState->LoopDurationMode = ENiagaraLoopDurationMode::Fixed;
+		EmitterState->LoopDuration.InitConstant(
+			bOneShot ? FMath::Max(Recipe.LifetimeMax + 0.1f, 0.2f) : 1.0f);
+		EmitterState->bLoopDelayEnabled = false;
+		EmitterState->bRecalculateDurationEachLoop = false;
+		EmitterState->bDelayFirstLoopOnly = false;
 		return true;
 	}
 
@@ -1006,10 +1199,10 @@ namespace
 		DimColor.A = Recipe.PrimaryColor.A;
 		FLinearColor BrightColor = Recipe.PrimaryColor * 1.65f;
 		BrightColor.A = Recipe.PrimaryColor.A;
-		Initialize->ColorDistribution.Mode = ENiagaraDistributionMode::ColorGradient;
-		Initialize->ColorDistribution.Values = {DimColor, BrightColor};
-		Initialize->ColorDistribution.ValuesTimeRange = FVector2f(0.0f, 1.0f);
-		Initialize->ColorDistribution.SetLookupValueMode(
+		const TArray<FLinearColor> InitialColors = {DimColor, BrightColor};
+		SetColorGradient(
+			Initialize->ColorDistribution,
+			InitialColors,
 			uint8(ENiagaraDistributionInitialLookupValueMode::Random));
 		SetVector2Range(
 			Initialize->SpriteSizeDistribution,
@@ -1018,11 +1211,11 @@ namespace
 
 		Velocity->Modify();
 		Velocity->SetIsModuleEnabled(true);
-		if (Recipe.Stage == EPBVfxStage::Activation || Recipe.Stage == EPBVfxStage::Impact)
+		if (Recipe.Stage == EPBBumperVfxStage::Activation || Recipe.Stage == EPBBumperVfxStage::Impact)
 		{
 			Velocity->VelocityType = ENSM_VelocityType::InCone;
 			Velocity->ConeVelocityDistribution.InitRange(Recipe.SpeedMin, Recipe.SpeedMax);
-			Velocity->ConeRotation = Recipe.Stage == EPBVfxStage::Impact
+			Velocity->ConeRotation = Recipe.Stage == EPBBumperVfxStage::Impact
 				? FRotator(-90.0f, 0.0f, 0.0f)
 				: FRotator::ZeroRotator;
 			Velocity->ConeAngle = Recipe.Style == EPBVfxStyle::Speed ? 24.0f : 92.0f;
@@ -1079,7 +1272,7 @@ namespace
 				|| Recipe.Style == EPBVfxStyle::Shield
 				|| Recipe.Style == EPBVfxStyle::Vulnerability
 				|| Recipe.Style == EPBVfxStyle::Summon;
-			if (Recipe.Stage == EPBVfxStage::Delivery || !bUsesRing)
+			if (Recipe.Stage == EPBBumperVfxStage::Delivery || !bUsesRing)
 			{
 				Shape->ShapePrimitive = ENSM_ShapePrimitive::Sphere;
 				Shape->SphereRadius.InitConstant(Recipe.ShapeRadius);
@@ -1088,7 +1281,7 @@ namespace
 			{
 				Shape->ShapePrimitive = ENSM_ShapePrimitive::Ring;
 				Shape->RingRadius.InitConstant(Recipe.ShapeRadius);
-				Shape->DiscCoverage.InitConstant(Recipe.Stage == EPBVfxStage::Status ? 0.08f : 0.28f);
+				Shape->DiscCoverage.InitConstant(Recipe.Stage == EPBBumperVfxStage::Status ? 0.08f : 0.28f);
 				Shape->RingUDistribution.InitRange(0.0f, 1.0f);
 			}
 		}
@@ -1097,15 +1290,15 @@ namespace
 			FindMutableModule<UNiagaraStatelessModule_ScaleColor>(Emitter))
 		{
 			ScaleColor->Modify();
-			ScaleColor->ScaleDistribution.Mode = ENiagaraDistributionMode::ColorGradient;
-			ScaleColor->ScaleDistribution.Values =
+			const TArray<FLinearColor> ScaleColors =
 			{
 				FLinearColor(0.0f, 0.0f, 0.0f, 1.0f),
 				FLinearColor::White,
 				FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
 			};
-			ScaleColor->ScaleDistribution.ValuesTimeRange = FVector2f(0.0f, 1.0f);
-			ScaleColor->ScaleDistribution.SetLookupValueMode(
+			SetColorGradient(
+				ScaleColor->ScaleDistribution,
+				ScaleColors,
 				uint8(ENiagaraDistributionLookupValueMode::ParticlesNormalizedAge));
 			ScaleColor->SetIsModuleEnabled(true);
 		}
@@ -1247,12 +1440,15 @@ namespace
 		PrimaryEmitter->Modify();
 		AccentEmitter->Modify();
 		SignatureEmitter->Modify();
-		if (!ConfigureSpawn(PrimaryEmitter, Recipe)
+		if (!ConfigureEmitterLifecycle(PrimaryEmitter, Recipe)
+			|| !ConfigureSpawn(PrimaryEmitter, Recipe)
 			|| !ConfigureRenderers(PrimaryEmitter, Recipe)
 			|| !ConfigureModules(PrimaryEmitter, Recipe)
+			|| !ConfigureEmitterLifecycle(AccentEmitter, AccentRecipe)
 			|| !ConfigureSpawn(AccentEmitter, AccentRecipe)
 			|| !ConfigureRenderers(AccentEmitter, AccentRecipe)
 			|| !ConfigureModules(AccentEmitter, AccentRecipe)
+			|| !ConfigureEmitterLifecycle(SignatureEmitter, SignatureRecipe)
 			|| !ConfigureSpawn(SignatureEmitter, SignatureRecipe)
 			|| !ConfigureRenderers(SignatureEmitter, SignatureRecipe)
 			|| !ConfigureModules(SignatureEmitter, SignatureRecipe))
@@ -1295,7 +1491,7 @@ namespace
 		}
 
 		TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
-		Root->SetStringField(TEXT("Schema"), TEXT("BumperVfxManifest.v1"));
+		Root->SetStringField(TEXT("Schema"), TEXT("BumperVfxManifest.v2"));
 		Root->SetArrayField(TEXT("Rows"), Rows);
 
 		FString Json;
@@ -1312,6 +1508,31 @@ namespace
 			*(OutputDirectory / TEXT("bumper_vfx_manifest.json")),
 			FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 	}
+}
+
+FName PBBumperVfxCatalog::CanonicalizeKnownVfxId(
+	const FName EffectId,
+	const EPBBumperVfxStage Stage,
+	const FName VfxId)
+{
+	if (EffectId.IsNone() || VfxId.IsNone())
+	{
+		return VfxId;
+	}
+
+	for (const FPBEffectVisualProfile& Profile : GetVisualProfiles())
+	{
+		if (EffectId != FName(Profile.EffectId))
+		{
+			continue;
+		}
+
+		const FName LegacyId(*MakeLegacyStageAssetName(Profile, Stage));
+		const FName SharedId(*MakeStageAssetName(Profile, Stage));
+		return VfxId == LegacyId || VfxId == SharedId ? SharedId : VfxId;
+	}
+
+	return VfxId;
 }
 
 UPBBumperVfxGenerationCommandlet::UPBBumperVfxGenerationCommandlet()
@@ -1338,6 +1559,7 @@ int32 UPBBumperVfxGenerationCommandlet::Main(const FString& Params)
 		return 1;
 	}
 	TArray<FPBGeneratedVfxSet> GeneratedSets;
+	TSet<FString> ProcessedAssetIds;
 	int32 GeneratedSystemCount = 0;
 
 	for (const FPBEffectVisualProfile& Profile : GetVisualProfiles())
@@ -1345,23 +1567,29 @@ int32 UPBBumperVfxGenerationCommandlet::Main(const FString& Params)
 		FPBGeneratedVfxSet& Set = GeneratedSets.AddDefaulted_GetRef();
 		Set.EffectId = Profile.EffectId;
 
-		auto GenerateStage = [&](const EPBVfxStage Stage, FString& OutAssetId) -> bool
+		auto GenerateStage = [&](const EPBBumperVfxStage Stage, FString& OutAssetId) -> bool
 		{
 			const FPBVfxRecipe Recipe = MakeRecipe(Profile, Stage);
+			OutAssetId = Recipe.AssetName;
+			if (ProcessedAssetIds.Contains(Recipe.AssetName))
+			{
+				return true;
+			}
+
 			bool bGenerated = false;
 			if (!GenerateSystem(AssetTools, EffectType, Recipe, Policy, bGenerated))
 			{
 				return false;
 			}
-			OutAssetId = Recipe.AssetName;
+			ProcessedAssetIds.Add(Recipe.AssetName);
 			GeneratedSystemCount += bGenerated ? 1 : 0;
 			return true;
 		};
 
-		if (!GenerateStage(EPBVfxStage::Activation, Set.Activation)
-			|| (Profile.bHasDelivery && !GenerateStage(EPBVfxStage::Delivery, Set.Delivery))
-			|| (Profile.bHasImpact && !GenerateStage(EPBVfxStage::Impact, Set.Impact))
-			|| (Profile.bHasStatus && !GenerateStage(EPBVfxStage::Status, Set.Status)))
+		if (!GenerateStage(EPBBumperVfxStage::Activation, Set.Activation)
+			|| (Profile.bHasDelivery && !GenerateStage(EPBBumperVfxStage::Delivery, Set.Delivery))
+			|| (Profile.bHasImpact && !GenerateStage(EPBBumperVfxStage::Impact, Set.Impact))
+			|| (Profile.bHasStatus && !GenerateStage(EPBBumperVfxStage::Status, Set.Status)))
 		{
 			UE_LOG(LogTemp, Error, TEXT("[BumperVfx] Generation aborted at EffectId=%s"), Profile.EffectId);
 			return 1;

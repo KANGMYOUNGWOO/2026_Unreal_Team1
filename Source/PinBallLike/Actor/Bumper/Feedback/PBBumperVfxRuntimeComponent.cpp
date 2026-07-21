@@ -3,6 +3,7 @@
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
+#include "Engine/World.h"
 #include "TimerManager.h"
 
 UPBBumperVfxRuntimeComponent::UPBBumperVfxRuntimeComponent()
@@ -125,6 +126,58 @@ void UPBBumperVfxRuntimeComponent::StopAll()
 	}
 }
 
+UNiagaraComponent* UPBBumperVfxRuntimeComponent::PlayOneShotAtLocation(
+	const UObject* WorldContext,
+	UNiagaraSystem* System,
+	const FVector& WorldLocation,
+	const FRotator& WorldRotation,
+	const FVector& Scale,
+	const float SafetyLifetime)
+{
+	UWorld* World = IsValid(WorldContext) ? WorldContext->GetWorld() : nullptr;
+	if (!IsValid(World)
+		|| !IsValid(System)
+		|| WorldLocation.ContainsNaN()
+		|| WorldRotation.ContainsNaN()
+		|| Scale.ContainsNaN()
+		|| !FMath::IsFinite(SafetyLifetime)
+		|| SafetyLifetime <= 0.0f)
+	{
+		return nullptr;
+	}
+
+	UNiagaraComponent* NiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		WorldContext,
+		System,
+		WorldLocation,
+		WorldRotation,
+		Scale,
+		true,
+		true,
+		ENCPoolMethod::None,
+		true);
+	if (!IsValid(NiagaraComponent))
+	{
+		return nullptr;
+	}
+
+	TWeakObjectPtr<UNiagaraComponent> WeakComponent = NiagaraComponent;
+	FTimerHandle CleanupTimer;
+	World->GetTimerManager().SetTimer(
+		CleanupTimer,
+		FTimerDelegate::CreateWeakLambda(NiagaraComponent, [WeakComponent]()
+		{
+			if (UNiagaraComponent* Component = WeakComponent.Get())
+			{
+				Component->DeactivateImmediate();
+				Component->DestroyComponent();
+			}
+		}),
+		FMath::Max(SafetyLifetime, 0.05f),
+		false);
+	return NiagaraComponent;
+}
+
 void UPBBumperVfxRuntimeComponent::PlayImpact(
 	const UObject* WorldContext,
 	UNiagaraSystem* System,
@@ -137,16 +190,12 @@ void UPBBumperVfxRuntimeComponent::PlayImpact(
 		return;
 	}
 
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+	PlayOneShotAtLocation(
 		WorldContext,
 		System,
 		TargetActor->GetActorLocation() + WorldOffset,
 		TargetActor->GetActorRotation(),
-		Scale,
-		true,
-		true,
-		ENCPoolMethod::AutoRelease,
-		true);
+		Scale);
 }
 
 void UPBBumperVfxRuntimeComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)

@@ -232,6 +232,7 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 		TEXT("SummonActorClass"));
 	TestNotNull(TEXT("Summon effect exposes its configured Actor class"), SummonActorClassProperty);
 	int32 ConfiguredVfxStageCount = 0;
+	TSet<FName> UniqueVfxSystemIds;
 	for (const TPair<FName, uint8*>& RowPair : BumperTable->GetRowMap())
 	{
 		const FPBBumperTableRow* Row = reinterpret_cast<const FPBBumperTableRow*>(RowPair.Value);
@@ -414,7 +415,7 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 					*FString::Printf(TEXT("ActivationVfxId is configured: %s"), *RowPair.Key.ToString()),
 					EffectRow->ActivationVfxId.IsNone());
 
-				auto ValidateVfxStage = [this, &ConfiguredVfxStageCount, &RowPair](
+				auto ValidateVfxStage = [this, &ConfiguredVfxStageCount, &UniqueVfxSystemIds, &RowPair](
 					const TCHAR* StageName,
 					const FName VfxId,
 					const TSoftObjectPtr<UNiagaraSystem>& VfxReference)
@@ -430,6 +431,7 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 					}
 
 					++ConfiguredVfxStageCount;
+					UniqueVfxSystemIds.Add(VfxId);
 					UNiagaraSystem* System = VfxReference.LoadSynchronous();
 					if (!TestNotNull(*FString::Printf(TEXT("%s resolves"), *Context), System))
 					{
@@ -467,6 +469,7 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Top catalog count"), TypeCounts.FindRef(EPBBumperType::TopTarget), 5);
 	TestEqual(TEXT("Gate catalog count"), TypeCounts.FindRef(EPBBumperType::Gate), 5);
 	TestEqual(TEXT("Bumper VFX stage reference count"), ConfiguredVfxStageCount, 64);
+	TestEqual(TEXT("Bumper shared VFX system count"), UniqueVfxSystemIds.Num(), 37);
 
 	struct FDeliveryExpectation
 	{

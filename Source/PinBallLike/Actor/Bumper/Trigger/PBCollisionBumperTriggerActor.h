@@ -45,17 +45,28 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Collision", meta = (ClampMin = "0.0", Units = "cm"))
 	float TriggerAreaHitPointTolerance = 0.5f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bumper|Collision", meta = (ClampMin = "0.0", Units = "s"))
+	float MinimumHitResponseInterval = 0.05f;
+
 private:
 	friend class FPBBumperRepresentativeInputPathTest;
 
 	TMap<TWeakObjectPtr<AActor>, int32> TriggeringBallOverlapCounts;
+	TMap<TWeakObjectPtr<AActor>, double> LastHitResponseTimes;
 
 	void RegisterCollisionAreas();
 	void SetupCollisionArea(UPrimitiveComponent* CollisionArea);
 	void SetupTriggerArea(UPrimitiveComponent* TriggerArea);
 	bool IsBallInTriggerArea(AActor* BallActor) const;
 	bool IsHitPointInsideTriggerArea(const FVector& HitPoint) const;
-	bool AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const;
+	bool TryBeginHitResponse(AActor* MovableActor);
+	static bool TryResolveBounceDirection(
+		const FVector& ImpactNormal,
+		const FVector& MovableLocation,
+		const FVector& ImpactPoint,
+		const FVector& IncomingVelocity,
+		FVector& OutBounceDirection);
+	bool QueueBounceVelocity(AActor* MovableActor, const FHitResult& Hit);
 
 	UFUNCTION()
 	void HandleComponentHit(

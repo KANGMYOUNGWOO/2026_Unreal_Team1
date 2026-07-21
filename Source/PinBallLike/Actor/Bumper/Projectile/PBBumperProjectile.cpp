@@ -4,12 +4,16 @@
 #include "PBBumperProjectile.h"
 
 #include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperVulnerabilityComponent.h"
 #include "PinBallLike/Actor/Bumper/Feedback/PBBumperVfxRuntimeComponent.h"
+#include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Interface/BossInterface.h"
+#include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 
 APBBumperProjectile::APBBumperProjectile()
 {
@@ -46,7 +50,8 @@ APBBumperProjectile* APBBumperProjectile::SpawnForTarget(
 	const float InLifetime,
 	UNiagaraSystem* InDeliveryVfx,
 	UNiagaraSystem* InImpactVfx,
-	UNiagaraSystem* InStatusVfx)
+	UNiagaraSystem* InStatusVfx,
+	UStaticMesh* InVisualMesh)
 {
 	UWorld* World = IsValid(WorldContext) ? WorldContext->GetWorld() : nullptr;
 	if (!IsValid(World)
@@ -81,7 +86,8 @@ APBBumperProjectile* APBBumperProjectile::SpawnForTarget(
 		InPayloadDuration,
 		InDeliveryVfx,
 		InImpactVfx,
-		InStatusVfx);
+		InStatusVfx,
+		InVisualMesh);
 	Projectile->SetLifeSpan(FMath::Max(InLifetime, 0.1f));
 	Projectile->ActivateProjectile();
 	return Projectile;
@@ -95,7 +101,8 @@ void APBBumperProjectile::ConfigureForTarget(
 	const float InPayloadDuration,
 	UNiagaraSystem* InDeliveryVfx,
 	UNiagaraSystem* InImpactVfx,
-	UNiagaraSystem* InStatusVfx)
+	UNiagaraSystem* InStatusVfx,
+	UStaticMesh* InVisualMesh)
 {
 	TargetActor = InTargetActor;
 	Payload = InPayload;
@@ -106,6 +113,7 @@ void APBBumperProjectile::ConfigureForTarget(
 	StatusVfx = InStatusVfx;
 	bDestroyOnResolved = bInDestroyOnResolved;
 	bHasResolved = false;
+	ApplyVisualMesh(InVisualMesh);
 	StartDeliveryVfx();
 
 	if (!IsValid(ProjectileMovementComponent))
@@ -127,6 +135,41 @@ void APBBumperProjectile::ConfigureForTarget(
 		{
 			SetActorRotation(Direction.Rotation());
 		}
+	}
+}
+
+UStaticMeshComponent* APBBumperProjectile::ResolveVisualMeshComponent() const
+{
+	if (!VisualMeshComponentTag.IsNone())
+	{
+		const TArray<UActorComponent*> TaggedComponents = GetComponentsByTag(
+			UStaticMeshComponent::StaticClass(),
+			VisualMeshComponentTag);
+		for (UActorComponent* TaggedComponent : TaggedComponents)
+		{
+			if (UStaticMeshComponent* MeshComponent = Cast<UStaticMeshComponent>(TaggedComponent))
+			{
+				return MeshComponent;
+			}
+		}
+	}
+
+	return FindComponentByClass<UStaticMeshComponent>();
+}
+
+void APBBumperProjectile::ApplyVisualMesh(UStaticMesh* InVisualMesh) const
+{
+	if (!IsValid(InVisualMesh))
+	{
+		return;
+	}
+
+	if (UStaticMeshComponent* MeshComponent = ResolveVisualMeshComponent())
+	{
+		MeshComponent->SetStaticMesh(InVisualMesh);
+		MeshComponent->EmptyOverrideMaterials();
+		MeshComponent->SetRelativeRotation(CustomVisualMeshRotationOffset);
+		MeshComponent->SetRelativeScale3D(FVector(FMath::Max(CustomVisualMeshScale, 0.01f)));
 	}
 }
 
@@ -179,11 +222,22 @@ void APBBumperProjectile::HandleProjectileBeginOverlap(
 	}
 
 	bHasResolved = true;
-	const bool bApplied = ApplyPayload(OtherActor);
+	int32 AppliedDamage = 0;
+	const bool bApplied = ApplyPayload(OtherActor, AppliedDamage);
 	StopDeliveryVfx();
 	if (bApplied)
 	{
 		PlayResolvedVfx(OtherActor);
+		if (AppliedDamage > 0)
+		{
+			const FVector HitLocation = IsFromSweep
+				? FVector(
+					SweepResult.ImpactPoint.X,
+					SweepResult.ImpactPoint.Y,
+					SweepResult.ImpactPoint.Z)
+				: OtherActor->GetActorLocation();
+			BroadcastDamageLog(AppliedDamage, HitLocation);
+		}
 	}
 	OnProjectileResolved.Broadcast(this, bApplied);
 
@@ -244,8 +298,9 @@ void APBBumperProjectile::PlayResolvedVfx(AActor* Target) const
 	}
 }
 
-bool APBBumperProjectile::ApplyPayload(AActor* Target) const
+bool APBBumperProjectile::ApplyPayload(AActor* Target, int32& OutAppliedDamage) const
 {
+	OutAppliedDamage = 0;
 	if (!IsValid(Target)
 		|| PayloadPower <= 0
 		|| !Target->GetClass()->ImplementsInterface(UBossInterface::StaticClass()))
@@ -262,7 +317,9 @@ bool APBBumperProjectile::ApplyPayload(AActor* Target) const
 		const int32 FinalDamage = IsValid(VulnerabilityComponent)
 			? VulnerabilityComponent->CalculateBumperProjectileDamage(PayloadPower)
 			: PayloadPower;
-		return IBossInterface::Execute_DamageToBoss(Target, FinalDamage);
+		const bool bApplied = IBossInterface::Execute_DamageToBoss(Target, FinalDamage);
+		OutAppliedDamage = bApplied ? FinalDamage : 0;
+		return bApplied;
 	}
 
 	case EPBBumperProjectilePayload::BossGroggy:
@@ -282,4 +339,22 @@ bool APBBumperProjectile::ApplyPayload(AActor* Target) const
 	default:
 		return false;
 	}
+}
+
+void APBBumperProjectile::BroadcastDamageLog(
+	const int32 AppliedDamage,
+	const FVector& HitLocation) const
+{
+	if (AppliedDamage <= 0 || !UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	FPBDamageLogMessage Message;
+	Message.Style = EPBDamageLogStyle::PlayerSkill;
+	Message.DamageAmount = AppliedDamage;
+	Message.HitLocation = HitLocation;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_UI_DamageLog_Requested,
+		Message);
 }
