@@ -100,9 +100,9 @@ void UPBBossTurtleChargePattern::StartCharge()
 
 void UPBBossTurtleChargePattern::UpdateCharge()
 {
-	if (APBTurtleBoss* Boss = GetTurtleBoss())
+	if (APBTurtleBoss* Boss = GetTurtleBoss(); IsValid(Boss))
 	{
-		if (IsDrawChargeDamageRange)
+		if (IsDrawChargeDamageRange && IsValid(Boss->GetWorld()))
 		{
 			DrawDebugSphere(
 				Boss->GetWorld(),

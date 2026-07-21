@@ -573,12 +573,12 @@ void ASnakeBoss::FaceMovementDirection(const FVector& Direction)
 void ASnakeBoss::DrawDebugSnake() const
 {
 	UWorld* World = GetWorld();
-	if (!World || !IsDrawDebugSnake)
+	if (!IsValid(World) || !IsDrawDebugSnake)
 	{
 		return;
 	}
 
-	const FTransform MeshTransform = SnakeMesh ? SnakeMesh->GetComponentTransform() : GetActorTransform();
+	const FTransform MeshTransform = IsValid(SnakeMesh) ? SnakeMesh->GetComponentTransform() : GetActorTransform();
 	for (const FVector& SnakeSplinePoint : SnakeSplinePoints)
 	{
 		DrawDebugSphere(
@@ -593,7 +593,7 @@ void ASnakeBoss::DrawDebugSnake() const
 			2.0f);
 	}
 
-	if (BossMoveArea)
+	if (IsValid(BossMoveArea))
 	{
 		const FVector PatrolCenter = BossMoveArea->GetAreaCenter();
 		const FVector PatrolExtent = BossMoveArea->GetAreaExtent().GetAbs();
