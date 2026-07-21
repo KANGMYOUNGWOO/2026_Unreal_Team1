@@ -312,10 +312,10 @@ FPBBallDetailInfoRowViewData UPBBallItemWidget::MakeInfoRow(const FText& LabelTe
 
 FPBBallDetailIconTextViewData UPBBallItemWidget::MakeIconText(UTexture2D* IconTexture, const FText& Text) const
 {
-	FPBBallDetailIconTextViewData ViewData;
-	ViewData.IconTexture = IconTexture;
-	ViewData.Text = Text;
-	return ViewData;
+	FPBBallDetailIconTextViewData outViewData;
+	outViewData.IconTexture = IconTexture;
+	outViewData.Text = Text;
+	return outViewData;
 }
 
 int32 UPBBallItemWidget::FindMapValue(const TMap<FName, int32>& Values, const FName Key) const
