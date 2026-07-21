@@ -2,14 +2,20 @@
 
 #include "Misc/AutomationTest.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/DataTable.h"
 #include "Engine/GameInstance.h"
+#include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "Materials/MaterialInterface.h"
+#include "TimerManager.h"
 #include "Tests/AutomationCommon.h"
 #include "PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperCounterShieldComponent.h"
+#include "PinBallLike/Actor/Bumper/Component/PBTurretFireComponent.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/PBBumperSpawner.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBCollisionBumperTriggerActor.h"
@@ -79,7 +85,7 @@ namespace
 		return Bumper;
 	}
 
-	AActor* SpawnMovableRuntimeTestActor(UWorld* World)
+	AActor* SpawnMovableRuntimeTestActor(UWorld* World, const bool bIncludeStatProvider = true)
 	{
 		if (!IsValid(World))
 		{
@@ -95,14 +101,22 @@ namespace
 		}
 
 		USphereComponent* CollisionComponent = NewObject<USphereComponent>(Actor);
-		UPBBaseStatComponent* StatComponent = NewObject<UPBBaseStatComponent>(Actor);
+		UPBBaseStatComponent* StatComponent = bIncludeStatProvider
+			? NewObject<UPBBaseStatComponent>(Actor)
+			: nullptr;
 		UPBBallPhysicsComponent* PhysicsComponent = NewObject<UPBBallPhysicsComponent>(Actor);
 		Actor->AddInstanceComponent(CollisionComponent);
-		Actor->AddInstanceComponent(StatComponent);
+		if (IsValid(StatComponent))
+		{
+			Actor->AddInstanceComponent(StatComponent);
+		}
 		Actor->AddInstanceComponent(PhysicsComponent);
 		Actor->SetRootComponent(CollisionComponent);
 		CollisionComponent->RegisterComponent();
-		StatComponent->RegisterComponent();
+		if (IsValid(StatComponent))
+		{
+			StatComponent->RegisterComponent();
+		}
 		PhysicsComponent->RegisterComponent();
 		PhysicsComponent->InitializeDependencies(CollisionComponent, StatComponent);
 		PhysicsComponent->SetVelocity(FVector(2000.0, 0.0, 0.0));
@@ -157,6 +171,248 @@ bool FPBBumperCounterShieldSourceTransformTest::RunTest(const FString& Parameter
 	TestTrue(
 		TEXT("Counter projectile location is resolved from the transform captured at activation"),
 		Component->ResolveProjectileSpawnLocation().Equals(ExpectedLocation, KINDA_SMALL_NUMBER));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBTurretAimRotationTest,
+	"PinBallLike.Bumper.Runtime.TurretAimRotation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBTurretAimRotationTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	const FVector SourceLocation(100.0f, 50.0f, 20.0f);
+	const FVector TargetLocation(100.0f, 250.0f, 520.0f);
+	const FRotator CurrentRotation(12.0f, -30.0f, 7.0f);
+	FRotator ResolvedRotation;
+
+	TestTrue(
+		TEXT("A horizontal target direction resolves to an aim rotation"),
+		UPBTurretFireComponent::TryResolveAimRotation(
+			SourceLocation,
+			TargetLocation,
+			CurrentRotation,
+			true,
+			0.0f,
+			ResolvedRotation));
+	TestTrue(
+		TEXT("The turret +X forward axis turns toward world +Y"),
+		FMath::IsNearlyEqual(ResolvedRotation.Yaw, 90.0f));
+	TestTrue(
+		TEXT("Yaw-only aiming preserves the placed pitch"),
+		FMath::IsNearlyEqual(ResolvedRotation.Pitch, CurrentRotation.Pitch));
+	TestTrue(
+		TEXT("Yaw-only aiming preserves the placed roll"),
+		FMath::IsNearlyEqual(ResolvedRotation.Roll, CurrentRotation.Roll));
+
+	TestFalse(
+		TEXT("A target at the same horizontal location does not overwrite the current aim"),
+		UPBTurretFireComponent::TryResolveAimRotation(
+			SourceLocation,
+			FVector(SourceLocation.X, SourceLocation.Y, SourceLocation.Z + 500.0f),
+			CurrentRotation,
+			true,
+			0.0f,
+			ResolvedRotation));
+
+	TestTrue(
+		TEXT("An authored mesh offset resolves from the actual muzzle direction"),
+		UPBTurretFireComponent::TryResolveAimRotationFromDirections(
+			FVector::ForwardVector,
+			FVector::RightVector,
+			FRotator(0.0f, -90.0f, 0.0f),
+			true,
+			0.0f,
+			ResolvedRotation));
+	TestTrue(
+		TEXT("The authored minus ninety degree head offset receives only the required yaw delta"),
+		FMath::IsNearlyEqual(ResolvedRotation.Yaw, 0.0f));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBTurretProductionAimPivotTest,
+	"PinBallLike.Bumper.Runtime.TurretProductionAimPivot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBTurretProductionAimPivotTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	FTestWorldWrapper TestWorld;
+	if (!TestTrue(TEXT("A temporary game world can be created"),
+		TestWorld.CreateTestWorld(EWorldType::Game)))
+	{
+		return false;
+	}
+
+	UClass* TurretClass = LoadClass<AActor>(
+		nullptr,
+		TEXT("/Game/Blueprints/Bumper/Effect/BP_TurretSummon.BP_TurretSummon_C"));
+	if (!TestNotNull(TEXT("The production turret Blueprint class resolves"), TurretClass))
+	{
+		return false;
+	}
+
+	UWorld* World = TestWorld.GetTestWorld();
+	AActor* Turret = IsValid(World)
+		? World->SpawnActor<AActor>(TurretClass, FTransform(FVector(100.0f, 50.0f, 0.0f)))
+		: nullptr;
+	AActor* Target = IsValid(World)
+		? World->SpawnActor<AActor>(
+			AActor::StaticClass(),
+			FTransform(FVector(100.0f, 1050.0f, 0.0f)))
+		: nullptr;
+	if (!TestNotNull(TEXT("The production turret can be spawned"), Turret)
+		|| !TestNotNull(TEXT("A target Actor can be spawned"), Target))
+	{
+		return false;
+	}
+
+	Turret->DispatchBeginPlay();
+	UPBTurretFireComponent* FireComponent = Turret->FindComponentByClass<UPBTurretFireComponent>();
+	if (!TestNotNull(TEXT("The production turret owns its fire component"), FireComponent))
+	{
+		return false;
+	}
+
+	const TArray<UActorComponent*> AimPivotComponents = Turret->GetComponentsByTag(
+		USceneComponent::StaticClass(),
+		TEXT("TurretAimPivot"));
+	if (!TestEqual(TEXT("The production turret has exactly one explicit aim pivot"),
+		AimPivotComponents.Num(), 1))
+	{
+		return false;
+	}
+
+	USceneComponent* AimPivot = Cast<USceneComponent>(AimPivotComponents[0]);
+	if (!TestNotNull(TEXT("The aim pivot is a scene component"), AimPivot))
+	{
+		return false;
+	}
+	const TArray<UActorComponent*> MuzzleComponents = Turret->GetComponentsByTag(
+		USceneComponent::StaticClass(),
+		TEXT("TurretMuzzle"));
+	if (!TestEqual(TEXT("The production turret has exactly one muzzle point"),
+		MuzzleComponents.Num(), 1))
+	{
+		return false;
+	}
+	USceneComponent* Muzzle = Cast<USceneComponent>(MuzzleComponents[0]);
+	if (!TestNotNull(TEXT("The production muzzle is a scene component"), Muzzle))
+	{
+		return false;
+	}
+
+	const FRotator BaseRotationBeforeAim = Turret->GetActorRotation();
+	FireComponent->ConfigureAttack(
+		Target,
+		EPBBumperProjectilePayload::BossDamage,
+		1,
+		1);
+
+	AimPivot->SetWorldRotation(FRotator::ZeroRotator);
+	FireComponent->TickComponent(1.0f / 60.0f, LEVELTICK_All, nullptr);
+
+	const FVector ExpectedDirection = (Target->GetActorLocation() - AimPivot->GetComponentLocation())
+		.GetSafeNormal2D();
+	const FVector ActualDirection = (Muzzle->GetComponentLocation() - AimPivot->GetComponentLocation())
+		.GetSafeNormal2D();
+	TestTrue(TEXT("The turret muzzle points at the target after a Blueprint rotation overwrite"),
+		FVector::DotProduct(ExpectedDirection, ActualDirection) > 0.999f);
+	TestTrue(TEXT("Aiming the head does not rotate the turret base Actor"),
+		Turret->GetActorRotation().Equals(BaseRotationBeforeAim, KINDA_SMALL_NUMBER));
+	TestEqual(TEXT("The final aim correction runs after ordinary Blueprint timeline updates"),
+		FireComponent->PrimaryComponentTick.TickGroup, TG_PostUpdateWork);
+
+	FireComponent->ConfigureAttack(
+		nullptr,
+		EPBBumperProjectilePayload::None,
+		0,
+		0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBBumperProjectileVisualMeshTest,
+	"PinBallLike.Bumper.Runtime.ProjectileCustomMeshVisualScale",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBBumperProjectileVisualMeshTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	FTestWorldWrapper TestWorld;
+	if (!TestTrue(TEXT("A temporary projectile world can be created"),
+		TestWorld.CreateTestWorld(EWorldType::Game)))
+	{
+		return false;
+	}
+
+	UClass* ProjectileClass = LoadClass<APBBumperProjectile>(
+		nullptr,
+		TEXT("/Game/Blueprints/Bumper/Effect/BP_TestBullet.BP_TestBullet_C"));
+	UStaticMesh* CustomMesh = LoadObject<UStaticMesh>(
+		nullptr,
+		TEXT("/Game/Resources/Bumper/Mesh/SM_BumperProjectile_TurretRound_01.SM_BumperProjectile_TurretRound_01"));
+	UMaterialInterface* ProjectileMaterial = LoadObject<UMaterialInterface>(
+		nullptr,
+		TEXT("/Game/Resources/Bumper/Material/M_BumperProjectiles.M_BumperProjectiles"));
+	if (!TestNotNull(TEXT("The production bumper projectile class resolves"), ProjectileClass)
+		|| !TestNotNull(TEXT("The turret round mesh resolves"), CustomMesh)
+		|| !TestNotNull(TEXT("The authored bumper projectile material resolves"), ProjectileMaterial))
+	{
+		return false;
+	}
+
+	UWorld* World = TestWorld.GetTestWorld();
+	APBBumperProjectile* Projectile = IsValid(World)
+		? World->SpawnActor<APBBumperProjectile>(ProjectileClass, FTransform::Identity)
+		: nullptr;
+	AActor* Target = IsValid(World)
+		? World->SpawnActor<AActor>(AActor::StaticClass(), FTransform(FVector(1000.0f, 0.0f, 0.0f)))
+		: nullptr;
+	if (!TestNotNull(TEXT("The production bumper projectile can be spawned"), Projectile)
+		|| !TestNotNull(TEXT("A projectile target can be spawned"), Target))
+	{
+		return false;
+	}
+
+	Projectile->ConfigureForTarget(
+		Target,
+		EPBBumperProjectilePayload::BossDamage,
+		1,
+		true,
+		0.0f,
+		nullptr,
+		nullptr,
+		nullptr,
+		CustomMesh);
+	UStaticMeshComponent* VisualMesh = Projectile->FindComponentByClass<UStaticMeshComponent>();
+	if (!TestNotNull(TEXT("The production projectile has a visual mesh component"), VisualMesh))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("The requested projectile mesh is applied"),
+		VisualMesh->GetStaticMesh() == CustomMesh);
+	TestTrue(TEXT("A custom projectile mesh uses its authored material instead of a component override"),
+		VisualMesh->GetMaterial(0) == ProjectileMaterial
+		&& CustomMesh->GetMaterial(0) == ProjectileMaterial);
+	TestTrue(TEXT("A custom projectile mesh uses its authored visual scale"),
+		VisualMesh->GetRelativeScale3D().Equals(FVector(1.0f), KINDA_SMALL_NUMBER));
+	TestTrue(TEXT("A custom projectile mesh compensates for the authored Y-forward axis"),
+		VisualMesh->GetRelativeRotation().Equals(FRotator(0.0f, -90.0f, 0.0f), KINDA_SMALL_NUMBER));
+	USphereComponent* CollisionSphere = Projectile->FindComponentByClass<USphereComponent>();
+	if (!TestNotNull(TEXT("The production projectile has a collision sphere"), CollisionSphere))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Changing the visual mesh scale does not resize the collision sphere"),
+		FMath::IsNearlyEqual(CollisionSphere->GetUnscaledSphereRadius(), 12.0f));
 	return true;
 }
 
@@ -565,8 +821,14 @@ bool FPBBumperRepresentativeInputPathTest::RunTest(const FString& Parameters)
 		OverlapHit);
 	FHitResult CollisionHit;
 	CollisionHit.ImpactPoint = TriggerArea->GetComponentLocation();
-	CollisionHit.ImpactNormal = FVector::XAxisVector;
-	CollisionHit.Normal = FVector::XAxisVector;
+	FVector ExpectedBounceDirection = MovableActor->GetActorLocation() - CollisionHit.ImpactPoint;
+	ExpectedBounceDirection.Z = 0.0f;
+	if (!ExpectedBounceDirection.Normalize())
+	{
+		ExpectedBounceDirection = -FVector::XAxisVector;
+	}
+	CollisionHit.ImpactNormal = -ExpectedBounceDirection;
+	CollisionHit.Normal = CollisionHit.ImpactNormal;
 	const FVector VelocityBeforeHit = PhysicsComponent->GetVelocity();
 	CollisionTrigger->HandleComponentHit(
 		CollisionArea,
@@ -574,12 +836,51 @@ bool FPBBumperRepresentativeInputPathTest::RunTest(const FString& Parameters)
 		MovablePrimitive,
 		FVector::ZeroVector,
 		CollisionHit);
+	TestTrue(TEXT("The Bumper boost waits until the base collision response has completed"),
+		PhysicsComponent->GetVelocity().Equals(VelocityBeforeHit));
+	CollisionTrigger->HandleComponentHit(
+		CollisionArea,
+		MovableActor,
+		MovablePrimitive,
+		FVector::ZeroVector,
+		CollisionHit);
+	TestEqual(TEXT("Repeated hit events from the same contact add only one count"),
+		CollisionTrigger->GetCurrentTriggerCount(), 1);
+
+	AActor* MovableWithoutStats = SpawnMovableRuntimeTestActor(World, false);
+	UPBBallPhysicsComponent* PhysicsWithoutStats = IsValid(MovableWithoutStats)
+		? MovableWithoutStats->FindComponentByClass<UPBBallPhysicsComponent>()
+		: nullptr;
+	if (!TestNotNull(TEXT("A generic IMovable Actor without a stat provider can be spawned"),
+		MovableWithoutStats)
+		|| !TestNotNull(TEXT("The generic IMovable Actor owns its movement component"),
+		PhysicsWithoutStats))
+	{
+		return false;
+	}
+	const FVector GenericIncomingVelocity = -ExpectedBounceDirection * 2000.0f;
+	PhysicsWithoutStats->SetVelocity(GenericIncomingVelocity);
+	TestTrue(TEXT("A generic IMovable Actor can queue the base Bumper rebound"),
+		CollisionTrigger->QueueBounceVelocity(MovableWithoutStats, CollisionHit));
+	TestTrue(TEXT("The generic IMovable rebound is also deferred"),
+		PhysicsWithoutStats->GetVelocity().Equals(GenericIncomingVelocity));
+
+	World->GetTimerManager().Tick(0.001f);
 	TestEqual(TEXT("A hit on the intended face adds one independent count"),
 		CollisionTrigger->GetCurrentTriggerCount(), 1);
 	TestEqual(TEXT("A valid hit is recorded as one meaningful contact"),
 		CollisionBumper->GetMeaningfulContactCount(), 1);
 	TestFalse(TEXT("The physical rebound path changes the Movable velocity"),
 		PhysicsComponent->GetVelocity().Equals(VelocityBeforeHit));
+	TestTrue(TEXT("The deferred Bumper boost is oriented away from the contact point"),
+		FVector::DotProduct(
+			PhysicsComponent->GetVelocity() - VelocityBeforeHit,
+			ExpectedBounceDirection) >= CollisionTrigger->BounceVelocityStrength);
+	TestTrue(TEXT("The base Bumper rebound does not require a stat provider"),
+		PhysicsWithoutStats->GetVelocity().Equals(
+			GenericIncomingVelocity
+				+ ExpectedBounceDirection * CollisionTrigger->BounceVelocityStrength,
+			KINDA_SMALL_NUMBER));
 
 	APBModularBumperBase* GateBumper = SpawnRuntimeTestBumper(
 		World,

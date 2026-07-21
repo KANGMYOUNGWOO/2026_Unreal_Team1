@@ -7,6 +7,7 @@
 class APBBumperProjectile;
 class APBModularBumperBase;
 class UPBBallComboComponent;
+class UStaticMesh;
 
 UCLASS(Transient)
 class PINBALLLIKE_API UPBBumperComboArcComponent : public UActorComponent
@@ -20,6 +21,7 @@ public:
 		APBModularBumperBase* SourceBumper,
 		AActor* BossTarget,
 		TSubclassOf<APBBumperProjectile> ProjectileClass,
+		UStaticMesh* ProjectileMesh,
 		int32 ComboInterval,
 		int32 Damage,
 		float Duration,
@@ -44,6 +46,10 @@ private:
 	TWeakObjectPtr<APBModularBumperBase> ArmedBumper;
 	TWeakObjectPtr<AActor> ArmedBossTarget;
 	TSubclassOf<APBBumperProjectile> ArmedProjectileClass;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UStaticMesh> ArmedProjectileMesh;
+
 	FVector ArmedSpawnOffset = FVector::ZeroVector;
 	int32 ArmedComboInterval = 0;
 	int32 ArmedDamage = 0;

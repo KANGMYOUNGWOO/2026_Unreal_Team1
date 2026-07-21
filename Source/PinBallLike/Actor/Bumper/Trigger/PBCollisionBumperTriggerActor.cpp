@@ -5,6 +5,7 @@
 
 #include "Components/BoxComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "TimerManager.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperReactionComponent.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Interface/Movable.h"
@@ -57,6 +58,7 @@ void APBCollisionBumperTriggerActor::EndPlay(const EEndPlayReason::Type EndPlayR
 	CollisionAreas.Reset();
 	TriggerAreas.Reset();
 	TriggeringBallOverlapCounts.Reset();
+	LastHitResponseTimes.Reset();
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -185,35 +187,126 @@ bool APBCollisionBumperTriggerActor::IsHitPointInsideTriggerArea(const FVector& 
 	return false;
 }
 
-bool APBCollisionBumperTriggerActor::AddBounceVelocityToBall(AActor* BallActor, const FHitResult& Hit) const
+bool APBCollisionBumperTriggerActor::TryBeginHitResponse(AActor* MovableActor)
 {
-	if (!IsValid(BallActor))
+	UWorld* World = GetWorld();
+	if (!IsValid(MovableActor) || !IsValid(World))
 	{
 		return false;
 	}
 
-	const IStatProvider* StatProvider = PBInterfaceUtils::FindInterface<IStatProvider>(BallActor);
-	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(BallActor);
-	if (!StatProvider || !Movable)
+	const TWeakObjectPtr<AActor> MovableKey = MovableActor;
+	const double CurrentTime = World->GetTimeSeconds();
+	const double MinimumInterval = FMath::Max(MinimumHitResponseInterval, 0.0f);
+	if (const double* LastResponseTime = LastHitResponseTimes.Find(MovableKey))
+	{
+		if (CurrentTime - *LastResponseTime < MinimumInterval)
+		{
+			return false;
+		}
+	}
+
+	LastHitResponseTimes.Add(MovableKey, CurrentTime);
+	return true;
+}
+
+bool APBCollisionBumperTriggerActor::TryResolveBounceDirection(
+	const FVector& ImpactNormal,
+	const FVector& MovableLocation,
+	const FVector& ImpactPoint,
+	const FVector& IncomingVelocity,
+	FVector& OutBounceDirection)
+{
+	OutBounceDirection = FVector::ZeroVector;
+
+	FVector CandidateDirection = ImpactNormal;
+	CandidateDirection.Z = 0.0f;
+	if (!CandidateDirection.Normalize())
 	{
 		return false;
 	}
 
-	const int32 BallBounce = StatProvider->GetStat(PBStatNames::Bounciness);
+	FVector OutwardReference = MovableLocation - ImpactPoint;
+	OutwardReference.Z = 0.0f;
+	if (OutwardReference.Normalize())
+	{
+		if (FVector::DotProduct(CandidateDirection, OutwardReference) < 0.0f)
+		{
+			CandidateDirection *= -1.0f;
+		}
+	}
+	else
+	{
+		FVector IncomingDirection = IncomingVelocity;
+		IncomingDirection.Z = 0.0f;
+		if (IncomingDirection.Normalize()
+			&& FVector::DotProduct(CandidateDirection, IncomingDirection) > 0.0f)
+		{
+			CandidateDirection *= -1.0f;
+		}
+	}
+
+	OutBounceDirection = CandidateDirection;
+	return true;
+}
+
+bool APBCollisionBumperTriggerActor::QueueBounceVelocity(AActor* MovableActor, const FHitResult& Hit)
+{
+	if (!IsValid(MovableActor))
+	{
+		return false;
+	}
+
+	IMovable* Movable = PBInterfaceUtils::FindInterface<IMovable>(MovableActor);
+	if (!Movable)
+	{
+		return false;
+	}
+
+	int32 BallBounce = 0;
+	if (const IStatProvider* StatProvider = PBInterfaceUtils::FindInterface<IStatProvider>(MovableActor))
+	{
+		BallBounce = StatProvider->GetStat(PBStatNames::Bounciness);
+	}
 	const float BounceForce = BallBounce + BounceVelocityStrength;
 	if (BounceForce <= 0.0f)
 	{
 		return false;
 	}
 
-	FVector BounceDirection = Hit.ImpactNormal;
-	BounceDirection.Z = 0.0f;
-	if (!BounceDirection.Normalize())
+	FVector BounceDirection;
+	if (!TryResolveBounceDirection(
+		Hit.ImpactNormal,
+		MovableActor->GetActorLocation(),
+		Hit.ImpactPoint,
+		Movable->GetVelocity(),
+		BounceDirection))
 	{
 		return false;
 	}
 
-	Movable->AddVelocity(BounceDirection * BounceForce);
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return false;
+	}
+
+	const TWeakObjectPtr<AActor> WeakMovableActor = MovableActor;
+	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(
+		this,
+		[WeakMovableActor, BounceDirection, BounceForce]()
+		{
+			AActor* ResolvedActor = WeakMovableActor.Get();
+			if (!IsValid(ResolvedActor))
+			{
+				return;
+			}
+
+			if (IMovable* ResolvedMovable = PBInterfaceUtils::FindInterface<IMovable>(ResolvedActor))
+			{
+				ResolvedMovable->AddVelocity(BounceDirection * BounceForce);
+			}
+		}));
 	return true;
 }
 
@@ -241,13 +334,17 @@ void APBCollisionBumperTriggerActor::HandleComponentHit(
 	{
 		return;
 	}
+	if (!TryBeginHitResponse(OtherActor))
+	{
+		return;
+	}
 
 	if (IsValid(ReactionComponent))
 	{
 		ReactionComponent->PlayImpactReaction(Hit);
 	}
 
-	if (AddBounceVelocityToBall(OtherActor, Hit))
+	if (QueueBounceVelocity(OtherActor, Hit))
 	{
 		PlayImpactCameraShake();
 	}
@@ -302,4 +399,5 @@ void APBCollisionBumperTriggerActor::HandleTriggerEndOverlap(
 	}
 
 	TriggeringBallOverlapCounts.Remove(BallKey);
+	LastHitResponseTimes.Remove(BallKey);
 }

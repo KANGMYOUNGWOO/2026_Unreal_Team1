@@ -24,6 +24,8 @@
 
 namespace
 {
+constexpr int32 BallSkillPreviewAttack = 10;
+
 template <typename EnumType>
 FText GetEnumDisplayText(const EnumType Value)
 {
@@ -240,8 +242,7 @@ TArray<FPBCollectionBallDisplayData> UPBCollectionSubsystem::GetBallCatalogEntri
 			if (TableData->FindSkillRow(DisplayData.SkillId, SkillRow))
 			{
 				DisplayData.SkillName = SkillRow.DisplayName;
-				//TODO : 임시로 수치 10 잡아서 넣음
-				DisplayData.SkillDescription = SkillRow.GetDescription(10);
+				DisplayData.SkillDescription = SkillRow.GetDescription(BallSkillPreviewAttack);
 				DisplayData.SkillStatsText = FText::Format(
 					LOCTEXT("BallSkillStats", "피해 배율 {0} / 지속 {1}초 / 값 {2} / 그로기 {3}"),
 					FText::AsNumber(SkillRow.PowerValue),

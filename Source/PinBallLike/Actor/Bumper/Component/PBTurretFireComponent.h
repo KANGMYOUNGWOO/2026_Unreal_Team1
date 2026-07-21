@@ -9,6 +9,8 @@
 
 class AProjectileBase;
 class UNiagaraSystem;
+class USceneComponent;
+class UStaticMesh;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FPBTurretProjectileSignature,
@@ -24,9 +26,32 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void TickComponent(
+		float DeltaTime,
+		ELevelTick TickType,
+		FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Fire")
 	AActor* FireOnce();
+
+	UFUNCTION(BlueprintCallable, Category = "Bumper|Turret|Aim")
+	bool AimAtTarget();
+
+	static bool TryResolveAimRotation(
+		const FVector& SourceLocation,
+		const FVector& TargetLocation,
+		const FRotator& CurrentRotation,
+		bool bYawOnly,
+		float YawOffsetDegrees,
+		FRotator& OutRotation);
+
+	static bool TryResolveAimRotationFromDirections(
+		const FVector& CurrentAimDirection,
+		const FVector& TargetDirection,
+		const FRotator& CurrentRotation,
+		bool bYawOnly,
+		float YawOffsetDegrees,
+		FRotator& OutRotation);
 
 	void ConfigureAttack(
 		AActor* InTargetActor,
@@ -53,10 +78,25 @@ protected:
 	TSubclassOf<AProjectileBase> ProjectileClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Fire")
+	TObjectPtr<UStaticMesh> ProjectileMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Fire")
 	FName MuzzleTag = TEXT("TurretMuzzle");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Fire", meta = (ClampMin = "0.0"))
 	float ProjectileLifeTime = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Aim")
+	bool bAimAtTargetBeforeFire = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Aim")
+	bool bYawOnlyAim = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Aim")
+	FName AimPivotTag = TEXT("TurretAimPivot");
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Aim", meta = (ClampMin = "-180.0", ClampMax = "180.0"))
+	float AimYawOffsetDegrees = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bumper|Turret|Pool")
 	bool IsUseObjectPool = true;
@@ -69,6 +109,8 @@ protected:
 
 private:
 	void HandleBumperProjectileResolved(APBBumperProjectile* Projectile, bool bApplied);
+	USceneComponent* ResolveAimPivot();
+	USceneComponent* ResolveMuzzleComponent() const;
 	FTransform GetMuzzleTransform() const;
 	AProjectileBase* GetProjectileFromPool();
 	AProjectileBase* SpawnProjectileActor();
@@ -85,6 +127,7 @@ private:
 	TMap<TWeakObjectPtr<AProjectileBase>, FTimerHandle> ProjectileLifeTimerHandles;
 
 	TWeakObjectPtr<AActor> AttackTarget;
+	TWeakObjectPtr<USceneComponent> CachedAimPivot;
 	EPBBumperProjectilePayload AttackPayload = EPBBumperProjectilePayload::None;
 	int32 AttackPower = 0;
 	int32 MaxAttackShotCount = 0;

@@ -8,6 +8,7 @@
 #include "PinBallLike/Collection/UI/PBCollectionTabController.h"
 #include "PinBallLike/Struct/Effect/PBEffectTypes.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Table/Ball/Struct/PBBallSkillTableRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectSetRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
@@ -258,6 +259,67 @@ bool FPBCollectionEffectSetAssetIntegrityTest::RunTest(const FString& Parameters
 		{
 			TestFalse(TEXT("A valid EffectSet produces a user-facing summary"), Projection.EffectSummary.IsEmpty());
 		}
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBCollectionBallSkillDescriptionContractTest,
+	"PinBallLike.Collection.Catalog.BallSkillDescriptionContract",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBCollectionBallSkillDescriptionContractTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+	constexpr int32 PreviewAttack = 10;
+
+	FPBBallSkillTableRow TestRow;
+	TestRow.Description = FText::FromString(TEXT("{Power}|{Life}|{Effect}|{Groggy}"));
+	TestRow.PowerValue = 0.8f;
+	TestRow.LifeValue = 2.0f;
+	TestRow.EffectValue = 3;
+	TestRow.GroggyValue = 4;
+
+	TestEqual(
+		TEXT("Skill damage uses the shared ball attack multiplier"),
+		TestRow.CalculateBaseDamage(PreviewAttack),
+		8);
+	TestEqual(TEXT("Negative attack values cannot create negative damage"), TestRow.CalculateBaseDamage(-10), 0);
+	TestEqual(
+		TEXT("Every supported named placeholder is resolved"),
+		TestRow.GetDescription(PreviewAttack).ToString(),
+		FString(TEXT("8|2|3|4")));
+
+	UDataTable* SkillTable = LoadObject<UDataTable>(
+		nullptr,
+		TEXT("/Game/Data/Tables/DT_Skill.DT_Skill"));
+	if (!TestNotNull(TEXT("DT_Skill loads"), SkillTable))
+	{
+		return false;
+	}
+
+	TestTrue(
+		TEXT("DT_Skill uses FPBBallSkillTableRow"),
+		SkillTable->GetRowStruct() == FPBBallSkillTableRow::StaticStruct());
+	const TArray<FName> RowNames = SkillTable->GetRowNames();
+	TestTrue(TEXT("DT_Skill contains at least one skill"), !RowNames.IsEmpty());
+
+	for (const FName RowName : RowNames)
+	{
+		const FPBBallSkillTableRow* SkillRow = SkillTable->FindRow<FPBBallSkillTableRow>(
+			RowName,
+			TEXT("PBCollectionBallSkillDescriptionContract"),
+			false);
+		if (!TestNotNull(*FString::Printf(TEXT("Skill row %s is readable"), *RowName.ToString()), SkillRow))
+		{
+			continue;
+		}
+
+		const FString FormattedDescription = SkillRow->GetDescription(PreviewAttack).ToString();
+		TestFalse(
+			*FString::Printf(TEXT("Skill row %s has no unresolved placeholders"), *RowName.ToString()),
+			FormattedDescription.Contains(TEXT("{")) || FormattedDescription.Contains(TEXT("}")));
 	}
 
 	return true;

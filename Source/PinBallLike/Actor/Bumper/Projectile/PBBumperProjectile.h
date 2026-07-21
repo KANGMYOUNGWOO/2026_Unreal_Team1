@@ -8,6 +8,8 @@
 
 class UNiagaraComponent;
 class UNiagaraSystem;
+class UStaticMesh;
+class UStaticMeshComponent;
 
 UENUM(BlueprintType)
 enum class EPBBumperProjectilePayload : uint8
@@ -44,7 +46,8 @@ public:
 		float InLifetime,
 		UNiagaraSystem* InDeliveryVfx = nullptr,
 		UNiagaraSystem* InImpactVfx = nullptr,
-		UNiagaraSystem* InStatusVfx = nullptr);
+		UNiagaraSystem* InStatusVfx = nullptr,
+		UStaticMesh* InVisualMesh = nullptr);
 
 	void ConfigureForTarget(
 		AActor* InTargetActor,
@@ -54,7 +57,8 @@ public:
 		float InPayloadDuration = 0.0f,
 		UNiagaraSystem* InDeliveryVfx = nullptr,
 		UNiagaraSystem* InImpactVfx = nullptr,
-		UNiagaraSystem* InStatusVfx = nullptr);
+		UNiagaraSystem* InStatusVfx = nullptr,
+		UStaticMesh* InVisualMesh = nullptr);
 	void ResetForPool();
 
 	FPBBumperProjectileResolvedSignature OnProjectileResolved;
@@ -74,8 +78,21 @@ protected:
 		meta = (ClampMin = "0.0", Units = "cm/s^2"))
 	float HomingAcceleration = 8000.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Projectile|Visual")
+	FName VisualMeshComponentTag = TEXT("ProjectileVisual");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Projectile|Visual",
+		meta = (ClampMin = "0.01"))
+	float CustomVisualMeshScale = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bumper|Projectile|Visual")
+	FRotator CustomVisualMeshRotationOffset = FRotator(0.0f, -90.0f, 0.0f);
+
 private:
-	bool ApplyPayload(AActor* Target) const;
+	UStaticMeshComponent* ResolveVisualMeshComponent() const;
+	void ApplyVisualMesh(UStaticMesh* InVisualMesh) const;
+	bool ApplyPayload(AActor* Target, int32& OutAppliedDamage) const;
+	void BroadcastDamageLog(int32 AppliedDamage, const FVector& HitLocation) const;
 	void StartDeliveryVfx();
 	void StopDeliveryVfx();
 	void PlayResolvedVfx(AActor* Target) const;

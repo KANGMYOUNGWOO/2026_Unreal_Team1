@@ -68,9 +68,11 @@ private:
 
 	void ApplyDamageToTarget(AActor* Target);
 	FVector CalculateHitLocation(const AActor* Target) const;
+	APBBallBase* ResolveLeaderBall() const;
+	UPBBallPhysicsComponent* ResolveLeaderPhysicsComponent() const;
 	void RestoreGravity();
 
-	TWeakObjectPtr<UPBBallPhysicsComponent> BallPhysicsComponent;
+	TWeakObjectPtr<UPBBallPhysicsComponent> GravityDisabledPhysicsComponent;
 	TSet<TWeakObjectPtr<AActor>> DamagedTargets;
 	int32 AttackCount = 1;
 };

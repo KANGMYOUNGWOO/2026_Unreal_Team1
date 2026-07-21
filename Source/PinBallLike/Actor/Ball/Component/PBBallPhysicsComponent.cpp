@@ -284,6 +284,11 @@ float UPBBallPhysicsComponent::CalculateImpactDamping(
 	const FVector IncomingDirection,
 	const FVector ImpactNormal) const
 {
+	if (!GravityDisableRequesters.IsEmpty())
+	{
+		return 1.0f;
+	}
+
 	// 스치는 충돌은 0, 정면 충돌은 1에 가까운 값이 된다.
 	const float ImpactStrength = FMath::Clamp(
 		-FVector::DotProduct(IncomingDirection, ImpactNormal), 0.0f, 1.0f);

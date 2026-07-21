@@ -381,7 +381,9 @@ void UPBBossPatternComponent::ClearCurrentPattern()
 
 void UPBBossPatternComponent::SetOwnerBossIdleIfPatternState() const
 {
-	if (OwnerBoss && OwnerBoss->GetBossState() == EPBBossState::Pattern)
+	if (OwnerBoss
+		&& !OwnerBoss->IsDead()
+		&& OwnerBoss->GetBossState() == EPBBossState::Pattern)
 	{
 		OwnerBoss->RequestBossState(EPBBossState::Idle);
 	}

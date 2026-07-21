@@ -220,6 +220,7 @@ void APBBattleGameMode::TryStartBossInfo()
 void APBBattleGameMode::EnterBossIntro()
 {
 	UE_LOG(LogTemp, Log, TEXT("[BattleFlow] Enter BossIntro."));
+	OnBossIntroEntered();
 }
 
 void APBBattleGameMode::EnterBallDeployment()

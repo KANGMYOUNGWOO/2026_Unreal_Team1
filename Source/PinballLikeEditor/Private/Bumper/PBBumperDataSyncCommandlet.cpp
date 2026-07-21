@@ -181,13 +181,13 @@ namespace
 			{TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Gate_ManaField"), TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Gate_ReactiveRepair")},
 			{TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Gate_StrengthField"), TEXT("/Game/Data/DataAssets/Bumper/DA_Bumper_Gate_ManaReactor")},
 
-			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Rebound_CounterShell"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Rebound_KineticShell")},
-			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Rebound_ManaOrb"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Rebound_BloodOverdrive")},
-			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Side_LaunchCharge"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Side_CounterShield")},
-			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Top_ComboUp"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Top_ComboArc")},
-			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Top_ComboPickup"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Top_VulnerabilityShell")},
-			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Gate_ManaField"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Gate_ReactiveRepair")},
-			{TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Gate_StrengthField"), TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/T_Gate_ManaReactor")}
+			{TEXT("/Game/Resources/Bumper/Texture/Icon/T_Rebound_CounterShell"), TEXT("/Game/Resources/Bumper/Texture/Icon/T_Rebound_KineticShell")},
+			{TEXT("/Game/Resources/Bumper/Texture/Icon/T_Rebound_ManaOrb"), TEXT("/Game/Resources/Bumper/Texture/Icon/T_Rebound_BloodOverdrive")},
+			{TEXT("/Game/Resources/Bumper/Texture/Icon/T_Side_LaunchCharge"), TEXT("/Game/Resources/Bumper/Texture/Icon/T_Side_CounterShield")},
+			{TEXT("/Game/Resources/Bumper/Texture/Icon/T_Top_ComboUp"), TEXT("/Game/Resources/Bumper/Texture/Icon/T_Top_ComboArc")},
+			{TEXT("/Game/Resources/Bumper/Texture/Icon/T_Top_ComboPickup"), TEXT("/Game/Resources/Bumper/Texture/Icon/T_Top_VulnerabilityShell")},
+			{TEXT("/Game/Resources/Bumper/Texture/Icon/T_Gate_ManaField"), TEXT("/Game/Resources/Bumper/Texture/Icon/T_Gate_ReactiveRepair")},
+			{TEXT("/Game/Resources/Bumper/Texture/Icon/T_Gate_StrengthField"), TEXT("/Game/Resources/Bumper/Texture/Icon/T_Gate_ManaReactor")}
 		};
 
 		TArray<FAssetRenameData> RenameData;
@@ -497,7 +497,7 @@ namespace
 		return bIncludeLegacyMigrationAssets
 			&& (PackageName.StartsWith(TEXT("/Game/Blueprints/Bumper/Effect/"))
 				|| PackageName.StartsWith(TEXT("/Game/Blueprints/Bumper/Trigger/"))
-				|| PackageName.StartsWith(TEXT("/Game/Blueprints/Bumper/Art/Texture/Icon/")));
+				|| PackageName.StartsWith(TEXT("/Game/Resources/Bumper/Texture/Icon/")));
 	}
 
 	bool SaveApprovedDirtyPackages(const bool bIncludeLegacyMigrationAssets)

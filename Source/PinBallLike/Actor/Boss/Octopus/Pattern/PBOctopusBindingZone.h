@@ -21,7 +21,7 @@ public:
 		float NewZoneDuration,
 		float NewBindDuration,
 		int32 NewBindDamage,
-		const FVector& NewEffectScale);
+		float NewEffectScale);
 
 protected:
 	virtual void BeginPlay() override;

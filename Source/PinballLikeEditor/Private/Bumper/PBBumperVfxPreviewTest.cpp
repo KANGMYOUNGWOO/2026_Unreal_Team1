@@ -15,13 +15,16 @@
 #include "NiagaraEmitterInstance.h"
 #include "NiagaraGpuComputeDispatchInterface.h"
 #include "NiagaraSystem.h"
+#include "NiagaraSystemEmitterState.h"
 #include "NiagaraSystemInstance.h"
 #include "NiagaraSystemInstanceController.h"
 #include "NiagaraWorldManager.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBGateFieldTuning.h"
 #include "RenderingThread.h"
 #include "Stateless/NiagaraStatelessEmitter.h"
+#include "Stateless/NiagaraStatelessSpawnInfo.h"
 #include "Stateless/Modules/NiagaraStatelessModule_ShapeLocation.h"
+#include "UObject/UnrealType.h"
 
 namespace
 {
@@ -40,14 +43,14 @@ namespace
 	{
 		static const TArray<FPBPreviewEntry> Entries =
 		{
-			{TEXT("NS_Bumper_Impact_DirectStrike"), FVector(-510.0, -210.0, 0.0)},
-			{TEXT("NS_Bumper_Impact_BossGroggy"), FVector(-170.0, -210.0, 0.0)},
-			{TEXT("NS_Bumper_Impact_ComboArc"), FVector(170.0, -210.0, 0.0)},
-			{TEXT("NS_Bumper_Impact_PartyMana"), FVector(510.0, -210.0, 0.0)},
-			{TEXT("NS_Bumper_Impact_RecoveryField"), FVector(-510.0, 210.0, 0.0)},
-			{TEXT("NS_Bumper_Impact_ShieldCharge"), FVector(-170.0, 210.0, 0.0)},
-			{TEXT("NS_Bumper_Impact_SpeedUp"), FVector(170.0, 210.0, 0.0)},
-			{TEXT("NS_Bumper_Impact_VulnerabilityShell"), FVector(510.0, 210.0, 0.0)}
+			{TEXT("NS_Bumper_Impact_Attack"), FVector(-510.0, -210.0, 0.0)},
+			{TEXT("NS_Bumper_Impact_Groggy"), FVector(-170.0, -210.0, 0.0)},
+			{TEXT("NS_Bumper_Impact_Combo"), FVector(170.0, -210.0, 0.0)},
+			{TEXT("NS_Bumper_Impact_Mana"), FVector(510.0, -210.0, 0.0)},
+			{TEXT("NS_Bumper_Impact_Recovery"), FVector(-510.0, 210.0, 0.0)},
+			{TEXT("NS_Bumper_Impact_Shield"), FVector(-170.0, 210.0, 0.0)},
+			{TEXT("NS_Bumper_Impact_Speed"), FVector(170.0, 210.0, 0.0)},
+			{TEXT("NS_Bumper_Impact_Vulnerability"), FVector(510.0, 210.0, 0.0)}
 		};
 		return Entries;
 	}
@@ -56,14 +59,14 @@ namespace
 	{
 		static const TArray<FPBPreviewEntry> Entries =
 		{
-			{TEXT("NS_Bumper_Status_BloodOverdrive"), FVector(-510.0, -210.0, 0.0)},
-			{TEXT("NS_Bumper_Status_CounterShield"), FVector(-170.0, -210.0, 0.0)},
-			{TEXT("NS_Bumper_Status_ManaReactor"), FVector(170.0, -210.0, 0.0)},
-			{TEXT("NS_Bumper_Status_RecoveryField"), FVector(510.0, -210.0, 0.0)},
-			{TEXT("NS_Bumper_Status_SpeedUp"), FVector(-510.0, 210.0, 0.0)},
-			{TEXT("NS_Bumper_Status_VulnerabilityShell"), FVector(-170.0, 210.0, 0.0)},
-			{TEXT("NS_Bumper_Delivery_DirectStrike"), FVector(170.0, 210.0, 0.0)},
-			{TEXT("NS_Bumper_Delivery_LaunchCharge"), FVector(510.0, 210.0, 0.0)}
+			{TEXT("NS_Bumper_Status_Strength"), FVector(-510.0, -210.0, 0.0)},
+			{TEXT("NS_Bumper_Status_Shield"), FVector(-170.0, -210.0, 0.0)},
+			{TEXT("NS_Bumper_Status_ManaArea"), FVector(170.0, -210.0, 0.0)},
+			{TEXT("NS_Bumper_Status_RecoveryArea"), FVector(510.0, -210.0, 0.0)},
+			{TEXT("NS_Bumper_Status_SpeedArea"), FVector(-510.0, 210.0, 0.0)},
+			{TEXT("NS_Bumper_Status_Vulnerability"), FVector(-170.0, 210.0, 0.0)},
+			{TEXT("NS_Bumper_Delivery_Attack"), FVector(170.0, 210.0, 0.0)},
+			{TEXT("NS_Bumper_Delivery_Summon"), FVector(510.0, 210.0, 0.0)}
 		};
 		return Entries;
 	}
@@ -81,10 +84,9 @@ namespace
 	{
 		static constexpr const TCHAR* GateAreaStatusSystems[] =
 		{
-			TEXT("NS_Bumper_Status_SpeedUp"),
-			TEXT("NS_Bumper_Status_RecoveryField"),
-			TEXT("NS_Bumper_Status_ReactiveRepair"),
-			TEXT("NS_Bumper_Status_ManaReactor")
+			TEXT("NS_Bumper_Status_SpeedArea"),
+			TEXT("NS_Bumper_Status_RecoveryArea"),
+			TEXT("NS_Bumper_Status_ManaArea")
 		};
 
 		bool bAllValid = true;
@@ -143,6 +145,63 @@ namespace
 				*FString::Printf(TEXT("Gate area VFX maximum radius: %s"), AssetName),
 				ActiveRadius.Max,
 				PBGateFieldTuning::DefaultRadius);
+		}
+		return bAllValid;
+	}
+
+	bool ValidateOneShotLifecycle(FAutomationTestBase& Test)
+	{
+		static constexpr const TCHAR* Stages[] = {TEXT("Activation"), TEXT("Impact")};
+		static constexpr const TCHAR* Styles[] =
+		{
+			TEXT("Attack"), TEXT("Combo"), TEXT("Groggy"), TEXT("Mana"), TEXT("Recovery"),
+			TEXT("Shield"), TEXT("Speed"), TEXT("Strength"), TEXT("Summon"), TEXT("Vulnerability")
+		};
+
+		const FStructProperty* EmitterStateProperty = FindFProperty<FStructProperty>(
+			UNiagaraStatelessEmitter::StaticClass(),
+			TEXT("EmitterState"));
+		if (!Test.TestNotNull(TEXT("Stateless emitter lifecycle metadata resolves"), EmitterStateProperty))
+		{
+			return false;
+		}
+
+		bool bAllValid = true;
+		for (const TCHAR* Stage : Stages)
+		{
+			for (const TCHAR* Style : Styles)
+			{
+				const FString AssetName = FString::Printf(TEXT("NS_Bumper_%s_%s"), Stage, Style);
+				UNiagaraSystem* System = LoadObject<UNiagaraSystem>(
+					nullptr,
+					*MakeSystemObjectPath(*AssetName));
+				if (!Test.TestNotNull(*FString::Printf(TEXT("One-shot VFX resolves: %s"), *AssetName), System))
+				{
+					bAllValid = false;
+					continue;
+				}
+
+				for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+				{
+					UNiagaraStatelessEmitter* Emitter = Handle.GetStatelessEmitter();
+					const FNiagaraEmitterStateData* EmitterState = IsValid(Emitter)
+						? EmitterStateProperty->ContainerPtrToValuePtr<FNiagaraEmitterStateData>(Emitter)
+						: nullptr;
+					const FNiagaraStatelessSpawnInfo* SpawnInfo = IsValid(Emitter)
+						? Emitter->GetSpawnInfoByIndex(0)
+						: nullptr;
+					bAllValid &= Test.TestTrue(
+						*FString::Printf(TEXT("One-shot emitter loops once: %s"), *AssetName),
+						EmitterState && EmitterState->LoopBehavior == ENiagaraLoopBehavior::Once);
+					bAllValid &= Test.TestTrue(
+						*FString::Printf(TEXT("One-shot burst is limited to the first loop: %s"), *AssetName),
+						SpawnInfo
+							&& SpawnInfo->Type == ENiagaraStatelessSpawnInfoType::Burst
+							&& SpawnInfo->bLoopCountLimitEnabled
+							&& SpawnInfo->LoopCountLimit.Min == 1
+							&& SpawnInfo->LoopCountLimit.Max == 1);
+				}
+			}
 		}
 		return bAllValid;
 	}
@@ -403,6 +462,10 @@ bool FPBBumperVfxVisualPreviewTest::RunTest(const FString& Parameters)
 {
 	static_cast<void>(Parameters);
 	if (!ValidateGateAreaVfxRadius(*this))
+	{
+		return false;
+	}
+	if (!ValidateOneShotLifecycle(*this))
 	{
 		return false;
 	}

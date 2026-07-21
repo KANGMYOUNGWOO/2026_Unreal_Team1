@@ -46,6 +46,9 @@ public:
 	void ReturnToMainMenu();
 
 protected:
+	UFUNCTION(BlueprintImplementableEvent, Category = "Battle|Flow")
+	void OnBossIntroEntered();
+
 	UFUNCTION(BlueprintNativeEvent, Category = "Battle|Flow")
 	void HandleBattleExit();
 	virtual void HandleBattleExit_Implementation();

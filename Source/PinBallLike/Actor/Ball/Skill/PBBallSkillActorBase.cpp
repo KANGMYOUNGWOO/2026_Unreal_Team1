@@ -2,6 +2,7 @@
 
 #include "Components/SceneComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Ball/Skill/Component/PBSkillFeedbackComponent.h"
 #include "PinBallLike/Actor/Ball/Skill/Component/PBTimedAreaDamageComponent.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
@@ -12,6 +13,11 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 
 const FName APBBallSkillActorBase::SkillCollisionProfileName(TEXT("Skill"));
+
+APBBallSkillActorBase::APBBallSkillActorBase()
+{
+	SkillFeedbackComponent = CreateDefaultSubobject<UPBSkillFeedbackComponent>(TEXT("SkillFeedbackComponent"));
+}
 
 void APBBallSkillActorBase::InitializeSkill(
 	APBBallBase* InOwnerBall,
@@ -119,6 +125,10 @@ void APBBallSkillActorBase::PrepareSkill_Implementation()
 
 void APBBallSkillActorBase::EnterPreparingState()
 {
+	if (SkillFeedbackComponent)
+	{
+		SkillFeedbackComponent->PlayCastFeedback();
+	}
 	PrepareSkill();
 }
 
@@ -133,6 +143,10 @@ void APBBallSkillActorBase::EnterFinishingState()
 	{
 		OwnerBall->OnDestroyed.RemoveDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
 	}
+	if (SkillFeedbackComponent)
+	{
+		SkillFeedbackComponent->StopSkillSound();
+	}
 	OnFinished();
 }
 
@@ -141,6 +155,10 @@ void APBBallSkillActorBase::EnterStoppingState()
 	if (IsValid(OwnerBall))
 	{
 		OwnerBall->OnDestroyed.RemoveDynamic(this, &APBBallSkillActorBase::HandleOwnerBallDestroyed);
+	}
+	if (SkillFeedbackComponent)
+	{
+		SkillFeedbackComponent->StopSkillSound();
 	}
 	OnStopped();
 }
@@ -224,6 +242,11 @@ void APBBallSkillActorBase::HandleDamageApplied(
 		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
 			GameplayTags::Event_UI_DamageLog_Requested,
 			Message);
+	}
+
+	if (SkillFeedbackComponent)
+	{
+		SkillFeedbackComponent->PlayHitFeedback();
 	}
 
 	OnHit(Target, AppliedDamage, HitLocation);
