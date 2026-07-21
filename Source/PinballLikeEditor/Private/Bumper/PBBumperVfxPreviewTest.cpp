@@ -28,7 +28,7 @@
 
 namespace
 {
-	constexpr TCHAR VfxFolder[] = TEXT("/Game/Blueprints/Bumper/Effect/VFX");
+	constexpr TCHAR VfxFolder[] = TEXT("/Game/Resources/Bumper/VFX");
 	constexpr int32 PreviewWidth = 1600;
 	constexpr int32 PreviewHeight = 900;
 	constexpr float PreviewDeltaSeconds = 1.0f / 60.0f;

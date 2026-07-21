@@ -2,6 +2,7 @@
 
 #include "Engine/DataTable.h"
 #include "Engine/GameInstance.h"
+#include "Engine/Texture2D.h"
 #include "Misc/AutomationTest.h"
 #include "PinBallLike/Collection/PBCollectionEffectSetProjector.h"
 #include "PinBallLike/Collection/UI/PBCollectionCatalogItemObject.h"
@@ -345,6 +346,8 @@ bool FPBCollectionTabControllerTest::RunTest(const FString& Parameters)
 	Alpha.DisplayName = FText::FromString(TEXT("알파 볼"));
 	Alpha.Description = FText::FromString(TEXT("기본 공격형 볼"));
 	Alpha.SortOrder = 10;
+	UTexture2D* AlphaIcon = NewObject<UTexture2D>();
+	Alpha.IconTexture = AlphaIcon;
 
 	FPBCollectionItemSummary Beta;
 	Beta.SourceRowName = TEXT("Ball_Beta");
@@ -367,6 +370,9 @@ bool FPBCollectionTabControllerTest::RunTest(const FString& Parameters)
 		SelectedItem);
 	TestEqual(TEXT("The first item is selected initially"), InitialDataIndex, 4);
 	TestEqual(TEXT("Two list item objects are created"), Items.Num(), 2);
+	TestTrue(
+		TEXT("Catalog item construction preserves the loaded icon texture"),
+		Items.Num() == 2 && Items[0]->Summary.IconTexture == AlphaIcon);
 
 	Controller->ResolveCatalogItem(Items[1]);
 	Controller->SetSortMode(EPBCollectionSortMode::NameDesc);

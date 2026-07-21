@@ -21,7 +21,7 @@ UPBBumperEffectTableParser::UPBBumperEffectTableParser()
 	EffectClassPreset.NameFormat = TEXT("BP_{0}");
 	BumperDataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Bumper");
 	BumperDataAssetPreset.NameFormat = TEXT("DA_Bumper_{0}");
-	ActivationVfxPreset.FolderPath.Path = TEXT("/Game/Blueprints/Bumper/Effect/VFX");
+	ActivationVfxPreset.FolderPath.Path = TEXT("/Game/Resources/Bumper/VFX");
 	ActivationVfxPreset.NameFormat = TEXT("{0}");
 }
 
