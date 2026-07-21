@@ -350,7 +350,7 @@ void UPBCheatManager::PrintAsyncLoadState() const
 
 	const TMap<FPrimaryAssetId, TObjectPtr<UObject>>& LoadedPrimaryAssets = GameDataLoadSubsystem->GetLoadedPrimaryAssets();
 	UE_LOG(LogTemp, Log, TEXT("[Cheat] AsyncLoadState. PrimaryAssetsReady=%s CachedPrimaryAssets=%d"),
-		GameDataLoadSubsystem->IsPrimaryAssetsReady() ? TEXT("true") : TEXT("false"),
+		LoadedPrimaryAssets.Num() > 0 ? TEXT("true") : TEXT("false"),
 		LoadedPrimaryAssets.Num());
 
 	for (const TPair<FPrimaryAssetId, TObjectPtr<UObject>>& LoadedAssetPair : LoadedPrimaryAssets)

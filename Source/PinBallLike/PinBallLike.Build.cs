@@ -24,15 +24,15 @@ public class PinBallLike : ModuleRules
 			"AssetRegistry",
 			"DeveloperSettings",
 			"GameplayMessageRuntime",
-			"Niagara"
+			"Niagara",
+			"AsyncLoadingScreen",
+			"MoviePlayer"
 			
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"EngineCameras",
-			"AsyncLoadingScreen",
-			"MoviePlayer"
+			"EngineCameras"
 		});
 			
 		
