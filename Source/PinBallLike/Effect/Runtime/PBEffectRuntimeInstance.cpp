@@ -210,6 +210,40 @@ void UPBComboStatBuffEffectRuntimeInstance::HandleComboChanged(const int32 Curre
 	}
 }
 
+
+void UPBComboPeriodStatBuffEffectRuntimeInstance::Setup(FName InStatName, FName InModifyType, float InValue,
+	int32 InRequiredCombo)
+{
+	StatName = InStatName;
+	ModifyType = InModifyType;
+	Value = InValue;
+	RequiredCombo = InRequiredCombo;
+}
+
+void UPBComboPeriodStatBuffEffectRuntimeInstance::HandleComboChanged(int32 CurrentCombo, int32 MaxCombo)
+{
+	if (RequiredCombo <= 0)
+	{
+		return;
+	}
+
+	const int32 CurrentStep = CurrentCombo / RequiredCombo;
+
+	if (CurrentStep <= LastAppliedStep)
+	{
+		return;
+	}
+
+	const int32 NewStepCount = CurrentStep - LastAppliedStep;
+
+	for (int32 Index = 0; Index < NewStepCount; ++Index)
+	{
+		ApplyStatDelta(StatName, ModifyType, Value);
+	}
+
+	LastAppliedStep = CurrentStep;
+}
+
 void UPBSkillDamageEffectRuntimeInstance::Setup(const float InPercent)
 {
 	Percent = InPercent;

@@ -22,6 +22,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(
 	FOnPurchaseCancelled);
 
+
 UCLASS()
 class PINBALLLIKE_API UPBPurchaseConfirmWidget : public UUserWidget
 {

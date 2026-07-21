@@ -72,6 +72,9 @@ public:
 	UPROPERTY(Config,EditAnywhere,BlueprintReadOnly, Category = "Relic|Table")
 	TSoftObjectPtr<UDataTable> RelicModifierTable;
 	
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Relic|Table")
+	TSoftObjectPtr<UDataTable> RelicTriggerTable;
+	
 #pragma endregion 
 	
 #pragma  region Choice

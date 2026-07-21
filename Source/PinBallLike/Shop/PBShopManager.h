@@ -6,9 +6,13 @@
 #include "UObject/Object.h"
 #include  "../Interface/IShopActorHandler.h"
 #include  "../Interface/IShopPurchaseHandler.h"
+#include  "PinBallLike/Struct/Shop/PBPurchaseConfirmData.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "PBShopManager.generated.h"
 
+struct FPBPurChaseMessaage;
 class UUPBShopViewModel;
+class UPBTableDataSubsystem;
 /**
  * 
  */
@@ -30,6 +34,11 @@ public :
 	
 	bool RerollShop();
 	
+	bool BuildPurchaseConfirmData(
+		int32 SlotIndex,
+		FPBPurchaseConfirmData& OutData) const override;
+	
+	void Initialize(UPBTableDataSubsystem* InTableDataSubsystem);
 	
 	int32 GetShopItemPrice(int32 SlotIndex) const;
 	FName GetShopItemRowName(int32 SlotIndex) const;
@@ -38,11 +47,19 @@ public :
 	void ApplyShopPriceDiscount(FName ModifyType, float Value);
 	void ApplyShopRerollDiscount(FName ModifyType, float Value);
 	void RefreshActiveSynergyDiscounts();
+	
+	void HandleBuyBall(
+		FGameplayTag PurChase,
+		const FPBPurChaseMessaage& Message);
+	
 private :
 	
 	int32 CurrentGold;
 	TArray<FName> CurrentShopItemBallIds;
 	TArray<bool> ShopItemIsSell;
+	
+	UPROPERTY()
+	TObjectPtr<UPBTableDataSubsystem> TableDataSubsystem;
 private:
 	// ShopTable에서 상품을 무작위로 뽑아 현재 상점 목록을 재구성한다.
 	bool GenerateShopItems(int32 SlotCount);
@@ -60,5 +77,9 @@ private:
 	float ShopRerollDiscountAmount = 0.0f;
 	
 	int32 CalculateDiscountedPrice(int32 BasePrice, float DiscountAmount, float DiscountPercent) const;
+	
+	FGameplayMessageListenerHandle PurChaseHandle;
+	
+protected:
 	
 };

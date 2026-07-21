@@ -29,6 +29,7 @@ namespace PBEffectTypes
 		inline const FName SwitchElasticityBuff(TEXT("SwitchElasticityBuff"));
 		inline const FName ReviveStatBuff(TEXT("ReviveStatBuff"));
 		inline const FName FirstHitTimedStatBuff(TEXT("FirstHitTimedStatBuff"));
+		inline const FName ComboPeriodicStatBuff(TEXT("ComboPeriodicStatBuff"));
 	}
 
 	namespace TargetType

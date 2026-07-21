@@ -2,12 +2,15 @@
 
 
 #include "PBShopActor.h"
+
+#include <PinBallLike/Struct/Effect/PBEffectTypes.h>
+
 #include  "../PBShopManager.h"
 #include "PBShopViewModel.h"
 #include "../DisplayActor/PBShopDisplayActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "../UI/PBShopWidget.h"
-
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
@@ -40,6 +43,11 @@ void APBShopActor::OpenShop()
 		ShopPurchaseHandler = ShopManager;
 
 		ShopManager->SetShopActorHandler(this);
+		
+		UPBTableDataSubsystem* TableSubsystem =
+			GetGameInstance()->GetSubsystem<UPBTableDataSubsystem>();
+		
+		ShopManager->Initialize(TableSubsystem);
 	}
 
 	if (!ShopWidget)
@@ -217,11 +225,21 @@ void APBShopActor::CloseShop()
 	
 }
 
-void APBShopActor::BuyItem(int32 SlotIndex)
+void APBShopActor::BuyItem(int32 SlotIndex, bool IsEnough)
 {
 	if (ShopWidget)
 	{
-		ShopWidget->UnActiveSlotWidget(SlotIndex);
+		if (IsEnough)
+		{
+			ShopWidget->UnActiveSlotWidget(SlotIndex);	
+			ShopDisplayActor->ClearItems(SlotIndex);
+		}
+
+		else
+		{
+			ShopWidget->RefuseWidgetSpawn();
+		}
+		
 	}
 	
 	RefreshUnsoldShopSlotWidgets();
@@ -230,15 +248,29 @@ void APBShopActor::BuyItem(int32 SlotIndex)
 
 void APBShopActor::ShoPPurchaseConfirm(int SlotIndex)
 {
+	if (!ShopPurchaseHandler)
+	{
+		return;
+	}
+	
+	FPBPurchaseConfirmData Data;
+	ShopPurchaseHandler->BuildPurchaseConfirmData(SlotIndex,Data);
+	
+	
 	if (ShopWidget)
 	{
-		ShopWidget->SetPurchaseConfirmInfo();
+		ShopWidget->SetPurchaseConfirmInfo(Data);
 	}
+	
 }
 
 void APBShopActor::OpenAbility()
 {
 	OpenShop();
+}
+
+void APBShopActor::ShowNotEnoughGoldPopup()
+{
 }
 
 bool APBShopActor::ApplyViewModelToWidget(UUserWidget* Widget)

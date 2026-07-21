@@ -57,7 +57,10 @@ private:
 	bool ApplySwitchElasticityBuff(FName EffectId, const FPBEffectTableRow& EffectRow, const TArray<FPBEffectParamRow>& ParamRows, const FPBEffectContext& Context);
 	bool ApplyReviveStatBuff(FName EffectId, const FPBEffectTableRow& EffectRow, const TArray<FPBEffectParamRow>& ParamRows, const FPBEffectContext& Context);
 	bool ApplyFirstHitTimedStatBuff(FName EffectId, const FPBEffectTableRow& EffectRow, const TArray<FPBEffectParamRow>& ParamRows, const FPBEffectContext& Context);
-
+    bool ApplyComboPeriodStatBuff(FName EffectId, const FPBEffectTableRow& EffectRow, const TArray<FPBEffectParamRow>& ParamRows, const FPBEffectContext& Context);
+	
+	
+	
 	static FString FindParamValue(const TArray<FPBEffectParamRow>& ParamRows, FName ParamKey);
 	static FName FindParamName(const TArray<FPBEffectParamRow>& ParamRows, FName ParamKey);
 	static FName NormalizeStatName(FName StatName);

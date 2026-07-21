@@ -24,6 +24,8 @@ public:
 	
 	FVector GetUIWorldLocation() const;
 	
+	
+	
 	int32 GetSlotIndex() const
 	{
 		return SlotIndex;

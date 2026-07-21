@@ -7,7 +7,7 @@
 #include "PinBallLike/Struct/Effect/PBEffectContext.h"
 #include "PinBallLike/Struct/Effect/PBEffectTypes.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
-#include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
+
 
 bool UPBEffectHandler::ApplyFirstAttack(
 	const FName,
@@ -29,6 +29,27 @@ bool UPBEffectHandler::ApplyFirstAttack(
 }
 
 bool UPBEffectHandler::ApplyComboStatBuff(
+	const FName,
+	const FPBEffectTableRow&,
+	const TArray<FPBEffectParamRow>& ParamRows,
+	const FPBEffectContext& Context)
+{
+	const FName StatName = NormalizeStatName(FindParamName(ParamRows, PBEffectTypes::ParamKey::StatName));
+	const FName ModifyType = FindParamName(ParamRows, PBEffectTypes::ParamKey::ModifyType);
+	const float Value = FCString::Atof(*FindParamValue(ParamRows, PBEffectTypes::ParamKey::Value));
+	const int32 RequiredCombo = FCString::Atoi(*FindParamValue(ParamRows, PBEffectTypes::ParamKey::RequiredCombo));
+
+	bool bApplied = false;
+	for (UPBBallEffectRuntimeComponent* RuntimeComponent : ResolveRuntimeComponents(Context))
+	{
+		RuntimeComponent->AddComboStatBuffRule(StatName, ModifyType, Value, RequiredCombo);
+		bApplied = true;
+	}
+
+	return bApplied;
+}
+
+bool UPBEffectHandler::ApplyComboPeriodStatBuff(
 	const FName,
 	const FPBEffectTableRow&,
 	const TArray<FPBEffectParamRow>& ParamRows,

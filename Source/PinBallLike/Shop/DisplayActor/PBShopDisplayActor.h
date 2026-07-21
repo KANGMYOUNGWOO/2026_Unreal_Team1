@@ -24,6 +24,8 @@ public:
 	
 	void ClearItems();
 	
+	void ClearItems(int32 SlotIndex);
+	
 private:
 	
 	UPROPERTY(VisibleAnywhere)
@@ -46,4 +48,5 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	
 };

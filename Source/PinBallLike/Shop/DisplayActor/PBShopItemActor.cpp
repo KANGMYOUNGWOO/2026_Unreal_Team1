@@ -102,7 +102,9 @@ void APBShopItemActor::Tick(float DeltaTime)
 
 void APBShopItemActor::OnPurchase()
 {
-	Destroy();
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
+	SetActorTickEnabled(false);
 }
 FVector APBShopItemActor::GetUIWorldLocation() const
 {
@@ -113,3 +115,4 @@ FVector APBShopItemActor::GetUIWorldLocation() const
 
 	return Origin + FVector(0.f, 0.f, BoxExtent.Z + 30.f);
 }
+

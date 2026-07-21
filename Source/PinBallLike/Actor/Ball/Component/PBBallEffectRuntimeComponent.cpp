@@ -60,6 +60,32 @@ void UPBBallEffectRuntimeComponent::AddComboStatBuffRule(
 	RegisterRuntimeInstance(Instance);
 }
 
+void UPBBallEffectRuntimeComponent::AddComboPeriodStatBuffRule(
+	FName StatName, 
+	FName ModifyType, 
+	float Value,
+	int32 RequiredCombo)
+{
+	if (StatName.IsNone() || ModifyType.IsNone() || RequiredCombo <= 0)
+	{
+		return;
+	}
+
+	UPBComboPeriodStatBuffEffectRuntimeInstance* Instance =
+		NewObject<UPBComboPeriodStatBuffEffectRuntimeInstance>(this);
+
+	Instance->Initialize(this);
+	Instance->Setup(
+		StatName,
+		ModifyType,
+		Value,
+		RequiredCombo);
+
+	RegisterRuntimeInstance(Instance);
+	
+
+}
+
 void UPBBallEffectRuntimeComponent::AddSkillDamagePercent(const float Percent)
 {
 	UPBSkillDamageEffectRuntimeInstance* Instance = NewObject<UPBSkillDamageEffectRuntimeInstance>(this);

@@ -1,6 +1,7 @@
 #include "PBRelicSubsystem.h"
 
 #include "PinBallLike/Relic/PBRelicCalculator.h"
+#include "PinBallLike/Subsystem/PBEffectSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
 
@@ -280,4 +281,37 @@ bool UPBRelicSubsystem::GetRandomRelicIds(int32 Count, TArray<FName>& OutRelicId
 	}
 
 	return !OutRelicIds.IsEmpty();
+}
+
+bool UPBRelicSubsystem::ApplyRelicEffect(const FName RelicId, const FPBRelicTableRow& RelicRow, AActor* TargetActor)
+{
+	if (RelicRow.EffectId.IsNone())
+	{
+		return false;
+	}
+
+	UGameInstance* GameInstance =
+		GetGameInstance();
+
+	if (!IsValid(GameInstance))
+	{
+		return false;
+	}
+
+	UPBEffectSubsystem* EffectSubsystem =
+		GameInstance->GetSubsystem<
+			UPBEffectSubsystem>();
+
+	if (!IsValid(EffectSubsystem))
+	{
+		return false;
+	}
+
+	FPBEffectContext Context;
+	Context.WorldContextObject = this;
+	Context.SourceActor = TargetActor;
+
+	return EffectSubsystem->ApplyEffect(
+		RelicRow.EffectId,
+		Context);
 }

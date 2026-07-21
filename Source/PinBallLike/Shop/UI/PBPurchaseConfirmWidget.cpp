@@ -6,6 +6,11 @@
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include  "PinBallLike/Choice/UI/PBBettingWidget.h"
+#include  "PinBallLike/Struct/Shop/PBPurChaseMessaage.h"
+#include  "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "Kismet/GameplayStatics.h"
 void UPBPurchaseConfirmWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -50,10 +55,19 @@ void UPBPurchaseConfirmWidget::NativeDestruct()
 
 void UPBPurchaseConfirmWidget::OnConfirmButtonClicked()
 {
+	FPBPurChaseMessaage Message;
+	Message.SlotIndex = SlotIndex;
+
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_UI_Shop_Purchase,
+		Message);
+	
+	
 }
 
 void UPBPurchaseConfirmWidget::OnCancelButtonClicked()
 {
+	this->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void UPBPurchaseConfirmWidget::OnOpenAnimationFinished()
