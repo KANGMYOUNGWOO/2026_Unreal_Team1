@@ -28,5 +28,5 @@ void UPBSynergyBallIconWidget::ApplyIcon()
 	}
 
 	IconImage->SetBrushFromTexture(ViewData.Icon);
-	IconImage->SetVisibility(ViewData.Icon ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+	IconImage->SetVisibility(ViewData.Icon ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 }

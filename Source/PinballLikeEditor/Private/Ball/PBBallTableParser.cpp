@@ -37,7 +37,17 @@ bool UPBBallTableParser::ParseRow(const FName RowName, const TMap<FString, FStri
 	NewRow.DescriptionKey = FText::FromString(RowData.FindRef(TEXT("DescriptionKey")));
 	NewRow.PowerFlipType = ParseEnumValue(RowData.FindRef(TEXT("PowerFlipType")), EPBPowerFlipType::Sword);
 	NewRow.RaceTypes = ParseEnumArray<EPBBallRaceType>(RowData.FindRef(TEXT("RaceType")));
-	NewRow.ClassType = ParseEnumValue(RowData.FindRef(TEXT("ClassType")), EPBBallClassType::Attacker);
+
+	const FString ClassTypeText = TrimCell(RowData.FindRef(TEXT("ClassType")));
+	NewRow.ClassType = ParseEnumValue(ClassTypeText, EPBBallClassType::None);
+	if (NewRow.ClassType == EPBBallClassType::None
+		&& !ClassTypeText.Equals(TEXT("None"), ESearchCase::IgnoreCase))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Sheet][Ball] Invalid or empty ClassType. RowName=%s ClassType=%s"),
+			*RowName.ToString(),
+			*ClassTypeText);
+	}
+
 	NewRow.DefaultSkillIds = ParseNameArray(RowData.FindRef(TEXT("DefaultSkillIds")));
 	NewRow.StarLevelId = FName(*TrimCell(RowData.FindRef(TEXT("StarLevelId"))));
 	NewRow.ShopId = FName(*TrimCell(RowData.FindRef(TEXT("ShopId"))));

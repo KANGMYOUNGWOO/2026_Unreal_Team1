@@ -28,7 +28,7 @@ struct PINBALLLIKE_API FPBBallTableRow : public FTableRowBase
 	TArray<EPBBallRaceType> RaceTypes;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
-	EPBBallClassType ClassType = EPBBallClassType::Attacker;
+	EPBBallClassType ClassType = EPBBallClassType::None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
 	TArray<FName> DefaultSkillIds;

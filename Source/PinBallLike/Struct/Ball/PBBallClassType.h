@@ -6,9 +6,10 @@
 UENUM(BlueprintType)
 enum class EPBBallClassType : uint8
 {
-	Attacker UMETA(DisplayName = "Attacker"),
-	Debuffer UMETA(DisplayName = "Debuffer"),
-	Supporter UMETA(DisplayName = "Supporter"),
-	Healer UMETA(DisplayName = "Healer"),
-	Tanker UMETA(DisplayName = "Tanker")
+	Attacker = 0 UMETA(DisplayName = "Attacker"),
+	Debuffer = 1 UMETA(DisplayName = "Debuffer"),
+	Supporter = 2 UMETA(DisplayName = "Supporter"),
+	Healer = 3 UMETA(DisplayName = "Healer"),
+	Tanker = 4 UMETA(DisplayName = "Tanker"),
+	None = 255 UMETA(DisplayName = "None")
 };

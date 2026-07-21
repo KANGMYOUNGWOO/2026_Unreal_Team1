@@ -253,6 +253,11 @@ FName UPBBallDeckSynergyService::GetRaceSynergyId(const EPBBallRaceType RaceType
 
 FName UPBBallDeckSynergyService::GetClassSynergyId(const EPBBallClassType ClassType)
 {
+	if (ClassType == EPBBallClassType::None)
+	{
+		return NAME_None;
+	}
+
 	const UEnum* Enum = StaticEnum<EPBBallClassType>();
 	return Enum ? FName(*Enum->GetNameStringByValue(static_cast<int64>(ClassType))) : NAME_None;
 }
