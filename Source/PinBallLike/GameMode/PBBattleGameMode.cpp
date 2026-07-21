@@ -101,6 +101,8 @@ void APBBattleGameMode::InitializeBattleCounts()
 		PlayerDataSubsystem ? PlayerDataSubsystem->GetInitialBattleLaunchCount() : 0);
 	BattleGameState->SetRemainingBattleShiftCount(
 		PlayerDataSubsystem ? PlayerDataSubsystem->GetInitialBattleShiftCount() : 0);
+	BattleGameState->SetBattleDashCooldownSeconds(
+		PlayerDataSubsystem ? PlayerDataSubsystem->GetBattleDashCooldownSeconds() : 5.0f);
 	ApplyActiveSynergyEffectsForBattle();
 }
 
@@ -720,6 +722,11 @@ void APBBattleGameMode::RegisterBattleMessageListeners()
 		GameplayTags::Event_Battle_Party_Shift_Requested,
 		this,
 		&APBBattleGameMode::HandlePartyShiftRequestedMessage);
+
+	BattleDashRequestedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattleDashRequestedMessage>(
+		GameplayTags::Event_Battle_Dash_Requested,
+		this,
+		&APBBattleGameMode::HandleBattleDashRequestedMessage);
 }
 
 void APBBattleGameMode::UnregisterBattleMessageListeners()
@@ -757,6 +764,11 @@ void APBBattleGameMode::UnregisterBattleMessageListeners()
 	if (PartyShiftRequestedListenerHandle.IsValid())
 	{
 		PartyShiftRequestedListenerHandle.Unregister();
+	}
+
+	if (BattleDashRequestedListenerHandle.IsValid())
+	{
+		BattleDashRequestedListenerHandle.Unregister();
 	}
 }
 
@@ -914,6 +926,29 @@ void APBBattleGameMode::HandlePartyShiftRequestedMessage(
 	{
 		TriggerPartySwitchEffects();
 	}
+}
+
+void APBBattleGameMode::HandleBattleDashRequestedMessage(
+	FGameplayTag Channel,
+	const FPBBattleDashRequestedMessage& Message)
+{
+	(void)Channel;
+	(void)Message;
+
+	APBBattleGameState* BattleGameState = GetBattleGameState();
+	if (!BattleGameState
+		|| BattleGameState->GetBattleLevelPhase() != EPBBattleLevelPhase::Combat
+		|| !UGameplayMessageSubsystem::HasInstance(this)
+		|| !BattleGameState->ConsumeBattleDash())
+	{
+		return;
+	}
+
+	FPBBattleDashApprovedMessage ApprovedMessage;
+	ApprovedMessage.CooldownSeconds = BattleGameState->GetBattleDashCooldownSeconds();
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_Battle_Dash_Approved,
+		ApprovedMessage);
 }
 
 #pragma endregion

@@ -25,6 +25,9 @@ public:
 	int32 GetInitialBattleShiftCount() const { return InitialBattleShiftCount; }
 
 	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
+	float GetBattleDashCooldownSeconds() const { return BattleDashCooldownSeconds; }
+
+	UFUNCTION(BlueprintPure, Category = "PlayerData|Battle")
 	int32 GetCurrentBossIndex() const { return CurrentBossIndex; }
 
 	bool SetCurrentBossIndex(int32 NewBossIndex, int32 BossCount);
@@ -108,6 +111,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 InitialBattleShiftCount = 3;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float BattleDashCooldownSeconds = 5.0f;
 
 	UPROPERTY(Transient)
 	int32 CurrentBossIndex = 0;

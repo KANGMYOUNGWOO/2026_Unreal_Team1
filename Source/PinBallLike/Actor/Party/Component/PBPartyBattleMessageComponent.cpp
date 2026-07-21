@@ -50,6 +50,11 @@ void UPBPartyBattleMessageComponent::RegisterMessageListeners()
 		GameplayTags::Event_Battle_Skill_Use_Requested,
 		this,
 		&UPBPartyBattleMessageComponent::HandleSkillUseRequestedMessage);
+
+	BattleDashApprovedListenerHandle = UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBattleDashApprovedMessage>(
+		GameplayTags::Event_Battle_Dash_Approved,
+		this,
+		&UPBPartyBattleMessageComponent::HandleBattleDashApprovedMessage);
 }
 
 void UPBPartyBattleMessageComponent::UnregisterMessageListeners()
@@ -70,6 +75,12 @@ void UPBPartyBattleMessageComponent::UnregisterMessageListeners()
 	{
 		SkillUseRequestedListenerHandle.Unregister();
 		SkillUseRequestedListenerHandle = FGameplayMessageListenerHandle();
+	}
+
+	if (BattleDashApprovedListenerHandle.IsValid())
+	{
+		BattleDashApprovedListenerHandle.Unregister();
+		BattleDashApprovedListenerHandle = FGameplayMessageListenerHandle();
 	}
 }
 
@@ -111,6 +122,19 @@ void UPBPartyBattleMessageComponent::HandleSkillUseRequestedMessage(
 	if (Dependencies.RequestUseSkill)
 	{
 		Dependencies.RequestUseSkill(Message.SkillInputValue);
+	}
+}
+
+void UPBPartyBattleMessageComponent::HandleBattleDashApprovedMessage(
+	FGameplayTag Channel,
+	const FPBBattleDashApprovedMessage& Message)
+{
+	(void)Channel;
+	(void)Message;
+
+	if (Dependencies.RequestDashToBoss)
+	{
+		Dependencies.RequestDashToBoss();
 	}
 }
 

@@ -88,6 +88,16 @@ void APinBallPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	{
 		UE_LOG(LogTemp, Warning, TEXT("SkillAction is not assigned on %s."), *GetName());
 	}
+
+	if (DashAction)
+	{
+		EnhancedInputComponent->BindAction(
+			DashAction, ETriggerEvent::Started, this, &APinBallPlayer::RequestDash);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DashAction is not assigned on %s."), *GetName());
+	}
 }
 
 void APinBallPlayer::UnPossessed()
@@ -201,5 +211,19 @@ void APinBallPlayer::RequestUseSkill(const FInputActionValue& Value)
 
 	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
 		GameplayTags::Event_Battle_Skill_Use_Requested,
+		Message);
+}
+
+void APinBallPlayer::RequestDash(const FInputActionValue& Value)
+{
+	if (!UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	FPBBattleDashRequestedMessage Message;
+	Message.Requester = this;
+	UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+		GameplayTags::Event_Battle_Dash_Requested,
 		Message);
 }

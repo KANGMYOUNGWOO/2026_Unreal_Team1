@@ -17,6 +17,7 @@ struct FPBBattlePartyAllBallsDeadMessage;
 struct FPBBattlePartyLaunchedMessage;
 struct FPBBattlePartyLaunchRequestedMessage;
 struct FPBBattlePartyShiftRequestedMessage;
+struct FPBBattleDashRequestedMessage;
 struct FPBBattlePreparationCompletedMessage;
 
 UCLASS(Blueprintable)
@@ -135,6 +136,7 @@ private:
 	void HandlePartyLaunchedMessage(FGameplayTag Channel, const FPBBattlePartyLaunchedMessage& Message);
 	void HandlePartyAllBallsDeadMessage(FGameplayTag Channel, const FPBBattlePartyAllBallsDeadMessage& Message);
 	void HandlePartyShiftRequestedMessage(FGameplayTag Channel, const FPBBattlePartyShiftRequestedMessage& Message);
+	void HandleBattleDashRequestedMessage(FGameplayTag Channel, const FPBBattleDashRequestedMessage& Message);
 
 	FGameplayMessageListenerHandle PreparationCompletedListenerHandle;
 	FGameplayMessageListenerHandle BossIntroCompletedListenerHandle;
@@ -143,6 +145,7 @@ private:
 	FGameplayMessageListenerHandle PartyLaunchedListenerHandle;
 	FGameplayMessageListenerHandle PartyAllBallsDeadListenerHandle;
 	FGameplayMessageListenerHandle PartyShiftRequestedListenerHandle;
+	FGameplayMessageListenerHandle BattleDashRequestedListenerHandle;
 
 #pragma endregion
 
