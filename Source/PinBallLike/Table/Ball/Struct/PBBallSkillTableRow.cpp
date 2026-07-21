@@ -2,9 +2,14 @@
 
 int32 FPBBallSkillTableRow::CalculateBaseDamage(const int32 BallAttackPower) const
 {
-	return FMath::Max(
-		0,
-		FMath::RoundToInt(static_cast<float>(BallAttackPower) * PowerValue));
+	if (PowerValue <= 0.0f)
+	{
+		return 0;
+	}
+
+	const int32 CalculatedDamage =
+		FMath::RoundToInt(static_cast<float>(BallAttackPower) * PowerValue);
+	return CalculatedDamage < 0 ? 0 : FMath::Max(CalculatedDamage, 1);
 }
 
 FText FPBBallSkillTableRow::GetDescription(const int32 BallAttackPower) const
