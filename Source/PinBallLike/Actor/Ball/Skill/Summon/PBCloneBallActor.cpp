@@ -43,7 +43,6 @@ void APBCloneBallActor::InitializeFromSourceBall(APBBallBase* InSourceBall)
 	const UPBBaseStatComponent* SourceStatComponent =
 		InSourceBall->FindComponentByClass<UPBBaseStatComponent>();
 	CopyStat(SourceStatComponent, PBStatNames::Attack);
-	CopyStat(SourceStatComponent, PBStatNames::StaggerPower);
 	CopyStat(SourceStatComponent, PBStatNames::Mass);
 	CopyStat(SourceStatComponent, PBStatNames::Bounciness);
 	CopyStat(SourceStatComponent, PBStatNames::Size);
