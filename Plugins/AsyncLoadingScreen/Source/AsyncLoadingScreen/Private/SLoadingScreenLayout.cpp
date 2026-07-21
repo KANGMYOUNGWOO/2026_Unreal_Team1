@@ -10,6 +10,7 @@
 #include "Engine/UserInterfaceSettings.h"
 #include "Engine/Engine.h"
 #include "GenericPlatform/GenericApplication.h"
+#include "MoviePlayer.h"
 
 //DEFINE_LOG_CATEGORY(LogLoadingScreen);
 
@@ -19,6 +20,41 @@ float SLoadingScreenLayout::PointSizeToSlateUnits(float PointSize)
 	const float FreeTypeNativeDPI = 72.0;
 	const float PixelSize = PointSize * (SlateFreeTypeHorizontalResolutionDPI / FreeTypeNativeDPI);
 	return PixelSize;
+}
+
+void SLoadingScreenLayout::SetIsMoviePlayerFadeEnabled(const bool NewIsMoviePlayerFadeEnabled)
+{
+	IsMoviePlayerFadeEnabled = NewIsMoviePlayerFadeEnabled;
+}
+
+void SLoadingScreenLayout::Tick(
+	const FGeometry& AllottedGeometry,
+	double InCurrentTime,
+	float InDeltaTime)
+{
+	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+	if (!IsMoviePlayerFadeEnabled)
+	{
+		return;
+	}
+
+	const bool IsFadeOut = GetMoviePlayer() && GetMoviePlayer()->IsLoadingFinished();
+	if (IsFadeOut && !IsFadeOutStarted)
+	{
+		IsFadeOutStarted = true;
+		FadeAlpha = 1.0f;
+	}
+
+	const float FadeDirection = IsFadeOut ? -1.0f : 1.0f;
+	FadeAlpha = FMath::Clamp(
+		FadeAlpha + FadeDirection * InDeltaTime / FadeDurationSeconds,
+		0.0f,
+		1.0f);
+	SetRenderOpacity(FadeAlpha);
+	if (IsFadeOut && FadeAlpha <= 0.0f)
+	{
+		GetMoviePlayer()->StopMovie();
+	}
 }
 
 float SLoadingScreenLayout::GetDPIScale() const

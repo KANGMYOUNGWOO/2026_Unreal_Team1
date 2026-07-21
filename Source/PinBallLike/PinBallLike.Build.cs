@@ -24,7 +24,9 @@ public class PinBallLike : ModuleRules
 			"AssetRegistry",
 			"DeveloperSettings",
 			"GameplayMessageRuntime",
-			"Niagara"
+			"Niagara",
+			"AsyncLoadingScreen",
+			"MoviePlayer"
 			
 		});
 

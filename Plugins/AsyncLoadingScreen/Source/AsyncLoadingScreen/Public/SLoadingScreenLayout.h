@@ -22,13 +22,19 @@
  * Instead, use derived classes that implement specific loading screen layouts.
  *
  */
-class SLoadingScreenLayout : public SCompoundWidget
+class ASYNCLOADINGSCREEN_API SLoadingScreenLayout : public SCompoundWidget
 {
 public:	
 	static float PointSizeToSlateUnits(float PointSize);
+	void SetIsMoviePlayerFadeEnabled(bool NewIsMoviePlayerFadeEnabled);
+	virtual void Tick(const FGeometry& AllottedGeometry, double InCurrentTime, float InDeltaTime) override;
 protected:
 	float GetDPIScale() const;
 	void CalculateViewportSize() const;
 private:
+	static constexpr float FadeDurationSeconds = 0.75f;
+	float FadeAlpha = 0.0f;
+	bool IsMoviePlayerFadeEnabled = true;
+	bool IsFadeOutStarted = false;
 	mutable FIntPoint _cachedViewportSize;
 };

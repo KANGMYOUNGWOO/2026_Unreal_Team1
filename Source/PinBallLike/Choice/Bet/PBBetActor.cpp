@@ -45,7 +45,7 @@ void APBBetActor::HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Messag
 	{
 		if (BetWidget)
 		{
-			BetWidget->RemoveFromViewport();
+			BetWidget->RemoveFromParent();
 			BetWidget = nullptr;
 		}
 		

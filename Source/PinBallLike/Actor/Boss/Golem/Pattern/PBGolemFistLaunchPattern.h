@@ -9,7 +9,7 @@ class APBBossChargeTelegraph;
 class APBBallBase;
 class UPBGolemHandMovementComponent;
 class UPrimitiveComponent;
-class USphereComponent;
+class UCapsuleComponent;
 
 UCLASS(Blueprintable)
 class PINBALLLIKE_API UPBGolemFistLaunchPattern : public UPBGolemBossPatternBase
@@ -37,6 +37,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Pattern|Hit", meta = (ClampMin = "0.0"))
 	float PunchHitRadius = 300.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Pattern|Hit", meta = (ClampMin = "0.0"))
+	float PunchHitHalfHeight = 600.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Golem Pattern|Hit")
 	float PunchHitZOffset = -100.0f;
@@ -98,7 +101,7 @@ private:
 	TArray<TObjectPtr<APBBossChargeTelegraph>> SpawnedFistChargeTelegraphs;
 
 	UPROPERTY(Transient)
-	TObjectPtr<USphereComponent> PunchHitCollision;
+	TObjectPtr<UCapsuleComponent> PunchHitCollision;
 
 	TSet<TObjectKey<APBBallBase>> DamagedBalls;
 	FTimerHandle PunchHitRangeTimerHandle;

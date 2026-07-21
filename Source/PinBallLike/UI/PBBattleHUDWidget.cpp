@@ -1,7 +1,6 @@
 #include "PBBattleHUDWidget.h"
 
 #include "Components/PanelWidget.h"
-#include "Engine/GameViewportClient.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -14,14 +13,15 @@
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
-#include "PinBallLike/UI/Loading/PBLoadingScreen.h"
+#include "PinBallLike/UI/Loading/PBLoadingScreenController.h"
 #include "TimerManager.h"
 
 void UPBBattleHUDWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	ShowBattleLoadingScreen();
+	LoadingScreenController = MakeUnique<FPBLoadingScreenController>();
+	LoadingScreenController->Show(GetWorld());
 	CacheBallPanels();
 	CacheDeckSubsystem();
 	CachePartyController();
@@ -43,7 +43,11 @@ void UPBBattleHUDWidget::NativeConstruct()
 
 void UPBBattleHUDWidget::NativeDestruct()
 {
-	HideBattleLoadingScreen();
+	if (LoadingScreenController)
+	{
+		LoadingScreenController->Shutdown();
+		LoadingScreenController.Reset();
+	}
 	UnregisterBattleMessageListeners();
 	UnbindDeckEvents();
 
@@ -69,43 +73,11 @@ void UPBBattleHUDWidget::ApplyBattlePhaseToLoadingScreen(const EPBBattleLevelPha
 	if (NewPhase == EPBBattleLevelPhase::DataLoading
 		|| NewPhase == EPBBattleLevelPhase::LevelPreparing)
 	{
-		ShowBattleLoadingScreen();
+		LoadingScreenController->Show(GetWorld());
 		return;
 	}
 
-	HideBattleLoadingScreen();
-}
-
-void UPBBattleHUDWidget::ShowBattleLoadingScreen()
-{
-	if (BattleLoadingScreenWidget.IsValid())
-	{
-		return;
-	}
-
-	UGameViewportClient* GameViewportClient = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
-	if (!GameViewportClient)
-	{
-		return;
-	}
-
-	BattleLoadingScreenWidget = FPBLoadingScreen::CreateLoadingScreenWidget();
-	GameViewportClient->AddViewportWidgetContent(BattleLoadingScreenWidget.ToSharedRef(), MAX_int32);
-}
-
-void UPBBattleHUDWidget::HideBattleLoadingScreen()
-{
-	if (!BattleLoadingScreenWidget.IsValid())
-	{
-		return;
-	}
-
-	if (UGameViewportClient* GameViewportClient = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
-	{
-		GameViewportClient->RemoveViewportWidgetContent(BattleLoadingScreenWidget.ToSharedRef());
-	}
-
-	BattleLoadingScreenWidget.Reset();
+	LoadingScreenController->Hide();
 }
 
 void UPBBattleHUDWidget::RefreshBallPanels()

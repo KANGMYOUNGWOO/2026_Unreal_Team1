@@ -48,7 +48,6 @@ private:
 
 	FTimerHandle DurationTimerHandle;
 	int32 SummonedBallDamage = 0;
-	int32 SummonedBallGroggy = 0;
 	float SummonedBallDuration = 0.0f;
 	int32 SummonedBallCount = 0;
 };
