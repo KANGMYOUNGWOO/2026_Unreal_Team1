@@ -1,6 +1,6 @@
 #include "PBGolemFistLaunchPattern.h"
 
-#include "Components/SphereComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "DrawDebugHelpers.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
@@ -373,14 +373,14 @@ void UPBGolemFistLaunchPattern::FinishFistLaunchPattern()
 void UPBGolemFistLaunchPattern::CreatePunchHitCollision(APBGolemBossHand* GolemHand)
 {
 	DestroyPunchHitCollision();
-	if (!GolemHand || PunchHitRadius <= 0.0f)
+	if (!GolemHand || PunchHitRadius <= 0.0f || PunchHitHalfHeight <= 0.0f)
 	{
 		return;
 	}
 
 	DamagedBalls.Reset();
-	PunchHitCollision = NewObject<USphereComponent>(GolemHand, TEXT("GolemPunchHitCollision"));
-	PunchHitCollision->InitSphereRadius(PunchHitRadius);
+	PunchHitCollision = NewObject<UCapsuleComponent>(GolemHand, TEXT("GolemPunchHitCollision"));
+	PunchHitCollision->InitCapsuleSize(PunchHitRadius, FMath::Max(PunchHitHalfHeight, PunchHitRadius));
 	PunchHitCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	PunchHitCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
 	PunchHitCollision->SetGenerateOverlapEvents(true);
@@ -436,11 +436,12 @@ void UPBGolemFistLaunchPattern::DrawPunchHitRange()
 		return;
 	}
 
-	DrawDebugSphere(
+	DrawDebugCapsule(
 		PunchHitCollision->GetWorld(),
 		PunchHitCollision->GetComponentLocation(),
-		PunchHitRadius,
-		64,
+		PunchHitCollision->GetScaledCapsuleHalfHeight(),
+		PunchHitCollision->GetScaledCapsuleRadius(),
+		PunchHitCollision->GetComponentQuat(),
 		FColor::Blue,
 		false,
 		0.0f,
