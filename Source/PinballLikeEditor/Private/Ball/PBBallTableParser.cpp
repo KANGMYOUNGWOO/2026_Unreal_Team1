@@ -14,10 +14,14 @@ UPBBallTableParser::UPBBallTableParser()
 {
 	DataAssetPreset.FolderPath.Path = TEXT("/Game/Data/DataAssets/Ball");
 	DataAssetPreset.NameFormat = TEXT("DA_{0}");
-	IconPreset.FolderPath.Path = TEXT("/Game/Resources/Ball/Icon");
-	IconPreset.NameFormat = TEXT("Icon_{0}");
-	SpritePreset.FolderPath.Path = TEXT("/Game/Resources/Ball/Sprite");
-	SpritePreset.NameFormat = TEXT("Sprite_{0}");
+	BallIconPreset.FolderPath.Path = TEXT("/Game/Resources/Ball/Icon");
+	BallIconPreset.NameFormat = TEXT("Icon_{0}");
+	BallSpritePreset.FolderPath.Path = TEXT("/Game/Resources/Ball/Sprite");
+	BallSpritePreset.NameFormat = TEXT("Sprite_{0}");
+	SynergyIconPreset.FolderPath.Path = TEXT("/Game/Resources/Synergy");
+	SynergyIconPreset.NameFormat = TEXT("Icon_{0}");
+	PowerFlipIconPreset.FolderPath.Path = TEXT("/Game/Resources/Ball/PowerFlip");
+	PowerFlipIconPreset.NameFormat = TEXT("Icon_{0}");
 }
 
 const TCHAR* UPBBallTableParser::GetParserName() const
@@ -52,13 +56,15 @@ bool UPBBallTableParser::ParseRow(const FName RowName, const TMap<FString, FStri
 	NewRow.StarLevelId = FName(*TrimCell(RowData.FindRef(TEXT("StarLevelId"))));
 	NewRow.ShopId = FName(*TrimCell(RowData.FindRef(TEXT("ShopId"))));
 
-	(void)SetupBallDataAsset(RowName);
+	(void)SetupBallDataAsset(RowName, NewRow);
 
 	TargetTable->AddRow(RowName, NewRow);
 	return true;
 }
 
-UPBBallDataAsset* UPBBallTableParser::SetupBallDataAsset(const FName RowName) const
+UPBBallDataAsset* UPBBallTableParser::SetupBallDataAsset(
+	const FName RowName,
+	const FPBBallTableRow& BallRow) const
 {
 	UPBBallDataAsset* BallDataAsset =
 		GetOrCreateDataAsset<UPBBallDataAsset>(DataAssetPreset, RowName, TEXT("Ball"));
@@ -67,14 +73,45 @@ UPBBallDataAsset* UPBBallTableParser::SetupBallDataAsset(const FName RowName) co
 		return nullptr;
 	}
 
-	if (IconPreset.IsValid())
+	if (BallIconPreset.IsValid())
 	{
-		BallDataAsset->Icon = FindObject<UTexture2D>(IconPreset, RowName);
+		BallDataAsset->BallIcon = FindObject<UTexture2D>(BallIconPreset, RowName);
 	}
 
-	if (SpritePreset.IsValid())
+	if (BallSpritePreset.IsValid())
 	{
-		BallDataAsset->Sprite = FindObject<UTexture2D>(SpritePreset, RowName);
+		BallDataAsset->BallSprite = FindObject<UTexture2D>(BallSpritePreset, RowName);
+	}
+
+	const UEnum* PowerFlipEnum = StaticEnum<EPBPowerFlipType>();
+	if (PowerFlipIconPreset.IsValid() && PowerFlipEnum)
+	{
+		const FName PowerFlipIconId(*PowerFlipEnum->GetNameStringByValue(static_cast<int64>(BallRow.PowerFlipType)));
+		BallDataAsset->PowerFlipIcon = FindObject<UTexture2D>(PowerFlipIconPreset, PowerFlipIconId);
+	}
+
+	BallDataAsset->RaceIcons.Reset();
+	const UEnum* RaceEnum = StaticEnum<EPBBallRaceType>();
+	if (SynergyIconPreset.IsValid() && RaceEnum)
+	{
+		for (const EPBBallRaceType RaceType : BallRow.RaceTypes)
+		{
+			const FName RaceIconId(*RaceEnum->GetNameStringByValue(static_cast<int64>(RaceType)));
+			BallDataAsset->RaceIcons.Add(FindObject<UTexture2D>(SynergyIconPreset, RaceIconId));
+		}
+	}
+
+	const UEnum* ClassEnum = StaticEnum<EPBBallClassType>();
+	if (SynergyIconPreset.IsValid()
+		&& ClassEnum
+		&& BallRow.ClassType != EPBBallClassType::None)
+	{
+		const FName ClassIconId(*ClassEnum->GetNameStringByValue(static_cast<int64>(BallRow.ClassType)));
+		BallDataAsset->ClassIcon = FindObject<UTexture2D>(SynergyIconPreset, ClassIconId);
+	}
+	else
+	{
+		BallDataAsset->ClassIcon = nullptr;
 	}
 
 	(void)BallDataAsset->MarkPackageDirty();

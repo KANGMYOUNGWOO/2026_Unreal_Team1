@@ -309,5 +309,5 @@ UTexture2D* APBBallBase::ResolveBallSprite() const
 	const FPrimaryAssetId BallAssetId(PBBallAssetIds::Type::BallData, BallInstanceData.BallId);
 	const UPBBallDataAsset* BallDataAsset =
 		Cast<UPBBallDataAsset>(GameDataLoadSubsystem->GetLoadedPrimaryAsset(BallAssetId));
-	return BallDataAsset ? BallDataAsset->Sprite.Get() : nullptr;
+	return BallDataAsset ? BallDataAsset->BallSprite.Get() : nullptr;
 }

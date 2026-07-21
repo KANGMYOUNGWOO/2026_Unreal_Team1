@@ -128,7 +128,7 @@ const UPBBallDataAsset* UPBBallDeckAssetLoadService::GetLoadedBallDataAsset(cons
 UTexture2D* UPBBallDeckAssetLoadService::GetLoadedBallIcon(const int32 BallInstanceId) const
 {
 	const UPBBallDataAsset* BallDataAsset = GetLoadedBallDataAsset(BallInstanceId);
-	return BallDataAsset ? BallDataAsset->Icon.Get() : nullptr;
+	return BallDataAsset ? BallDataAsset->BallIcon.Get() : nullptr;
 }
 
 FGuid UPBBallDeckAssetLoadService::LoadPlacedBallAssetsAsync(const TArray<FName>& BundleNames, FStreamableDelegate OnLoaded)

@@ -266,7 +266,7 @@ UTexture2D* UPBDeckOverviewViewModel::ResolveBallIcon(const FName BallId) const
 	}
 
 	const UPBBallDataAsset* BallDataAsset = Cast<UPBBallDataAsset>(BallAssetData.GetAsset());
-	return BallDataAsset ? BallDataAsset->Icon.LoadSynchronous() : nullptr;
+	return BallDataAsset ? BallDataAsset->BallIcon.LoadSynchronous() : nullptr;
 }
 
 FText UPBDeckOverviewViewModel::BuildTierEffectText(const FPBSynergyTierRow& TierRow) const

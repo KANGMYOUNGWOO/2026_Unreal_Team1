@@ -8,6 +8,7 @@
 #include "PBBallTableParser.generated.h"
 
 class UPBBallDataAsset;
+struct FPBBallTableRow;
 
 UCLASS()
 class PINBALLLIKEEDITOR_API UPBBallTableParser : public UPBTableParserBase
@@ -26,10 +27,16 @@ protected:
 	FPBSheetAssetPathPreset DataAssetPreset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Sheet")
-	FPBSheetAssetPathPreset IconPreset;
+	FPBSheetAssetPathPreset BallIconPreset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Sheet")
-	FPBSheetAssetPathPreset SpritePreset;
+	FPBSheetAssetPathPreset BallSpritePreset;
 
-	UPBBallDataAsset* SetupBallDataAsset(FName RowName) const;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Sheet")
+	FPBSheetAssetPathPreset SynergyIconPreset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Sheet")
+	FPBSheetAssetPathPreset PowerFlipIconPreset;
+
+	UPBBallDataAsset* SetupBallDataAsset(FName RowName, const FPBBallTableRow& BallRow) const;
 };

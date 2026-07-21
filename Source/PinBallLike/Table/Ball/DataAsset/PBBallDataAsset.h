@@ -21,10 +21,19 @@ public:
 	FName RowName = NAME_None;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "UI"))
-	TSoftObjectPtr<UTexture2D> Icon;
+	TSoftObjectPtr<UTexture2D> BallIcon;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "Gameplay"))
-	TSoftObjectPtr<UTexture2D> Sprite;
+	TSoftObjectPtr<UTexture2D> BallSprite;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "UI"))
+	TSoftObjectPtr<UTexture2D> PowerFlipIcon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "UI"))
+	TSoftObjectPtr<UTexture2D> ClassIcon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "UI"))
+	TArray<TSoftObjectPtr<UTexture2D>> RaceIcons;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Skill", meta = (AssetBundles = "Gameplay"))
 	TSoftClassPtr<APBBallSkillActorBase> SkillActorClass;
