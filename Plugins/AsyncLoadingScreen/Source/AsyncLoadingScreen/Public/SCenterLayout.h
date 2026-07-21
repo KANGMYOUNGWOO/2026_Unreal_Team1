@@ -16,7 +16,7 @@ struct FCenterLayoutSettings;
 /**
  * Center layout loading screen
  */
-class SCenterLayout : public SLoadingScreenLayout
+class ASYNCLOADINGSCREEN_API SCenterLayout : public SLoadingScreenLayout
 {
 public:
 	SLATE_BEGIN_ARGS(SCenterLayout) {}

@@ -40,6 +40,7 @@ void SCenterLayout::Construct(const FArguments& InArgs, const FALoadingScreenSet
 	{
 		LoadingWidget = SNew(SVerticalLoadingWidget, Settings.LoadingWidget);
 	}
+	RegisterLoadingContentWidget(LoadingWidget);
 
 	// Add loading widget at center
 	Root->AddSlot()

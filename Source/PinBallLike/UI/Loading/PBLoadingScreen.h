@@ -2,10 +2,10 @@
 
 #include "CoreMinimal.h"
 
-class SWidget;
+class SLoadingScreenLayout;
 
 class FPBLoadingScreen
 {
 public:
-	static TSharedRef<SWidget> CreateLoadingScreenWidget();
+	static TSharedRef<SLoadingScreenLayout> CreateLoadingScreenWidget();
 };

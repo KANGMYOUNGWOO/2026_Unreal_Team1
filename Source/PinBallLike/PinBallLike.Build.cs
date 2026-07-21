@@ -30,7 +30,9 @@ public class PinBallLike : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"EngineCameras"
+			"EngineCameras",
+			"AsyncLoadingScreen",
+			"MoviePlayer"
 		});
 			
 		

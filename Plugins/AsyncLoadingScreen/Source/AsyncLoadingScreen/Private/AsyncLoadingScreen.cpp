@@ -95,7 +95,9 @@ void FAsyncLoadingScreenModule::SetupLoadingScreen(const FALoadingScreenSettings
 	LoadingScreen.MinimumLoadingScreenDisplayTime = LoadingScreenSettings.MinimumLoadingScreenDisplayTime;
 	LoadingScreen.bAutoCompleteWhenLoadingCompletes = LoadingScreenSettings.bAutoCompleteWhenLoadingCompletes;
 	LoadingScreen.bMoviesAreSkippable = LoadingScreenSettings.bMoviesAreSkippable;
-	LoadingScreen.bWaitForManualStop = LoadingScreenSettings.bWaitForManualStop;
+	LoadingScreen.bWaitForManualStop = bIsStartupLoadingScreen
+		? LoadingScreenSettings.bWaitForManualStop
+		: true;
 	LoadingScreen.bAllowInEarlyStartup = LoadingScreenSettings.bAllowInEarlyStartup;
 	LoadingScreen.bAllowEngineTick = LoadingScreenSettings.bAllowEngineTick;
 	LoadingScreen.MoviePaths = MoviesList;

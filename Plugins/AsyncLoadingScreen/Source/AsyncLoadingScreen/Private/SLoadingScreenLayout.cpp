@@ -10,6 +10,7 @@
 #include "Engine/UserInterfaceSettings.h"
 #include "Engine/Engine.h"
 #include "GenericPlatform/GenericApplication.h"
+#include "MoviePlayer.h"
 
 //DEFINE_LOG_CATEGORY(LogLoadingScreen);
 
@@ -19,6 +20,57 @@ float SLoadingScreenLayout::PointSizeToSlateUnits(float PointSize)
 	const float FreeTypeNativeDPI = 72.0;
 	const float PixelSize = PointSize * (SlateFreeTypeHorizontalResolutionDPI / FreeTypeNativeDPI);
 	return PixelSize;
+}
+
+void SLoadingScreenLayout::SetIsMoviePlayerFadeEnabled(const bool NewIsMoviePlayerFadeEnabled)
+{
+	IsMoviePlayerFadeEnabled = NewIsMoviePlayerFadeEnabled;
+}
+
+void SLoadingScreenLayout::SetLoadingContentOpacity(const float NewOpacity)
+{
+	if (LoadingContentWidget.IsValid())
+	{
+		LoadingContentWidget->SetRenderOpacity(NewOpacity);
+	}
+}
+
+void SLoadingScreenLayout::RegisterLoadingContentWidget(const TSharedRef<SWidget>& NewLoadingContentWidget)
+{
+	LoadingContentWidget = NewLoadingContentWidget;
+}
+
+void SLoadingScreenLayout::Tick(
+	const FGeometry& AllottedGeometry,
+	double InCurrentTime,
+	float InDeltaTime)
+{
+	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+	if (!IsMoviePlayerFadeEnabled)
+	{
+		return;
+	}
+
+	const bool IsFadeOut = GetMoviePlayer() && GetMoviePlayer()->IsLoadingFinished();
+	const float FadeDirection = IsFadeOut ? -1.0f : 1.0f;
+	FadeAlpha = FMath::Clamp(
+		FadeAlpha + FadeDirection * InDeltaTime / FadeDurationSeconds,
+		0.0f,
+		1.0f);
+	if (IsFadeOut)
+	{
+		SetRenderOpacity(1.0f);
+		SetLoadingContentOpacity(FadeAlpha);
+		if (FadeAlpha <= 0.0f)
+		{
+			SetRenderOpacity(0.0f);
+			GetMoviePlayer()->StopMovie();
+		}
+		return;
+	}
+
+	SetLoadingContentOpacity(1.0f);
+	SetRenderOpacity(FadeAlpha);
 }
 
 float SLoadingScreenLayout::GetDPIScale() const
