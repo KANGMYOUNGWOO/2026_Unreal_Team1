@@ -168,7 +168,7 @@ bool UPBTurretFireComponent::AimAtTarget()
 		? AimPivot->GetComponentRotation()
 		: Owner->GetActorRotation();
 
-	FRotator AimRotation;
+	FRotator AimRotation = CurrentRotation;
 	const FVector TargetDirection = Target->GetActorLocation() - SourceLocation;
 	USceneComponent* MuzzleComponent = ResolveMuzzleComponent();
 	const bool bResolvedFromMuzzle = IsValid(AimPivot)
