@@ -170,3 +170,15 @@ void UPBSoundSubsystem::SetSFXVolume(float InVolume)
 		? FMath::Clamp(InVolume, 0.0f, 1.0f)
 		: 1.0f;
 }
+
+void UPBSoundSubsystem::SetBGMVolume(float InVolume)
+{
+	CurrentBGMVolume = FMath::IsFinite(InVolume)
+	? FMath::Clamp(InVolume, 0.0f, 1.0f)
+	: 1.0f;
+
+	if (IsValid(CurrentBGMComponent.Get()))
+	{
+		CurrentBGMComponent->SetVolumeMultiplier(CurrentBGMVolume * MasterVolume);
+	}
+}
