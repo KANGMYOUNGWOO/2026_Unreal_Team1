@@ -12,7 +12,7 @@
 
 namespace
 {
-	FVector CalculateCubicBezierLocation(
+	FVector CalculateSnakeChargeBezierLocation(
 		const FVector& StartLocation,
 		const FVector& FirstControlLocation,
 		const FVector& SecondControlLocation,
@@ -478,7 +478,7 @@ void UPBBossSnakeChargePattern::UpdateReturn()
 	const FVector PreviousLocation = Boss->GetActorLocation();
 	ReturnElapsedSeconds = FMath::Min(ReturnElapsedSeconds + UpdateIntervalSeconds, ReboundSeconds);
 	const float ReturnAlpha = FMath::Clamp(ReturnElapsedSeconds / ReboundSeconds, 0.0f, 1.0f);
-	const FVector NextLocation = CalculateCubicBezierLocation(
+	const FVector NextLocation = CalculateSnakeChargeBezierLocation(
 		ChargeEndLocation,
 		ReturnFirstControlLocation,
 		ReturnSecondControlLocation,
