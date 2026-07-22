@@ -80,6 +80,7 @@ void UPBDirectRewardBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
 	AActor* InteractionActor)
 {
+	InteractionActor = ResolveBallEffectTargetOrSource(InteractionActor);
 	FPBBumperRewardApplyResult Result;
 	TArray<TWeakObjectPtr<AActor>> AppliedTargets;
 	const auto ApplyReward = [&](AActor* TargetActor, const float Power)
