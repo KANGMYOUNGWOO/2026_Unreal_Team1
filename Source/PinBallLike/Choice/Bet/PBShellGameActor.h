@@ -3,10 +3,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Interface/PBChoiceNodeAction.h"
+#include "PinBallLike/Struct/Choice/PBShellGameReward.h"
 #include "PBShellGameActor.generated.h"
 
 class APBShellCupActor;
 class USceneComponent;
+class UTexture2D;
+class USoundBase;
+class UPBUserWidget;
 
 UENUM()
 enum class EPBShellGameState : uint8 
@@ -17,6 +21,7 @@ enum class EPBShellGameState : uint8
     Shuffling,
     WaitingForChoice,
     Revealing,
+    WaitingForRewardConfirmation,
     Finished
 };
 
@@ -58,6 +63,10 @@ private:
     void StartCoveringBall();
     void FinishCoveringBall();
 
+    void HandleCupRaiseFinished(APBShellCupActor* Cup);
+    void HandleCupLowerFinished(APBShellCupActor* Cup);
+    void StartRevealHoldTimer();
+
     void StartShuffling();
     void UpdateCupSlotLocations();
     
@@ -94,6 +103,28 @@ private:
     UPROPERTY(EditAnywhere, Category = "Shell Game|Shuffle")
     float ShuffleEaseExponent = 2.f;
 
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Sound")
+    TObjectPtr<USoundBase> ShuffleSound;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Sound",
+        meta = (ClampMin = "0"))
+    float ShuffleSoundVolume = 1.f;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Sound",
+        meta = (ClampMin = "0.01"))
+    float ShuffleSoundStartPitch = 0.95f;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Sound",
+        meta = (ClampMin = "0.01"))
+    float ShuffleSoundEndPitch = 1.15f;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Sound")
+    TObjectPtr<USoundBase> ResultRevealSound;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Sound",
+        meta = (ClampMin = "0"))
+    float ResultRevealSoundVolume = 1.f;
+
     UPROPERTY(EditAnywhere, Category = "Shell Game|Reveal")
     float RevealHeight = 150.f;
 
@@ -103,18 +134,41 @@ private:
     UPROPERTY(EditAnywhere, Category = "Shell Game|Reveal")
     FVector PrizeBallOffset = FVector(0.f, 0.f, 20.f);
 
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Reward",
+        meta = (ClampMin = "0"))
+    int32 GoldRewardAmount = 300;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Reward")
+    TSoftObjectPtr<UTexture2D> GoldRewardIcon;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Reward",
+        meta = (ClampMin = "0"))
+    float GoldRewardBillboardScale = 0.25f;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Reward",
+        meta = (ClampMin = "0"))
+    float BallRewardBillboardScale = 11.f;
+
+    UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Shell Game|Reward",
+        meta = (AllowPrivateAccess = "true"))
+    FPBShellGameReward CurrentReward;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTexture2D> CurrentRewardIcon;
+
     UPROPERTY(EditAnywhere, Category = "Shell Game")
     bool bAutoStartOnBeginPlay = false;
+
+    UPROPERTY(EditAnywhere, Category = "Shell Game|UI")
+    TSubclassOf<UPBUserWidget> ShellGameWidgetClass;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UPBUserWidget> ShellGameWidget;
     
     UPROPERTY(EditAnywhere, Category = "Shell Game|Intro")
     float ShowBallDuration = 2.0f;
 
-    UPROPERTY(EditAnywhere, Category = "Shell Game|Intro")
-    float CoverBallDuration = 0.5f;
-
     FTimerHandle ShowBallTimerHandle;
-    FTimerHandle CoverBallTimerHandle;
-    
     FTimerHandle RevealTimerHandle;
     
     TArray<TObjectPtr<USceneComponent>> CupSlots;
@@ -134,16 +188,25 @@ private:
     float CurrentShuffleDuration = 0.f;
 
     EPBShellGameState CurrentState = EPBShellGameState::Idle;
+    bool bRewardGranted = false;
 
     UPROPERTY(EditAnywhere, Category = "Shell Game|Layout")
     float CupSpacing = 250.f;
     
     // 공이 들어 있는 컵의 Actor 인덱스
     int32 WinningCupIndex = INDEX_NONE;
+
+    int32 PendingRevealCupAnimationCount = 0;
    
 private:
     bool InitializeCups();
     void ResetShellGame();
+
+    bool PrepareReward();
+    void PrepareGoldReward();
+    UTexture2D* ResolveBallRewardIcon(FName BallId) const;
+    void ApplyRewardVisual();
+    bool GrantCurrentReward();
 
     bool IsSameCupPair(
         int32 FirstA,
@@ -155,5 +218,11 @@ private:
     void HandleSuccess();
     void HandleFailure();
     void FinishReveal();
+    void PushShellGameWidget();
+    void PopShellGameWidget();
+    FText BuildRewardPopupMessage() const;
+    void ShowRewardPopup();
+    void HandleRewardPopupClosed(bool bConfirmed);
+    void CompleteShellGame();
     
 };

@@ -1,17 +1,31 @@
 #include "PBShellGameActor.h"
 
 #include "PBShellCupActor.h"
+#include "AssetRegistry/AssetData.h"
 #include "Components/SceneComponent.h"
+#include "Engine/AssetManager.h"
+#include "Engine/Texture2D.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Struct/Choice/PBChoiceType.h"
 #include "Kismet/GameplayStatics.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
+#include "PinBallLike/Subsystem/PBSoundSubsystem.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
+#include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
+#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
+#include "PinBallLike/UI/PBUserWidget.h"
 
 APBShellGameActor::APBShellGameActor()
 {
     PrimaryActorTick.bCanEverTick = true;
+
+    GoldRewardIcon = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(
+        TEXT("/Game/Resources/UI/T_UI_Gold.T_UI_Gold")));
 
     Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
     SetRootComponent(Root);
@@ -111,6 +125,12 @@ bool APBShellGameActor::InitializeCups()
 
         Cup->SetCupIndex(CupIndex);
         Cup->SetOwnerGame(this);
+        Cup->OnRaiseCupFinished.AddUObject(
+            this,
+            &APBShellGameActor::HandleCupRaiseFinished);
+        Cup->OnLowerCupFinished.AddUObject(
+            this,
+            &APBShellGameActor::HandleCupLowerFinished);
 
         Cup->SetActorLocationAndRotation(
             Slot->GetComponentLocation(),
@@ -132,6 +152,13 @@ void APBShellGameActor::ResetShellGame()
 
     CurrentShuffleElapsed = 0.f;
     CurrentShuffleDuration = 0.f;
+    PendingRevealCupAnimationCount = 0;
+    bRewardGranted = false;
+    CurrentReward = FPBShellGameReward();
+    CurrentRewardIcon = nullptr;
+
+    GetWorldTimerManager().ClearTimer(ShowBallTimerHandle);
+    GetWorldTimerManager().ClearTimer(RevealTimerHandle);
 
     ShuffleCommands.Reset();
 
@@ -153,9 +180,198 @@ void APBShellGameActor::ResetShellGame()
             CupSlots[CupIndex]->GetComponentLocation(),
             CupSlots[CupIndex]->GetComponentRotation());
 
-        Cups[CupIndex]->LowerCup();
+        Cups[CupIndex]->ResetCupPresentation();
+        Cups[CupIndex]->SetSelectionEnabled(false);
         Cups[CupIndex]->HidePrize();
+        Cups[CupIndex]->SetPrizeSprite(nullptr);
+        Cups[CupIndex]->SetPrizeScale(1.f);
     }
+}
+
+bool APBShellGameActor::PrepareReward()
+{
+    UGameInstance* GameInstance = GetGameInstance();
+    if (!GameInstance)
+    {
+        return false;
+    }
+
+    const UPBBallDeckSubsystem* DeckSubsystem =
+        GameInstance->GetSubsystem<UPBBallDeckSubsystem>();
+    const UPBTableDataSubsystem* TableDataSubsystem =
+        GameInstance->GetSubsystem<UPBTableDataSubsystem>();
+
+    if (!DeckSubsystem || !TableDataSubsystem)
+    {
+        return false;
+    }
+
+    if (!DeckSubsystem->HasEmptyDeckSlot())
+    {
+        PrepareGoldReward();
+        return CurrentReward.IsValid();
+    }
+
+    TArray<FName> CandidateBallIds;
+    TArray<FPBBallTableRow> BallRows;
+    if (!TableDataSubsystem->GetAllBallRows(CandidateBallIds, BallRows) ||
+        CandidateBallIds.IsEmpty())
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[ShellGame] No Ball reward candidates. Falling back to Gold."));
+        PrepareGoldReward();
+        return CurrentReward.IsValid();
+    }
+
+    while (!CandidateBallIds.IsEmpty())
+    {
+        const int32 CandidateIndex =
+            FMath::RandRange(0, CandidateBallIds.Num() - 1);
+        const FName CandidateBallId = CandidateBallIds[CandidateIndex];
+        CandidateBallIds.RemoveAtSwap(CandidateIndex);
+
+        UTexture2D* BallIcon = ResolveBallRewardIcon(CandidateBallId);
+        if (!BallIcon)
+        {
+            UE_LOG(
+                LogTemp,
+                Warning,
+                TEXT("[ShellGame] Ball reward has no loadable icon. BallId=%s"),
+                *CandidateBallId.ToString());
+            continue;
+        }
+
+        CurrentReward.Type = EPBShellGameRewardType::Ball;
+        CurrentReward.BallId = CandidateBallId;
+        CurrentReward.GoldAmount = 0;
+        CurrentRewardIcon = BallIcon;
+
+        UE_LOG(
+            LogTemp,
+            Log,
+            TEXT("[ShellGame] Ball reward prepared. BallId=%s"),
+            *CurrentReward.BallId.ToString());
+        return true;
+    }
+
+    UE_LOG(
+        LogTemp,
+        Warning,
+        TEXT("[ShellGame] No Ball reward with a valid icon. Falling back to Gold."));
+    PrepareGoldReward();
+    return CurrentReward.IsValid();
+}
+
+void APBShellGameActor::PrepareGoldReward()
+{
+    CurrentReward.Type = EPBShellGameRewardType::Gold;
+    CurrentReward.BallId = NAME_None;
+    CurrentReward.GoldAmount = FMath::Max(GoldRewardAmount, 0);
+    CurrentRewardIcon = GoldRewardIcon.LoadSynchronous();
+
+    if (!CurrentRewardIcon)
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[ShellGame] GoldRewardIcon is not assigned or could not be loaded."));
+    }
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[ShellGame] Gold reward prepared. Amount=%d"),
+        CurrentReward.GoldAmount);
+}
+
+UTexture2D* APBShellGameActor::ResolveBallRewardIcon(FName BallId) const
+{
+    if (BallId.IsNone())
+    {
+        return nullptr;
+    }
+
+    FAssetData BallAssetData;
+    const FPrimaryAssetId BallAssetId(
+        PBBallAssetIds::Type::BallData,
+        BallId);
+    if (!UAssetManager::Get().GetPrimaryAssetData(BallAssetId, BallAssetData))
+    {
+        return nullptr;
+    }
+
+    const UPBBallDataAsset* BallDataAsset =
+        Cast<UPBBallDataAsset>(BallAssetData.GetAsset());
+    return BallDataAsset
+        ? BallDataAsset->BallSprite.LoadSynchronous()
+        : nullptr;
+}
+
+void APBShellGameActor::ApplyRewardVisual()
+{
+    if (!Cups.IsValidIndex(WinningCupIndex) ||
+        !IsValid(Cups[WinningCupIndex]))
+    {
+        return;
+    }
+
+    APBShellCupActor* WinningCup = Cups[WinningCupIndex];
+    WinningCup->SetPrizeSprite(CurrentRewardIcon);
+    WinningCup->SetPrizeScale(
+        CurrentReward.Type == EPBShellGameRewardType::Gold
+            ? GoldRewardBillboardScale
+            : BallRewardBillboardScale);
+}
+
+bool APBShellGameActor::GrantCurrentReward()
+{
+    UGameInstance* GameInstance = GetGameInstance();
+    if (!GameInstance || !CurrentReward.IsValid())
+    {
+        return false;
+    }
+
+    if (CurrentReward.Type == EPBShellGameRewardType::Ball)
+    {
+        UPBBallDeckSubsystem* DeckSubsystem =
+            GameInstance->GetSubsystem<UPBBallDeckSubsystem>();
+        if (!DeckSubsystem)
+        {
+            return false;
+        }
+
+        if (DeckSubsystem->AddNewBallToDeck(CurrentReward.BallId))
+        {
+            DeckSubsystem->LoadPlacedBallUIAssetsAsync(FStreamableDelegate());
+            DeckSubsystem->LoadPlacedBallGameplayAssetsAsync(FStreamableDelegate());
+            return true;
+        }
+
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[ShellGame] Ball reward grant failed. Converting reward to Gold. BallId=%s"),
+            *CurrentReward.BallId.ToString());
+        PrepareGoldReward();
+        ApplyRewardVisual();
+    }
+
+    if (CurrentReward.Type == EPBShellGameRewardType::Gold)
+    {
+        UPBPlayerDataSubsystem* PlayerDataSubsystem =
+            GameInstance->GetSubsystem<UPBPlayerDataSubsystem>();
+        if (!PlayerDataSubsystem)
+        {
+            return false;
+        }
+
+        PlayerDataSubsystem->GainGold(CurrentReward.GoldAmount);
+        return true;
+    }
+
+    return false;
 }
 
 
@@ -215,6 +431,18 @@ void APBShellGameActor::StartShellGame()
 
     WinningCupIndex =
         FMath::RandRange(0, Cups.Num() - 1);
+
+    if (!PrepareReward())
+    {
+        UE_LOG(
+            LogTemp,
+            Error,
+            TEXT("[ShellGame] Reward preparation failed."));
+        CurrentState = EPBShellGameState::Finished;
+        return;
+    }
+
+    ApplyRewardVisual();
 
     BuildShuffleCommands();
 
@@ -276,8 +504,18 @@ void APBShellGameActor::HandleCupSelected(int32 CupIndex)
     }
 
     CurrentState = EPBShellGameState::Revealing;
+    PopShellGameWidget();
+
+    for (APBShellCupActor* Cup : Cups)
+    {
+        if (IsValid(Cup))
+        {
+            Cup->SetSelectionEnabled(false);
+        }
+    }
 
     const bool bCorrect = CupIndex == WinningCupIndex;
+    PendingRevealCupAnimationCount = bCorrect ? 1 : 2;
 
     UE_LOG(
         LogTemp,
@@ -286,6 +524,13 @@ void APBShellGameActor::HandleCupSelected(int32 CupIndex)
         CupIndex,
         WinningCupIndex,
         bCorrect ? TEXT("Success") : TEXT("Fail"));
+
+    if (UPBSoundSubsystem* SoundSubsystem = UPBSoundSubsystem::Get(this))
+    {
+        SoundSubsystem->PlaySFX(
+            ResultRevealSound,
+            ResultRevealSoundVolume);
+    }
 
     // 플레이어가 선택한 컵을 올린다.
     Cups[CupIndex]->RaiseCup(RevealHeight);
@@ -307,12 +552,6 @@ void APBShellGameActor::HandleCupSelected(int32 CupIndex)
         HandleFailure();
     }
 
-    GetWorldTimerManager().SetTimer(
-        RevealTimerHandle,
-        this,
-        &APBShellGameActor::FinishReveal,
-        RevealDuration,
-        false);
 }
 
 void APBShellGameActor::BuildShuffleCommands()
@@ -469,6 +708,25 @@ void APBShellGameActor::BeginShuffleCommand(
     CurrentShuffleElapsed = 0.f;
     CurrentShuffleDuration =
         FMath::Max(Command.Duration, KINDA_SMALL_NUMBER);
+
+    if (UPBSoundSubsystem* SoundSubsystem = UPBSoundSubsystem::Get(this))
+    {
+        const float ShuffleProgress = ShuffleCommands.Num() > 1
+            ? static_cast<float>(CurrentShuffleCommandIndex)
+                / static_cast<float>(ShuffleCommands.Num() - 1)
+            : 0.f;
+        const float SafeStartPitch = FMath::Max(ShuffleSoundStartPitch, 0.01f);
+        const float SafeEndPitch = FMath::Max(ShuffleSoundEndPitch, 0.01f);
+        const float Pitch = FMath::Lerp(
+            SafeStartPitch,
+            SafeEndPitch,
+            FMath::Clamp(ShuffleProgress, 0.f, 1.f));
+
+        SoundSubsystem->PlaySFX(
+            ShuffleSound,
+            ShuffleSoundVolume,
+            Pitch);
+    }
 }
 
 void APBShellGameActor::UpdateCurrentShuffle(float DeltaTime)
@@ -564,6 +822,15 @@ void APBShellGameActor::FinishCurrentShuffle()
 void APBShellGameActor::FinishAllShuffles()
 {
     CurrentState = EPBShellGameState::WaitingForChoice;
+    PushShellGameWidget();
+
+    for (APBShellCupActor* Cup : Cups)
+    {
+        if (IsValid(Cup))
+        {
+            Cup->SetSelectionEnabled(true);
+        }
+    }
 
     FirstMovingCupIndex = INDEX_NONE;
     SecondMovingCupIndex = INDEX_NONE;
@@ -610,14 +877,6 @@ void APBShellGameActor::StartShowingBall()
         Log,
         TEXT("[ShellGame] Showing ball. WinningCupIndex=%d"),
         WinningCupIndex);
-
-    GetWorldTimerManager().SetTimer(
-        ShowBallTimerHandle,
-        this,
-        &APBShellGameActor::FinishShowingBall,
-        ShowBallDuration,
-        false);
-    
 }
 
 void APBShellGameActor::FinishShowingBall()
@@ -643,20 +902,12 @@ void APBShellGameActor::StartCoveringBall()
     APBShellCupActor* WinningCup =
         Cups[WinningCupIndex];
 
-    WinningCup->LowerCup();
-    WinningCup->HidePrize();
-
     UE_LOG(
         LogTemp,
         Log,
         TEXT("[ShellGame] Covering ball."));
 
-    GetWorldTimerManager().SetTimer(
-        CoverBallTimerHandle,
-        this,
-        &APBShellGameActor::FinishCoveringBall,
-        CoverBallDuration,
-        false);
+    WinningCup->LowerCup();
 }
 
 void APBShellGameActor::FinishCoveringBall()
@@ -679,6 +930,66 @@ void APBShellGameActor::FinishCoveringBall()
     WinningCup->HidePrize();
 
     StartShuffling();
+}
+
+void APBShellGameActor::HandleCupRaiseFinished(APBShellCupActor* Cup)
+{
+    if (!IsValid(Cup))
+    {
+        return;
+    }
+
+    if (CurrentState == EPBShellGameState::ShowingBall)
+    {
+        if (!Cups.IsValidIndex(WinningCupIndex) ||
+            Cup != Cups[WinningCupIndex])
+        {
+            return;
+        }
+
+        GetWorldTimerManager().SetTimer(
+            ShowBallTimerHandle,
+            this,
+            &APBShellGameActor::FinishShowingBall,
+            ShowBallDuration,
+            false);
+        return;
+    }
+
+    if (CurrentState != EPBShellGameState::Revealing ||
+        PendingRevealCupAnimationCount <= 0)
+    {
+        return;
+    }
+
+    --PendingRevealCupAnimationCount;
+
+    if (PendingRevealCupAnimationCount == 0)
+    {
+        StartRevealHoldTimer();
+    }
+}
+
+void APBShellGameActor::HandleCupLowerFinished(APBShellCupActor* Cup)
+{
+    if (CurrentState != EPBShellGameState::CoveringBall ||
+        !Cups.IsValidIndex(WinningCupIndex) ||
+        Cup != Cups[WinningCupIndex])
+    {
+        return;
+    }
+
+    FinishCoveringBall();
+}
+
+void APBShellGameActor::StartRevealHoldTimer()
+{
+    GetWorldTimerManager().SetTimer(
+        RevealTimerHandle,
+        this,
+        &APBShellGameActor::FinishReveal,
+        RevealDuration,
+        false);
 }
 
 void APBShellGameActor::StartShuffling()
@@ -705,16 +1016,25 @@ void APBShellGameActor::StartShuffling()
 
 void APBShellGameActor::HandleSuccess()
 {
+    bRewardGranted = GrantCurrentReward();
+
+    if (!bRewardGranted)
+    {
+        UE_LOG(
+            LogTemp,
+            Error,
+            TEXT("[ShellGame] Correct cup selected, but reward grant failed."));
+        return;
+    }
+
     UE_LOG(
         LogTemp,
-        Warning,
-        TEXT("[ShellGame] Correct cup selected."));
-
-    // TODO:
-    // 골드 지급
-    // 볼 지급
-    // 강화권 지급
-    // PlayerDataSubsystem 갱신
+        Log,
+        TEXT("[ShellGame] Correct cup selected. RewardGranted=%s RewardType=%d BallId=%s Gold=%d"),
+        bRewardGranted ? TEXT("true") : TEXT("false"),
+        static_cast<int32>(CurrentReward.Type),
+        *CurrentReward.BallId.ToString(),
+        CurrentReward.GoldAmount);
 }
 
 void APBShellGameActor::HandleFailure()
@@ -731,7 +1051,169 @@ void APBShellGameActor::HandleFailure()
 
 void APBShellGameActor::FinishReveal()
 {
+    CurrentState = EPBShellGameState::WaitingForRewardConfirmation;
+    ShowRewardPopup();
+}
+
+FText APBShellGameActor::BuildRewardPopupMessage() const
+{
+    if (!bRewardGranted)
+    {
+        return NSLOCTEXT(
+            "ShellGame",
+            "RewardFailedPopup",
+            "보상 획득에 실패했습니다.");
+    }
+
+    if (CurrentReward.Type == EPBShellGameRewardType::Ball)
+    {
+        FText BallDisplayName = FText::FromName(CurrentReward.BallId);
+
+        const UGameInstance* GameInstance = GetGameInstance();
+        const UPBTableDataSubsystem* TableDataSubsystem = GameInstance
+            ? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
+            : nullptr;
+        if (TableDataSubsystem)
+        {
+            TArray<FName> BallIds;
+            TArray<FPBBallTableRow> BallRows;
+            if (TableDataSubsystem->GetAllBallRows(BallIds, BallRows))
+            {
+                const int32 BallIndex = BallIds.IndexOfByKey(CurrentReward.BallId);
+                if (BallRows.IsValidIndex(BallIndex) &&
+                    !BallRows[BallIndex].DisplayName.IsEmpty())
+                {
+                    BallDisplayName = BallRows[BallIndex].DisplayName;
+                }
+            }
+        }
+
+        return FText::Format(
+            NSLOCTEXT("ShellGame", "BallRewardPopup", "{0} 볼을 획득했습니다."),
+            BallDisplayName);
+    }
+
+    if (CurrentReward.Type == EPBShellGameRewardType::Gold)
+    {
+        const UGameInstance* GameInstance = GetGameInstance();
+        const UPBPlayerDataSubsystem* PlayerDataSubsystem = GameInstance
+            ? GameInstance->GetSubsystem<UPBPlayerDataSubsystem>()
+            : nullptr;
+
+        return FText::Format(
+            NSLOCTEXT(
+                "ShellGame",
+                "GoldRewardPopupWithCurrentGold",
+                "{0}G 획득했습니다.\n현재 골드: {1}G"),
+            FText::AsNumber(CurrentReward.GoldAmount),
+            FText::AsNumber(PlayerDataSubsystem->GetCurrentGold()));
+    }
+
+    return NSLOCTEXT("ShellGame", "UnknownRewardPopup", "보상을 획득했습니다.");
+}
+
+void APBShellGameActor::ShowRewardPopup()
+{
+    UGameInstance* GameInstance = GetGameInstance();
+    UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance
+        ? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+        : nullptr;
+    if (!UIManagerSubsystem)
+    {
+        UE_LOG(
+            LogTemp,
+            Error,
+            TEXT("[ShellGame] UIManagerSubsystem is unavailable. Skipping reward confirmation."));
+        CompleteShellGame();
+        return;
+    }
+
+    if (bRewardGranted &&
+        CurrentReward.Type == EPBShellGameRewardType::Ball)
+    {
+        if (UIManagerSubsystem->ShowBallRewardPopup(
+            BuildRewardPopupMessage(),
+            CurrentReward.BallId,
+            1,
+            FPBSimplePopupClosedDelegate::CreateUObject(
+                this,
+                &APBShellGameActor::HandleRewardPopupClosed)))
+        {
+            return;
+        }
+
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[ShellGame] Failed to show the Ball reward popup. Falling back to the simple popup."));
+    }
+
+    if (!UIManagerSubsystem->ShowSimplePopup(
+        BuildRewardPopupMessage(),
+        FPBSimplePopupClosedDelegate::CreateUObject(
+            this,
+            &APBShellGameActor::HandleRewardPopupClosed)))
+    {
+        UE_LOG(
+            LogTemp,
+            Error,
+            TEXT("[ShellGame] Failed to create the reward popup. Skipping reward confirmation."));
+        CompleteShellGame();
+    }
+}
+
+void APBShellGameActor::HandleRewardPopupClosed(const bool bConfirmed)
+{
+    if (CurrentState != EPBShellGameState::WaitingForRewardConfirmation)
+    {
+        return;
+    }
+
+    if (!bConfirmed)
+    {
+        ShowRewardPopup();
+        return;
+    }
+
+    CompleteShellGame();
+}
+
+void APBShellGameActor::PushShellGameWidget()
+{
+    if (!ShellGameWidgetClass)
+    {
+        return;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance
+        ? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+        : nullptr;
+    if (!UIManagerSubsystem)
+    {
+        return;
+    }
+
+    ShellGameWidget = UIManagerSubsystem->PushWidget(
+        ShellGameWidgetClass,
+        0);
+}
+
+void APBShellGameActor::PopShellGameWidget()
+{
+    if (IsValid(ShellGameWidget))
+    {
+        ShellGameWidget->CompletePop();
+    }
+
+    ShellGameWidget = nullptr;
+}
+
+void APBShellGameActor::CompleteShellGame()
+{
     CurrentState = EPBShellGameState::Finished;
+    PopShellGameWidget();
+
     FPBChoiceType Message;
     Message.Exit = 1;
     UE_LOG(
