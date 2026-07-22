@@ -78,7 +78,7 @@ void APBBattleGameMode::ReturnToMainMenu()
 		GameDataLoadSubsystem->UnloadPrimaryAssets();
 	}
 
-	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/Lv_MainMenu")));
+	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/LV_EndingCredit")));
 }
 
 APBBattleGameState* APBBattleGameMode::GetBattleGameState() const

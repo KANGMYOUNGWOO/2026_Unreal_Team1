@@ -87,6 +87,7 @@ void APBRelicChoiceActor::OpenRelicChoice()
 void APBRelicChoiceActor::OpenAbility()
 {
 	OpenRelicChoice();
+	UE_LOG(LogTemp, Warning, TEXT("[RelicChoice] Open"));
 }
 
 void APBRelicChoiceActor::HandleRelicSelected(const FPBRelicViewData SelectedReward)
