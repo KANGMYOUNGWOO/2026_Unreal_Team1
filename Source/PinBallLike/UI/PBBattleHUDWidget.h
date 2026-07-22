@@ -59,6 +59,7 @@ private:
 	void ApplyComboText(int32 CurrentCombo);
 	void ScheduleRefreshBallPanels();
 	void RefreshDeckOverview();
+	APBBallBase* FindPartyBallForDeploymentSlot(int32 SlotIndex) const;
 	void SetBallPanel(int32 PanelIndex, APBBallBase* Ball);
 	void SetBallPanelSlotVisibility(int32 PanelIndex, bool bVisible);
 	UPBBallStatusWidget* GetBallPanel(int32 PanelIndex) const;

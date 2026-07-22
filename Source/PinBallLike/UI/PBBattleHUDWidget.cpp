@@ -13,6 +13,7 @@
 #include "PinBallLike/Deck/UI/View/PBDeckOverviewWidget.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
+#include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/UI/Loading/PBLoadingScreenController.h"
@@ -92,18 +93,13 @@ void UPBBattleHUDWidget::ApplyBattlePhaseToLoadingScreen(const EPBBattleLevelPha
 
 void UPBBattleHUDWidget::RefreshBallPanels()
 {
+	CacheDeckSubsystem();
 	CachePartyController();
 	UnbindDisplayedBallEvents();
 
-	TArray<APBBallBase*> PartyBalls;
-	if (PartyController)
-	{
-		PartyBalls = PartyController->GetValidPartyBalls();
-	}
-
 	for (int32 PanelIndex = 0; PanelIndex < MaxBallPanelCount; ++PanelIndex)
 	{
-		APBBallBase* Ball = PartyBalls.IsValidIndex(PanelIndex) ? PartyBalls[PanelIndex] : nullptr;
+		APBBallBase* Ball = FindPartyBallForDeploymentSlot(PanelIndex);
 		SetBallPanel(PanelIndex, Ball);
 		if (IsValid(Ball))
 		{
@@ -399,6 +395,33 @@ void UPBBattleHUDWidget::RefreshDeckOverview()
 	{
 		DeckOverviewWidget->RefreshAll();
 	}
+}
+
+APBBallBase* UPBBattleHUDWidget::FindPartyBallForDeploymentSlot(const int32 SlotIndex) const
+{
+	if (!DeckSubsystem || !PartyController)
+	{
+		return nullptr;
+	}
+
+	const int32 BallInstanceId = DeckSubsystem->GetSlotBallInstanceId(
+		EPBBallDeckSlotType::Deployment,
+		SlotIndex);
+	if (BallInstanceId == INDEX_NONE)
+	{
+		return nullptr;
+	}
+
+	for (const TObjectPtr<APBBallBase>& PartyBall : PartyController->GetPartyBalls())
+	{
+		APBBallBase* Ball = PartyBall.Get();
+		if (IsValid(Ball) && Ball->GetBallInstanceId() == BallInstanceId)
+		{
+			return Ball;
+		}
+	}
+
+	return nullptr;
 }
 
 void UPBBattleHUDWidget::SetBallPanel(const int32 PanelIndex, APBBallBase* Ball)
