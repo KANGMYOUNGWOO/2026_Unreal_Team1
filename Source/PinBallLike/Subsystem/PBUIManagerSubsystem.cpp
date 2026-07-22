@@ -8,7 +8,6 @@
 #include "PinBallLike/UI/Popup/PBBallRewardPopupWidget.h"
 #include "PinBallLike/UI/Popup/PBSimplePopupWidget.h"
 #include "UObject/ConstructorHelpers.h"
-#include "UObject/UObjectGlobals.h"
 
 namespace
 {
@@ -24,27 +23,22 @@ UPBUIManagerSubsystem::UPBUIManagerSubsystem()
 		DefaultSimplePopupClass = PopupClassFinder.Class;
 	}
 
-	DefaultBallRewardPopupClass = TSoftClassPtr<UPBBallRewardPopupWidget>(
-		FSoftObjectPath(
-			TEXT("/Game/Blueprints/UI/Popup/WBP_Ball_Reward.WBP_Ball_Reward_C")));
 }
 
 UPBBallRewardPopupWidget* UPBUIManagerSubsystem::ShowBallRewardPopup(
+	const TSubclassOf<UPBBallRewardPopupWidget> PopupClass,
 	const FText& Message,
 	const FName BallId,
 	const int32 StarLevel,
 	FPBSimplePopupClosedDelegate ClosedCallback,
 	const int32 ZOrder)
 {
-	const TSubclassOf<UPBBallRewardPopupWidget> PopupClass =
-		DefaultBallRewardPopupClass.LoadSynchronous();
 	if (!PopupClass)
 	{
 		UE_LOG(
 			LogTemp,
 			Error,
-			TEXT("Failed to load Ball reward popup class. Path=%s"),
-			*DefaultBallRewardPopupClass.ToSoftObjectPath().ToString());
+			TEXT("Ball reward popup class is not assigned."));
 		return nullptr;
 	}
 
