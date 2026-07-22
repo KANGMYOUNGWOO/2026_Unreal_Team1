@@ -12,7 +12,8 @@
 
 namespace
 {
-	constexpr int32 GlobalToolbarZOrder = MAX_int32 - 1;
+	// AddToViewport adds an internal Z-order offset, so values near MAX_int32 can overflow.
+	constexpr int32 GlobalToolbarZOrder = 10000;
 }
 
 UPBUIManagerSubsystem::UPBUIManagerSubsystem()
@@ -94,6 +95,13 @@ UPBUserWidget* UPBUIManagerSubsystem::PushWidget(
 	if (!WidgetClass)
 	{
 		return nullptr;
+	}
+
+	CleanInvalidWidgetsFromStack();
+	if (UPBUserWidget* TopWidget = GetTopWidget();
+		IsValid(TopWidget) && TopWidget->IsA(WidgetClass))
+	{
+		return TopWidget;
 	}
 
 	UGameInstance* GameInstance = GetGameInstance();
@@ -206,6 +214,11 @@ void UPBUIManagerSubsystem::SetGlobalToolbarSuppressedForLoading(const bool bSup
 
 	bGlobalToolbarSuppressedForLoading = bSuppressed;
 	RefreshGlobalToolbarVisibility();
+}
+
+void UPBUIManagerSubsystem::RequestGlobalDeckToggle()
+{
+	OnGlobalDeckToggleRequested.Broadcast();
 }
 
 void UPBUIManagerSubsystem::HandlePostLoadMap(UWorld* LoadedWorld)
