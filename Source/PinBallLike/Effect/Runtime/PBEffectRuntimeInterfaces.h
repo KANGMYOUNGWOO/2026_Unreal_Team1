@@ -59,7 +59,7 @@ class PINBALLLIKE_API IPBComboChangedListener
 	GENERATED_BODY()
 
 public:
-	virtual void HandleComboChanged(int32 CurrentCombo, int32 MaxCombo) = 0;
+	virtual void HandleComboChanged(int32 CurrentCombo) = 0;
 };
 
 UINTERFACE(MinimalAPI)

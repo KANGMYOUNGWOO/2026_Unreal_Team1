@@ -3,6 +3,7 @@
 
 #include "PBBallHitReactionComponent.h"
 
+#include "PBBallComboComponent.h"
 #include "PBBallPhysicsComponent.h"
 #include "PBBallEffectRuntimeComponent.h"
 #include "EngineUtils.h"
@@ -10,6 +11,8 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "Engine/World.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
+#include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
+#include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 #include "PinBallLike/Actor/Common/Component/Resource/PBBaseResourceComponent.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
@@ -62,7 +65,13 @@ void UPBBallHitReactionComponent::HandleMovementHit(const FHitResult& Hit)
 
 void UPBBallHitReactionComponent::ProcessBallContact(const FHitResult& Hit)
 {
-	ProcessBossContact(Hit.GetActor(), Hit.ImpactPoint, true);
+	AActor* HitActor = Hit.GetActor();
+	if (ProcessBossContact(HitActor, Hit.ImpactPoint, true))
+	{
+		return;
+	}
+
+	ProcessBumperContact(HitActor);
 }
 
 bool UPBBallHitReactionComponent::ProcessBossContact(
@@ -90,6 +99,8 @@ bool UPBBallHitReactionComponent::ProcessBossContact(
 	
 	if (bAppliedDamage)
 	{
+		AddComboForExternalCollision(BossActor);
+
 		if (UGameplayMessageSubsystem::HasInstance(this))
 		{
 			FPBDamageLogMessage Message;
@@ -117,6 +128,46 @@ bool UPBBallHitReactionComponent::ProcessBossContact(
 	}
 
 	return true;
+}
+
+bool UPBBallHitReactionComponent::ProcessBumperContact(AActor* BumperActor)
+{
+	AActor* Owner = GetOwner();
+	if (!Owner || !BumperActor || BumperActor == Owner || WasContactProcessedThisFrame(BumperActor))
+	{
+		return false;
+	}
+
+	APBModularBumperBase* Bumper = Cast<APBModularBumperBase>(BumperActor);
+	if (!Bumper)
+	{
+		if (const APBBumperTriggerActorBase* TriggerActor = Cast<APBBumperTriggerActorBase>(BumperActor))
+		{
+			Bumper = TriggerActor->GetOwnerBumper();
+		}
+	}
+	if (!IsValid(Bumper))
+	{
+		return false;
+	}
+
+	AddComboForExternalCollision(BumperActor);
+	MarkContactProcessed(BumperActor);
+	return true;
+}
+
+void UPBBallHitReactionComponent::AddComboForExternalCollision(AActor* OtherActor)
+{
+	AActor* Owner = GetOwner();
+	UPBBallComboComponent* ComboComponent = Owner ? Owner->FindComponentByClass<UPBBallComboComponent>() : nullptr;
+	if (!ComboComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Combo] External collision combo skipped because ComboComponent is missing. Owner=%s Other=%s"), *GetNameSafe(Owner), *GetNameSafe(OtherActor));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Combo] External collision combo added. Owner=%s Other=%s OtherClass=%s"), *GetNameSafe(Owner), *GetNameSafe(OtherActor), OtherActor ? *GetNameSafe(OtherActor->GetClass()) : TEXT("None"));
+	ComboComponent->AddCombo(1);
 }
 
 void UPBBallHitReactionComponent::ApplyManaGainOnDamage()

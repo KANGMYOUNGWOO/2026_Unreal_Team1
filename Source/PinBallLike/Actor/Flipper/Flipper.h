@@ -31,6 +31,7 @@ protected:
 	float CalculateDistanceAlpha(FVector WorldLocation) const;
 	FVector CalculateForceDirection(float DistanceAlpha) const;
 	void ApplyForceToMovableActors(float DeltaTime, float MotionAlpha);
+	void ConsumeComboForPowerFlip(AActor* TargetActor) const;
 	void DrawForceDirectionDebug() const;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flipper|Launch")

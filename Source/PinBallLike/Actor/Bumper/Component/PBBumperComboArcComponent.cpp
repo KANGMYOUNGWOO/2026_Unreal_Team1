@@ -156,11 +156,8 @@ bool UPBBumperComboArcComponent::FireArcProjectile() const
 		ArmedProjectileMesh));
 }
 
-void UPBBumperComboArcComponent::HandleComboChanged(
-	const int32 CurrentCombo,
-	const int32 MaxCombo)
+void UPBBumperComboArcComponent::HandleComboChanged(const int32 CurrentCombo)
 {
-	static_cast<void>(MaxCombo);
 	const int32 ComboGain = CurrentCombo - LastCombo;
 	LastCombo = CurrentCombo;
 	if (!bArmed || ComboGain <= 0 || ArmedComboInterval <= 0)

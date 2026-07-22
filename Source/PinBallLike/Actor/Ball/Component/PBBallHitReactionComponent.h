@@ -35,6 +35,8 @@ private:
 	void HandleMovementHit(const FHitResult& Hit);
 	
 	void ProcessBallContact(const FHitResult& Hit);
+	bool ProcessBumperContact(AActor* BumperActor);
+	void AddComboForExternalCollision(AActor* OtherActor);
 	void ApplyManaGainOnDamage();
 	void ApplyManaGainToBall(class APBBallBase* Ball) const;
 	APBCombatPartyController* FindOwningPartyController() const;

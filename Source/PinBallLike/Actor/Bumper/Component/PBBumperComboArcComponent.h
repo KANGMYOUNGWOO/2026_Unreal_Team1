@@ -40,7 +40,7 @@ private:
 	bool FireArcProjectile() const;
 
 	UFUNCTION()
-	void HandleComboChanged(int32 CurrentCombo, int32 MaxCombo);
+	void HandleComboChanged(int32 CurrentCombo);
 
 	TWeakObjectPtr<UPBBallComboComponent> CachedComboComponent;
 	TWeakObjectPtr<APBModularBumperBase> ArmedBumper;

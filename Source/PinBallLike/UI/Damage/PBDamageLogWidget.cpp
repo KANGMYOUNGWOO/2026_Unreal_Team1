@@ -3,6 +3,7 @@
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 #include "Components/PanelWidget.h"
+#include "Components/TextBlock.h"
 
 void UPBDamageLogWidget::NativeOnInitialized()
 {
@@ -42,6 +43,7 @@ bool UPBDamageLogWidget::ShowDamage(
 		return false;
 	}
 
+	ApplyEntryOutlineColor(Entry, InLogType);
 	OnEntryActivated(Entry, InLogType, Damage, WorldLocation);
 	return true;
 }
@@ -100,4 +102,26 @@ UUserWidget* UPBDamageLogWidget::AcquireEntry()
 	ActiveEntries.Add(Entry);
 	Entry->SetVisibility(ESlateVisibility::HitTestInvisible);
 	return Entry;
+}
+
+void UPBDamageLogWidget::ApplyEntryOutlineColor(
+	UUserWidget* Entry,
+	const EPBDamageLogStyle InLogType) const
+{
+	if (!Entry)
+	{
+		return;
+	}
+
+	UTextBlock* DamageText = Cast<UTextBlock>(Entry->GetWidgetFromName(TEXT("DamageText")));
+	if (!DamageText)
+	{
+		return;
+	}
+
+	FSlateFontInfo FontInfo = DamageText->GetFont();
+	FontInfo.OutlineSettings.OutlineColor = InLogType == EPBDamageLogStyle::EnemyAttack
+		? FLinearColor::FromSRGBColor(FColor(0x3F, 0x00, 0x04, 0xFF))
+		: FLinearColor(0.02f, 0.02f, 0.02f, 1.0f);
+	DamageText->SetFont(FontInfo);
 }

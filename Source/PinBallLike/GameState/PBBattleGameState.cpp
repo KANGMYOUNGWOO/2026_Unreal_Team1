@@ -157,6 +157,64 @@ float APBBattleGameState::GetBattleDashCooldownRatio() const
 		1.0f);
 }
 
+#pragma region Combo
+
+void APBBattleGameState::SetCombo(const int32 NewCombo)
+{
+	const int32 ClampedCombo = FMath::Max(0, NewCombo);
+	if (CurrentCombo == ClampedCombo)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[Combo] BattleGameState SetCombo ignored because value is unchanged. Current=%d Requested=%d"), CurrentCombo, NewCombo);
+		return;
+	}
+
+	const int32 PreviousCombo = CurrentCombo;
+	CurrentCombo = ClampedCombo;
+	UE_LOG(LogTemp, Log, TEXT("[Combo] BattleGameState combo changed. Previous=%d Current=%d Requested=%d"), PreviousCombo, CurrentCombo, NewCombo);
+	OnBattleComboChanged.Broadcast(CurrentCombo);
+}
+
+void APBBattleGameState::AddCombo(const int32 Delta)
+{
+	if (Delta == 0)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[Combo] BattleGameState AddCombo ignored because delta is zero. Current=%d"), CurrentCombo);
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Combo] BattleGameState AddCombo. Delta=%d Previous=%d"), Delta, CurrentCombo);
+	SetCombo(CurrentCombo + Delta);
+}
+
+bool APBBattleGameState::TryConsumeCombo(const int32 Cost)
+{
+	if (Cost < 0 || CurrentCombo < Cost)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Combo] BattleGameState TryConsumeCombo failed. Cost=%d Current=%d"), Cost, CurrentCombo);
+		return false;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Combo] BattleGameState TryConsumeCombo. Cost=%d Previous=%d"), Cost, CurrentCombo);
+	SetCombo(CurrentCombo - Cost);
+	return true;
+}
+
+int32 APBBattleGameState::ConsumeCombo()
+{
+	const int32 ConsumedCombo = CurrentCombo;
+	UE_LOG(LogTemp, Log, TEXT("[Combo] BattleGameState ConsumeCombo. Consumed=%d"), ConsumedCombo);
+	ResetCombo();
+	return ConsumedCombo;
+}
+
+void APBBattleGameState::ResetCombo()
+{
+	UE_LOG(LogTemp, Log, TEXT("[Combo] BattleGameState ResetCombo. Previous=%d"), CurrentCombo);
+	SetCombo(0);
+}
+
+#pragma endregion
+
 #pragma region MessageHandler
 
 void APBBattleGameState::RegisterMessageListeners()

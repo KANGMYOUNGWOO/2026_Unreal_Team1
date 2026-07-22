@@ -1,6 +1,8 @@
 #include "PBBattleHUDWidget.h"
 
+#include "Components/Image.h"
 #include "Components/PanelWidget.h"
+#include "Components/TextBlock.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -28,11 +30,11 @@ void UPBBattleHUDWidget::NativeConstruct()
 	BindDeckEvents();
 	EnsureDeckOverviewWidget();
 	RegisterBattleMessageListeners();
+	BindComboEvents();
 	ScheduleRefreshBallPanels();
 	RefreshDeckOverview();
+	RefreshComboText();
 
-	const UWorld* World = GetWorld();
-	const APBBattleGameState* BattleGameState = World ? World->GetGameState<APBBattleGameState>() : nullptr;
 	if (BattleGameState)
 	{
 		const EPBBattleLevelPhase CurrentPhase = BattleGameState->GetBattleLevelPhase();
@@ -49,7 +51,14 @@ void UPBBattleHUDWidget::NativeDestruct()
 		LoadingScreenController.Reset();
 	}
 	UnregisterBattleMessageListeners();
+	UnbindComboEvents();
 	UnbindDeckEvents();
+	UnbindDisplayedBallEvents();
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ComboBindRetryTimerHandle);
+	}
 
 	for (UPBBallStatusWidget* BallPanel : BallPanels)
 	{
@@ -59,6 +68,7 @@ void UPBBattleHUDWidget::NativeDestruct()
 		}
 	}
 	BallPanels.Reset();
+	BallPanelInputIndicators.Reset();
 
 	if (DeckOverviewWidget)
 	{
@@ -83,6 +93,7 @@ void UPBBattleHUDWidget::ApplyBattlePhaseToLoadingScreen(const EPBBattleLevelPha
 void UPBBattleHUDWidget::RefreshBallPanels()
 {
 	CachePartyController();
+	UnbindDisplayedBallEvents();
 
 	TArray<APBBallBase*> PartyBalls;
 	if (PartyController)
@@ -94,6 +105,11 @@ void UPBBattleHUDWidget::RefreshBallPanels()
 	{
 		APBBallBase* Ball = PartyBalls.IsValidIndex(PanelIndex) ? PartyBalls[PanelIndex] : nullptr;
 		SetBallPanel(PanelIndex, Ball);
+		if (IsValid(Ball))
+		{
+			Ball->OnDestroyed.AddUniqueDynamic(this, &UPBBattleHUDWidget::HandleDisplayedBallDestroyed);
+			DisplayedBalls.Add(Ball);
+		}
 	}
 }
 
@@ -138,19 +154,68 @@ void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(const EPBBattleLevelPhas
 void UPBBattleHUDWidget::CacheBallPanels()
 {
 	BallPanels.Reset();
+	BallPanelInputIndicators.Reset();
 	if (!BallPanelContainer)
 	{
 		return;
 	}
 
-	const int32 ChildCount = FMath::Min(BallPanelContainer->GetChildrenCount(), MaxBallPanelCount);
+	UWidget* PendingInputIndicator = nullptr;
+	const int32 ChildCount = BallPanelContainer->GetChildrenCount();
 	for (int32 ChildIndex = 0; ChildIndex < ChildCount; ++ChildIndex)
 	{
-		if (UPBBallStatusWidget* BallPanel = Cast<UPBBallStatusWidget>(BallPanelContainer->GetChildAt(ChildIndex)))
+		UWidget* ChildWidget = BallPanelContainer->GetChildAt(ChildIndex);
+		if (UImage* InputIndicator = Cast<UImage>(ChildWidget))
 		{
-			BallPanels.Add(BallPanel);
+			PendingInputIndicator = InputIndicator;
+		}
+		else if (UPBBallStatusWidget* BallPanel = Cast<UPBBallStatusWidget>(ChildWidget))
+		{
+			if (BallPanels.Num() < MaxBallPanelCount)
+			{
+				BallPanelInputIndicators.Add(PendingInputIndicator);
+				BallPanels.Add(BallPanel);
+				PendingInputIndicator = nullptr;
+			}
 		}
 	}
+
+	int32 ValidIndicatorCount = 0;
+	for (const TObjectPtr<UWidget>& Indicator : BallPanelInputIndicators)
+	{
+		if (IsValid(Indicator))
+		{
+			++ValidIndicatorCount;
+		}
+	}
+	if (BallPanels.Num() != MaxBallPanelCount
+		|| ValidIndicatorCount != MaxBallPanelCount)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BattleHUD] Ball panel slot composition mismatch. Panels=%d Indicators=%d Expected=%d"),
+			BallPanels.Num(),
+			ValidIndicatorCount,
+			MaxBallPanelCount);
+	}
+
+	for (int32 PanelIndex = 0; PanelIndex < MaxBallPanelCount; ++PanelIndex)
+	{
+		SetBallPanelSlotVisibility(PanelIndex, false);
+	}
+}
+
+void UPBBattleHUDWidget::UnbindDisplayedBallEvents()
+{
+	for (const TWeakObjectPtr<APBBallBase>& DisplayedBall : DisplayedBalls)
+	{
+		if (APBBallBase* Ball = DisplayedBall.Get())
+		{
+			Ball->OnDestroyed.RemoveDynamic(this, &UPBBattleHUDWidget::HandleDisplayedBallDestroyed);
+		}
+	}
+	DisplayedBalls.Reset();
 }
 
 void UPBBattleHUDWidget::CacheDeckSubsystem()
@@ -244,6 +309,80 @@ void UPBBattleHUDWidget::UnregisterBattleMessageListeners()
 	}
 }
 
+void UPBBattleHUDWidget::CacheBattleGameState()
+{
+	if (IsValid(BattleGameState))
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	BattleGameState = World ? World->GetGameState<APBBattleGameState>() : nullptr;
+}
+
+void UPBBattleHUDWidget::BindComboEvents()
+{
+	if (bComboEventsBound)
+	{
+		return;
+	}
+
+	CacheBattleGameState();
+	if (!BattleGameState)
+	{
+		ScheduleBindComboEvents();
+		return;
+	}
+
+	BattleGameState->OnBattleComboChanged.AddUniqueDynamic(this, &UPBBattleHUDWidget::HandleBattleComboChanged);
+	bComboEventsBound = true;
+	RefreshComboText();
+}
+
+void UPBBattleHUDWidget::UnbindComboEvents()
+{
+	if (!bComboEventsBound || !BattleGameState)
+	{
+		return;
+	}
+
+	BattleGameState->OnBattleComboChanged.RemoveDynamic(this, &UPBBattleHUDWidget::HandleBattleComboChanged);
+	bComboEventsBound = false;
+	BattleGameState = nullptr;
+}
+
+void UPBBattleHUDWidget::ScheduleBindComboEvents()
+{
+	if (UWorld* World = GetWorld())
+	{
+		ComboBindRetryTimerHandle = World->GetTimerManager().SetTimerForNextTick(
+			FTimerDelegate::CreateUObject(this, &UPBBattleHUDWidget::BindComboEvents));
+	}
+}
+
+void UPBBattleHUDWidget::RefreshComboText()
+{
+	if (!Text_Combo)
+	{
+		return;
+	}
+
+	CacheBattleGameState();
+	const int32 CurrentCombo = BattleGameState ? BattleGameState->GetCombo() : 0;
+	ApplyComboText(CurrentCombo);
+}
+
+void UPBBattleHUDWidget::ApplyComboText(const int32 CurrentCombo)
+{
+	if (!Text_Combo)
+	{
+		return;
+	}
+
+	Text_Combo->SetVisibility(CurrentCombo > 0 ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	Text_Combo->SetText(FText::Format(FText::FromString(TEXT("Combo {0}")), CurrentCombo));
+}
+
 void UPBBattleHUDWidget::ScheduleRefreshBallPanels()
 {
 	if (UWorld* World = GetWorld())
@@ -265,23 +404,49 @@ void UPBBattleHUDWidget::RefreshDeckOverview()
 void UPBBattleHUDWidget::SetBallPanel(const int32 PanelIndex, APBBallBase* Ball)
 {
 	UPBBallStatusWidget* BallPanel = GetBallPanel(PanelIndex);
-	if (!BallPanel)
+	if (!IsValid(Ball))
 	{
+		if (BallPanel)
+		{
+			BallPanel->ClearBall();
+		}
+		SetBallPanelSlotVisibility(PanelIndex, false);
 		return;
 	}
 
-	if (!IsValid(Ball))
+	if (!BallPanel)
 	{
-		BallPanel->ClearBall();
+		SetBallPanelSlotVisibility(PanelIndex, false);
 		return;
 	}
 
 	BallPanel->SetBall(Ball, GetBallIcon(Ball));
+	SetBallPanelSlotVisibility(PanelIndex, true);
+}
+
+void UPBBattleHUDWidget::SetBallPanelSlotVisibility(const int32 PanelIndex, const bool bVisible)
+{
+	if (UPBBallStatusWidget* BallPanel = GetBallPanel(PanelIndex))
+	{
+		BallPanel->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	}
+
+	if (UWidget* InputIndicator = GetBallPanelInputIndicator(PanelIndex))
+	{
+		InputIndicator->SetVisibility(bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
 }
 
 UPBBallStatusWidget* UPBBattleHUDWidget::GetBallPanel(const int32 PanelIndex) const
 {
 	return BallPanels.IsValidIndex(PanelIndex) ? BallPanels[PanelIndex] : nullptr;
+}
+
+UWidget* UPBBattleHUDWidget::GetBallPanelInputIndicator(const int32 PanelIndex) const
+{
+	return BallPanelInputIndicators.IsValidIndex(PanelIndex)
+		? BallPanelInputIndicators[PanelIndex]
+		: nullptr;
 }
 
 UTexture2D* UPBBattleHUDWidget::GetBallIcon(APBBallBase* Ball) const
@@ -305,6 +470,17 @@ void UPBBattleHUDWidget::HandleDeploymentSlotChanged(const int32 SlotIndex, cons
 void UPBBattleHUDWidget::HandleDeploymentChanged()
 {
 	ScheduleRefreshBallPanels();
+}
+
+void UPBBattleHUDWidget::HandleDisplayedBallDestroyed(AActor* DestroyedActor)
+{
+	(void)DestroyedActor;
+	ScheduleRefreshBallPanels();
+}
+
+void UPBBattleHUDWidget::HandleBattleComboChanged(const int32 CurrentCombo)
+{
+	ApplyComboText(CurrentCombo);
 }
 
 void UPBBattleHUDWidget::HandleBattlePhaseChangedMessage(
