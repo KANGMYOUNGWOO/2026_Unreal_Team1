@@ -58,6 +58,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (ClampMin = "0"))
 	float CooldownSeconds = 3.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (ClampMin = "0"))
+	int32 DamageAmount = 1;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
 	bool IsEnabled = true;
 
