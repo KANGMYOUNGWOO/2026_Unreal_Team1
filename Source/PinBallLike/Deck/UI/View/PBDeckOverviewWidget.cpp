@@ -368,7 +368,18 @@ void UPBDeckOverviewWidget::UnbindGlobalToolbarEvents()
 
 void UPBDeckOverviewWidget::HandleGlobalDeckToggleRequested()
 {
-	ToggleDeck();
+	if (bIsDeckAnimationPlaying || bIsDeploymentAnimationPlaying)
+	{
+		return;
+	}
+
+	if (bIsDeckOpen)
+	{
+		CloseAll();
+		return;
+	}
+
+	OpenAll();
 }
 
 void UPBDeckOverviewWidget::HandleDeploymentSlotChanged(const int32 SlotIndex, const int32 BallInstanceId)
