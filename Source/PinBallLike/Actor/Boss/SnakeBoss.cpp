@@ -8,7 +8,7 @@
 
 namespace
 {
-	FVector CalculateCubicBezierLocation(
+	FVector CalculatePatrolCubicBezierLocation(
 		const FVector& StartLocation,
 		const FVector& FirstControlLocation,
 		const FVector& SecondControlLocation,
@@ -559,7 +559,7 @@ bool ASnakeBoss::IsInsideHeadExcludedArea(const FVector& SourceLocation) const
 
 FVector ASnakeBoss::GetPatrolCurveLocation(float Alpha) const
 {
-	return CalculateCubicBezierLocation(
+	return CalculatePatrolCubicBezierLocation(
 		PatrolStartLocation,
 		PatrolCurveControlLocation,
 		PatrolCurveEndControlLocation,
