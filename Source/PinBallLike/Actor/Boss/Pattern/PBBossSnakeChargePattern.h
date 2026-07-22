@@ -38,6 +38,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.0", Units = "cm"))
 	float ReturnUpwardOffset = 300.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.0", Units = "cm"))
+	float UndergroundDepth = 500.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.0", Units = "cm"))
+	float ReturnCurveControlDistance = 600.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.0", Units = "cm"))
+	float EmergenceSearchRadius = 700.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.0", Units = "cm"))
+	float MinimumEmergenceDistance = 500.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge", meta = (ClampMin = "0.001"))
 	float UpdateIntervalSeconds = 0.016f;
 
@@ -72,6 +84,7 @@ private:
 	void MoveBossByChargeDistance(APBBossBase* Boss, float ChargeDistance);
 	void FinishCharge();
 	void StartReturn();
+	FVector FindEmergenceLocation(APBBossBase* Boss) const;
 	void UpdateReturn();
 	void FinishReturn();
 	void ClearPatternTimers();
@@ -93,12 +106,15 @@ private:
 	FVector ChargeStartLocation = FVector::ZeroVector;
 	FVector ChargeEndLocation = FVector::ZeroVector;
 	FVector ReturnEndLocation = FVector::ZeroVector;
+	FVector ReturnFirstControlLocation = FVector::ZeroVector;
+	FVector ReturnSecondControlLocation = FVector::ZeroVector;
 	FRotator ChargeStartRotation = FRotator::ZeroRotator;
 	FVector ChargeDirection = FVector::ForwardVector;
 	float ChargePathLength = 0.0f;
 	float ChargeProgressDistance = 0.0f;
 	float ChargeAimElapsedSeconds = 0.0f;
 	float ChargeAimDurationSeconds = 0.0f;
+	float ReturnElapsedSeconds = 0.0f;
 	bool IsChargeMovementStarted = false;
 
 	UPROPERTY(Transient)
