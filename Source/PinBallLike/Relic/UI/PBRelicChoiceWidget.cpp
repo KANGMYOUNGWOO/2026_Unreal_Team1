@@ -1,87 +1,127 @@
 #include "PBRelicChoiceWidget.h"
-
-#include "Components/Button.h"
-#include "Components/TextBlock.h"
+#include "PBRelicChoicePanel.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
 
 void UPBRelicChoiceWidget::NativeConstruct()
 {
-    Super::NativeConstruct();
+	Super::NativeConstruct();
 
-    if (Button_Relic0)
-    {
-        Button_Relic0->OnClicked.AddUniqueDynamic(
-            this,
-            &UPBRelicChoiceWidget::HandleRelic0Clicked);
-    }
+	if (Panel_Relic0)
+	{
+		Panel_Relic0->OnClicked.AddUniqueDynamic(
+			this,
+			&UPBRelicChoiceWidget::HandleRelicPanelClicked);
+	}
 
-    if (Button_Relic1)
-    {
-        Button_Relic1->OnClicked.AddUniqueDynamic(
-            this,
-            &UPBRelicChoiceWidget::HandleRelic1Clicked);
-    }
+	if (Panel_Relic1)
+	{
+		Panel_Relic1->OnClicked.AddUniqueDynamic(
+			this,
+			&UPBRelicChoiceWidget::HandleRelicPanelClicked);
+	}
 
-    if (Button_Relic2)
-    {
-        Button_Relic2->OnClicked.AddUniqueDynamic(
-            this,
-            &UPBRelicChoiceWidget::HandleRelic2Clicked);
-    }
+	if (Panel_Relic2)
+	{
+		Panel_Relic2->OnClicked.AddUniqueDynamic(
+			this,
+			&UPBRelicChoiceWidget::HandleRelicPanelClicked);
+	}
 }
 
-void UPBRelicChoiceWidget::SetRelicChoices(
-    const TArray<FName>& InRelicIds)
+void UPBRelicChoiceWidget::SetRelicChoices(const TArray<FName>& InRelicIds, const int32 InFallbackGoldAmount)
 {
-    RelicIds = InRelicIds;
+	RelicIds = InRelicIds;
+	FallbackGoldAmount = FMath::Max(InFallbackGoldAmount, 0);
+	RelicViewDataList.Reset();
 
-    if (Text_Relic0)
-    {
-        Text_Relic0->SetText(
-            RelicIds.IsValidIndex(0)
-                ? FText::FromName(RelicIds[0])
-                : FText::GetEmpty());
-    }
+	for (const FName RelicId : RelicIds)
+	{
+		RelicViewDataList.Add(BuildRelicViewData(RelicId));
+	}
 
-    if (Text_Relic1)
-    {
-        Text_Relic1->SetText(
-            RelicIds.IsValidIndex(1)
-                ? FText::FromName(RelicIds[1])
-                : FText::GetEmpty());
-    }
+	while (RelicViewDataList.Num() < 3)
+	{
+		RelicViewDataList.Add(BuildGoldViewData(FallbackGoldAmount));
+	}
 
-    if (Text_Relic2)
-    {
-        Text_Relic2->SetText(
-            RelicIds.IsValidIndex(2)
-                ? FText::FromName(RelicIds[2])
-                : FText::GetEmpty());
-    }
+	if (Panel_Relic0)
+	{
+		Panel_Relic0->SetRelicViewData(RelicViewDataList.IsValidIndex(0) ? RelicViewDataList[0] : FPBRelicViewData());
+	}
+
+	if (Panel_Relic1)
+	{
+		Panel_Relic1->SetRelicViewData(RelicViewDataList.IsValidIndex(1) ? RelicViewDataList[1] : FPBRelicViewData());
+	}
+
+	if (Panel_Relic2)
+	{
+		Panel_Relic2->SetRelicViewData(RelicViewDataList.IsValidIndex(2) ? RelicViewDataList[2] : FPBRelicViewData());
+	}
 }
 
-void UPBRelicChoiceWidget::SelectRelic(
-    const int32 SlotIndex)
+void UPBRelicChoiceWidget::SelectRelic(const int32 SlotIndex)
 {
-    if (!RelicIds.IsValidIndex(SlotIndex))
-    {
-        return;
-    }
+	if (!RelicViewDataList.IsValidIndex(SlotIndex))
+	{
+		return;
+	}
 
-    OnRelicSelected.ExecuteIfBound(
-        RelicIds[SlotIndex]);
+	OnRelicSelected.ExecuteIfBound(RelicViewDataList[SlotIndex]);
 }
 
-void UPBRelicChoiceWidget::HandleRelic0Clicked()
+FPBRelicViewData UPBRelicChoiceWidget::BuildRelicViewData(const FName RelicId) const
 {
-    SelectRelic(0);
+	FPBRelicViewData ViewData;
+	ViewData.RelicId = RelicId;
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBTableDataSubsystem* TableSubsystem = GameInstance ? GameInstance->GetSubsystem<UPBTableDataSubsystem>() : nullptr;
+	if (!TableSubsystem)
+	{
+		return ViewData;
+	}
+
+	FPBRelicTableRow RelicRow;
+	if (!TableSubsystem->FindRelicRow(RelicId, RelicRow))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[RelicChoice] Relic row not found. RelicId=%s"), *RelicId.ToString());
+		return ViewData;
+	}
+
+	ViewData.DisplayName = RelicRow.DisplayName.IsEmpty() ? FText::FromName(RelicId) : RelicRow.DisplayName;
+	ViewData.Description = RelicRow.Description;
+	ViewData.Rarity = RelicRow.Rarity;
+	return ViewData;
 }
 
-void UPBRelicChoiceWidget::HandleRelic1Clicked()
+FPBRelicViewData UPBRelicChoiceWidget::BuildGoldViewData(const int32 GoldAmount) const
 {
-    SelectRelic(1);
+	FPBRelicViewData ViewData;
+	ViewData.RewardType = EPBRelicChoiceRewardType::Gold;
+	ViewData.DisplayName = NSLOCTEXT("RelicChoice", "GoldRewardName", "골드");
+	ViewData.Description = FText::Format(NSLOCTEXT("RelicChoice", "GoldRewardDescription", "{0} Gold 획득"), FText::AsNumber(GoldAmount));
+	ViewData.GoldAmount = GoldAmount;
+	return ViewData;
 }
 
-void UPBRelicChoiceWidget::HandleRelic2Clicked()
+void UPBRelicChoiceWidget::HandleRelicPanelClicked(UPBRelicChoicePanel* ClickedPanel)
 {
-    SelectRelic(2);
+	if (ClickedPanel == Panel_Relic0)
+	{
+		SelectRelic(0);
+		return;
+	}
+
+	if (ClickedPanel == Panel_Relic1)
+	{
+		SelectRelic(1);
+		return;
+	}
+
+	if (ClickedPanel == Panel_Relic2)
+	{
+		SelectRelic(2);
+	}
 }

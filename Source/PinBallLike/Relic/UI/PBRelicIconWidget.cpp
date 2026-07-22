@@ -1,82 +1,129 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "PBRelicIconWidget.h"
 
-#include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
-#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Relic/UI/PBRelicTooltipWidget.h"
+#include "PinBallLike/Relic/UI/PBRelicViewModel.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
+#include "View/MVVMView.h"
 
+void UPBRelicIconWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+	EnsureRelicViewModel();
+}
 
 void UPBRelicIconWidget::SetRelicId(FName InRelicId)
 {
-	RelicId = InRelicId;
+	SetRelicViewData(BuildRelicViewData(InRelicId));
+}
 
-	if (RelicId.IsNone())
+void UPBRelicIconWidget::SetRelicViewData(const FPBRelicViewData& InViewData)
+{
+	ViewData = InViewData;
+	EnsureRelicViewModel();
+	if (RelicViewModel)
 	{
-		return;
+		RelicViewModel->SetRelicViewData(ViewData);
+	}
+	RebuildRelicTooltip();
+}
+
+FPBRelicViewData UPBRelicIconWidget::BuildRelicViewData(FName InRelicId) const
+{
+	FPBRelicViewData NewViewData;
+	NewViewData.RelicId = InRelicId;
+
+	if (InRelicId.IsNone())
+	{
+		return NewViewData;
 	}
 
 	UGameInstance* GameInstance = GetGameInstance();
 	if (!GameInstance)
 	{
-		return;
+		return NewViewData;
 	}
 
-	UPBTableDataSubsystem* TableSubsystem =
-		GameInstance->GetSubsystem<UPBTableDataSubsystem>();
-
+	UPBTableDataSubsystem* TableSubsystem = GameInstance->GetSubsystem<UPBTableDataSubsystem>();
 	if (!TableSubsystem)
 	{
-		return;
+		return NewViewData;
 	}
 
 	FPBRelicTableRow RelicRow;
-
-	if (!TableSubsystem->FindRelicRow(
-		RelicId,
-		RelicRow))
+	if (!TableSubsystem->FindRelicRow(InRelicId, RelicRow))
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[RelicIcon] Relic row not found. RelicId=%s"),
-			*RelicId.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("[RelicIcon] Relic row not found. RelicId=%s"), *InRelicId.ToString());
+		return NewViewData;
+	}
 
+	NewViewData.DisplayName = RelicRow.DisplayName.IsEmpty() ? FText::FromName(InRelicId) : RelicRow.DisplayName;
+	NewViewData.Description = RelicRow.Description;
+	NewViewData.Rarity = RelicRow.Rarity;
+	return NewViewData;
+}
+
+void UPBRelicIconWidget::RebuildRelicTooltip()
+{
+	if (!ViewData.IsValid())
+	{
+		SetToolTip(nullptr);
 		return;
 	}
 
 	if (!RelicTooltipWidgetClass)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[RelicIcon] Tooltip class is null. RelicId=%s"),
-			*RelicId.ToString());
-
+		UE_LOG(LogTemp, Warning, TEXT("[RelicIcon] Tooltip class is null. RelicId=%s"), *ViewData.RelicId.ToString());
+		SetToolTip(nullptr);
 		return;
 	}
 
-	UPBRelicTooltipWidget* TooltipWidget =
-		CreateWidget<UPBRelicTooltipWidget>(
-			GetOwningPlayer(),
-			RelicTooltipWidgetClass);
-
+	UPBRelicTooltipWidget* TooltipWidget = CreateWidget<UPBRelicTooltipWidget>(GetOwningPlayer(), RelicTooltipWidgetClass);
 	if (!TooltipWidget)
 	{
 		return;
 	}
 
-	TooltipWidget->SetRelicData(
-		RelicRow.DisplayName,
-		RelicRow.Description);
-
+	TooltipWidget->SetRelicViewData(ViewData);
 	SetToolTip(TooltipWidget);
+	UE_LOG(LogTemp, Warning, TEXT("[RelicIcon] Tooltip assigned. RelicId=%s Tooltip=%s"), *ViewData.RelicId.ToString(), *GetNameSafe(GetToolTip()));
+}
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[RelicIcon] Tooltip assigned. RelicId=%s Tooltip=%s"),
-		*RelicId.ToString(),
-		*GetNameSafe(GetToolTip()));
+void UPBRelicIconWidget::EnsureRelicViewModel()
+{
+	if (!RelicViewModel)
+	{
+		RelicViewModel = NewObject<UPBRelicViewModel>(this);
+	}
+
+	if (RelicViewModel)
+	{
+		ApplyViewModelToWidget();
+	}
+}
+
+bool UPBRelicIconWidget::ApplyViewModelToWidget()
+{
+	if (!RelicViewModel)
+	{
+		return false;
+	}
+
+	UMVVMView* View = GetExtension<UMVVMView>();
+	if (!View)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RelicIconWidget ApplyViewModelToWidget failed. Widget=%s MVVMView extension is null"), *GetNameSafe(this));
+		return false;
+	}
+
+	TScriptInterface<INotifyFieldValueChanged> ViewModelInterface(RelicViewModel);
+	const bool bResult = View->SetViewModelByClass(ViewModelInterface);
+	if (!bResult)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RelicIconWidget ApplyViewModelToWidget failed. Widget=%s ViewModel=%s"), *GetNameSafe(this), *GetNameSafe(RelicViewModel));
+	}
+	return bResult;
 }
 
 void UPBRelicIconWidget::NativeOnMouseEnter(
@@ -89,7 +136,7 @@ void UPBRelicIconWidget::NativeOnMouseEnter(
 		LogTemp,
 		Warning,
 		TEXT("[RelicIcon] Mouse Enter. RelicId=%s"),
-		*RelicId.ToString());
+		*ViewData.RelicId.ToString());
 }
 
 void UPBRelicIconWidget::NativeOnMouseLeave(
@@ -101,5 +148,5 @@ void UPBRelicIconWidget::NativeOnMouseLeave(
 		LogTemp,
 		Warning,
 		TEXT("[RelicIcon] Mouse Leave. RelicId=%s"),
-		*RelicId.ToString());
+		*ViewData.RelicId.ToString());
 }

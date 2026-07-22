@@ -2,9 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "PinBallLike/Struct/Relic/PBRelicViewData.h"
 #include "PBRelicTooltipWidget.generated.h"
 
-class UTextBlock;
+class UPBRelicViewModel;
 
 UCLASS()
 class PINBALLLIKE_API UPBRelicTooltipWidget : public UUserWidget
@@ -12,14 +13,19 @@ class PINBALLLIKE_API UPBRelicTooltipWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	void SetRelicData(
-		const FText& InDisplayName,
-		const FText& InDescription);
+	virtual void NativeOnInitialized() override;
+
+	void SetRelicData(const FText& InDisplayName, const FText& InDescription);
+	void SetRelicViewData(const FPBRelicViewData& InViewData);
 
 private:
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> RelicNameText;
+	void EnsureRelicViewModel();
+	bool ApplyViewModelToWidget();
 
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> RelicDescriptionText;
+private:
+	UPROPERTY(Transient)
+	TObjectPtr<UPBRelicViewModel> RelicViewModel;
+
+	UPROPERTY()
+	FPBRelicViewData ViewData;
 };
