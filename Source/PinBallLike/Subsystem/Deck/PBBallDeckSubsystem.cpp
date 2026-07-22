@@ -225,6 +225,13 @@ bool UPBBallDeckSubsystem::AddNewBallToDeck(FName BallId, int32 StarLevel)
 	return SetBenchSlot(EmptyBenchSlotIndex, NewBallInstanceId);
 }
 
+bool UPBBallDeckSubsystem::HasEmptyDeckSlot() const
+{
+	return
+		FindEmptySlot(EPBBallDeckSlotType::Deployment) != INDEX_NONE ||
+		FindEmptySlot(EPBBallDeckSlotType::Bench) != INDEX_NONE;
+}
+
 bool UPBBallDeckSubsystem::RemoveOwnedBall(int32 BallInstanceId)
 {
 	const FPBDeckOwnedBallData* BallInstanceData = GetOwnedBallData(BallInstanceId);

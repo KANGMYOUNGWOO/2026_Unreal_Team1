@@ -35,6 +35,7 @@ public:
 
 	int32 AddOwnedBall(FName BallId, int32 StarLevel = 1);
 	bool AddNewBallToDeck(FName BallId, int32 StarLevel = 1);
+	bool HasEmptyDeckSlot() const;
 	bool RemoveOwnedBall(int32 BallInstanceId);
 	bool SetOwnedBallStarLevel(int32 BallInstanceId, int32 StarLevel);
 

@@ -23,7 +23,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "UI"))
 	TSoftObjectPtr<UTexture2D> BallIcon;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "Gameplay"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "Gameplay,UI"))
 	TSoftObjectPtr<UTexture2D> BallSprite;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Visual", meta = (AssetBundles = "UI"))
