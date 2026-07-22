@@ -1,6 +1,5 @@
 #include "PBBattleHUDWidget.h"
 
-#include "Components/Image.h"
 #include "Components/PanelWidget.h"
 #include "Components/TextBlock.h"
 #include "Engine/GameInstance.h"
@@ -69,7 +68,6 @@ void UPBBattleHUDWidget::NativeDestruct()
 		}
 	}
 	BallPanels.Reset();
-	BallPanelInputIndicators.Reset();
 
 	if (DeckOverviewWidget)
 	{
@@ -150,55 +148,32 @@ void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(const EPBBattleLevelPhas
 void UPBBattleHUDWidget::CacheBallPanels()
 {
 	BallPanels.Reset();
-	BallPanelInputIndicators.Reset();
 	if (!BallPanelContainer)
 	{
 		return;
 	}
 
-	UWidget* PendingInputIndicator = nullptr;
 	const int32 ChildCount = BallPanelContainer->GetChildrenCount();
 	for (int32 ChildIndex = 0; ChildIndex < ChildCount; ++ChildIndex)
 	{
-		UWidget* ChildWidget = BallPanelContainer->GetChildAt(ChildIndex);
-		if (UImage* InputIndicator = Cast<UImage>(ChildWidget))
-		{
-			PendingInputIndicator = InputIndicator;
-		}
-		else if (UPBBallStatusWidget* BallPanel = Cast<UPBBallStatusWidget>(ChildWidget))
+		if (UPBBallStatusWidget* BallPanel = Cast<UPBBallStatusWidget>(
+			BallPanelContainer->GetChildAt(ChildIndex)))
 		{
 			if (BallPanels.Num() < MaxBallPanelCount)
 			{
-				BallPanelInputIndicators.Add(PendingInputIndicator);
 				BallPanels.Add(BallPanel);
-				PendingInputIndicator = nullptr;
 			}
 		}
 	}
 
-	int32 ValidIndicatorCount = 0;
-	for (const TObjectPtr<UWidget>& Indicator : BallPanelInputIndicators)
-	{
-		if (IsValid(Indicator))
-		{
-			++ValidIndicatorCount;
-		}
-	}
-	if (BallPanels.Num() != MaxBallPanelCount
-		|| ValidIndicatorCount != MaxBallPanelCount)
+	if (BallPanels.Num() != MaxBallPanelCount)
 	{
 		UE_LOG(
 			LogTemp,
 			Warning,
-			TEXT("[BattleHUD] Ball panel slot composition mismatch. Panels=%d Indicators=%d Expected=%d"),
+			TEXT("[BattleHUD] Ball panel slot composition mismatch. Panels=%d Expected=%d"),
 			BallPanels.Num(),
-			ValidIndicatorCount,
 			MaxBallPanelCount);
-	}
-
-	for (int32 PanelIndex = 0; PanelIndex < MaxBallPanelCount; ++PanelIndex)
-	{
-		SetBallPanelSlotVisibility(PanelIndex, false);
 	}
 }
 
@@ -427,49 +402,23 @@ APBBallBase* UPBBattleHUDWidget::FindPartyBallForDeploymentSlot(const int32 Slot
 void UPBBattleHUDWidget::SetBallPanel(const int32 PanelIndex, APBBallBase* Ball)
 {
 	UPBBallStatusWidget* BallPanel = GetBallPanel(PanelIndex);
-	if (!IsValid(Ball))
+	if (!BallPanel)
 	{
-		if (BallPanel)
-		{
-			BallPanel->ClearBall();
-		}
-		SetBallPanelSlotVisibility(PanelIndex, false);
 		return;
 	}
 
-	if (!BallPanel)
+	if (!IsValid(Ball))
 	{
-		SetBallPanelSlotVisibility(PanelIndex, false);
+		BallPanel->ClearBall();
 		return;
 	}
 
 	BallPanel->SetBall(Ball, GetBallIcon(Ball));
-	SetBallPanelSlotVisibility(PanelIndex, true);
-}
-
-void UPBBattleHUDWidget::SetBallPanelSlotVisibility(const int32 PanelIndex, const bool bVisible)
-{
-	if (UPBBallStatusWidget* BallPanel = GetBallPanel(PanelIndex))
-	{
-		BallPanel->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-	}
-
-	if (UWidget* InputIndicator = GetBallPanelInputIndicator(PanelIndex))
-	{
-		InputIndicator->SetVisibility(bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
-	}
 }
 
 UPBBallStatusWidget* UPBBattleHUDWidget::GetBallPanel(const int32 PanelIndex) const
 {
 	return BallPanels.IsValidIndex(PanelIndex) ? BallPanels[PanelIndex] : nullptr;
-}
-
-UWidget* UPBBattleHUDWidget::GetBallPanelInputIndicator(const int32 PanelIndex) const
-{
-	return BallPanelInputIndicators.IsValidIndex(PanelIndex)
-		? BallPanelInputIndicators[PanelIndex]
-		: nullptr;
 }
 
 UTexture2D* UPBBattleHUDWidget::GetBallIcon(APBBallBase* Ball) const
