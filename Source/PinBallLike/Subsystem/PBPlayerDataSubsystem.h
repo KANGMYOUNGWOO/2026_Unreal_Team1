@@ -8,6 +8,8 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PBPlayerDataSubsystem.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBOnGoldChanged, int32, NewGold);
+
 UCLASS()
 class PINBALLLIKE_API UPBPlayerDataSubsystem : public UGameInstanceSubsystem
 {
@@ -77,6 +79,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "PlayerData")
 	void SpendGold(int32 Amount);
+
+	UPROPERTY(BlueprintAssignable, Category = "PlayerData|Gold")
+	FPBOnGoldChanged OnGoldChanged;
 private:
 #if WITH_DEV_AUTOMATION_TESTS
 	friend class FPBBumperLoadoutTransactionTest;

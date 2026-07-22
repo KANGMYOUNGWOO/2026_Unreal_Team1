@@ -363,7 +363,12 @@ TArray<FName> UPBPlayerDataSubsystem::GetEquippedBumperRowIds() const
 
 void UPBPlayerDataSubsystem::GainGold(int32 Amount)
 {
+	const int32 PreviousGold = Gold;
 	Gold = FMath::Max(Gold + Amount, 0);
+	if (Gold != PreviousGold)
+	{
+		OnGoldChanged.Broadcast(Gold);
+	}
 }
 
 void UPBPlayerDataSubsystem::SpendGold(int32 Amount)
@@ -373,7 +378,12 @@ void UPBPlayerDataSubsystem::SpendGold(int32 Amount)
 		return;
 	}
 
+	const int32 PreviousGold = Gold;
 	Gold -= Amount;
+	if (Gold != PreviousGold)
+	{
+		OnGoldChanged.Broadcast(Gold);
+	}
 }
 
 
