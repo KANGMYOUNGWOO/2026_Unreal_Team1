@@ -22,7 +22,7 @@ public:
 
 	// 월드 어디서나 2D 사운드를 즉시 재생합니다.
 	UFUNCTION(BlueprintCallable, Category = "Sound|SFX")
-	void PlaySFX(USoundBase* SFXToPlay, float Volume = 1.0f, float Pitch = 1.0f);
+	void PlaySFX(USoundBase* SFXToPlay, float Volume = 1.0f, float Pitch = 1.0f, float StartTime = 0.0f);
 
 	// 쿨다운 안에 반복 호출하면 피치가 단계적으로 올라갑니다.
 	UFUNCTION(BlueprintCallable, Category = "Sound|SFX")
