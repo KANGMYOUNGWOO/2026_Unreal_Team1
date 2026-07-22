@@ -29,6 +29,8 @@ public:
 
 	void SetSnakeProjectilePose(bool IsActive, float BlendAlpha);
 	void SetSnakePinballCollisionEnabled(bool IsEnabled);
+	void SetSnakeChargeMovementCollisionEnabled(bool IsEnabled);
+	FVector GetClampedSnakePatrolLocation(const FVector& SourceLocation) const;
 	void UpdateSnakeChargeMovement(
 		float DeltaTime,
 		const FVector& PreviousLocation,
@@ -129,6 +131,9 @@ private:
 	bool IsSnakeAnimationMoveActive = false;
 	bool IsSnakeProjectilePoseActiveValue = false;
 	bool IsSnakePinballCollisionDisabled = false;
+	bool IsSnakeChargeMovementCollisionDisabled = false;
 	ECollisionResponse CachedCollisionSpherePhysicsBodyResponse = ECR_Block;
 	ECollisionResponse CachedSnakeMeshPhysicsBodyResponse = ECR_Block;
+	ECollisionResponse CachedCollisionSphereWorldStaticResponse = ECR_Block;
+	ECollisionResponse CachedSnakeMeshWorldStaticResponse = ECR_Block;
 };
