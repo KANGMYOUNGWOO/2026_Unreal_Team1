@@ -44,6 +44,7 @@ private:
 	void HandleDamageLogRequested(FGameplayTag Channel, const FPBDamageLogMessage& Message);
 	void InitializePool();
 	UUserWidget* AcquireEntry();
+	void ApplyEntryOutlineColor(UUserWidget* Entry, EPBDamageLogStyle InLogType) const;
 
 	FGameplayMessageListenerHandle DamageLogRequestedHandle;
 
