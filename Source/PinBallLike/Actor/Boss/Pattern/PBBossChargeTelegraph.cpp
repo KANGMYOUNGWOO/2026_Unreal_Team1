@@ -242,7 +242,7 @@ FVector APBBossChargeTelegraph::GetGroundedTelegraphLocation(const FVector& Star
 	}
 
 	FVector GroundedLocation = StartLocation;
-	GroundedLocation.Z = GroundHit.ImpactPoint.Z + GroundClearance;
+	GroundedLocation.Z = GroundHit.ImpactPoint.Z + GroundClearance - 560.0f;
 	return GroundedLocation;
 }
 
