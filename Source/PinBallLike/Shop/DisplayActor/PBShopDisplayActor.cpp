@@ -35,63 +35,140 @@ APBShopDisplayActor::APBShopDisplayActor()
 
 }
 
-TArray<FVector> APBShopDisplayActor::DisplayItems(const TArray<FName>& ItemIds,const TArray<UStaticMesh*>& Meshes , IIShopPurchaseHandler* handler)
+TArray<FVector> APBShopDisplayActor::DisplayItems(
+    const TArray<FName>& ItemIds,
+    const TArray<UTexture2D*>& Sprites,
+    IIShopPurchaseHandler* Handler)
 {
-	TArray<FVector> UIWorldLocations;
+    TArray<FVector> UIWorldLocations;
 
-	for (APBShopItemActor* ItemActor : SpawnedItems)
-	{
-		if (ItemActor)
-		{
-			ItemActor->Destroy();
-		}
-	}
+    UE_LOG(
+        LogTemp,
+        Warning,
+        TEXT("[ShopDisplay] ItemIds=%d, Sprites=%d, Slots=%d"),
+        ItemIds.Num(),
+        Sprites.Num(),
+        ShopSlots.Num());
 
-	SpawnedItems.Empty();
+    // 기존 아이템 제거
+    for (APBShopItemActor* ItemActor : SpawnedItems)
+    {
+        if (IsValid(ItemActor))
+        {
+            ItemActor->Destroy();
+        }
+    }
 
-	if (!ShopItemActorClass)
-	{
-		return UIWorldLocations;
-	}
+    const int32 Count = FMath::Min3(
+        ItemIds.Num(),
+        Sprites.Num(),
+        ShopSlots.Num());
 
-	const int32 Count = FMath::Min3(
-		ItemIds.Num(),
-		Meshes.Num(),
-		ShopSlots.Num()
-	);
+    // ★ 인덱스를 미리 확보
+    SpawnedItems.Empty();
+    SpawnedItems.SetNum(Count);
 
-	for (int32 i = 0; i < Count; ++i)
-	{
-		if (!ShopSlots[i])
-		{
-			continue;
-		}
+    UIWorldLocations.Empty();
+    UIWorldLocations.SetNum(Count);
 
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = this;
+    if (!ShopItemActorClass)
+    {
+        UE_LOG(
+            LogTemp,
+            Error,
+            TEXT("[ShopDisplay] ShopItemActorClass is null"));
 
-		APBShopItemActor* SpawnedItem =
-			GetWorld()->SpawnActor<APBShopItemActor>(
-				ShopItemActorClass,
-				ShopSlots[i]->GetComponentTransform(),
-				SpawnParams
-			);
+        return UIWorldLocations;
+    }
 
-		if (!SpawnedItem)
-		{
-			continue;
-		}
+    for (int32 Index = 0; Index < Count; ++Index)
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[ShopDisplay] Index=%d BallId=%s Sprite=%s"),
+            Index,
+            *ItemIds[Index].ToString(),
+            *GetNameSafe(Sprites[Index]));
 
-		SpawnedItem->SetSlotIndex(i);
-		SpawnedItem->SetMesh(Meshes[i]);
-		SpawnedItem->SetHandler(handler);
-		
-		SpawnedItems.Add(SpawnedItem);
-	
-		UIWorldLocations.Add(SpawnedItem->GetUIWorldLocation());
-	}
-	
-	return UIWorldLocations;
+        if (!ShopSlots[Index])
+        {
+            UE_LOG(
+                LogTemp,
+                Error,
+                TEXT("[ShopDisplay] Slot is null. Index=%d"),
+                Index);
+
+            SpawnedItems[Index] = nullptr;
+            continue;
+        }
+
+        // Sprite가 없으면 Spawn하지 않되 인덱스는 유지
+        if (!Sprites[Index])
+        {
+            UE_LOG(
+                LogTemp,
+                Warning,
+                TEXT("[ShopDisplay] Sprite is null. Index=%d"),
+                Index);
+
+            SpawnedItems[Index] = nullptr;
+            UIWorldLocations[Index] =
+                ShopSlots[Index]->GetComponentLocation()
+        	+ FVector(0.f, 0.f, 30.f);
+
+            continue;
+        }
+
+        const FTransform SpawnTransform =
+            ShopSlots[Index]->GetComponentTransform();
+
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.Owner = this;
+        SpawnParams.SpawnCollisionHandlingOverride =
+            ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+        APBShopItemActor* SpawnedItem =
+            GetWorld()->SpawnActor<APBShopItemActor>(
+                ShopItemActorClass,
+                SpawnTransform,
+                SpawnParams);
+
+        if (!SpawnedItem)
+        {
+            UE_LOG(
+                LogTemp,
+                Error,
+                TEXT("[ShopDisplay] Spawn failed. Index=%d"),
+                Index);
+
+            SpawnedItems[Index] = nullptr;
+            UIWorldLocations[Index] =
+                ShopSlots[Index]->GetComponentLocation()
+        	+ FVector(0.f, 0.f, 30.f);;
+        	 
+
+            continue;
+        }
+
+        SpawnedItem->SetSlotIndex(Index);
+        SpawnedItem->SetSprite(Sprites[Index]);
+        SpawnedItem->SetHandler(Handler);
+
+        // ★ Add()가 아니라 대입
+        SpawnedItems[Index] = SpawnedItem;
+    	UIWorldLocations[Index] =
+		 ShopSlots[Index]->GetComponentLocation()
+			 + FVector(0.f, 0.f, 30.f);
+
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("Spawn Success Index=%d"),
+            Index);
+    }
+
+    return UIWorldLocations;
 }
 
 TArray<FVector> APBShopDisplayActor::GetSlotWorldLocation() const

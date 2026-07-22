@@ -1,12 +1,15 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+
 #include "CoreMinimal.h"
+#include "PinBallLike/Struct/Synergy/PBSynergyViewData.h"
 #include "PBPurchaseConfirmData.generated.h"
 
+class UTexture2D;
 
 USTRUCT(BlueprintType)
-struct FPBPurchaseConfirmData
+struct PINBALLLIKE_API FPBPurchaseConfirmData
 {
 	GENERATED_BODY()
 
@@ -14,23 +17,29 @@ struct FPBPurchaseConfirmData
 	int32 SlotIndex = INDEX_NONE;
 
 	UPROPERTY(BlueprintReadOnly)
-	FName BallId = NAME_None;
+	FText BallName = FText::GetEmpty();
 
 	UPROPERTY(BlueprintReadOnly)
-	FText BallName;
-
-	UPROPERTY(BlueprintReadOnly)
-	FText BallDescription;
+	FText Description = FText::GetEmpty();
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 Price = 0;
 
 	UPROPERTY(BlueprintReadOnly)
-	FText SynergyName;
+	TObjectPtr<UTexture2D> BallIcon = nullptr;
 
 	UPROPERTY(BlueprintReadOnly)
-	FText SynergyDescription;
+	TArray<FPBSynergyViewData> Synergies;
 
 	UPROPERTY(BlueprintReadOnly)
-	TSoftObjectPtr<UTexture2D> BallIcon;
+	int32 HP = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 MP = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Attack = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 ManaRegen = 0;
 };

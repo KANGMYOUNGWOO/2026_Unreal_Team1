@@ -74,7 +74,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "PlayerData")
 	void GainGold(int32 Amount);
-
+	
+	UFUNCTION(BlueprintCallable, Category = "PlayerData")
+	void SpendGold(int32 Amount);
 private:
 #if WITH_DEV_AUTOMATION_TESTS
 	friend class FPBBumperLoadoutTransactionTest;

@@ -19,6 +19,7 @@ class UPBShopViewModel;
 class UPBShopRefuseWidget;
 class UPBDeckOverviewWidget;
 class UPBSellZoneWidget;
+class UTexture2D;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBShopRerollRequested);
 
@@ -94,17 +95,19 @@ private:
 public:
 	virtual void NativeConstruct() override;
 
-	void SetShopSlotWorldLocations(const TArray<FVector>& InWorldLocations);
+	
 	
 	void SetShopSlotWidgetData(TArray<const FBallDataStruct*> BallDatas);
 	
-	void SetShopSlotWidgetData(int32 index, FText Name, int32 Price, FText Synergy);
+	void SetShopSlotWidgetData(int32 index, FText Name, int32 Price, FText Synergy , UTexture2D* Icon);
 	
 	void UnActiveSlotWidget(int32 SlotIndex);
  
 	void RefuseWidgetSpawn();
 	
 	void SetPurchaseConfirmInfo(const FPBPurchaseConfirmData& Data);
+	
+	void SetSlotWidgetLocation(const TArray<FVector>& InWorldLocations);
 	
 private:
 	

@@ -1,46 +1,70 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "PBShopItemActor.h"
+
+#include "Components/BillboardComponent.h"
+#include "Components/BoxComponent.h"
+#include "Engine/Texture2D.h"
 
 // Sets default values
 APBShopItemActor::APBShopItemActor()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
-	
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 
-	SetRootComponent(Mesh);
-	
-	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	
-	Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
-	
-	Mesh->SetCollisionResponseToChannel(
+	ClickCollision =
+		CreateDefaultSubobject<UBoxComponent>(
+			TEXT("ClickCollision"));
+
+	SetRootComponent(ClickCollision);
+
+	ClickCollision->SetBoxExtent(
+		FVector(100.f, 100.f, 100.f));
+
+	ClickCollision->SetCollisionEnabled(
+		ECollisionEnabled::QueryOnly);
+
+	ClickCollision->SetCollisionResponseToAllChannels(
+		ECR_Ignore);
+
+	ClickCollision->SetCollisionResponseToChannel(
 		ECC_Visibility,
 		ECR_Block);
-	
-	Mesh->OnBeginCursorOver.AddDynamic(this, &APBShopItemActor::HandleBeginCursorOver);
-	
-	Mesh->OnEndCursorOver.AddDynamic(this, &APBShopItemActor::HandleEndCursorOver);
-	
-	Mesh->OnClicked.AddDynamic(this, &APBShopItemActor::HandleClicked);
-	
+
+	ClickCollision->OnBeginCursorOver.AddDynamic(
+		this,
+		&APBShopItemActor::HandleBeginCursorOver);
+
+	ClickCollision->OnEndCursorOver.AddDynamic(
+		this,
+		&APBShopItemActor::HandleEndCursorOver);
+
+	ClickCollision->OnClicked.AddDynamic(
+		this,
+		&APBShopItemActor::HandleClicked);
+
+	Billboard =
+	CreateDefaultSubobject<UBillboardComponent>(
+		TEXT("Billboard"));
+
+	Billboard->SetupAttachment(ClickCollision);
+
+	Billboard->SetRelativeLocation(
+		FVector(0.f, 0.f, 60.f));
+
+	Billboard->SetUsingAbsoluteScale(true);
+	Billboard->SetWorldScale3D(FVector(25.f));
+
+	Billboard->SetVisibility(true);
+	Billboard->SetHiddenInGame(false);
 }
 
-void APBShopItemActor::SetMesh(UStaticMesh* InMesh)
+void APBShopItemActor::SetSprite(UTexture2D* InSprite)
 {
-	if (!Mesh || !InMesh)
+	if (!Billboard || !InSprite)
 	{
 		return;
 	}
-	
-	Mesh->SetStaticMesh(InMesh);
-	
-	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
-	Mesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
+	Billboard->SetSprite(InSprite);
 	
 	
 }
@@ -56,11 +80,7 @@ void APBShopItemActor::SetHandler(IIShopPurchaseHandler* handler)
 }
 
 // Called when the game starts or when spawned
-void APBShopItemActor::BeginPlay()
-{
-	Super::BeginPlay();
-	
-}
+
 
 void APBShopItemActor::HandleBeginCursorOver(UPrimitiveComponent* TouchedComponent)
 {
@@ -95,10 +115,7 @@ void APBShopItemActor::SetHovered(bool IsHovered)
 }
 
 // Called every frame
-void APBShopItemActor::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
+
 
 void APBShopItemActor::OnPurchase()
 {
@@ -109,10 +126,10 @@ void APBShopItemActor::OnPurchase()
 FVector APBShopItemActor::GetUIWorldLocation() const
 {
 	FVector Origin;
-	FVector BoxExtent;
+	//FVector BoxExtent;
 
-	GetActorBounds(false, Origin, BoxExtent);
+	//GetActorBounds(false, Origin, BoxExtent);
 
-	return Origin + FVector(0.f, 0.f, BoxExtent.Z + 30.f);
+	return Origin + FVector(0.f, 0.f,  30.f);
 }
 

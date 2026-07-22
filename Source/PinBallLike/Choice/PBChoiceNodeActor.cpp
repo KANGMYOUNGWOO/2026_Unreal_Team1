@@ -12,7 +12,7 @@ APBChoiceNodeActor::APBChoiceNodeActor()
 	LabelWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("LabelWidget"));
 	LabelWidget->SetupAttachment(Mesh);
 	LabelWidget->SetWidgetSpace(EWidgetSpace::World);
-	LabelWidget->SetDrawSize(FVector2D(300.f, 120.f));
+	LabelWidget->SetDrawSize(FVector2D(300.f, 300.f));
 	LabelWidget->SetRelativeLocation(FVector(0.f, 0.f, 150.f));
 	LabelWidget->SetTwoSided(true);
 	
@@ -27,9 +27,9 @@ APBChoiceNodeActor::APBChoiceNodeActor()
 	FloorWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FloorWidget"));
 	FloorWidget->SetupAttachment(Mesh);
 	FloorWidget->SetWidgetSpace(EWidgetSpace::World);
-	FloorWidget->SetDrawSize(FVector2D(320.f, 120.f));
+	FloorWidget->SetDrawSize(FVector2D(320.f, 300.f));
 	FloorWidget->SetRelativeLocation(FVector(0.f, 0.f, 10.f));
-	FloorWidget->SetRelativeLocation(FVector(0.f, 90.f, 0.f));
+	FloorWidget->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
 	FloorWidget->SetTwoSided(true);
 }
 

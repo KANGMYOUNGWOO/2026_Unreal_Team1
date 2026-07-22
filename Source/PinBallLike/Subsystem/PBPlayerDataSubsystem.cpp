@@ -366,6 +366,17 @@ void UPBPlayerDataSubsystem::GainGold(int32 Amount)
 	Gold = FMath::Max(Gold + Amount, 0);
 }
 
+void UPBPlayerDataSubsystem::SpendGold(int32 Amount)
+{
+	if (Gold < Amount)
+	{
+		return;
+	}
+
+	Gold -= Amount;
+}
+
+
 void UPBPlayerDataSubsystem::InitializeDefaultBumpers()
 {
 	EquipBumperAtSlot(EPBBumperEquipSlot::ReboundLeft, PBBumperAssetIds::Bumper::Rebound_PowerPush);

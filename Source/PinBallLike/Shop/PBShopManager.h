@@ -8,7 +8,9 @@
 #include  "../Interface/IShopPurchaseHandler.h"
 #include  "PinBallLike/Struct/Shop/PBPurchaseConfirmData.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
+#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PBShopManager.generated.h"
+
 
 struct FPBPurChaseMessaage;
 class UUPBShopViewModel;
@@ -38,7 +40,7 @@ public :
 		int32 SlotIndex,
 		FPBPurchaseConfirmData& OutData) const override;
 	
-	void Initialize(UPBTableDataSubsystem* InTableDataSubsystem);
+	void Initialize(UPBTableDataSubsystem* InTableDataSubsystem, UPBPlayerDataSubsystem* InPlayerDataSubSystem);
 	
 	int32 GetShopItemPrice(int32 SlotIndex) const;
 	FName GetShopItemRowName(int32 SlotIndex) const;
@@ -60,6 +62,9 @@ private :
 	
 	UPROPERTY()
 	TObjectPtr<UPBTableDataSubsystem> TableDataSubsystem;
+	
+	UPROPERTY()
+	TObjectPtr<UPBPlayerDataSubsystem> PlayerDataSubsystem;
 private:
 	// ShopTable에서 상품을 무작위로 뽑아 현재 상점 목록을 재구성한다.
 	bool GenerateShopItems(int32 SlotCount);

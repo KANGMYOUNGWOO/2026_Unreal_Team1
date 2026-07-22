@@ -81,22 +81,126 @@ void UPBPurchaseConfirmWidget::SetButtonsEnabled(bool bEnabled)
 
 }
 
-void UPBPurchaseConfirmWidget::SetInfo(int32 Index, FText Name, int32 Price, FText Synergy, UTexture2D* Icon)
+void UPBPurchaseConfirmWidget::SetInfo(
+	const FPBPurchaseConfirmData& Data)
 {
-	SlotIndex = Index;
-	ItemNameText->SetText(Name);
+	SlotIndex = Data.SlotIndex;
+
+	//--------------------------------------------------
+	// 이름
+	//--------------------------------------------------
+
+	if (ItemNameText)
+	{
+		ItemNameText->SetText(Data.BallName);
+	}
+
+	//--------------------------------------------------
+	// 가격
+	//--------------------------------------------------
+
+	if (PriceText)
+	{
+		PriceText->SetText(
+			FText::Format(
+				FText::FromString(TEXT("아이템 가격 : {0} Gold")),
+				FText::AsNumber(Data.Price)));
+	}
+
+	//--------------------------------------------------
+	// 시너지
+	//--------------------------------------------------
+
 	
-	PriceText->SetText(
-	FText::Format(
-		FText::FromString(TEXT("아이템 가격 : {0} Gold")),
-		FText::AsNumber(Price)
-	));
+	//--------------------------------------------------
+	// 아이콘
+	//--------------------------------------------------
+
+	if (ItemIcon)
+	{
+		ItemIcon->SetBrushFromTexture(Data.BallIcon);
+	}
+
+	//--------------------------------------------------
+	// HP
+	//--------------------------------------------------
+
+	if (HPText)
+	{
+		HPText->SetText(FText::AsNumber(Data.HP));
+	}
+
+	//--------------------------------------------------
+	// MP
+	//--------------------------------------------------
+
+	if (MPText)
+	{
+		MPText->SetText(FText::AsNumber(Data.MP));
+	}
+
+	//--------------------------------------------------
+	// Attack
+	//--------------------------------------------------
+
+	if (AttackText)
+	{
+		AttackText->SetText(FText::AsNumber(Data.Attack));
+	}
+
+	//--------------------------------------------------
+	// Mana Regen
+	//--------------------------------------------------
+
+	if (ManaRegenText)
+	{
+		ManaRegenText->SetText(
+			FText::AsNumber(Data.ManaRegen));
+	}
+
+	//--------------------------------------------------
+	// 애니메이션
+	//--------------------------------------------------
+
 	
+	SynergyIcon1->SetVisibility(ESlateVisibility::Hidden);
+	SynergyIcon2->SetVisibility(ESlateVisibility::Hidden);
+	SynergyIcon3->SetVisibility(ESlateVisibility::Hidden);
+	SynergyText1->SetVisibility(ESlateVisibility::Hidden);
+	SynergyText2->SetVisibility(ESlateVisibility::Hidden);
+	SynergyText3->SetVisibility(ESlateVisibility::Hidden);
+	if(Data.Synergies.Num() > 0)
+	{
+		SynergyIcon1->SetBrushFromTexture(
+			Data.Synergies[0].Icon);
+		SynergyIcon1->SetVisibility(ESlateVisibility::Visible);
+		SynergyText1->SetText(
+	 Data.Synergies[0].SynergyName);
 		
-	SynergyText->SetText(Synergy);
+		SynergyText1->SetVisibility(ESlateVisibility::Visible);
+	}
+
+	if(Data.Synergies.Num() > 1)
+	{
+		SynergyIcon2->SetBrushFromTexture(
+			Data.Synergies[1].Icon);
+		SynergyIcon2->SetVisibility(ESlateVisibility::Visible);
+		SynergyText2->SetText(
+	  Data.Synergies[1].SynergyName);
+		SynergyText2->SetVisibility(ESlateVisibility::Visible);
+	}
+	
+	if(Data.Synergies.Num() > 2)
+	{
+		SynergyIcon2->SetBrushFromTexture(
+			Data.Synergies[2].Icon);
+		SynergyIcon3->SetVisibility(ESlateVisibility::Visible);
+		SynergyText3->SetText(
+	  Data.Synergies[2].SynergyName);
+		SynergyText3->SetVisibility(ESlateVisibility::Visible);
+	}
 	
 	PlayOpenAnimation();
-	
 }
 void UPBPurchaseConfirmWidget::PlayOpenAnimation()
 {

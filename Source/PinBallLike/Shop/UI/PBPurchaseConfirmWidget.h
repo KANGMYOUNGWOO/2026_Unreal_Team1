@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "PinBallLike/Struct/Shop/PBPurchaseConfirmData.h"
 #include "PBPurchaseConfirmWidget.generated.h"
 
 class UTextBlock;
@@ -39,8 +40,7 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> PriceText;
 	
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> SynergyText;
+	
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> ItemIcon;
@@ -50,6 +50,36 @@ protected:
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> CancelButton;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> HPText;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> MPText;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> AttackText;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> ManaRegenText;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> SynergyIcon1;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> SynergyText1;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> SynergyIcon2;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> SynergyText2;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> SynergyIcon3;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> SynergyText3;
 	
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> OpenAnim;
@@ -73,7 +103,7 @@ private:
 
 public:
 	
-	void SetInfo(int32 Index, FText Name, int32 Price, FText Synergy , UTexture2D* Icon);
+	void SetInfo(const FPBPurchaseConfirmData& Data);
 	
 	void PlayOpenAnimation();
 	

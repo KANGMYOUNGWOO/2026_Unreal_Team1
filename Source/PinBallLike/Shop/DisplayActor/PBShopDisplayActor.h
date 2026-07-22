@@ -18,7 +18,10 @@ public:
 	// Sets default values for this actor's properties
 	APBShopDisplayActor();
 
-	TArray<FVector> DisplayItems(const TArray<FName>& ItemIds,const TArray<UStaticMesh*>& Meshes, IIShopPurchaseHandler* handler);
+	TArray<FVector> DisplayItems(
+	const TArray<FName>& ItemIds,
+	const TArray<UTexture2D*>& Sprites,
+	IIShopPurchaseHandler* Handler);
 	
 	TArray<FVector> GetSlotWorldLocation() const;
 	

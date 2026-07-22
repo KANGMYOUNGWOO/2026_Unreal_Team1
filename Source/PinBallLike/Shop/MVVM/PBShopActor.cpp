@@ -18,6 +18,7 @@
 #include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
 #include "View/MVVMView.h"
 #include  "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
 
 // Sets default values
 APBShopActor::APBShopActor()
@@ -47,7 +48,10 @@ void APBShopActor::OpenShop()
 		UPBTableDataSubsystem* TableSubsystem =
 			GetGameInstance()->GetSubsystem<UPBTableDataSubsystem>();
 		
-		ShopManager->Initialize(TableSubsystem);
+		UPBPlayerDataSubsystem* PlayerDataSubsystem =
+			GetGameInstance()->GetSubsystem<UPBPlayerDataSubsystem>();
+		
+		ShopManager->Initialize(TableSubsystem,PlayerDataSubsystem);
 	}
 
 	if (!ShopWidget)
@@ -88,102 +92,61 @@ void APBShopActor::OpenShop()
 	PC->SetInputMode(InputMode);
 }
 
-void APBShopActor::RefreshShopDisplay(const TArray<FName>& ShopItemBallIds)
+void APBShopActor::RefreshShopDisplay(
+	const TArray<FName>& ShopItemBallIds)
 {
-	if (!ShopManager || !ShopWidget)
-	{
-		return;
-	}
-
-	UGameInstance* GameInstance =
-		UGameplayStatics::GetGameInstance(GetWorld());
-
+	UGameInstance* GameInstance = GetGameInstance();
 	if (!GameInstance)
 	{
 		return;
 	}
 
-	UPBTableDataSubsystem* TableSubsystem =
-		GameInstance->GetSubsystem<UPBTableDataSubsystem>();
+	UPBGameDataLoadSubsystem* LoadSubsystem =
+		GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>();
 
-	if (!TableSubsystem)
+	if (!LoadSubsystem)
 	{
 		return;
 	}
 
-	UStaticMesh* CubeMesh =
-		LoadObject<UStaticMesh>(
-			nullptr,
-			TEXT("/Engine/BasicShapes/Cube.Cube"));
+	// 비동기 로딩 완료 후 어떤 BallId를 표시해야 하는지 기억한다.
+	PendingShopItemBallIds = ShopItemBallIds;
 
-	if (!CubeMesh)
+	TArray<FPrimaryAssetId> AssetIds;
+	AssetIds.Reserve(ShopItemBallIds.Num());
+
+	for (const FName& BallId : ShopItemBallIds)
 	{
-		UE_LOG(
-			LogTemp,
-			Error,
-			TEXT("[ShopActor] Default cube mesh load failed."));
-
-		return;
-	}
-
-	TArray<UStaticMesh*> LoadedMeshes;
-	LoadedMeshes.Reserve(ShopItemBallIds.Num());
-
-	for (int32 SlotIndex = 0;
-		 SlotIndex < ShopItemBallIds.Num();
-		 ++SlotIndex)
-	{
-		const FName BallId =
-			ShopItemBallIds[SlotIndex];
-
-		const int32 BuyPrice =
-			ShopManager->GetShopItemPrice(SlotIndex);
-
-		FPBBallTableRow BallRow;
-		if (!TableSubsystem->FindBallRow(
-			BallId,
-			BallRow))
+		if (BallId.IsNone())
 		{
-			UE_LOG(
-				LogTemp,
-				Warning,
-				TEXT(
-					"[ShopActor] Ball row not found. "
-					"Slot=%d BallId=%s"),
-				SlotIndex,
-				*BallId.ToString());
-
-			LoadedMeshes.Add(CubeMesh);
-
-			ShopWidget->SetShopSlotWidgetData(
-				SlotIndex,
-				FText::FromName(BallId),
-				BuyPrice,
-				FText::GetEmpty());
-
 			continue;
 		}
 
-		LoadedMeshes.Add(CubeMesh);
-
-		ShopWidget->SetShopSlotWidgetData(
-			SlotIndex,
-			BallRow.DisplayName,
-			BuyPrice,
-			BallRow.DescriptionKey);
+		AssetIds.AddUnique(
+			FPrimaryAssetId(
+				PBBallAssetIds::Type::BallData,
+				BallId));
 	}
 
-	if (ShopDisplayActor)
+	// 표시할 상품이 없는 경우
+	if (AssetIds.IsEmpty())
 	{
-		const TArray<FVector> UIWorldLocations =
-			ShopDisplayActor->DisplayItems(
-				ShopItemBallIds,
-				LoadedMeshes,
-				ShopPurchaseHandler);
-
-		ShopWidget->SetShopSlotWorldLocations(
-			UIWorldLocations);
+		HandleShopBallAssetsLoaded();
+		return;
 	}
+
+	// BallSprite는 Gameplay 번들,
+	// BallIcon은 UI 번들에 들어 있으므로 둘 다 요청한다.
+	ShopAssetLoadRequestId =
+		LoadSubsystem->LoadPrimaryAssetsByIdsAsync(
+			AssetIds,
+			{
+				PBAssetBundleNames::Gameplay,
+				PBAssetBundleNames::UI
+			},
+			FStreamableDelegate::CreateUObject(
+				this,
+				&APBShopActor::HandleShopBallAssetsLoaded));
 }
 
 void APBShopActor::HandleRerollRequested()
@@ -323,6 +286,7 @@ void APBShopActor::RefreshViewModel()
 
 void APBShopActor::RefreshUnsoldShopSlotWidgets()
 {
+	/*
 	if (!ShopManager || !ShopWidget)
 	{
 		return;
@@ -376,6 +340,7 @@ void APBShopActor::RefreshUnsoldShopSlotWidgets()
 			BuyPrice,
 			BallRow.DescriptionKey);
 	}
+	*/
 }
 
 
@@ -383,6 +348,154 @@ void APBShopActor::RefreshUnsoldShopSlotWidgets()
 void APBShopActor::HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message)
 {
 	if (Message.Exit == 0) CloseShop();
+}
+
+void APBShopActor::HandleShopBallAssetsLoaded()
+{
+    UGameInstance* GameInstance = GetGameInstance();
+    if (!GameInstance)
+    {
+        return;
+    }
+
+    UPBTableDataSubsystem* TableSubsystem =
+        GameInstance->GetSubsystem<UPBTableDataSubsystem>();
+
+    UPBGameDataLoadSubsystem* LoadSubsystem =
+        GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>();
+
+    if (!TableSubsystem || !LoadSubsystem)
+    {
+        return;
+    }
+
+    TArray<UTexture2D*> BallSprites;
+    BallSprites.Reserve(PendingShopItemBallIds.Num());
+
+    for (int32 SlotIndex = 0;
+         SlotIndex < PendingShopItemBallIds.Num();
+         ++SlotIndex)
+    {
+        const FName BallId =
+            PendingShopItemBallIds[SlotIndex];
+
+        UTexture2D* BallSprite = nullptr;
+        UTexture2D* BallIcon = nullptr;
+        int32 BuyPrice = 0;
+
+        //--------------------------------------
+        // 1. BallTable 조회
+        //--------------------------------------
+        FPBBallTableRow BallRow;
+
+        if (!TableSubsystem->FindBallRow(
+            BallId,
+            BallRow))
+        {
+            UE_LOG(
+                LogTemp,
+                Warning,
+                TEXT("[ShopActor] Ball row not found. BallId=%s"),
+                *BallId.ToString());
+
+            // 슬롯 인덱스가 어긋나지 않도록 nullptr 추가
+            BallSprites.Add(nullptr);
+            continue;
+        }
+
+        //--------------------------------------
+        // 2. BallRow.ShopId로 ShopTable 조회
+        //--------------------------------------
+        FPBShopTableRow ShopRow;
+
+        if (BallRow.ShopId.IsNone())
+        {
+            UE_LOG(
+                LogTemp,
+                Warning,
+                TEXT("[ShopActor] ShopId is None. BallId=%s"),
+                *BallId.ToString());
+        }
+        else if (TableSubsystem->FindShopRow(
+            BallRow.ShopId,
+            ShopRow))
+        {
+            BuyPrice = ShopRow.BuyPrice;
+        }
+        else
+        {
+            UE_LOG(
+                LogTemp,
+                Warning,
+                TEXT(
+                    "[ShopActor] Shop row not found. "
+                    "BallId=%s ShopId=%s"),
+                *BallId.ToString(),
+                *BallRow.ShopId.ToString());
+        }
+
+        //--------------------------------------
+        // 3. BallDataAsset 조회
+        //--------------------------------------
+        const FPrimaryAssetId BallAssetId(
+            PBBallAssetIds::Type::BallData,
+            BallId);
+
+        const UPBBallDataAsset* BallDataAsset =
+            Cast<UPBBallDataAsset>(
+                LoadSubsystem->GetLoadedPrimaryAsset(
+                    BallAssetId));
+
+        if (BallDataAsset)
+        {
+            BallSprite =
+            	BallDataAsset->BallSprite.LoadSynchronous();
+
+            BallIcon =
+                BallDataAsset->BallIcon.Get();
+        }
+        else
+        {
+            UE_LOG(
+                LogTemp,
+                Warning,
+                TEXT(
+                    "[ShopActor] BallDataAsset not loaded. "
+                    "AssetId=%s"),
+                *BallAssetId.ToString());
+        }
+
+        // BallId 배열과 동일한 슬롯 순서를 유지한다.
+        BallSprites.Add(BallSprite);
+
+        //--------------------------------------
+        // 4. Widget 갱신
+        //--------------------------------------
+        if (ShopWidget)
+        {
+            ShopWidget->SetShopSlotWidgetData(
+                SlotIndex,
+                BallRow.DisplayName,
+                BuyPrice,
+                BallRow.DescriptionKey,
+                BallIcon);
+        }
+    }
+
+    //--------------------------------------
+    // 5. 월드의 ShopItemActor 생성/갱신
+    //--------------------------------------
+	if (ShopDisplayActor && ShopWidget)
+	{
+		const TArray<FVector> UIWorldLocations =
+			ShopDisplayActor->DisplayItems(
+				PendingShopItemBallIds,
+				BallSprites,
+				ShopPurchaseHandler);
+
+		ShopWidget->SetSlotWidgetLocation(
+			UIWorldLocations);
+	}
 }
 
 void APBShopActor::BeginPlay()
