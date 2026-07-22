@@ -335,6 +335,33 @@ void UPBBettingWidget::SetAvailableGold(int32 NewAvailableGold)
 	RefreshCurrentGoldText();
 }
 
+void UPBBettingWidget::SetNationData(
+	const FText& NationName1,
+	UTexture2D* NationSprite1,
+	const FText& NationName2,
+	UTexture2D* NationSprite2)
+{
+	if (NationText1)
+	{
+		NationText1->SetText(NationName1);
+	}
+
+	if (Flag1)
+	{
+		Flag1->SetBrushFromTexture(NationSprite1);
+	}
+
+	if (NationText2)
+	{
+		NationText2->SetText(NationName2);
+	}
+
+	if (Flag2)
+	{
+		Flag2->SetBrushFromTexture(NationSprite2);
+	}
+}
+
 void UPBBettingWidget::OnWinnerAnimationFinished()
 {
 	ShowWinnerImage();

@@ -8,6 +8,7 @@
 class UButton;
 class UImage;
 class UTextBlock;
+class UTexture2D;
 class UWidgetAnimation;
 
 
@@ -44,6 +45,11 @@ public:
 
 	void PlayBetResultAnimations(const FPBBettingResult& Result);
 	void SetAvailableGold(int32 NewAvailableGold);
+	void SetNationData(
+		const FText& NationName1,
+		UTexture2D* NationSprite1,
+		const FText& NationName2,
+		UTexture2D* NationSprite2);
 
 protected:
 	virtual void NativeConstruct() override;
@@ -89,6 +95,12 @@ private:
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> BetText2;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> NationText1;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> NationText2;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> Flag1;
