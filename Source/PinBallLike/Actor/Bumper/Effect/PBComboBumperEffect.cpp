@@ -8,6 +8,7 @@ void UPBComboBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
 	AActor* InteractionActor)
 {
+	InteractionActor = ResolveBallEffectTargetOrSource(InteractionActor);
 	if (!IsValid(InteractionActor))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Bumper] Combo effect skipped because the target Actor is invalid. Bumper=%s"),

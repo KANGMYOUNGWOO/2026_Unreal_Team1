@@ -209,6 +209,9 @@ void APBBumperSpawner::LogBattleTelemetrySummary()
 	}
 	int32 ValidBumperCount = 0;
 	int32 TotalMeaningfulContacts = 0;
+	int32 TotalDirectBallContacts = 0;
+	int32 TotalBallOwnedActorContacts = 0;
+	int32 TotalOtherMovableContacts = 0;
 	int32 TotalActivations = 0;
 	for (const APBModularBumperBase* Bumper : SpawnedBumpers)
 	{
@@ -219,12 +222,18 @@ void APBBumperSpawner::LogBattleTelemetrySummary()
 
 		++ValidBumperCount;
 		TotalMeaningfulContacts += Bumper->GetMeaningfulContactCount();
+		TotalDirectBallContacts += Bumper->GetDirectBallContactCount();
+		TotalBallOwnedActorContacts += Bumper->GetBallOwnedActorContactCount();
+		TotalOtherMovableContacts += Bumper->GetOtherMovableContactCount();
 		TotalActivations += Bumper->GetActivationCount();
 		UE_LOG(LogTemp, Log,
-			TEXT("[BumperTelemetry] BattleSummary RowName=%s Position=%s MeaningfulContacts=%d Activations=%d Progress=%d/%d Pending=%d"),
+			TEXT("[BumperTelemetry] BattleSummary RowName=%s Position=%s MeaningfulContacts=%d DirectBall=%d BallOwnedActor=%d OtherMovable=%d Activations=%d Progress=%d/%d Pending=%d"),
 			*Bumper->GetBumperRowId().ToString(),
 			*UEnum::GetValueAsString(Bumper->GetPrimaryPositionId()),
 			Bumper->GetMeaningfulContactCount(),
+			Bumper->GetDirectBallContactCount(),
+			Bumper->GetBallOwnedActorContactCount(),
+			Bumper->GetOtherMovableContactCount(),
 			Bumper->GetActivationCount(),
 			Bumper->GetCurrentTriggerCount(),
 			Bumper->GetRequiredTriggerCount(),
@@ -232,9 +241,12 @@ void APBBumperSpawner::LogBattleTelemetrySummary()
 	}
 
 	UE_LOG(LogTemp, Log,
-		TEXT("[BumperTelemetry] BattleSummaryTotal Bumpers=%d MeaningfulContacts=%d Activations=%d"),
+		TEXT("[BumperTelemetry] BattleSummaryTotal Bumpers=%d MeaningfulContacts=%d DirectBall=%d BallOwnedActor=%d OtherMovable=%d Activations=%d"),
 		ValidBumperCount,
 		TotalMeaningfulContacts,
+		TotalDirectBallContacts,
+		TotalBallOwnedActorContacts,
+		TotalOtherMovableContacts,
 		TotalActivations);
 	bBattleTelemetrySummaryLogged = true;
 }

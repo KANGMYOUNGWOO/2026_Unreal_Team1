@@ -18,6 +18,15 @@ struct PINBALLLIKE_API FPBBumperRuntimeState
 	int32 MeaningfulContactCount = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime|Telemetry")
+	int32 DirectBallContactCount = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime|Telemetry")
+	int32 BallOwnedActorContactCount = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime|Telemetry")
+	int32 OtherMovableContactCount = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime|Telemetry")
 	int32 ActivationCount = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bumper|Runtime")

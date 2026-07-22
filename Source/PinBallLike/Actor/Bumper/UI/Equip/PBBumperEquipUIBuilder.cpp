@@ -8,9 +8,19 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperEffectRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PinBallLike/Utils/PBTextFormatUtils.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 
 namespace PBBumperEquipUIBuilder
 {
+	FSlateBrush MakeIconFrameBrush()
+	{
+		return FSlateRoundedBoxBrush(
+			FLinearColor(0.102f, 0.127f, 0.143f, 1.0f),
+			6.0f,
+			FLinearColor::White,
+			1.0f);
+	}
+
 	namespace
 	{
 		void AddBumperListItemObject(

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "PinBallLike/Actor/Bumper/UI/Equip/PBBumperListItemObject.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
+#include "Styling/SlateBrush.h"
 
 class UPBGameDataLoadSubsystem;
 class UPBPlayerDataSubsystem;
@@ -13,6 +14,7 @@ enum class EPBBumperEquipSlot : uint8;
 
 namespace PBBumperEquipUIBuilder
 {
+	FSlateBrush MakeIconFrameBrush();
 	void AppendListItemObjects(
 		const TArray<TObjectPtr<UPBBumperListItemObject>>& SourceItems,
 		TArray<UPBBumperListItemObject*>& TargetItems);

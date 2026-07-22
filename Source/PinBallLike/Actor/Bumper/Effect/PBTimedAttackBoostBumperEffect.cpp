@@ -8,6 +8,7 @@ void UPBTimedAttackBoostBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
 	AActor* InteractionActor)
 {
+	InteractionActor = ResolveBallEffectTargetOrSource(InteractionActor);
 	const float ResolvedDuration = EffectData.Duration > 0.0f
 		? EffectData.Duration
 		: EffectDuration;
