@@ -1,7 +1,9 @@
 #include "PBBattleHUDWidget.h"
 
+#include "AssetRegistry/AssetData.h"
 #include "Components/PanelWidget.h"
 #include "Components/TextBlock.h"
+#include "Engine/AssetManager.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -15,6 +17,8 @@
 #include "PinBallLike/Struct/Deck/PBBallDeckSlot.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckAssetLoadService.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
+#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
 #include "PinBallLike/UI/Loading/PBLoadingScreenController.h"
 #include "TimerManager.h"
 
@@ -31,7 +35,7 @@ void UPBBattleHUDWidget::NativeConstruct()
 	EnsureDeckOverviewWidget();
 	RegisterBattleMessageListeners();
 	BindComboEvents();
-	ScheduleRefreshBallPanels();
+	ScheduleRefreshBallPanels(true);
 	RefreshDeckOverview();
 	RefreshComboText();
 
@@ -58,6 +62,7 @@ void UPBBattleHUDWidget::NativeDestruct()
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(ComboBindRetryTimerHandle);
+		World->GetTimerManager().ClearTimer(BallPanelRefreshRetryTimerHandle);
 	}
 
 	for (UPBBallStatusWidget* BallPanel : BallPanels)
@@ -95,16 +100,30 @@ void UPBBattleHUDWidget::RefreshBallPanels()
 	CachePartyController();
 	UnbindDisplayedBallEvents();
 
+	bool bNeedsRetry = false;
 	for (int32 PanelIndex = 0; PanelIndex < MaxBallPanelCount; ++PanelIndex)
 	{
+		const int32 ExpectedBallInstanceId = DeckSubsystem
+			? DeckSubsystem->GetSlotBallInstanceId(EPBBallDeckSlotType::Deployment, PanelIndex)
+			: INDEX_NONE;
 		APBBallBase* Ball = FindPartyBallForDeploymentSlot(PanelIndex);
 		SetBallPanel(PanelIndex, Ball);
+		bNeedsRetry |= ExpectedBallInstanceId != INDEX_NONE && !IsValid(Ball);
 		if (IsValid(Ball))
 		{
 			Ball->OnDestroyed.AddUniqueDynamic(this, &UPBBattleHUDWidget::HandleDisplayedBallDestroyed);
 			DisplayedBalls.Add(Ball);
 		}
 	}
+
+	if (bNeedsRetry && BallPanelRefreshRetryCount < MaxBallPanelRefreshRetryCount)
+	{
+		++BallPanelRefreshRetryCount;
+		ScheduleRefreshBallPanels();
+		return;
+	}
+
+	BallPanelRefreshRetryCount = 0;
 }
 
 void UPBBattleHUDWidget::RefreshSynergyPanels()
@@ -354,11 +373,16 @@ void UPBBattleHUDWidget::ApplyComboText(const int32 CurrentCombo)
 	Text_Combo->SetText(FText::Format(FText::FromString(TEXT("Combo {0}")), CurrentCombo));
 }
 
-void UPBBattleHUDWidget::ScheduleRefreshBallPanels()
+void UPBBattleHUDWidget::ScheduleRefreshBallPanels(const bool bResetRetryCount)
 {
 	if (UWorld* World = GetWorld())
 	{
-		World->GetTimerManager().SetTimerForNextTick(
+		if (bResetRetryCount)
+		{
+			BallPanelRefreshRetryCount = 0;
+		}
+		World->GetTimerManager().ClearTimer(BallPanelRefreshRetryTimerHandle);
+		BallPanelRefreshRetryTimerHandle = World->GetTimerManager().SetTimerForNextTick(
 			FTimerDelegate::CreateUObject(this, &UPBBattleHUDWidget::RefreshBallPanels));
 	}
 }
@@ -429,25 +453,38 @@ UTexture2D* UPBBattleHUDWidget::GetBallIcon(APBBallBase* Ball) const
 	}
 
 	const UPBBallDeckAssetLoadService* AssetLoadService = DeckSubsystem->GetAssetLoadService();
-	return AssetLoadService ? AssetLoadService->GetLoadedBallIcon(Ball->GetBallInstanceId()) : nullptr;
+	if (UTexture2D* LoadedIcon = AssetLoadService ? AssetLoadService->GetLoadedBallIcon(Ball->GetBallInstanceId()) : nullptr)
+	{
+		return LoadedIcon;
+	}
+
+	const FPrimaryAssetId BallAssetId(PBBallAssetIds::Type::BallData, Ball->GetBallId());
+	FAssetData BallAssetData;
+	if (!Ball->GetBallId().IsNone() && UAssetManager::Get().GetPrimaryAssetData(BallAssetId, BallAssetData))
+	{
+		const UPBBallDataAsset* BallDataAsset = Cast<UPBBallDataAsset>(BallAssetData.GetAsset());
+		return BallDataAsset ? BallDataAsset->BallIcon.LoadSynchronous() : nullptr;
+	}
+
+	return nullptr;
 }
 
 void UPBBattleHUDWidget::HandleDeploymentSlotChanged(const int32 SlotIndex, const int32 BallInstanceId)
 {
 	(void)SlotIndex;
 	(void)BallInstanceId;
-	ScheduleRefreshBallPanels();
+	ScheduleRefreshBallPanels(true);
 }
 
 void UPBBattleHUDWidget::HandleDeploymentChanged()
 {
-	ScheduleRefreshBallPanels();
+	ScheduleRefreshBallPanels(true);
 }
 
 void UPBBattleHUDWidget::HandleDisplayedBallDestroyed(AActor* DestroyedActor)
 {
 	(void)DestroyedActor;
-	ScheduleRefreshBallPanels();
+	ScheduleRefreshBallPanels(true);
 }
 
 void UPBBattleHUDWidget::HandleBattleComboChanged(const int32 CurrentCombo)
