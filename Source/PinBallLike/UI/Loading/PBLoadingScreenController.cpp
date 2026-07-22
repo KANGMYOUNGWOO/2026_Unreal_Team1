@@ -1,9 +1,24 @@
 #include "PBLoadingScreenController.h"
 
+#include "Engine/GameInstance.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 #include "PinBallLike/UI/Loading/PBLoadingScreen.h"
 #include "SLoadingScreenLayout.h"
+
+namespace
+{
+	void SetGlobalToolbarLoadingSuppressed(UGameInstance* GameInstance, const bool bSuppressed)
+	{
+		if (UPBUIManagerSubsystem* UIManager = IsValid(GameInstance)
+			? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+			: nullptr)
+		{
+			UIManager->SetGlobalToolbarSuppressedForLoading(bSuppressed);
+		}
+	}
+}
 
 void FPBLoadingScreenController::Show(UWorld* World)
 {
@@ -16,6 +31,7 @@ void FPBLoadingScreenController::Show(UWorld* World)
 	FadeAlpha = 1.0f;
 	FadeState = EFadeState::Visible;
 	LoadingScreenWidget->SetRenderOpacity(FadeAlpha);
+	SetGlobalToolbarLoadingSuppressed(LoadingGameInstance.Get(), true);
 }
 
 bool FPBLoadingScreenController::EnsureLoadingScreen(UWorld* World)
@@ -31,6 +47,7 @@ bool FPBLoadingScreenController::EnsureLoadingScreen(UWorld* World)
 	}
 
 	LoadingWorld = World;
+	LoadingGameInstance = World->GetGameInstance();
 	LoadingScreenWidget = FPBLoadingScreen::CreateLoadingScreenWidget();
 	World->GetGameViewport()->AddViewportWidgetContent(LoadingScreenWidget.ToSharedRef(), MAX_int32);
 	return true;
@@ -92,6 +109,7 @@ void FPBLoadingScreenController::UpdateFadeOut()
 void FPBLoadingScreenController::Remove()
 {
 	ClearFadeTimer();
+	UGameInstance* GameInstance = LoadingGameInstance.Get();
 	if (LoadingScreenWidget.IsValid() && LoadingWorld.IsValid())
 	{
 		if (UGameViewportClient* GameViewport = LoadingWorld->GetGameViewport())
@@ -102,8 +120,10 @@ void FPBLoadingScreenController::Remove()
 
 	LoadingScreenWidget.Reset();
 	LoadingWorld.Reset();
+	LoadingGameInstance.Reset();
 	FadeAlpha = 0.0f;
 	FadeState = EFadeState::Hidden;
+	SetGlobalToolbarLoadingSuppressed(GameInstance, false);
 }
 
 void FPBLoadingScreenController::ClearFadeTimer()
