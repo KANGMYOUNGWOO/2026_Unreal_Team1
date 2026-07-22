@@ -32,12 +32,16 @@ protected:
 	TObjectPtr<UImage> Image_CooldownCircle;
 
 	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> Image_DashReadyIcon;
+
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> Text_RemainingTime;
 
 private:
 	void RefreshCooldown();
 	void SetCooldownRatio(float CooldownRatio);
 	void SetRemainingTimeText(float RemainingSeconds);
+	void SetReadyIconVisibility(bool bIsReady);
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> CooldownCircleMaterial;

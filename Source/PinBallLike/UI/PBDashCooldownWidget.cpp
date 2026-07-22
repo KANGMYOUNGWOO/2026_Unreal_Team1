@@ -35,6 +35,7 @@ void UPBDashCooldownWidget::RefreshCooldown()
 	{
 		SetCooldownRatio(ReadyRatioValue);
 		SetRemainingTimeText(0.0f);
+		SetReadyIconVisibility(true);
 		return;
 	}
 
@@ -45,6 +46,7 @@ void UPBDashCooldownWidget::RefreshCooldown()
 
 	SetCooldownRatio(CooldownRatio);
 	SetRemainingTimeText(RemainingSeconds);
+	SetReadyIconVisibility(RemainingSeconds <= 0.0f);
 }
 
 void UPBDashCooldownWidget::SetCooldownRatio(const float CooldownRatio)
@@ -78,4 +80,13 @@ void UPBDashCooldownWidget::SetRemainingTimeText(const float RemainingSeconds)
 	Text_RemainingTime->SetText(FText::AsNumber(
 		FMath::Max(RemainingSeconds, 0.0f),
 		&FormatOptions));
+}
+
+void UPBDashCooldownWidget::SetReadyIconVisibility(const bool bIsReady)
+{
+	if (Image_DashReadyIcon)
+	{
+		Image_DashReadyIcon->SetVisibility(
+			bIsReady ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
 }
