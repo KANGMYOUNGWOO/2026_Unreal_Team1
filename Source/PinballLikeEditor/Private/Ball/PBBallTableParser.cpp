@@ -53,7 +53,7 @@ bool UPBBallTableParser::ParseRow(const FName RowName, const TMap<FString, FStri
 	}
 
 	NewRow.DefaultSkillIds = ParseNameArray(RowData.FindRef(TEXT("DefaultSkillIds")));
-	NewRow.StarLevelId = FName(*TrimCell(RowData.FindRef(TEXT("StarLevelId"))));
+	NewRow.VoiceType = ParseEnumValue(RowData.FindRef(TEXT("VoiceType")), EPBBallVoiceType::Girl);
 	NewRow.ShopId = FName(*TrimCell(RowData.FindRef(TEXT("ShopId"))));
 
 	(void)SetupBallDataAsset(RowName, NewRow);
