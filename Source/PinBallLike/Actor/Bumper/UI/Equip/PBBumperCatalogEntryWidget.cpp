@@ -1,10 +1,24 @@
 #include "PBBumperCatalogEntryWidget.h"
 
 #include "PBBumperDragDropOperation.h"
+#include "PBBumperEquipUIBuilder.h"
 #include "PBBumperListItemObject.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Components/Border.h"
 #include "Components/TextBlock.h"
 #include "InputCoreTypes.h"
+
+void UPBBumperCatalogEntryWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	if (IsValid(CatalogIconFrameBorder))
+	{
+		CatalogIconFrameBorder->SetBrush(PBBumperEquipUIBuilder::MakeIconFrameBrush());
+		CatalogIconFrameBorder->SetBrushColor(FLinearColor::White);
+		CatalogIconFrameBorder->SetClipping(EWidgetClipping::ClipToBounds);
+	}
+}
 
 void UPBBumperCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 {

@@ -231,6 +231,9 @@ private:
 	TObjectPtr<UBorder> DetailAccentBorder;
 
 	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UBorder> DetailIconFrameBorder;
+
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> DetailIconImage;
 
 	UPROPERTY(meta = (BindWidgetOptional))
