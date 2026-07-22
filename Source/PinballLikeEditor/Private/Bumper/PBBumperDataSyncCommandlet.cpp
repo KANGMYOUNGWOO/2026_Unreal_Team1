@@ -17,6 +17,7 @@
 #include "PinBallLike/Actor/Bumper/Effect/PBBossDamageBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBossVulnerabilityBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBComboArcBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBComboBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBCounterShieldBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBGateSupportFieldBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBKineticShellBumperEffect.h"
@@ -291,9 +292,18 @@ namespace
 		return Blueprint->Status != BS_Error;
 	}
 
-	bool ReparentApprovedEffectBlueprints()
+	bool RepairComboPulseEffectBlueprint()
 	{
 		return ReparentEffectBlueprint(
+			TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_ComboPulse_01"),
+			UPBComboBumperEffect::StaticClass(),
+			false);
+	}
+
+	bool ReparentApprovedEffectBlueprints()
+	{
+		return RepairComboPulseEffectBlueprint()
+			&& ReparentEffectBlueprint(
 			TEXT("/Game/Blueprints/Bumper/Effect/BP_Effect_KineticShell_01"),
 			UPBKineticShellBumperEffect::StaticClass(),
 			true)
@@ -722,6 +732,18 @@ int32 UPBBumperDataSyncCommandlet::Main(const FString& Params)
 	if (FParse::Param(*Params, TEXT("ValidateOnly")))
 	{
 		return ValidateExistingBumperData() ? 0 : 1;
+	}
+
+	if (FParse::Param(*Params, TEXT("RepairComboPulseParent")))
+	{
+		if (!RepairComboPulseEffectBlueprint() || !SaveApprovedDirtyPackages(true))
+		{
+			return 1;
+		}
+
+		UE_LOG(LogTemp, Display,
+			TEXT("[BumperSync] Combo Pulse effect parent repair completed."));
+		return 0;
 	}
 
 	const bool bMigrateLegacyAssets = FParse::Param(*Params, TEXT("MigrateLegacyAssets"));
