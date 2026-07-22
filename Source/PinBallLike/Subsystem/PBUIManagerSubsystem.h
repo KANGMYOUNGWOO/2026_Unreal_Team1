@@ -6,6 +6,8 @@
 #include "PBUIManagerSubsystem.generated.h"
 
 class UPBUserWidget;
+class UPBGlobalToolbarWidget;
+class UWorld;
 
 UCLASS()
 class PINBALLLIKE_API UPBUIManagerSubsystem : public UGameInstanceSubsystem
@@ -14,6 +16,8 @@ class PINBALLLIKE_API UPBUIManagerSubsystem : public UGameInstanceSubsystem
 
 public:
 	UPBUIManagerSubsystem();
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 
 	// Widget을 생성하고 Viewport와 Stack에 추가한다.
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -45,6 +49,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "UI")
 	UPBUserWidget* GetTopWidget() const;
 
+	void SetGlobalToolbarSuppressedForLoading(bool bSuppressed);
+
+	UFUNCTION(BlueprintPure, Category = "UI|Global Toolbar")
+	UPBGlobalToolbarWidget* GetGlobalToolbarWidget() const { return GlobalToolbarWidget; }
+
 private:
 	UPBSimplePopupWidget* PushSimplePopup(
 		TSubclassOf<UPBSimplePopupWidget> PopupClass,
@@ -54,10 +63,21 @@ private:
 	// bForceRemove가 true면 닫기 요청 여부와 Top Widget 여부를 무시하고 제거한다.
 	bool RemoveWidgetFromStack(UPBUserWidget* Widget, bool bForceRemove);
 	void CleanInvalidWidgetsFromStack();
+	void HandlePostLoadMap(UWorld* LoadedWorld);
+	void RefreshGlobalToolbarVisibility();
+	void EnsureGlobalToolbar();
+	void RemoveGlobalToolbar();
+	bool ShouldHideGlobalToolbar(const UWorld* World) const;
 
 	UPROPERTY()
 	TSubclassOf<UPBSimplePopupWidget> DefaultSimplePopupClass;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBUserWidget>> WidgetStack;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBGlobalToolbarWidget> GlobalToolbarWidget;
+
+	FDelegateHandle PostLoadMapHandle;
+	bool bGlobalToolbarSuppressedForLoading = false;
 };

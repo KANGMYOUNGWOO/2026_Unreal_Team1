@@ -8,7 +8,7 @@
 
 namespace
 {
-	FVector CalculateCubicBezierLocation(
+	FVector CalculatePatrolCubicBezierLocation(
 		const FVector& StartLocation,
 		const FVector& FirstControlLocation,
 		const FVector& SecondControlLocation,
@@ -125,6 +125,70 @@ void ASnakeBoss::SetSnakePinballCollisionEnabled(bool IsEnabled)
 	}
 
 	IsSnakePinballCollisionDisabled = true;
+}
+
+void ASnakeBoss::SetSnakeChargeMovementCollisionEnabled(bool IsEnabled)
+{
+	if (IsEnabled)
+	{
+		if (!IsSnakeChargeMovementCollisionDisabled)
+		{
+			return;
+		}
+
+		if (CollisionSphere)
+		{
+			CollisionSphere->SetCollisionResponseToChannel(
+				ECC_PhysicsBody,
+				CachedCollisionSpherePhysicsBodyResponse);
+			CollisionSphere->SetCollisionResponseToChannel(
+				ECC_WorldStatic,
+				CachedCollisionSphereWorldStaticResponse);
+		}
+
+		if (SnakeMesh)
+		{
+			SnakeMesh->SetCollisionResponseToChannel(
+				ECC_PhysicsBody,
+				CachedSnakeMeshPhysicsBodyResponse);
+			SnakeMesh->SetCollisionResponseToChannel(
+				ECC_WorldStatic,
+				CachedSnakeMeshWorldStaticResponse);
+		}
+
+		IsSnakePinballCollisionDisabled = false;
+		IsSnakeChargeMovementCollisionDisabled = false;
+		return;
+	}
+
+	if (IsSnakeChargeMovementCollisionDisabled)
+	{
+		return;
+	}
+
+	if (CollisionSphere)
+	{
+		CachedCollisionSpherePhysicsBodyResponse = CollisionSphere->GetCollisionResponseToChannel(ECC_PhysicsBody);
+		CachedCollisionSphereWorldStaticResponse = CollisionSphere->GetCollisionResponseToChannel(ECC_WorldStatic);
+		CollisionSphere->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
+		CollisionSphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Ignore);
+	}
+
+	if (SnakeMesh)
+	{
+		CachedSnakeMeshPhysicsBodyResponse = SnakeMesh->GetCollisionResponseToChannel(ECC_PhysicsBody);
+		CachedSnakeMeshWorldStaticResponse = SnakeMesh->GetCollisionResponseToChannel(ECC_WorldStatic);
+		SnakeMesh->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
+		SnakeMesh->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Ignore);
+	}
+
+	IsSnakePinballCollisionDisabled = true;
+	IsSnakeChargeMovementCollisionDisabled = true;
+}
+
+FVector ASnakeBoss::GetClampedSnakePatrolLocation(const FVector& SourceLocation) const
+{
+	return ClampLocationToPatrolArea(SourceLocation);
 }
 
 void ASnakeBoss::UpdateSnakeChargeMovement(
@@ -495,7 +559,7 @@ bool ASnakeBoss::IsInsideHeadExcludedArea(const FVector& SourceLocation) const
 
 FVector ASnakeBoss::GetPatrolCurveLocation(float Alpha) const
 {
-	return CalculateCubicBezierLocation(
+	return CalculatePatrolCubicBezierLocation(
 		PatrolStartLocation,
 		PatrolCurveControlLocation,
 		PatrolCurveEndControlLocation,

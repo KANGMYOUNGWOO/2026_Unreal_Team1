@@ -4,7 +4,7 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Struct/Choice/PBChoiceType.h"
 #include "PinBallLike/Relic/UI/PBRelicChoiceWidget.h"
-#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/Relic/PBRelicSubsystem.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 APBRelicChoiceActor::APBRelicChoiceActor()
@@ -44,23 +44,9 @@ void APBRelicChoiceActor::OpenRelicChoice()
 
 	CurrentRelicChoices.Reset();
 
-	if (!RelicSubsystem->GetRandomRelicIds(
-		3,
-		CurrentRelicChoices))
-	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[RelicChoice] Failed to get random relic ids."));
+	RelicSubsystem->GetRandomRelicIds(3, CurrentRelicChoices);
 
-		return;
-	}
-	
-
-	APlayerController* PlayerController =
-		UGameplayStatics::GetPlayerController(
-			this,
-			0);
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
 
 	if (!PlayerController ||
 		!RelicChoiceWidgetClass)
@@ -72,27 +58,6 @@ void APBRelicChoiceActor::OpenRelicChoice()
 		return;
 	}
 
-	GameInstance->GetSubsystem<UPBRelicSubsystem>();
-
-	if (!RelicSubsystem)
-	{
-		return;
-	}
-
-	CurrentRelicChoices.Reset();
-
-	if (!RelicSubsystem->GetRandomRelicIds(
-		3,
-		CurrentRelicChoices))
-	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[RelicChoice] Failed to get random relic ids."));
-
-		return;
-	}
-	
 	if (!RelicChoiceWidget)
 	{
 		RelicChoiceWidget =
@@ -110,8 +75,7 @@ void APBRelicChoiceActor::OpenRelicChoice()
 			&APBRelicChoiceActor::HandleRelicSelected);
 	}
 
-	RelicChoiceWidget->SetRelicChoices(
-		CurrentRelicChoices);
+	RelicChoiceWidget->SetRelicChoices(CurrentRelicChoices, FallbackGoldAmount);
 
 	RelicChoiceWidget->AddToViewport();
 
@@ -125,8 +89,7 @@ void APBRelicChoiceActor::OpenAbility()
 	OpenRelicChoice();
 }
 
-void APBRelicChoiceActor::HandleRelicSelected(
-	const FName RelicId)
+void APBRelicChoiceActor::HandleRelicSelected(const FPBRelicViewData SelectedReward)
 {
 	UGameInstance* GameInstance = GetGameInstance();
 	if (!GameInstance)
@@ -134,8 +97,22 @@ void APBRelicChoiceActor::HandleRelicSelected(
 		return;
 	}
 
-	UPBRelicSubsystem* RelicSubsystem =
-		GameInstance->GetSubsystem<UPBRelicSubsystem>();
+	if (SelectedReward.RewardType == EPBRelicChoiceRewardType::Gold)
+	{
+		UPBPlayerDataSubsystem* PlayerDataSubsystem = GameInstance->GetSubsystem<UPBPlayerDataSubsystem>();
+		if (!PlayerDataSubsystem)
+		{
+			return;
+		}
+
+		PlayerDataSubsystem->GainGold(SelectedReward.GoldAmount);
+		UE_LOG(LogTemp, Warning, TEXT("[RelicChoice] Gold selected. Amount=%d CurrentGold=%d"), SelectedReward.GoldAmount, PlayerDataSubsystem->GetCurrentGold());
+		CloseRelicChoice();
+		return;
+	}
+
+	const FName RelicId = SelectedReward.RelicId;
+	UPBRelicSubsystem* RelicSubsystem = GameInstance->GetSubsystem<UPBRelicSubsystem>();
 
 	if (!RelicSubsystem)
 	{

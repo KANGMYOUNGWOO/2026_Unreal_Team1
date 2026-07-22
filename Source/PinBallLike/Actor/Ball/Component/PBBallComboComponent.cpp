@@ -2,8 +2,8 @@
 
 
 #include "PBBallComboComponent.h"
-#include  "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PBBallEffectRuntimeComponent.h"
+#include "PinBallLike/GameState/PBBattleGameState.h"
 
 
 UPBBallComboComponent::UPBBallComboComponent()
@@ -11,33 +11,47 @@ UPBBallComboComponent::UPBBallComboComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-int32 UPBBallComboComponent::GetCombo() const
+void UPBBallComboComponent::BeginPlay()
 {
-	return CurrentCombo;
+	Super::BeginPlay();
+
+	if (APBBattleGameState* BattleGameState = GetBattleGameState())
+	{
+		BattleGameState->OnBattleComboChanged.AddUniqueDynamic(this, &UPBBallComboComponent::HandleBattleComboChanged);
+		UE_LOG(LogTemp, Log, TEXT("[Combo] BallComboComponent bound to BattleGameState. Owner=%s CurrentCombo=%d"), *GetNameSafe(GetOwner()), BattleGameState->GetCombo());
+		HandleBattleComboChanged(BattleGameState->GetCombo());
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[Combo] BallComboComponent failed to bind BattleGameState. Owner=%s World=%s"), *GetNameSafe(GetOwner()), *GetNameSafe(GetWorld()));
 }
 
-int32 UPBBallComboComponent::GetMaxCombo() const
+void UPBBallComboComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	return MaxCombo;
+	if (APBBattleGameState* BattleGameState = GetBattleGameState())
+	{
+		BattleGameState->OnBattleComboChanged.RemoveDynamic(this, &UPBBallComboComponent::HandleBattleComboChanged);
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
+
+int32 UPBBallComboComponent::GetCombo() const
+{
+	const APBBattleGameState* BattleGameState = GetBattleGameState();
+	return BattleGameState ? BattleGameState->GetCombo() : 0;
 }
 
 void UPBBallComboComponent::SetCombo(int32 Value)
 {
-	const int32 NewCombo = FMath::Max(0, Value);
-	if (CurrentCombo == NewCombo)
+	if (APBBattleGameState* BattleGameState = GetBattleGameState())
 	{
+		UE_LOG(LogTemp, Log, TEXT("[Combo] SetCombo forwarded to BattleGameState. Owner=%s Value=%d Previous=%d"), *GetNameSafe(GetOwner()), Value, BattleGameState->GetCombo());
+		BattleGameState->SetCombo(Value);
 		return;
 	}
 
-	CurrentCombo = NewCombo;
-	MaxCombo = FMath::Max(MaxCombo, CurrentCombo);
-	OnComboChanged.Broadcast(CurrentCombo, MaxCombo);
-	
-	if (UPBBallEffectRuntimeComponent* EffectRuntimeComponent =
-		GetOwner() ? GetOwner()->FindComponentByClass<UPBBallEffectRuntimeComponent>() : nullptr)
-	{
-		EffectRuntimeComponent->HandleComboChanged(CurrentCombo, MaxCombo);
-	}
+	UE_LOG(LogTemp, Warning, TEXT("[Combo] SetCombo failed because BattleGameState is invalid. Owner=%s Value=%d"), *GetNameSafe(GetOwner()), Value);
 }
 
 void UPBBallComboComponent::AddCombo(int32 Delta)
@@ -47,21 +61,55 @@ void UPBBallComboComponent::AddCombo(int32 Delta)
 		return;
 	}
 
-	SetCombo(CurrentCombo + Delta);
+	if (APBBattleGameState* BattleGameState = GetBattleGameState())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[Combo] AddCombo forwarded to BattleGameState. Owner=%s Delta=%d Previous=%d"), *GetNameSafe(GetOwner()), Delta, BattleGameState->GetCombo());
+		BattleGameState->AddCombo(Delta);
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[Combo] AddCombo failed because BattleGameState is invalid. Owner=%s Delta=%d"), *GetNameSafe(GetOwner()), Delta);
 }
 
 bool UPBBallComboComponent::TryConsumeCombo(int32 Cost)
 {
-	if (Cost < 0 || CurrentCombo < Cost)
+	if (APBBattleGameState* BattleGameState = GetBattleGameState())
 	{
-		return false;
+		const bool bConsumed = BattleGameState->TryConsumeCombo(Cost);
+		UE_LOG(LogTemp, Log, TEXT("[Combo] TryConsumeCombo forwarded to BattleGameState. Owner=%s Cost=%d Result=%s Current=%d"), *GetNameSafe(GetOwner()), Cost, bConsumed ? TEXT("true") : TEXT("false"), BattleGameState->GetCombo());
+		return bConsumed;
 	}
 
-	SetCombo(CurrentCombo - Cost);
-	return true;
+	UE_LOG(LogTemp, Warning, TEXT("[Combo] TryConsumeCombo failed because BattleGameState is invalid. Owner=%s Cost=%d"), *GetNameSafe(GetOwner()), Cost);
+	return false;
 }
 
 void UPBBallComboComponent::ResetCombo()
 {
-	SetCombo(0);
+	if (APBBattleGameState* BattleGameState = GetBattleGameState())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[Combo] ResetCombo forwarded to BattleGameState. Owner=%s Previous=%d"), *GetNameSafe(GetOwner()), BattleGameState->GetCombo());
+		BattleGameState->ResetCombo();
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[Combo] ResetCombo failed because BattleGameState is invalid. Owner=%s"), *GetNameSafe(GetOwner()));
+}
+
+APBBattleGameState* UPBBallComboComponent::GetBattleGameState() const
+{
+	const UWorld* World = GetWorld();
+	return World ? World->GetGameState<APBBattleGameState>() : nullptr;
+}
+
+void UPBBallComboComponent::HandleBattleComboChanged(const int32 CurrentCombo)
+{
+	UE_LOG(LogTemp, Log, TEXT("[Combo] BallComboComponent received BattleGameState combo change. Owner=%s Current=%d"), *GetNameSafe(GetOwner()), CurrentCombo);
+	OnComboChanged.Broadcast(CurrentCombo);
+
+	if (UPBBallEffectRuntimeComponent* EffectRuntimeComponent =
+		GetOwner() ? GetOwner()->FindComponentByClass<UPBBallEffectRuntimeComponent>() : nullptr)
+	{
+		EffectRuntimeComponent->HandleComboChanged(CurrentCombo);
+	}
 }

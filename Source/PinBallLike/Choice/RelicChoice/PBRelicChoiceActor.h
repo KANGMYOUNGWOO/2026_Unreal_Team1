@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Interface/PBChoiceNodeAction.h"
+#include "PinBallLike/Struct/Relic/PBRelicViewData.h"
 #include "PBRelicChoiceActor.generated.h"
 
 class UPBRelicChoiceWidget;
@@ -22,7 +23,7 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	void HandleRelicSelected(FName RelicId);
+	void HandleRelicSelected(FPBRelicViewData SelectedReward);
 	void CloseRelicChoice();
 
 private:
@@ -34,4 +35,7 @@ private:
 
 	UPROPERTY()
 	TArray<FName> CurrentRelicChoices;
+
+	UPROPERTY(EditAnywhere, Category = "Relic|Reward", meta = (ClampMin = "0"))
+	int32 FallbackGoldAmount = 100;
 };

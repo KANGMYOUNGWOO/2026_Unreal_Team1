@@ -9,6 +9,7 @@
 #include "DrawDebugHelpers.h"
 #endif
 #include "Math/UnrealMathUtility.h"
+#include "PinBallLike/GameState/PBBattleGameState.h"
 #include "PinBallLike/Interface/Movable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
@@ -187,6 +188,28 @@ void AFlipper::ApplyForceToMovableActors(const float DeltaTime, const float Moti
 		const FVector VelocityToAdd = ForceDirection * FinalPower * DeltaTime;
 
 		Movable->AddVelocity(VelocityToAdd);
+		ConsumeComboForPowerFlip(OverlappingActor);
+	}
+}
+
+void AFlipper::ConsumeComboForPowerFlip(AActor* TargetActor) const
+{
+	if (!IsValid(TargetActor))
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	APBBattleGameState* BattleGameState = World ? World->GetGameState<APBBattleGameState>() : nullptr;
+	if (!BattleGameState)
+	{
+		return;
+	}
+
+	const int32 ConsumedCombo = BattleGameState->ConsumeCombo();
+	if (ConsumedCombo > 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[Flipper] Combo consumed for power flip. Target=%s Combo=%d"), *GetNameSafe(TargetActor), ConsumedCombo);
 	}
 }
 

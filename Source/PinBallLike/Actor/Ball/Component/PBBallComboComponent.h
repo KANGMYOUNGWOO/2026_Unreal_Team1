@@ -7,7 +7,9 @@
 #include "PinBallLike/Interface/Comboable.h"
 #include "PBBallComboComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnBallComboChanged, int32, CurrentCombo, int32, MaxCombo);
+class APBBattleGameState;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBallComboChanged, int32, CurrentCombo);
 
 UCLASS(ClassGroup=(PinBall), meta=(BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBallComboComponent : public UActorComponent, public IComboable
@@ -17,14 +19,14 @@ class PINBALLLIKE_API UPBBallComboComponent : public UActorComponent, public ICo
 public:
 	UPBBallComboComponent();
 
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	UPROPERTY(BlueprintAssignable, Category = "Ball|Combo")
 	FOnBallComboChanged OnComboChanged;
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Combo")
 	virtual int32 GetCombo() const override;
-
-	UFUNCTION(BlueprintCallable, Category = "Ball|Combo")
-	int32 GetMaxCombo() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Ball|Combo")
 	virtual void SetCombo(int32 Value) override;
@@ -39,10 +41,9 @@ public:
 	virtual void ResetCombo() override;
 
 private:
-	UPROPERTY(VisibleAnywhere, Category = "Ball|Combo")
-	int32 CurrentCombo = 0;
+	APBBattleGameState* GetBattleGameState() const;
 
-	UPROPERTY(VisibleAnywhere, Category = "Ball|Combo")
-	int32 MaxCombo = 0;
+	UFUNCTION()
+	void HandleBattleComboChanged(int32 CurrentCombo);
 	
 };

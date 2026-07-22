@@ -51,6 +51,9 @@ private:
 	UFUNCTION()
 	void HandleSummonActionFinished(APBBumperSummonActor* SummonActor);
 
+	UFUNCTION()
+	void HandleSummonActorDestroyed(AActor* DestroyedActor);
+
 	EPBBumperPositionId ResolveSourcePositionId(const APBModularBumperBase* Bumper) const;
 	void UpdateSummonActorTransform(
 		APBModularBumperBase* Bumper,

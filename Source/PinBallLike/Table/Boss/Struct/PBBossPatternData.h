@@ -20,6 +20,9 @@ struct PINBALLLIKE_API FPBBossPatternData
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern", meta = (ClampMin = "0"))
 	float CooldownSeconds = 3.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern", meta = (ClampMin = "0"))
+	int32 DamageAmount = 1;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Pattern")
 	bool IsEnabled = true;
 };

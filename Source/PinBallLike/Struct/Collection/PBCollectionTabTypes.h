@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "PBCollectionTabTypes.generated.h"
 
+class UTexture2D;
+
 USTRUCT(BlueprintType)
 struct FPBCollectionItemSummary
 {
@@ -25,6 +27,9 @@ struct FPBCollectionItemSummary
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Catalog")
 	FName IconAssetKey = NAME_None;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Collection|Catalog")
+	TObjectPtr<UTexture2D> IconTexture = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collection|Catalog")
 	FName PreviewAssetKey = NAME_None;

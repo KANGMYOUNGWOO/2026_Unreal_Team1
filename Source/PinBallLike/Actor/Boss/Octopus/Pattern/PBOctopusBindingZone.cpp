@@ -1,5 +1,7 @@
 #include "PBOctopusBindingZone.h"
 
+#include "PinBallLike/Actor/Boss/PBBossBase.h"
+
 #include "Components/SphereComponent.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
@@ -122,6 +124,8 @@ void APBOctopusBindingZone::HandleZoneBeginOverlap(
 	{
 		Movable->PauseMovement();
 	}
+
+	OnBallBound.Broadcast(Cast<APBBossBase>(GetOwner()));
 
 	if (BindDamage > 0)
 	{

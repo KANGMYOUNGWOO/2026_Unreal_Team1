@@ -246,13 +246,13 @@ void UPBBallEffectRuntimeComponent::HandleEnemyHit(AActor* EnemyActor)
 	}
 }
 
-void UPBBallEffectRuntimeComponent::HandleComboChanged(const int32 CurrentCombo, const int32 MaxCombo)
+void UPBBallEffectRuntimeComponent::HandleComboChanged(const int32 CurrentCombo)
 {
 	for (IPBComboChangedListener* Listener : ComboChangedListeners)
 	{
 		if (Listener)
 		{
-			Listener->HandleComboChanged(CurrentCombo, MaxCombo);
+			Listener->HandleComboChanged(CurrentCombo);
 		}
 	}
 }

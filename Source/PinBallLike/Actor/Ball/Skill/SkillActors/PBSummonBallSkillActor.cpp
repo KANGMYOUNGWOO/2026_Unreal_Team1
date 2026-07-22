@@ -101,6 +101,7 @@ bool APBSummonBallSkillActor::SpawnSummonedBalls()
 		}
 
 		SummonedBall->InitializeFromSourceBall(OwnerBall);
+		SummonedBall->SetMaxHitCount(SummonedBallMaxHitCount);
 		UGameplayStatics::FinishSpawningActor(SummonedBall, SpawnTransform);
 
 		if (UPBBaseStatComponent* StatComponent =

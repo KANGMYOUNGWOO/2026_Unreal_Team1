@@ -100,6 +100,7 @@ bool UPBBossPatternTableParser::ParseRow(const FName RowName, const TMap<FString
 		EPBBossPatternPhaseType::Normal);
 	NewRow.PatternName = FName(*TrimCell(RowData.FindRef(TEXT("PatternName"))));
 	NewRow.CooldownSeconds = FMath::Max(ParseFloatValue(RowData.FindRef(TEXT("CooldownSeconds")), 3.0f), 0.0f);
+	NewRow.DamageAmount = FMath::Max(ParseIntValue(RowData.FindRef(TEXT("DamageAmount")), 1), 0);
 	NewRow.IsEnabled = ParseBoolValue(RowData.FindRef(TEXT("IsEnabled")), true);
 
 	TargetTable->AddRow(RowName, NewRow);
@@ -113,6 +114,7 @@ bool UPBBossPatternTableParser::ParseRow(const FName RowName, const TMap<FString
 			NewRow.PatternPhaseType,
 			NewRow.PatternName,
 			NewRow.CooldownSeconds,
+			NewRow.DamageAmount,
 			NewRow.IsEnabled);
 	}
 
@@ -125,6 +127,7 @@ void UPBBossPatternTableParser::UpdateLinkedBossDataAsset(
 	const EPBBossPatternPhaseType PatternPhaseType,
 	const FName PatternName,
 	const float CooldownSeconds,
+	const int32 DamageAmount,
 	const bool IsEnabled)
 {
 	if (BossRowName.IsNone() || PatternClassId.IsNone())
@@ -152,6 +155,7 @@ void UPBBossPatternTableParser::UpdateLinkedBossDataAsset(
 	PatternData.PatternClass = PatternClass;
 	PatternData.PatternName = PatternName;
 	PatternData.CooldownSeconds = CooldownSeconds;
+	PatternData.DamageAmount = DamageAmount;
 	PatternData.IsEnabled = IsEnabled;
 
 	switch (PatternPhaseType)

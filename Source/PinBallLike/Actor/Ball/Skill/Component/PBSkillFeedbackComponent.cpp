@@ -13,14 +13,14 @@ UPBSkillFeedbackComponent::UPBSkillFeedbackComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 
 	static ConstructorHelpers::FObjectFinder<USoundBase> CastSoundAsset(
-		TEXT("/Game/Resources/Sound/SFX/S_SkillReady.S_SkillReady"));
+		TEXT("/Game/Resources/Sound/SFX/Battle/S_SkillReady.S_SkillReady"));
 	if (CastSoundAsset.Succeeded())
 	{
 		CastFeedback.Sound = CastSoundAsset.Object;
 	}
 
 	static ConstructorHelpers::FObjectFinder<USoundBase> HitSoundAsset(
-		TEXT("/Game/Resources/Sound/SFX/S_Hit.S_Hit"));
+		TEXT("/Game/Resources/Sound/SFX/Battle/S_Hit.S_Hit"));
 	if (HitSoundAsset.Succeeded())
 	{
 		HitFeedback.Sound = HitSoundAsset.Object;

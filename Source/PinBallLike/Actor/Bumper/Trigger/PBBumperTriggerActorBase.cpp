@@ -9,6 +9,7 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Bumper/Feedback/PBBumperImpactCameraShake.h"
+#include "PinBallLike/Actor/Bumper/Feedback/PBBumperSoundComponent.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Interface/Movable.h"
@@ -21,6 +22,7 @@ APBBumperTriggerActorBase::APBBumperTriggerActorBase()
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
+	BumperSoundComponent = CreateDefaultSubobject<UPBBumperSoundComponent>(TEXT("BumperSoundComponent"));
 	ImpactCameraShakeClass = UPBBumperImpactCameraShake::StaticClass();
 }
 
@@ -214,6 +216,10 @@ bool APBBumperTriggerActorBase::AddTriggerProgress(const int32 Amount)
 
 	const bool bBecameReady = PreviousCount < RequiredTriggerCount
 		&& CurrentTriggerCount >= RequiredTriggerCount;
+	if (CurrentTriggerCount > PreviousCount && !bBecameReady && BumperSoundComponent)
+	{
+		BumperSoundComponent->PlayTriggerCountSound(CurrentTriggerCount, RequiredTriggerCount);
+	}
 	if (bBecameReady)
 	{
 		SetTriggerProgressState(EPBBumperTriggerProgressState::Ready);
@@ -245,4 +251,12 @@ void APBBumperTriggerActorBase::SetTriggerProgressState(
 void APBBumperTriggerActorBase::NotifyTriggerProgressChanged()
 {
 	OnTriggerProgressChanged.Broadcast(CurrentTriggerCount, RequiredTriggerCount);
+}
+
+void APBBumperTriggerActorBase::PlayActivationSound()
+{
+	if (BumperSoundComponent)
+	{
+		BumperSoundComponent->PlayActivationSound();
+	}
 }

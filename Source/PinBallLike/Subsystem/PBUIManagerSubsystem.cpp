@@ -1,8 +1,18 @@
 #include "PBUIManagerSubsystem.h"
 
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
+#include "PinBallLike/DeveloperSettings/PBUISettings.h"
+#include "PinBallLike/UI/Global/PBGlobalToolbarWidget.h"
 #include "PinBallLike/UI/PBUserWidget.h"
 #include "PinBallLike/UI/Popup/PBSimplePopupWidget.h"
 #include "UObject/ConstructorHelpers.h"
+#include "UObject/UObjectGlobals.h"
+
+namespace
+{
+	constexpr int32 GlobalToolbarZOrder = MAX_int32 - 1;
+}
 
 UPBUIManagerSubsystem::UPBUIManagerSubsystem()
 {
@@ -12,6 +22,28 @@ UPBUIManagerSubsystem::UPBUIManagerSubsystem()
 	{
 		DefaultSimplePopupClass = PopupClassFinder.Class;
 	}
+}
+
+void UPBUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+
+	PostLoadMapHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(
+		this,
+		&UPBUIManagerSubsystem::HandlePostLoadMap);
+	RefreshGlobalToolbarVisibility();
+}
+
+void UPBUIManagerSubsystem::Deinitialize()
+{
+	if (PostLoadMapHandle.IsValid())
+	{
+		FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(PostLoadMapHandle);
+		PostLoadMapHandle.Reset();
+	}
+
+	RemoveGlobalToolbar();
+	Super::Deinitialize();
 }
 
 UPBUserWidget* UPBUIManagerSubsystem::PushWidget(
@@ -122,6 +154,115 @@ UPBUserWidget* UPBUIManagerSubsystem::GetTopWidget() const
 	}
 
 	return nullptr;
+}
+
+void UPBUIManagerSubsystem::SetGlobalToolbarSuppressedForLoading(const bool bSuppressed)
+{
+	if (bGlobalToolbarSuppressedForLoading == bSuppressed)
+	{
+		return;
+	}
+
+	bGlobalToolbarSuppressedForLoading = bSuppressed;
+	RefreshGlobalToolbarVisibility();
+}
+
+void UPBUIManagerSubsystem::HandlePostLoadMap(UWorld* LoadedWorld)
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	if (!IsValid(LoadedWorld) || !IsValid(GameInstance) || LoadedWorld->GetGameInstance() != GameInstance)
+	{
+		return;
+	}
+
+	RefreshGlobalToolbarVisibility();
+}
+
+void UPBUIManagerSubsystem::RefreshGlobalToolbarVisibility()
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	UWorld* World = IsValid(GameInstance) ? GameInstance->GetWorld() : nullptr;
+	const bool bShouldShow = IsValid(World)
+		&& !bGlobalToolbarSuppressedForLoading
+		&& !ShouldHideGlobalToolbar(World);
+
+	if (!bShouldShow)
+	{
+		if (IsValid(GlobalToolbarWidget))
+		{
+			GlobalToolbarWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		return;
+	}
+
+	EnsureGlobalToolbar();
+	if (IsValid(GlobalToolbarWidget))
+	{
+		GlobalToolbarWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	}
+}
+
+void UPBUIManagerSubsystem::EnsureGlobalToolbar()
+{
+	if (IsValid(GlobalToolbarWidget))
+	{
+		if (!GlobalToolbarWidget->IsInViewport())
+		{
+			GlobalToolbarWidget->AddToViewport(GlobalToolbarZOrder);
+		}
+		return;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!IsValid(GameInstance))
+	{
+		return;
+	}
+
+	TSubclassOf<UPBGlobalToolbarWidget> ToolbarWidgetClass = UPBGlobalToolbarWidget::StaticClass();
+	const UPBUISettings* UISettings = GetDefault<UPBUISettings>();
+	if (IsValid(UISettings) && !UISettings->GlobalToolbarWidgetClass.IsNull())
+	{
+		if (UClass* ConfiguredClass = UISettings->GlobalToolbarWidgetClass.LoadSynchronous())
+		{
+			ToolbarWidgetClass = ConfiguredClass;
+		}
+	}
+
+	GlobalToolbarWidget = CreateWidget<UPBGlobalToolbarWidget>(
+		GameInstance,
+		ToolbarWidgetClass);
+	if (IsValid(GlobalToolbarWidget))
+	{
+		GlobalToolbarWidget->AddToViewport(GlobalToolbarZOrder);
+	}
+}
+
+void UPBUIManagerSubsystem::RemoveGlobalToolbar()
+{
+	if (IsValid(GlobalToolbarWidget))
+	{
+		GlobalToolbarWidget->RemoveFromParent();
+	}
+	GlobalToolbarWidget = nullptr;
+}
+
+bool UPBUIManagerSubsystem::ShouldHideGlobalToolbar(const UWorld* World) const
+{
+	if (!IsValid(World))
+	{
+		return true;
+	}
+
+	const UPBUISettings* UISettings = GetDefault<UPBUISettings>();
+	if (!IsValid(UISettings) || UISettings->GlobalToolbarHiddenMapName.IsNone())
+	{
+		return false;
+	}
+
+	FString MapName = World->GetMapName();
+	MapName.RemoveFromStart(World->StreamingLevelsPrefix);
+	return FName(MapName).IsEqual(UISettings->GlobalToolbarHiddenMapName);
 }
 
 bool UPBUIManagerSubsystem::RemoveWidgetFromStack(UPBUserWidget* Widget, const bool bForceRemove)

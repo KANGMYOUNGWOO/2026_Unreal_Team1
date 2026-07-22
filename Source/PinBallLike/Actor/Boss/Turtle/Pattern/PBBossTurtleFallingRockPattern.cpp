@@ -1,5 +1,6 @@
 #include "PBBossTurtleFallingRockPattern.h"
 
+#include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Boss/Turtle/PBTurtleBoss.h"
 #include "PinBallLike/Actor/Boss/Turtle/PBTurtleFallingRock.h"
 
@@ -21,25 +22,26 @@ void UPBBossTurtleFallingRockPattern::ExecutePattern_Implementation(APBBossBase*
 		return;
 	}
 
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.Owner = TurtleBoss;
-	SpawnParameters.Instigator = TurtleBoss;
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	USoundBase* HitSFXToUse = IsValid(RockHitSFX) ? RockHitSFX.Get() : LoopingSFX.Get();
 
 	for (int32 FallingRockIndex = 0; FallingRockIndex < FallingRockCount; ++FallingRockIndex)
 	{
 		const FVector SpawnLocation = TurtleBoss->GetRandomFallingRockLocation(SpawnHeight);
-		APBTurtleFallingRock* FallingRock = World->SpawnActor<APBTurtleFallingRock>(
+		const FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
+		APBTurtleFallingRock* FallingRock = World->SpawnActorDeferred<APBTurtleFallingRock>(
 			FallingRockClass,
-			SpawnLocation,
-			FRotator::ZeroRotator,
-			SpawnParameters);
+			SpawnTransform,
+			TurtleBoss,
+			TurtleBoss,
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 		if (FallingRock)
 		{
 			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
 			FallingRock->SetSourcePatternName(SourcePatternName);
 			FallingRock->SetFallingSpeed(FallingSpeed);
+			FallingRock->SetHitSFX(HitSFXToUse);
+			UGameplayStatics::FinishSpawningActor(FallingRock, SpawnTransform);
 		}
 	}
 

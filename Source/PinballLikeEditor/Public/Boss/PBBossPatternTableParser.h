@@ -39,6 +39,7 @@ protected:
 		EPBBossPatternPhaseType PatternPhaseType,
 		FName PatternName,
 		float CooldownSeconds,
+		int32 DamageAmount,
 		bool IsEnabled);
 	TSoftClassPtr<UPBBossPatternBase> FindPatternClass(FName PatternClassId) const;
 	void ClearBossPatternData(FName BossRowName);

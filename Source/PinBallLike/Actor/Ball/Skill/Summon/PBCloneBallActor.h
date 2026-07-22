@@ -23,8 +23,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ball|Summon")
 	void InitializeFromSourceBall(APBBallBase* InSourceBall);
 
+	UFUNCTION(BlueprintCallable, Category = "Ball|Summon")
+	void SetMaxHitCount(int32 InMaxHitCount);
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ball|Summon|Collision")
 	TObjectPtr<USphereComponent> CollisionSphere;
@@ -41,9 +45,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ball|Summon", meta = (ClampMin = "0.0"))
 	float LifeTime = 5.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ball|Summon", meta = (ClampMin = "1"))
+	int32 MaxHitCount = 5;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Ball|Summon")
+	int32 CurrentHitCount = 0;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient, Category = "Ball|Summon", meta = (ExposeOnSpawn = "true"))
 	TObjectPtr<APBBallBase> SourceBall;
 
 private:
+	UFUNCTION()
+	void HandleMovementHit(const FHitResult& Hit);
+
 	void CopyStat(const UPBBaseStatComponent* SourceStatComponent, FName StatName);
 };

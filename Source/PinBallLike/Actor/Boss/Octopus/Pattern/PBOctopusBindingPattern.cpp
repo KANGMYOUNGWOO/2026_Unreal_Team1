@@ -41,6 +41,8 @@ void UPBOctopusBindingPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 		return;
 	}
 
+	BindingZone->OnBallBound.AddUniqueDynamic(this, &UPBOctopusBindingPattern::HandleBallBound);
+
 	BindingZone->InitializeZone(
 		ZoneRadius,
 		ZoneDuration,
@@ -50,6 +52,11 @@ void UPBOctopusBindingPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 	BindingZone->FinishSpawning(ZoneTransform);
 
 	FinishPattern();
+}
+
+void UPBOctopusBindingPattern::HandleBallBound(APBBossBase* Boss)
+{
+	PlayPatternSFX(Boss);
 }
 
 APBBossMoveArea* UPBOctopusBindingPattern::FindNearestMoveArea(const APBBossBase* Boss) const

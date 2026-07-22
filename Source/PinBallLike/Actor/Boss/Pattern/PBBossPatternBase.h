@@ -9,6 +9,7 @@ class APBBossBase;
 class APBBossPatternTelegraph;
 class AActor;
 class UPBBossPatternComponent;
+class USoundBase;
 
 UCLASS(Abstract, Blueprintable)
 class PINBALLLIKE_API UPBBossPatternBase : public UObject
@@ -57,6 +58,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (ClampMin = "0"))
 	float CooldownSeconds = 3.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern", meta = (ClampMin = "0"))
+	int32 DamageAmount = 1;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern")
 	bool IsEnabled = true;
 
@@ -86,9 +90,13 @@ protected:
 	void SetOwnerBoss(APBBossBase* Boss);
 	AActor* FindPinballActor() const;
 	AActor* FindPinballActor(APBBossBase* Boss) const;
+	void PlayPatternSFX(const UObject* WorldContextObject) const;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Pattern|Telegraph")
 	TArray<FPBBossPatternTelegraphData> TelegraphDataList;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Pattern|Sound", meta = (DisplayName = "SFX"))
+	TObjectPtr<USoundBase> LoopingSFX;
 
 private:
 	// 텔레그래프 시간이 끝난 뒤 실제 패턴 실행을 시작합니다.

@@ -2,9 +2,40 @@
 
 
 #include "PBBetActor.h"
+#include "Engine/AssetManager.h"
 #include "Kismet/GameplayStatics.h"
 #include  "PinBallLike/Choice/UI/PBBettingWidget.h"
 #include  "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
+#include "PinBallLike/Table/Ball/PBBallAssetIds.h"
+#include "PinBallLike/Table/Ball/Struct/PBBallTableRow.h"
+
+namespace
+{
+	struct FBetNationCandidate
+	{
+		FName BallId = NAME_None;
+		FText DisplayName;
+		UTexture2D* BallSprite = nullptr;
+	};
+
+	bool ContainsKoreanCharacter(const FText& Text)
+	{
+		const FString String = Text.ToString();
+		for (const TCHAR Character : String)
+		{
+			if ((Character >= 0xAC00 && Character <= 0xD7A3)
+				|| (Character >= 0x3131 && Character <= 0x318E))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
 
 void APBBetActor::OpenAbility()
 {
@@ -36,6 +67,19 @@ void APBBetActor::OpenAbility()
 	PC->bEnableMouseOverEvents = true;
 	
 	BindWidget(BetWidget);
+
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBPlayerDataSubsystem* PlayerDataSubsystem =
+			GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
+		{
+			BetWidget->SetAvailableGold(
+				PlayerDataSubsystem->GetCurrentGold());
+		}
+	}
+
+	SetupBetNationData();
+
 	BetWidget->PlayIntroAnimation();
 }
 
@@ -75,12 +119,17 @@ void APBBetActor::BindWidget(UPBBettingWidget* InWidget)
 	BettingWidget->OnBetResultAnimationsFinished.AddUniqueDynamic(
 		this,
 		&APBBetActor::HandleBetResultAnimationsFinished);
+
+	BettingWidget->OnBetExitRequested.AddUniqueDynamic(
+		this,
+		&APBBetActor::HandleExitRequested);
 }
 
-void APBBetActor::HandleBetSelected(int32 SelectedIndex)
+void APBBetActor::HandleBetSelected(int32 SelectedIndex, int32 BetGold)
 {
 	const FPBBettingResult Result =
 		ResolveBet(SelectedIndex);
+	ApplyBetGoldResult(Result.bWin, BetGold);
 
 	UE_LOG(
 		LogTemp,
@@ -115,6 +164,126 @@ FPBBettingResult APBBetActor::ResolveBet(int32 SelectedIndex)
 	return Result;
 }
 
+void APBBetActor::ApplyBetGoldResult(bool IsWin, int32 BetGold)
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	UPBPlayerDataSubsystem* PlayerDataSubsystem =
+		GameInstance->GetSubsystem<UPBPlayerDataSubsystem>();
+	if (!PlayerDataSubsystem)
+	{
+		return;
+	}
+
+	const int32 EarnedGold = IsWin ? BetGold : -BetGold;
+	const int32 CurrentGold = PlayerDataSubsystem->GetCurrentGold();
+
+	PlayerDataSubsystem->GainGold(EarnedGold);
+
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("[Bet] CurrentGold=%d EarnedGold=%d GoldAfter=%d"),
+		CurrentGold,
+		EarnedGold,
+		PlayerDataSubsystem->GetCurrentGold());
+}
+
+void APBBetActor::SetupBetNationData()
+{
+	if (!BetWidget)
+	{
+		return;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBTableDataSubsystem* TableDataSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
+		: nullptr;
+	if (!TableDataSubsystem)
+	{
+		return;
+	}
+
+	TArray<FName> BallIds;
+	TArray<FPBBallTableRow> BallRows;
+	if (!TableDataSubsystem->GetAllBallRows(BallIds, BallRows))
+	{
+		return;
+	}
+
+	TArray<FBetNationCandidate> Candidates;
+	const int32 BallCount = FMath::Min(BallIds.Num(), BallRows.Num());
+	UAssetManager& AssetManager = UAssetManager::Get();
+	for (int32 BallIndex = 0; BallIndex < BallCount; ++BallIndex)
+	{
+		const FPBBallTableRow& BallRow = BallRows[BallIndex];
+		if (BallRow.DisplayName.IsEmpty()
+			|| !ContainsKoreanCharacter(BallRow.DisplayName))
+		{
+			continue;
+		}
+
+		const FPrimaryAssetId BallAssetId(
+			PBBallAssetIds::Type::BallData,
+			BallIds[BallIndex]);
+		const FSoftObjectPath BallDataAssetPath =
+			AssetManager.GetPrimaryAssetPath(BallAssetId);
+		const UPBBallDataAsset* BallDataAsset =
+			Cast<UPBBallDataAsset>(BallDataAssetPath.TryLoad());
+		UTexture2D* BallSprite = BallDataAsset
+			? BallDataAsset->BallSprite.LoadSynchronous()
+			: nullptr;
+		if (!BallSprite)
+		{
+			continue;
+		}
+
+		FBetNationCandidate& Candidate = Candidates.AddDefaulted_GetRef();
+		Candidate.BallId = BallIds[BallIndex];
+		Candidate.DisplayName = BallRow.DisplayName;
+		Candidate.BallSprite = BallSprite;
+	}
+
+	if (Candidates.Num() < 2)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[Bet] At least two balls with Korean DisplayName and BallSprite are required. Count=%d"),
+			Candidates.Num());
+		return;
+	}
+
+	const int32 FirstCandidateIndex =
+		FMath::RandRange(0, Candidates.Num() - 1);
+	const FBetNationCandidate FirstCandidate =
+		Candidates[FirstCandidateIndex];
+	Candidates.RemoveAtSwap(FirstCandidateIndex);
+
+	const int32 SecondCandidateIndex =
+		FMath::RandRange(0, Candidates.Num() - 1);
+	const FBetNationCandidate& SecondCandidate =
+		Candidates[SecondCandidateIndex];
+
+	BetWidget->SetNationData(
+		FirstCandidate.DisplayName,
+		FirstCandidate.BallSprite,
+		SecondCandidate.DisplayName,
+		SecondCandidate.BallSprite);
+
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("[Bet] Nation candidates selected. Left=%s Right=%s"),
+		*FirstCandidate.BallId.ToString(),
+		*SecondCandidate.BallId.ToString());
+}
+
 void APBBetActor::FinishBet()
 {
 	FPBChoiceType Message;
@@ -139,6 +308,11 @@ APBBetActor::APBBetActor()
 }
 
 void APBBetActor::HandleBetResultAnimationsFinished()
+{
+	FinishBet();
+}
+
+void APBBetActor::HandleExitRequested()
 {
 	FinishBet();
 }

@@ -100,6 +100,7 @@ void UPBGolemFistLaunchPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 
 	GolemHand->BeginPatternMovementLock();
 	CreatePunchHitCollision(GolemHand);
+	PlayPatternSFX(GolemBoss);
 	GolemHand->LaunchFistAtLocationForPattern(FistTargetLocation, FistTargetDirection, LaunchDuration);
 	UE_LOG(LogTemp, Log, TEXT("[GolemFistLaunchPattern] ExecutePattern succeeded. HandType=%d TargetLocation=%s Direction=%s LaunchDuration=%.2f"),
 		static_cast<int32>(HandType),

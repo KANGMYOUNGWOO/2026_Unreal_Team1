@@ -6,6 +6,7 @@
 
 class UProjectileMovementComponent;
 class UNiagaraSystem;
+class USoundBase;
 class UStaticMeshComponent;
 
 UCLASS(Blueprintable)
@@ -18,6 +19,7 @@ public:
 
 	void SetFallingSpeed(float NewFallingSpeed);
 	void SetSourcePatternName(FName NewSourcePatternName);
+	void SetHitSFX(USoundBase* NewHitSFX);
 
 protected:
 	virtual void BeginPlay() override;
@@ -44,6 +46,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Falling Rock")
 	TObjectPtr<UNiagaraSystem> HitEffect;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> HitSFX;
 
 	FName SourcePatternName = NAME_None;
 };

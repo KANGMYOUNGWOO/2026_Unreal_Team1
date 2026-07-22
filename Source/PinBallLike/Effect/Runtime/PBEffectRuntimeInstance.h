@@ -77,7 +77,7 @@ class PINBALLLIKE_API UPBComboStatBuffEffectRuntimeInstance
 public:
 	void Setup(FName InStatName, FName InModifyType, float InValue, int32 InRequiredCombo);
 	virtual IPBComboChangedListener* AsComboChangedListener() override { return this; }
-	virtual void HandleComboChanged(int32 CurrentCombo, int32 MaxCombo) override;
+	virtual void HandleComboChanged(int32 CurrentCombo) override;
 
 private:
 	FName StatName = NAME_None;
@@ -97,7 +97,7 @@ class PINBALLLIKE_API UPBComboPeriodStatBuffEffectRuntimeInstance
 public:
 	void Setup(FName InStatName, FName InModifyType, float InValue, int32 InRequiredCombo);
 	virtual IPBComboChangedListener* AsComboChangedListener() override { return this; }
-	virtual void HandleComboChanged(int32 CurrentCombo, int32 MaxCombo) override;
+	virtual void HandleComboChanged(int32 CurrentCombo) override;
 
 private:
 	FName StatName = NAME_None;
@@ -172,7 +172,7 @@ class PINBALLLIKE_API UPBComboExtraDamageEffectRuntimeInstance
 public:
 	void Setup(int32 InComboInterval, int32 InDamageAmount);
 	virtual IPBComboChangedListener* AsComboChangedListener() override { return this; }
-	virtual void HandleComboChanged(int32 CurrentCombo, int32 MaxCombo) override;
+	virtual void HandleComboChanged(int32 CurrentCombo) override;
 
 private:
 	int32 ComboInterval = 0;

@@ -4,15 +4,20 @@
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/UI/Loading/PBLoadingScreenController.h"
+#include "TimerManager.h"
 #include "PBBattleHUDWidget.generated.h"
 
 class UPBDeckOverviewWidget;
+class APBBattleGameState;
 class APBCombatPartyController;
 class APBBallBase;
 class UPBBallDeckSubsystem;
 class UPBBallStatusWidget;
 class UPanelWidget;
+class UTextBlock;
 class UTexture2D;
+class UWidget;
+class AActor;
 enum class EPBBattleLevelPhase : uint8;
 struct FPBBattlePhaseChangedMessage;
 
@@ -36,6 +41,7 @@ private:
 	static constexpr int32 MaxBallPanelCount = 3;
 
 	void CacheBallPanels();
+	void UnbindDisplayedBallEvents();
 	void CacheDeckSubsystem();
 	void CachePartyController();
 	void BindDeckEvents();
@@ -45,10 +51,19 @@ private:
 	void ApplyBattlePhaseToLoadingScreen(EPBBattleLevelPhase NewPhase);
 	void RegisterBattleMessageListeners();
 	void UnregisterBattleMessageListeners();
+	void CacheBattleGameState();
+	void BindComboEvents();
+	void UnbindComboEvents();
+	void ScheduleBindComboEvents();
+	void RefreshComboText();
+	void ApplyComboText(int32 CurrentCombo);
 	void ScheduleRefreshBallPanels();
 	void RefreshDeckOverview();
+	APBBallBase* FindPartyBallForDeploymentSlot(int32 SlotIndex) const;
 	void SetBallPanel(int32 PanelIndex, APBBallBase* Ball);
+	void SetBallPanelSlotVisibility(int32 PanelIndex, bool bVisible);
 	UPBBallStatusWidget* GetBallPanel(int32 PanelIndex) const;
+	UWidget* GetBallPanelInputIndicator(int32 PanelIndex) const;
 	UTexture2D* GetBallIcon(APBBallBase* Ball) const;
 
 	UFUNCTION()
@@ -56,6 +71,12 @@ private:
 
 	UFUNCTION()
 	void HandleDeploymentChanged();
+
+	UFUNCTION()
+	void HandleDisplayedBallDestroyed(AActor* DestroyedActor);
+
+	UFUNCTION()
+	void HandleBattleComboChanged(int32 CurrentCombo);
 
 	void HandleBattlePhaseChangedMessage(FGameplayTag Channel, const FPBBattlePhaseChangedMessage& Message);
 
@@ -65,8 +86,16 @@ private:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UPanelWidget> BallPanelContainer;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Text_Combo;
+
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBBallStatusWidget>> BallPanels;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UWidget>> BallPanelInputIndicators;
+
+	TArray<TWeakObjectPtr<APBBallBase>> DisplayedBalls;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallDeckSubsystem> DeckSubsystem;
@@ -74,8 +103,14 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<APBCombatPartyController> PartyController;
 
+	UPROPERTY(Transient)
+	TObjectPtr<APBBattleGameState> BattleGameState;
+
 	FGameplayMessageListenerHandle BattlePhaseChangedListenerHandle;
 	TUniquePtr<FPBLoadingScreenController> LoadingScreenController;
 
+	FTimerHandle ComboBindRetryTimerHandle;
+
 	bool bDeckEventsBound = false;
+	bool bComboEventsBound = false;
 };

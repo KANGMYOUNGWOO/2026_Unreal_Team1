@@ -133,6 +133,7 @@ void UPBBossTurtleChargePattern::UpdateCharge()
 			&& FVector::DistSquared2D(Boss->GetActorLocation(), ChargeEndLocation) <= KINDA_SMALL_NUMBER)
 		{
 			Boss->SetActorLocation(ChargeEndLocation, false, nullptr, ETeleportType::None);
+			PlayPatternSFX(Boss);
 			StopCharge();
 		}
 	}
@@ -147,7 +148,6 @@ void UPBBossTurtleChargePattern::StopCharge()
 
 	DestroyChargeHitCollision();
 }
-
 void UPBBossTurtleChargePattern::FinishCharge()
 {
 	APBTurtleBoss* Boss = GetTurtleBoss();

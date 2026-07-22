@@ -78,6 +78,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Collection|Catalog")
 	TArray<FPBCollectionBossDisplayData> GetBossCatalogEntries() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Collection|Catalog")
+	void RequestCatalogUIAssetsAsync();
+
 	UFUNCTION(BlueprintPure, Category = "Collection|Validation")
 	TArray<FPBCollectionValidationIssue> GetCatalogValidationIssues() const;
 
@@ -126,6 +129,7 @@ public:
 private:
 	UFUNCTION()
 	void HandleStartupGameDataLoaded();
+	void HandleCatalogUIAssetsLoaded();
 
 	bool BuildEntriesFromCollectionTable(TArray<FPBCollectionEntryData>& OutEntries) const;
 	void RebuildLookupIndexes();
@@ -154,4 +158,5 @@ private:
 	TMap<FName, TArray<FName>> CollectionIdsBySourceRowName;
 
 	bool bIsDataReady = false;
+	bool bCatalogUIAssetsRequested = false;
 };

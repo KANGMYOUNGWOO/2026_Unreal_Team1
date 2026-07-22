@@ -43,7 +43,7 @@ public:
 	int32 ModifyCollisionDamage(int32 BaseDamage);
 	int32 ModifySkillDamage(int32 BaseDamage) const;
 	void HandleEnemyHit(AActor* EnemyActor);
-	void HandleComboChanged(int32 CurrentCombo, int32 MaxCombo);
+	void HandleComboChanged(int32 CurrentCombo);
 
 	UFUNCTION(BlueprintPure, Category = "Effect|Ball")
 	int32 GetPendingMultiBallCount() const { return PendingMultiBallCount; }

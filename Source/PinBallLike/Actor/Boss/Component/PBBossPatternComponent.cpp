@@ -327,6 +327,7 @@ void UPBBossPatternComponent::InitializePatternDatas(
 
 		Pattern->PatternName = PatternData.PatternName;
 		Pattern->CooldownSeconds = FMath::Max(0.0f, PatternData.CooldownSeconds);
+		Pattern->DamageAmount = FMath::Max(0, PatternData.DamageAmount);
 		Pattern->IsEnabled = PatternData.IsEnabled;
 		Pattern->InitializePattern(this);
 		PatternInstanceList.Add(Pattern);

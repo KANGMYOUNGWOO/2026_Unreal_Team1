@@ -22,6 +22,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	int32, PreviousCount,
 	int32, NewCount);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+	FPBBattleComboChangedSignature,
+	int32, CurrentCombo);
+
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBBattleGameState : public AGameStateBase
 {
@@ -81,6 +85,31 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Battle|Dash")
 	bool CanUseBattleDash() const;
 
+#pragma region Combo
+
+	UFUNCTION(BlueprintPure, Category = "Battle|Combo")
+	int32 GetCombo() const { return CurrentCombo; }
+
+	UFUNCTION(BlueprintCallable, Category = "Battle|Combo")
+	void SetCombo(int32 NewCombo);
+
+	UFUNCTION(BlueprintCallable, Category = "Battle|Combo")
+	void AddCombo(int32 Delta);
+
+	UFUNCTION(BlueprintCallable, Category = "Battle|Combo")
+	bool TryConsumeCombo(int32 Cost);
+
+	UFUNCTION(BlueprintCallable, Category = "Battle|Combo")
+	int32 ConsumeCombo();
+
+	UFUNCTION(BlueprintCallable, Category = "Battle|Combo")
+	void ResetCombo();
+
+	UPROPERTY(BlueprintAssignable, Category = "Battle|Combo")
+	FPBBattleComboChangedSignature OnBattleComboChanged;
+
+#pragma endregion
+
 	UPROPERTY(BlueprintAssignable, Category = "Battle|Flow")
 	FPBBattleLevelPhaseChangedSignature OnBattleLevelPhaseChanged;
 
@@ -108,6 +137,9 @@ private:
 
 	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Dash")
 	bool bBattleDashUsed = false;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Battle|Combo")
+	int32 CurrentCombo = 0;
 	
 #pragma region MessageHandler
 	
