@@ -60,6 +60,11 @@ void APBTurtleFallingRock::SetSourcePatternName(const FName NewSourcePatternName
 	SourcePatternName = NewSourcePatternName;
 }
 
+void APBTurtleFallingRock::SetDamageAmount(const int32 NewDamageAmount)
+{
+	DamageAmount = FMath::Max(NewDamageAmount, 0);
+}
+
 void APBTurtleFallingRock::SetHitSFX(USoundBase* NewHitSFX)
 {
 	HitSFX = NewHitSFX;
