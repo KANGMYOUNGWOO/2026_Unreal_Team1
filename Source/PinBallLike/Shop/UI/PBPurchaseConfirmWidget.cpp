@@ -192,7 +192,7 @@ void UPBPurchaseConfirmWidget::SetInfo(
 	
 	if(Data.Synergies.Num() > 2)
 	{
-		SynergyIcon2->SetBrushFromTexture(
+		SynergyIcon3->SetBrushFromTexture(
 			Data.Synergies[2].Icon);
 		SynergyIcon3->SetVisibility(ESlateVisibility::Visible);
 		SynergyText3->SetText(
