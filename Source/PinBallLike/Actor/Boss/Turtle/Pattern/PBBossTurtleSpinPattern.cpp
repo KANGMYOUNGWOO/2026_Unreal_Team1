@@ -216,7 +216,7 @@ void UPBBossTurtleSpinPattern::HandleSpinBeginOverlap(
 
 void UPBBossTurtleSpinPattern::ApplySpinHit(APBBallBase* Ball)
 {
-	if (!Ball || SpinDamage <= 0)
+	if (!Ball || DamageAmount <= 0)
 	{
 		return;
 	}
@@ -225,10 +225,10 @@ void UPBBossTurtleSpinPattern::ApplySpinHit(APBBallBase* Ball)
 	{
 		if (!Damageable->IsDead())
 		{
-			Damageable->TakeDamage(SpinDamage);
+			Damageable->TakeDamage(DamageAmount);
 			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
 			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
-				*SourcePatternName.ToString(), SpinDamage, *GetNameSafe(Ball));
+				*SourcePatternName.ToString(), DamageAmount, *GetNameSafe(Ball));
 		}
 	}
 

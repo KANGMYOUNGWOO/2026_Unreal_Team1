@@ -11,11 +11,13 @@ class USceneComponent;
 class UTexture2D;
 class USoundBase;
 class UPBUserWidget;
+class UPBBallRewardPopupWidget;
 
 UENUM()
 enum class EPBShellGameState : uint8 
 {
     Idle,
+    PreparingReward,
     ShowingBall,
     CoveringBall,
     Shuffling,
@@ -103,6 +105,10 @@ private:
     UPROPERTY(EditAnywhere, Category = "Shell Game|Shuffle")
     float ShuffleEaseExponent = 2.f;
 
+    UPROPERTY(EditAnywhere, Category = "Shell Game|Shuffle",
+        meta = (ClampMin = "0.01"))
+    float ShuffleSpeedMultiplier = 2.f;
+
     UPROPERTY(EditAnywhere, Category = "Shell Game|Sound")
     TObjectPtr<USoundBase> ShuffleSound;
 
@@ -143,7 +149,7 @@ private:
 
     UPROPERTY(EditAnywhere, Category = "Shell Game|Reward",
         meta = (ClampMin = "0"))
-    float GoldRewardBillboardScale = 0.25f;
+    float GoldRewardBillboardScale = 3.0f;
 
     UPROPERTY(EditAnywhere, Category = "Shell Game|Reward",
         meta = (ClampMin = "0"))
@@ -161,6 +167,9 @@ private:
 
     UPROPERTY(EditAnywhere, Category = "Shell Game|UI")
     TSubclassOf<UPBUserWidget> ShellGameWidgetClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Shell Game|UI")
+    TSubclassOf<UPBBallRewardPopupWidget> BallRewardPopupClass;
 
     UPROPERTY(Transient)
     TObjectPtr<UPBUserWidget> ShellGameWidget;
@@ -204,7 +213,9 @@ private:
 
     bool PrepareReward();
     void PrepareGoldReward();
-    UTexture2D* ResolveBallRewardIcon(FName BallId) const;
+    void BeginLoadingRewardAssets();
+    void HandleRewardAssetsLoaded();
+    void StartShellGameAfterRewardLoaded();
     void ApplyRewardVisual();
     bool GrantCurrentReward();
 

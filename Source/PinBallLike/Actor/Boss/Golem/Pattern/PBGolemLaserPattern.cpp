@@ -49,7 +49,11 @@ void UPBGolemLaserPattern::StartPattern_Implementation(APBBossBase* Boss)
 	}
 
 	const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
-	SpawnedLaserWall->InitializeLaserWall(LaserDirection, BounceVelocity, SourcePatternName);
+	SpawnedLaserWall->InitializeLaserWall(
+		LaserDirection,
+		BounceVelocity,
+		SourcePatternName,
+		DamageAmount);
 
 	if (LaserWallDuration <= 0.0f)
 	{
