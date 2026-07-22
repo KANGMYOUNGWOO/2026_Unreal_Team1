@@ -8,6 +8,7 @@ class APBBallBase;
 class UPBStatusEffectComponent;
 class UPBStatusEffectItemWidget;
 class UPBBallStatusViewModel;
+class UImage;
 class UPanelWidget;
 class UTexture2D;
 
@@ -42,6 +43,7 @@ private:
 	void UpsertStatusEffectItem(FName StatusEffectId, int32 StackCount);
 	void RemoveStatusEffectItem(FName StatusEffectId);
 	UTexture2D* ResolveStatusEffectIcon(FName StatusEffectId) const;
+	void RefreshBallIconState(UTexture2D* IconTexture);
 
 	UFUNCTION()
 	void HandleStatusEffectApplied(FName StatusEffectId, int32 StackCount);
@@ -57,6 +59,12 @@ private:
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UPanelWidget> StatusEffectPanel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UImage> BallIconImage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Ball|Status UI")
+	FLinearColor EmptyBallIconColor = FLinearColor(0.035f, 0.045f, 0.055f, 0.95f);
 
 	UPROPERTY(Transient)
 	TObjectPtr<APBBallBase> Ball;
