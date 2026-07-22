@@ -16,7 +16,6 @@ class UPBBallStatusWidget;
 class UPanelWidget;
 class UTextBlock;
 class UTexture2D;
-class UWidget;
 class AActor;
 enum class EPBBattleLevelPhase : uint8;
 struct FPBBattlePhaseChangedMessage;
@@ -61,9 +60,7 @@ private:
 	void RefreshDeckOverview();
 	APBBallBase* FindPartyBallForDeploymentSlot(int32 SlotIndex) const;
 	void SetBallPanel(int32 PanelIndex, APBBallBase* Ball);
-	void SetBallPanelSlotVisibility(int32 PanelIndex, bool bVisible);
 	UPBBallStatusWidget* GetBallPanel(int32 PanelIndex) const;
-	UWidget* GetBallPanelInputIndicator(int32 PanelIndex) const;
 	UTexture2D* GetBallIcon(APBBallBase* Ball) const;
 
 	UFUNCTION()
@@ -91,9 +88,6 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBBallStatusWidget>> BallPanels;
-
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UWidget>> BallPanelInputIndicators;
 
 	TArray<TWeakObjectPtr<APBBallBase>> DisplayedBalls;
 

@@ -6,6 +6,8 @@
 
 class APBBossBase;
 class UPBBossIntroViewModel;
+class UTextBlock;
+class UWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBBossIntroFinishedSignature);
 
@@ -44,25 +46,46 @@ protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual void NativeDestruct() override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Intro Animation", meta = (ClampMin = "0"))
+	float IntroHoldDurationSeconds = 1.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Intro Animation", meta = (ClampMin = "0.01"))
-	float SlideDurationSeconds = 0.5f;
+	float ApproachDurationSeconds = 0.4f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Intro Animation", meta = (ClampMin = "0.01"))
+	float ImpactReturnDurationSeconds = 0.45f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Intro Animation", meta = (ClampMin = "0.01"))
+	float FadeOutDurationSeconds = 0.35f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Intro Animation", meta = (ClampMin = "0"))
-	float IntroHoldDurationSeconds = 2.0f;
+	float PanelApproachDistance = 220.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Intro Animation")
-	float SlideStartPositionX = -1200.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Intro Animation")
-	float SlideEndPositionX = 1200.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Intro Animation", meta = (ClampMin = "0"))
+	float PanelImpactPushDistance = 40.0f;
 
 private:
 	void EnsureIntroViewModel();
 	bool ApplyViewModelToWidget();
-	float CalculateSlideAlpha(float CurrentTime) const;
+	void SetBossOnChildWidgets(APBBossBase* NewBoss);
+	void ClearBossOnChildWidgets();
+	void ResolveAnimationWidgets();
+	void ResetAnimationWidgets();
+	void UpdateApproachAnimation(float PhaseAlpha);
+	void UpdateImpactReturnAnimation(float PhaseAlpha);
+	void UpdateFadeOutAnimation(float PhaseAlpha);
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBossIntroViewModel> IntroViewModel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UWidget> BossPanelWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UWidget> BallPanelWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> VersusTextWidget;
 
 	float AnimationElapsedSeconds = 0.0f;
 	bool IsBossIntroAnimationPlaying = false;

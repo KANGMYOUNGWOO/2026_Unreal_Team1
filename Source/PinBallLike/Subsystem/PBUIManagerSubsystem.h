@@ -8,6 +8,7 @@
 class UPBUserWidget;
 class UPBGlobalToolbarWidget;
 class UWorld;
+class UPBBallRewardPopupWidget;
 
 UCLASS()
 class PINBALLLIKE_API UPBUIManagerSubsystem : public UGameInstanceSubsystem
@@ -25,6 +26,13 @@ public:
 
 	UPBSimplePopupWidget* ShowSimplePopup(
 		const FText& Message,
+		FPBSimplePopupClosedDelegate ClosedCallback = {},
+		int32 ZOrder = 100);
+
+	UPBBallRewardPopupWidget* ShowBallRewardPopup(
+		const FText& Message,
+		FName BallId,
+		int32 StarLevel,
 		FPBSimplePopupClosedDelegate ClosedCallback = {},
 		int32 ZOrder = 100);
 
@@ -71,6 +79,9 @@ private:
 
 	UPROPERTY()
 	TSubclassOf<UPBSimplePopupWidget> DefaultSimplePopupClass;
+
+	UPROPERTY()
+	TSoftClassPtr<UPBBallRewardPopupWidget> DefaultBallRewardPopupClass;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBUserWidget>> WidgetStack;

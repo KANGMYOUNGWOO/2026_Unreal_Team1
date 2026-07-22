@@ -293,7 +293,8 @@ bool UPBBallItemWidget::BuildBallDetailTooltipViewData(FPBBallDetailTooltipViewD
 	}
 
 	OutTooltipViewData.SkillNameText = SkillRow.DisplayName;
-	OutTooltipViewData.SkillDescriptionText = SkillRow.Description;
+	OutTooltipViewData.SkillDescriptionText = SkillRow.GetDescription(
+		FindMapValue(StarLevelRow.BaseStats, PBStatNames::Attack));
 	if (BallDataAsset)
 	{
 		OutTooltipViewData.SkillIconTexture = BallDataAsset->SkillIcon.LoadSynchronous();

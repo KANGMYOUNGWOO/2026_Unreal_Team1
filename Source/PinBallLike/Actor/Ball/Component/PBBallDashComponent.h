@@ -6,6 +6,7 @@
 
 class UPBBallPhysicsComponent;
 class AActor;
+class USoundBase;
 
 UCLASS(ClassGroup = (PinBall), meta = (BlueprintSpawnableComponent))
 class PINBALLLIKE_API UPBBallDashComponent : public UActorComponent
@@ -30,9 +31,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Dash", meta = (ClampMin = "0.0"))
 	float DefaultDashSpeed = 2500.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Dash")
+	TObjectPtr<USoundBase> DashSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Dash", meta = (ClampMin = "0.0"))
+	float DashSoundVolume = 3.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Dash", meta = (ClampMin = "0.0"))
+	float DashSoundStartTime = 0.0f;
+
 private:
 	AActor* FindBossTarget() const;
 	FVector ResolveDashDirectionToActor(const AActor* TargetActor) const;
+	void PlayDashSound() const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallPhysicsComponent> PhysicsComponent;

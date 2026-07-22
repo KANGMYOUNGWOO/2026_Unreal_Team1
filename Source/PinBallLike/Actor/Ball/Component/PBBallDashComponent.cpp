@@ -4,6 +4,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
+#include "PinBallLike/Subsystem/PBSoundSubsystem.h"
 
 UPBBallDashComponent::UPBBallDashComponent()
 {
@@ -15,9 +16,7 @@ void UPBBallDashComponent::InitializeDependencies(UPBBallPhysicsComponent* InPhy
 	PhysicsComponent = InPhysicsComponent;
 }
 
-bool UPBBallDashComponent::DashInDirection(
-	FVector Direction,
-	const float Speed)
+bool UPBBallDashComponent::DashInDirection(FVector Direction, const float Speed)
 {
 	if (!PhysicsComponent || Speed <= 0.0f)
 	{
@@ -32,15 +31,14 @@ bool UPBBallDashComponent::DashInDirection(
 	}
 
 	PhysicsComponent->Launch(DashDirection, Speed);
+	PlayDashSound();
 
 	return true;
 }
 
 bool UPBBallDashComponent::DashToBoss(const float Speed)
 {
-	return DashInDirection(
-		ResolveDashDirectionToActor(FindBossTarget()),
-		Speed);
+	return DashInDirection(ResolveDashDirectionToActor(FindBossTarget()), Speed);
 }
 
 bool UPBBallDashComponent::DashToBossWithDefaultSpeed()
@@ -79,4 +77,17 @@ FVector UPBBallDashComponent::ResolveDashDirectionToActor(const AActor* TargetAc
 	FVector Direction = TargetActor->GetActorLocation() - OwnerActor->GetActorLocation();
 	Direction.Z = 0.0f;
 	return Direction;
+}
+
+void UPBBallDashComponent::PlayDashSound() const
+{
+	if (!DashSound)
+	{
+		return;
+	}
+
+	if (UPBSoundSubsystem* SoundSubsystem = UPBSoundSubsystem::Get(this))
+	{
+		SoundSubsystem->PlaySFX(DashSound, DashSoundVolume, 1.0f, DashSoundStartTime);
+	}
 }

@@ -37,7 +37,7 @@ UPBSoundSubsystem* UPBSoundSubsystem::Get(const UObject* WorldContextObject)
 	return GameInstance->GetSubsystem<UPBSoundSubsystem>();
 }
 
-void UPBSoundSubsystem::PlaySFX(USoundBase* SFXToPlay, float Volume, float Pitch)
+void UPBSoundSubsystem::PlaySFX(USoundBase* SFXToPlay, float Volume, float Pitch, float StartTime)
 {
 	UWorld* World = GetWorld();
 	if (!IsValid(SFXToPlay) || !World)
@@ -47,11 +47,13 @@ void UPBSoundSubsystem::PlaySFX(USoundBase* SFXToPlay, float Volume, float Pitch
 
 	const float SafeVolume = FMath::IsFinite(Volume) ? FMath::Max(0.0f, Volume) : 1.0f;
 	const float SafePitch = FMath::IsFinite(Pitch) ? FMath::Max(0.01f, Pitch) : 1.0f;
+	const float SafeStartTime = FMath::IsFinite(StartTime) ? FMath::Max(0.0f, StartTime) : 0.0f;
 	UGameplayStatics::PlaySound2D(
 		World,
 		SFXToPlay,
 		SafeVolume * CurrentSFXVolume * MasterVolume,
-		SafePitch);
+		SafePitch,
+		SafeStartTime);
 }
 
 void UPBSoundSubsystem::PlayComboSFX(USoundBase* ComboSFX, float Volume)
@@ -169,4 +171,16 @@ void UPBSoundSubsystem::SetSFXVolume(float InVolume)
 	CurrentSFXVolume = FMath::IsFinite(InVolume)
 		? FMath::Clamp(InVolume, 0.0f, 1.0f)
 		: 1.0f;
+}
+
+void UPBSoundSubsystem::SetBGMVolume(float InVolume)
+{
+	CurrentBGMVolume = FMath::IsFinite(InVolume)
+	? FMath::Clamp(InVolume, 0.0f, 1.0f)
+	: 1.0f;
+
+	if (IsValid(CurrentBGMComponent.Get()))
+	{
+		CurrentBGMComponent->SetVolumeMultiplier(CurrentBGMVolume * MasterVolume);
+	}
 }
