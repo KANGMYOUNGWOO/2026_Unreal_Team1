@@ -4,6 +4,7 @@
 #include "TimerManager.h"
 
 class SLoadingScreenLayout;
+class UGameInstance;
 class UWorld;
 
 class FPBLoadingScreenController
@@ -31,6 +32,7 @@ private:
 	void ClearFadeTimer();
 
 	TWeakObjectPtr<UWorld> LoadingWorld;
+	TWeakObjectPtr<UGameInstance> LoadingGameInstance;
 	TSharedPtr<SLoadingScreenLayout> LoadingScreenWidget;
 	FTimerHandle FadeTimerHandle;
 	float FadeAlpha = 0.0f;
