@@ -12,12 +12,14 @@
 #include "PinBallLike/Struct/Choice/PBChoiceType.h"
 #include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBSoundSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 #include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
 #include "PinBallLike/Table/Ball/PBBallAssetIds.h"
+#include "PinBallLike/Table/PBAssetBundleNames.h"
 #include "PinBallLike/UI/PBUserWidget.h"
 
 APBShellGameActor::APBShellGameActor()
@@ -232,13 +234,18 @@ bool APBShellGameActor::PrepareReward()
         const FName CandidateBallId = CandidateBallIds[CandidateIndex];
         CandidateBallIds.RemoveAtSwap(CandidateIndex);
 
-        UTexture2D* BallIcon = ResolveBallRewardIcon(CandidateBallId);
-        if (!BallIcon)
+        FAssetData BallAssetData;
+        const FPrimaryAssetId BallAssetId(
+            PBBallAssetIds::Type::BallData,
+            CandidateBallId);
+        if (!UAssetManager::Get().GetPrimaryAssetData(
+                BallAssetId,
+                BallAssetData))
         {
             UE_LOG(
                 LogTemp,
                 Warning,
-                TEXT("[ShellGame] Ball reward has no loadable icon. BallId=%s"),
+                TEXT("[ShellGame] Ball reward asset was not found. BallId=%s"),
                 *CandidateBallId.ToString());
             continue;
         }
@@ -246,7 +253,7 @@ bool APBShellGameActor::PrepareReward()
         CurrentReward.Type = EPBShellGameRewardType::Ball;
         CurrentReward.BallId = CandidateBallId;
         CurrentReward.GoldAmount = 0;
-        CurrentRewardIcon = BallIcon;
+        CurrentRewardIcon = nullptr;
 
         UE_LOG(
             LogTemp,
@@ -259,7 +266,7 @@ bool APBShellGameActor::PrepareReward()
     UE_LOG(
         LogTemp,
         Warning,
-        TEXT("[ShellGame] No Ball reward with a valid icon. Falling back to Gold."));
+        TEXT("[ShellGame] No valid Ball reward asset. Falling back to Gold."));
     PrepareGoldReward();
     return CurrentReward.IsValid();
 }
@@ -286,27 +293,83 @@ void APBShellGameActor::PrepareGoldReward()
         CurrentReward.GoldAmount);
 }
 
-UTexture2D* APBShellGameActor::ResolveBallRewardIcon(FName BallId) const
+void APBShellGameActor::BeginLoadingRewardAssets()
 {
-    if (BallId.IsNone())
+    if (CurrentReward.Type != EPBShellGameRewardType::Ball)
     {
-        return nullptr;
+        StartShellGameAfterRewardLoaded();
+        return;
     }
 
-    FAssetData BallAssetData;
+    UGameInstance* GameInstance = GetGameInstance();
+    UPBGameDataLoadSubsystem* GameDataLoadSubsystem = GameInstance
+        ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>()
+        : nullptr;
+    if (!GameDataLoadSubsystem)
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[ShellGame] Game data load subsystem was not found. Falling back to Gold."));
+        PrepareGoldReward();
+        StartShellGameAfterRewardLoaded();
+        return;
+    }
+
+    CurrentState = EPBShellGameState::PreparingReward;
+
     const FPrimaryAssetId BallAssetId(
         PBBallAssetIds::Type::BallData,
-        BallId);
-    if (!UAssetManager::Get().GetPrimaryAssetData(BallAssetId, BallAssetData))
+        CurrentReward.BallId);
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[ShellGame] Loading reward assets. BallId=%s"),
+        *CurrentReward.BallId.ToString());
+
+    GameDataLoadSubsystem->LoadPrimaryAssetsByIdsAsync(
+        { BallAssetId },
+        { PBAssetBundleNames::UI },
+        FStreamableDelegate::CreateUObject(
+            this,
+            &APBShellGameActor::HandleRewardAssetsLoaded));
+}
+
+void APBShellGameActor::HandleRewardAssetsLoaded()
+{
+    if (CurrentState != EPBShellGameState::PreparingReward)
     {
-        return nullptr;
+        return;
     }
 
-    const UPBBallDataAsset* BallDataAsset =
-        Cast<UPBBallDataAsset>(BallAssetData.GetAsset());
-    return BallDataAsset
-        ? BallDataAsset->BallSprite.LoadSynchronous()
+    UGameInstance* GameInstance = GetGameInstance();
+    UPBGameDataLoadSubsystem* GameDataLoadSubsystem = GameInstance
+        ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>()
         : nullptr;
+    const FPrimaryAssetId BallAssetId(
+        PBBallAssetIds::Type::BallData,
+        CurrentReward.BallId);
+    const UPBBallDataAsset* BallDataAsset =
+        GameDataLoadSubsystem
+            ? Cast<UPBBallDataAsset>(
+                GameDataLoadSubsystem->GetLoadedPrimaryAsset(BallAssetId))
+            : nullptr;
+
+    CurrentRewardIcon = BallDataAsset
+        ? BallDataAsset->BallSprite.Get()
+        : nullptr;
+
+    if (!CurrentRewardIcon)
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[ShellGame] Ball reward sprite load failed. Falling back to Gold. BallId=%s"),
+            *CurrentReward.BallId.ToString());
+        PrepareGoldReward();
+    }
+
+    StartShellGameAfterRewardLoaded();
 }
 
 void APBShellGameActor::ApplyRewardVisual()
@@ -442,6 +505,17 @@ void APBShellGameActor::StartShellGame()
         return;
     }
 
+    BeginLoadingRewardAssets();
+}
+
+void APBShellGameActor::StartShellGameAfterRewardLoaded()
+{
+    if (CurrentState != EPBShellGameState::PreparingReward &&
+        CurrentState != EPBShellGameState::Idle)
+    {
+        return;
+    }
+
     ApplyRewardVisual();
 
     BuildShuffleCommands();
@@ -466,6 +540,7 @@ void APBShellGameActor::StartShellGame()
     APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
     if (!PC)
     {
+        CurrentState = EPBShellGameState::Finished;
         return;	
     }
     
@@ -707,7 +782,9 @@ void APBShellGameActor::BeginShuffleCommand(
 
     CurrentShuffleElapsed = 0.f;
     CurrentShuffleDuration =
-        FMath::Max(Command.Duration, KINDA_SMALL_NUMBER);
+        FMath::Max(
+            Command.Duration / FMath::Max(ShuffleSpeedMultiplier, 0.01f),
+            KINDA_SMALL_NUMBER);
 
     if (UPBSoundSubsystem* SoundSubsystem = UPBSoundSubsystem::Get(this))
     {
@@ -1132,6 +1209,7 @@ void APBShellGameActor::ShowRewardPopup()
         CurrentReward.Type == EPBShellGameRewardType::Ball)
     {
         if (UIManagerSubsystem->ShowBallRewardPopup(
+            BallRewardPopupClass,
             BuildRewardPopupMessage(),
             CurrentReward.BallId,
             1,

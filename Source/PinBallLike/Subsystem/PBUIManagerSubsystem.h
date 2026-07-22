@@ -32,6 +32,7 @@ public:
 		int32 ZOrder = 100);
 
 	UPBBallRewardPopupWidget* ShowBallRewardPopup(
+		TSubclassOf<UPBBallRewardPopupWidget> PopupClass,
 		const FText& Message,
 		FName BallId,
 		int32 StarLevel,
@@ -87,9 +88,6 @@ private:
 
 	UPROPERTY()
 	TSubclassOf<UPBSimplePopupWidget> DefaultSimplePopupClass;
-
-	UPROPERTY()
-	TSoftClassPtr<UPBBallRewardPopupWidget> DefaultBallRewardPopupClass;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBUserWidget>> WidgetStack;
