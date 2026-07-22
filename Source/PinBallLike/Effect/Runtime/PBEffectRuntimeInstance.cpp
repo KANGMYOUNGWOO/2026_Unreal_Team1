@@ -201,7 +201,7 @@ void UPBComboStatBuffEffectRuntimeInstance::Setup(
 	RequiredCombo = InRequiredCombo;
 }
 
-void UPBComboStatBuffEffectRuntimeInstance::HandleComboChanged(const int32 CurrentCombo, const int32)
+void UPBComboStatBuffEffectRuntimeInstance::HandleComboChanged(const int32 CurrentCombo)
 {
 	if (!bApplied && RequiredCombo > 0 && CurrentCombo >= RequiredCombo)
 	{
@@ -220,7 +220,7 @@ void UPBComboPeriodStatBuffEffectRuntimeInstance::Setup(FName InStatName, FName 
 	RequiredCombo = InRequiredCombo;
 }
 
-void UPBComboPeriodStatBuffEffectRuntimeInstance::HandleComboChanged(int32 CurrentCombo, int32 MaxCombo)
+void UPBComboPeriodStatBuffEffectRuntimeInstance::HandleComboChanged(int32 CurrentCombo)
 {
 	if (RequiredCombo <= 0)
 	{
@@ -305,7 +305,7 @@ void UPBComboExtraDamageEffectRuntimeInstance::Setup(const int32 InComboInterval
 	DamageAmount = FMath::Max(0, InDamageAmount);
 }
 
-void UPBComboExtraDamageEffectRuntimeInstance::HandleComboChanged(const int32 CurrentCombo, const int32)
+void UPBComboExtraDamageEffectRuntimeInstance::HandleComboChanged(const int32 CurrentCombo)
 {
 	if (ComboInterval <= 0
 		|| DamageAmount <= 0

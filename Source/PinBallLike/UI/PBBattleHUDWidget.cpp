@@ -2,6 +2,7 @@
 
 #include "Components/Image.h"
 #include "Components/PanelWidget.h"
+#include "Components/TextBlock.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -29,11 +30,11 @@ void UPBBattleHUDWidget::NativeConstruct()
 	BindDeckEvents();
 	EnsureDeckOverviewWidget();
 	RegisterBattleMessageListeners();
+	BindComboEvents();
 	ScheduleRefreshBallPanels();
 	RefreshDeckOverview();
+	RefreshComboText();
 
-	const UWorld* World = GetWorld();
-	const APBBattleGameState* BattleGameState = World ? World->GetGameState<APBBattleGameState>() : nullptr;
 	if (BattleGameState)
 	{
 		const EPBBattleLevelPhase CurrentPhase = BattleGameState->GetBattleLevelPhase();
@@ -50,8 +51,14 @@ void UPBBattleHUDWidget::NativeDestruct()
 		LoadingScreenController.Reset();
 	}
 	UnregisterBattleMessageListeners();
+	UnbindComboEvents();
 	UnbindDeckEvents();
 	UnbindDisplayedBallEvents();
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ComboBindRetryTimerHandle);
+	}
 
 	for (UPBBallStatusWidget* BallPanel : BallPanels)
 	{
@@ -302,6 +309,80 @@ void UPBBattleHUDWidget::UnregisterBattleMessageListeners()
 	}
 }
 
+void UPBBattleHUDWidget::CacheBattleGameState()
+{
+	if (IsValid(BattleGameState))
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	BattleGameState = World ? World->GetGameState<APBBattleGameState>() : nullptr;
+}
+
+void UPBBattleHUDWidget::BindComboEvents()
+{
+	if (bComboEventsBound)
+	{
+		return;
+	}
+
+	CacheBattleGameState();
+	if (!BattleGameState)
+	{
+		ScheduleBindComboEvents();
+		return;
+	}
+
+	BattleGameState->OnBattleComboChanged.AddUniqueDynamic(this, &UPBBattleHUDWidget::HandleBattleComboChanged);
+	bComboEventsBound = true;
+	RefreshComboText();
+}
+
+void UPBBattleHUDWidget::UnbindComboEvents()
+{
+	if (!bComboEventsBound || !BattleGameState)
+	{
+		return;
+	}
+
+	BattleGameState->OnBattleComboChanged.RemoveDynamic(this, &UPBBattleHUDWidget::HandleBattleComboChanged);
+	bComboEventsBound = false;
+	BattleGameState = nullptr;
+}
+
+void UPBBattleHUDWidget::ScheduleBindComboEvents()
+{
+	if (UWorld* World = GetWorld())
+	{
+		ComboBindRetryTimerHandle = World->GetTimerManager().SetTimerForNextTick(
+			FTimerDelegate::CreateUObject(this, &UPBBattleHUDWidget::BindComboEvents));
+	}
+}
+
+void UPBBattleHUDWidget::RefreshComboText()
+{
+	if (!Text_Combo)
+	{
+		return;
+	}
+
+	CacheBattleGameState();
+	const int32 CurrentCombo = BattleGameState ? BattleGameState->GetCombo() : 0;
+	ApplyComboText(CurrentCombo);
+}
+
+void UPBBattleHUDWidget::ApplyComboText(const int32 CurrentCombo)
+{
+	if (!Text_Combo)
+	{
+		return;
+	}
+
+	Text_Combo->SetVisibility(CurrentCombo > 0 ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	Text_Combo->SetText(FText::Format(FText::FromString(TEXT("Combo {0}")), CurrentCombo));
+}
+
 void UPBBattleHUDWidget::ScheduleRefreshBallPanels()
 {
 	if (UWorld* World = GetWorld())
@@ -395,6 +476,11 @@ void UPBBattleHUDWidget::HandleDisplayedBallDestroyed(AActor* DestroyedActor)
 {
 	(void)DestroyedActor;
 	ScheduleRefreshBallPanels();
+}
+
+void UPBBattleHUDWidget::HandleBattleComboChanged(const int32 CurrentCombo)
+{
+	ApplyComboText(CurrentCombo);
 }
 
 void UPBBattleHUDWidget::HandleBattlePhaseChangedMessage(
