@@ -51,6 +51,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Sound|Volume")
 	void SetSFXVolume(float InVolume);
 
+	UFUNCTION(BlueprintPure, Category = "Sound|Volume")
+	float GetBGMVolume() const { return CurrentBGMVolume; }
+
+	UFUNCTION(BlueprintCallable, Category = "Sound|Volume")
+	void SetBGMVolume(float InVolume);
+	
+
 private:
 	float MinPitch = 1.0f;
 	float MaxPitch = 4.0f;
