@@ -84,6 +84,7 @@ void UPBOctopusTentacleSlamPattern::ExecutePattern_Implementation(APBBossBase* B
 	IsDamageWindowActive = false;
 	TentacleMesh->OnComponentHit.AddUniqueDynamic(this, &UPBOctopusTentacleSlamPattern::HandleTentacleHit);
 	ActiveTentacle->OnTentacleDestroyed.AddUniqueDynamic(this, &UPBOctopusTentacleSlamPattern::HandleTentacleDestroyed);
+	PlayPatternSFX(Boss);
 	ActiveTentacle->StartSlam(SlamDirection, SlamDuration);
 
 	FTimerManager& TimerManager = Boss->GetWorldTimerManager();

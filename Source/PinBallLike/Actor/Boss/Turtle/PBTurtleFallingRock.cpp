@@ -7,6 +7,7 @@
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Interface/Damageable.h"
 #include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Subsystem/PBSoundSubsystem.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -59,6 +60,11 @@ void APBTurtleFallingRock::SetSourcePatternName(const FName NewSourcePatternName
 	SourcePatternName = NewSourcePatternName;
 }
 
+void APBTurtleFallingRock::SetHitSFX(USoundBase* NewHitSFX)
+{
+	HitSFX = NewHitSFX;
+}
+
 void APBTurtleFallingRock::HandleRockHit(
 	UPrimitiveComponent* HitComponent,
 	AActor* OtherActor,
@@ -109,6 +115,11 @@ void APBTurtleFallingRock::HandleRockHit(
 			Hit.ImpactPoint,
 			FRotator::ZeroRotator,
 			GetActorScale3D());
+
+		if (UPBSoundSubsystem* SoundSubsystem = UPBSoundSubsystem::Get(this))
+		{
+			SoundSubsystem->PlaySFX(HitSFX);
+		}
 	}
 
 	Destroy();

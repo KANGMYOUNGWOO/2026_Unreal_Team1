@@ -84,7 +84,6 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UNiagaraComponent> SpinEffectComponent;
 
-	TSet<TObjectKey<APBBallBase>> DamagedBalls;
 	FTimerHandle SpinStartTimerHandle;
 	FTimerHandle SpinUpdateTimerHandle;
 	FTimerHandle SpinStopTimerHandle;

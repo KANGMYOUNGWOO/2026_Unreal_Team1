@@ -6,6 +6,7 @@
 #include "PinBallLike/Actor/Boss/Component/PBBossPatternComponent.h"
 #include "PinBallLike/Actor/Boss/Pattern/PBBossPatternTelegraph.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
+#include "PinBallLike/Subsystem/PBSoundSubsystem.h"
 
 void UPBBossPatternBase::InitializePattern(UPBBossPatternComponent* NewOwnerPatternComponent)
 {
@@ -25,7 +26,7 @@ void UPBBossPatternBase::StartPattern_Implementation(APBBossBase* Boss)
 		return;
 	}
 
-	OwnerBoss = Boss;
+	SetOwnerBoss(Boss);
 	SpawnTelegraph(Boss);
 
 	const float TelegraphDurationSeconds = GetMaxTelegraphDurationSeconds();
@@ -131,6 +132,17 @@ AActor* UPBBossPatternBase::FindPinballActor(APBBossBase* Boss) const
 	}
 
 	return UGameplayStatics::GetActorOfClass(World, APBBallBase::StaticClass());
+}
+
+void UPBBossPatternBase::PlayPatternSFX(const UObject* WorldContextObject) const
+{
+	UPBSoundSubsystem* SoundSubsystem = UPBSoundSubsystem::Get(WorldContextObject);
+	if (!IsValid(LoopingSFX) || !SoundSubsystem)
+	{
+		return;
+	}
+
+	SoundSubsystem->PlaySFX(LoopingSFX);
 }
 
 void UPBBossPatternBase::StartExecutePattern()

@@ -123,7 +123,6 @@ void UPBBossTurtleSpinPattern::StopSpin()
 	}
 
 	DestroySpinHitCollision();
-
 	if (SpinEffectComponent)
 	{
 		SpinEffectComponent->Deactivate();
@@ -202,7 +201,6 @@ void UPBBossTurtleSpinPattern::DestroySpinHitCollision()
 		SpinHitCollision = nullptr;
 	}
 
-	DamagedBalls.Reset();
 }
 
 void UPBBossTurtleSpinPattern::HandleSpinBeginOverlap(
@@ -223,13 +221,6 @@ void UPBBossTurtleSpinPattern::ApplySpinHit(APBBallBase* Ball)
 		return;
 	}
 
-	const TObjectKey<APBBallBase> BallKey(Ball);
-	if (DamagedBalls.Contains(BallKey))
-	{
-		return;
-	}
-
-	DamagedBalls.Add(BallKey);
 	if (IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball))
 	{
 		if (!Damageable->IsDead())

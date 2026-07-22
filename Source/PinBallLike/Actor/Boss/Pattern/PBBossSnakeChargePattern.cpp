@@ -351,6 +351,7 @@ void UPBBossSnakeChargePattern::FinishCharge()
 
 	Boss->GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
 	DestroyChargeHitCollision();
+	PlayPatternSFX(Boss);
 	StartReturn();
 }
 
@@ -559,5 +560,10 @@ void UPBBossSnakeChargePattern::ApplyChargeHit(APBBallBase* Ball)
 		{
 			Movable->AddVelocity(BounceDirection * ChargeBounceVelocity);
 		}
+	}
+
+	if (ChargePatternState == EPBBossSnakeChargePatternState::Charging)
+	{
+		FinishCharge();
 	}
 }

@@ -41,6 +41,9 @@ protected:
 	float ZoneEffectScale = 1.0f;
 
 private:
+	UFUNCTION()
+	void HandleBallBound(APBBossBase* Boss);
+
 	APBBossMoveArea* FindNearestMoveArea(const APBBossBase* Boss) const;
 	FVector SelectZoneLocation(const APBBossMoveArea* MoveArea) const;
 };

@@ -71,6 +71,8 @@ void UPBOctopusInkPattern::StartInk()
 		return;
 	}
 
+	PlayPatternSFX(Boss);
+
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(Boss, 0);
 	if (!PlayerController)
 	{

@@ -138,6 +138,7 @@ void UPBGolemHandSlamPattern::HandleHandMoveFinished()
 	case EPBGolemHandSlamPhase::Slamming:
 		DrawDebugSlamRange(DebugSlamRangeDuration);
 		ApplySlamDamage();
+		PlayPatternSFX(GolemBoss);
 		SpawnSlamEffect();
 		SlamPhase = EPBGolemHandSlamPhase::Holding;
 		if (SlamHoldDuration <= 0.0f)

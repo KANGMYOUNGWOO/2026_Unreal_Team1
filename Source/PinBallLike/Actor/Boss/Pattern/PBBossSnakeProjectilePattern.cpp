@@ -120,6 +120,7 @@ void UPBBossSnakeProjectilePattern::FireProjectile()
 		Projectile->SetProjectileSpeed(ProjectileSpeed);
 		Projectile->SetSourcePatternName(PatternName.IsNone() ? GetClass()->GetFName() : PatternName);
 		Projectile->FinishSpawning(FTransform(SpawnRotation, SpawnLocation));
+		PlayPatternSFX(Boss);
 	}
 
 	++FiredProjectileCount;

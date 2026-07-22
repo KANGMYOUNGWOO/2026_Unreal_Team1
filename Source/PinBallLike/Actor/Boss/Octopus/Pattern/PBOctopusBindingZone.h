@@ -5,8 +5,11 @@
 #include "PBOctopusBindingZone.generated.h"
 
 class APBBallBase;
+class APBBossBase;
 class UNiagaraComponent;
 class USphereComponent;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPBOctopusBallBoundSignature, APBBossBase*, Boss);
 
 UCLASS(Blueprintable)
 class PINBALLLIKE_API APBOctopusBindingZone : public AActor
@@ -22,6 +25,9 @@ public:
 		float NewBindDuration,
 		int32 NewBindDamage,
 		float NewEffectScale);
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Octopus Pattern|Binding")
+	FPBOctopusBallBoundSignature OnBallBound;
 
 protected:
 	virtual void BeginPlay() override;

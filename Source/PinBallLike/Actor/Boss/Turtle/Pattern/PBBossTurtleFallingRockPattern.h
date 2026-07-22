@@ -5,6 +5,7 @@
 #include "PBBossTurtleFallingRockPattern.generated.h"
 
 class APBTurtleFallingRock;
+class USoundBase;
 
 UCLASS(Blueprintable)
 class PINBALLLIKE_API UPBBossTurtleFallingRockPattern : public UPBBossPatternBase
@@ -26,4 +27,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Falling Rock", meta = (ClampMin = "0.0"))
 	float SpawnHeight = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Falling Rock|Sound")
+	TObjectPtr<USoundBase> RockHitSFX;
 };
