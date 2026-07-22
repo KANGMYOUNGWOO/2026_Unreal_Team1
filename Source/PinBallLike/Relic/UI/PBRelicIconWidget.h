@@ -2,10 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "PinBallLike/Struct/Relic/PBRelicViewData.h"
 #include "PBRelicIconWidget.generated.h"
 
-class UImage;
 class UPBRelicTooltipWidget;
+class UPBRelicViewModel;
 
 UCLASS()
 class PINBALLLIKE_API UPBRelicIconWidget : public UUserWidget
@@ -13,17 +14,25 @@ class PINBALLLIKE_API UPBRelicIconWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	virtual void NativeOnInitialized() override;
+
 	void SetRelicId(FName InRelicId);
+	void SetRelicViewData(const FPBRelicViewData& InViewData);
 
 private:
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UImage> RelicIcon;
+	FPBRelicViewData BuildRelicViewData(FName InRelicId) const;
+	void RebuildRelicTooltip();
+	void EnsureRelicViewModel();
+	bool ApplyViewModelToWidget();
 
 	UPROPERTY(EditAnywhere, Category = "Relic|UI")
 	TSubclassOf<UPBRelicTooltipWidget> RelicTooltipWidgetClass;
 	
 	UPROPERTY()
-	FName RelicId = NAME_None;
+	FPBRelicViewData ViewData;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBRelicViewModel> RelicViewModel;
 	
 protected:
 	virtual void NativeOnMouseEnter(
