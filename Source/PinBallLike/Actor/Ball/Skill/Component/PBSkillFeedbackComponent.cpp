@@ -13,7 +13,7 @@ UPBSkillFeedbackComponent::UPBSkillFeedbackComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 
 	static ConstructorHelpers::FObjectFinder<USoundBase> CastSoundAsset(
-		TEXT("/Game/Resources/Sound/SFX/Battle/S_SkillReady.S_SkillReady"));
+		TEXT("/Game/Resources/Sound/SFX/Battle/S_AttackCast.S_AttackCast"));
 	if (CastSoundAsset.Succeeded())
 	{
 		CastFeedback.Sound = CastSoundAsset.Object;

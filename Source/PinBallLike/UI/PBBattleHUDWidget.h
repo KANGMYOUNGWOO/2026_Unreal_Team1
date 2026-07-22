@@ -56,7 +56,7 @@ private:
 	void ScheduleBindComboEvents();
 	void RefreshComboText();
 	void ApplyComboText(int32 CurrentCombo);
-	void ScheduleRefreshBallPanels();
+	void ScheduleRefreshBallPanels(bool bResetRetryCount = false);
 	void RefreshDeckOverview();
 	APBBallBase* FindPartyBallForDeploymentSlot(int32 SlotIndex) const;
 	void SetBallPanel(int32 PanelIndex, APBBallBase* Ball);
@@ -104,7 +104,11 @@ private:
 	TUniquePtr<FPBLoadingScreenController> LoadingScreenController;
 
 	FTimerHandle ComboBindRetryTimerHandle;
+	FTimerHandle BallPanelRefreshRetryTimerHandle;
+	int32 BallPanelRefreshRetryCount = 0;
 
 	bool bDeckEventsBound = false;
 	bool bComboEventsBound = false;
+
+	static constexpr int32 MaxBallPanelRefreshRetryCount = 30;
 };
