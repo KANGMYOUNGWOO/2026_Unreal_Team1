@@ -29,8 +29,17 @@ void UPBBettingWidget::NativeConstruct()
 		WinnerImage->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
+	if (EarnedGoldText)
+	{
+		EarnedGoldText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
 	SetNationButtonsEnabled(false);
 	SetBetGoldButtonsEnabled(false);
+	if (ExitButton)
+	{
+		ExitButton->SetIsEnabled(false);
+	}
 
 	if (NationButton1)
 	{
@@ -65,6 +74,13 @@ void UPBBettingWidget::NativeConstruct()
 		BetGoldButton100->OnClicked.AddUniqueDynamic(
 			this,
 			&UPBBettingWidget::OnBetGoldButton100Clicked);
+	}
+
+	if (ExitButton)
+	{
+		ExitButton->OnClicked.AddUniqueDynamic(
+			this,
+			&UPBBettingWidget::OnExitButtonClicked);
 	}
 
 	IntroAnimationFinishedEvent.BindDynamic(
@@ -191,6 +207,7 @@ void UPBBettingWidget::NativeTick(
 	Super::NativeTick(MyGeometry, InDeltaTime);
 	UpdateOverBetGoldMessage(InDeltaTime);
 	UpdateBetGoldControlsFadeIn(InDeltaTime);
+	SyncEarnedGoldTextAppearance();
 }
 
 void UPBBettingWidget::OnNationButton1Clicked()
@@ -234,6 +251,18 @@ void UPBBettingWidget::OnBetGoldButton100Clicked()
 	AddBetGold(100);
 }
 
+void UPBBettingWidget::OnExitButtonClicked()
+{
+	SetNationButtonsEnabled(false);
+	SetBetGoldButtonsEnabled(false);
+	if (ExitButton)
+	{
+		ExitButton->SetIsEnabled(false);
+	}
+
+	OnBetExitRequested.Broadcast();
+}
+
 void UPBBettingWidget::OnProgressAnimationFinished()
 {
 	if (CachedResult.WinnerIndex == 0)
@@ -275,6 +304,10 @@ void UPBBettingWidget::PlayIntroAnimation()
 void UPBBettingWidget::OnIntroAnimationFinished()
 {
 	SetBetGoldButtonsEnabled(true);
+	if (ExitButton)
+	{
+		ExitButton->SetIsEnabled(true);
+	}
 	StartBetGoldControlsFadeIn();
 }
 
@@ -305,6 +338,7 @@ void UPBBettingWidget::SetAvailableGold(int32 NewAvailableGold)
 void UPBBettingWidget::OnWinnerAnimationFinished()
 {
 	ShowWinnerImage();
+	ShowEarnedGoldText();
 
 	/*
 	 * 왼쪽/오른쪽 승리 표시가 끝난 뒤
@@ -340,6 +374,44 @@ void UPBBettingWidget::ShowWinnerImage()
 	WinnerImage->SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
+void UPBBettingWidget::ShowEarnedGoldText()
+{
+	if (!EarnedGoldText)
+	{
+		return;
+	}
+
+	EarnedGoldText->SetText(
+		FText::Format(
+			IsPlayerWon
+				? NSLOCTEXT("PBBetting", "EarnedGoldWin", "+{0} Gold")
+				: NSLOCTEXT("PBBetting", "EarnedGoldLose", "-{0} Gold"),
+			FText::AsNumber(TotalBetGold)));
+
+	IsEarnedGoldTextActive = true;
+	EarnedGoldText->SetVisibility(ESlateVisibility::HitTestInvisible);
+	SyncEarnedGoldTextAppearance();
+}
+
+void UPBBettingWidget::SyncEarnedGoldTextAppearance()
+{
+	if (!IsEarnedGoldTextActive || !EarnedGoldText)
+	{
+		return;
+	}
+
+	if (!ResultText)
+	{
+		EarnedGoldText->SetRenderOpacity(1.0f);
+		return;
+	}
+
+	EarnedGoldText->SetRenderOpacity(
+		ResultText->GetRenderOpacity());
+	EarnedGoldText->SetVisibility(
+		ResultText->GetVisibility());
+}
+
 void UPBBettingWidget::OnFinalResultAnimationFinished()
 {
 	UWorld* World = GetWorld();
@@ -359,6 +431,12 @@ void UPBBettingWidget::OnFinalResultAnimationFinished()
 
 void UPBBettingWidget::FinishResultDisplay()
 {
+	IsEarnedGoldTextActive = false;
+	if (EarnedGoldText)
+	{
+		EarnedGoldText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
 	OnBetResultAnimationsFinished.Broadcast();
 }
 
@@ -474,6 +552,11 @@ void UPBBettingWidget::SetBetGoldControlsVisibility(
 		BetGoldButton100->SetVisibility(NewVisibility);
 	}
 
+	if (ExitButton)
+	{
+		ExitButton->SetVisibility(NewVisibility);
+	}
+
 	if (TotalBetGoldText)
 	{
 		TotalBetGoldText->SetVisibility(NewVisibility);
@@ -537,6 +620,11 @@ void UPBBettingWidget::SetBetGoldControlsOpacity(float Opacity)
 	if (BetGoldButton100)
 	{
 		BetGoldButton100->SetRenderOpacity(Opacity);
+	}
+
+	if (ExitButton)
+	{
+		ExitButton->SetRenderOpacity(Opacity);
 	}
 
 	if (TotalBetGoldText)

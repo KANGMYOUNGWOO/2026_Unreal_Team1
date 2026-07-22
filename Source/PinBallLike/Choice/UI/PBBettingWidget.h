@@ -21,6 +21,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(
 	FOnBetResultAnimationsFinished);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(
+	FOnBetExitRequested);
+
 UCLASS()
 class PINBALLLIKE_API UPBBettingWidget : public UUserWidget
 {
@@ -33,6 +36,9 @@ public:
 	// 결과 연출이 전부 끝났음을 Actor에 알림
 	UPROPERTY(BlueprintAssignable, Category = "Bet")
 	FOnBetResultAnimationsFinished OnBetResultAnimationsFinished;
+
+	UPROPERTY(BlueprintAssignable, Category = "Bet")
+	FOnBetExitRequested OnBetExitRequested;
 
 	void PlayIntroAnimation();
 
@@ -61,10 +67,19 @@ private:
 	TObjectPtr<UButton> BetGoldButton100;
 
 	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ExitButton;
+
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> TotalBetGoldText;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> CurrentGoldText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> ResultText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> EarnedGoldText;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> OverBetGoldText;
@@ -118,6 +133,9 @@ private:
 	void OnBetGoldButton100Clicked();
 
 	UFUNCTION()
+	void OnExitButtonClicked();
+
+	UFUNCTION()
 	void OnProgressAnimationFinished();
 
 	UFUNCTION()
@@ -137,6 +155,8 @@ private:
 	void PlayOverBetGoldMessage();
 	void UpdateOverBetGoldMessage(float DeltaTime);
 	void ShowWinnerImage();
+	void ShowEarnedGoldText();
+	void SyncEarnedGoldTextAppearance();
 	void StartBetGoldControlsFadeIn();
 	void UpdateBetGoldControlsFadeIn(float DeltaTime);
 	void SetBetGoldControlsOpacity(float Opacity);
@@ -147,6 +167,7 @@ private:
 	bool IsPlayerWon = false;
 	bool IsOverBetGoldMessagePlaying = false;
 	bool IsBetGoldControlsFadingIn = false;
+	bool IsEarnedGoldTextActive = false;
 	int32 TotalBetGold = 0;
 	int32 AvailableGold = 0;
 	float OverBetGoldMessageElapsedTime = 0.0f;

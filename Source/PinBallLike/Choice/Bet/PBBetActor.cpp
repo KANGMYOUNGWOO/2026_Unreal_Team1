@@ -87,6 +87,10 @@ void APBBetActor::BindWidget(UPBBettingWidget* InWidget)
 	BettingWidget->OnBetResultAnimationsFinished.AddUniqueDynamic(
 		this,
 		&APBBetActor::HandleBetResultAnimationsFinished);
+
+	BettingWidget->OnBetExitRequested.AddUniqueDynamic(
+		this,
+		&APBBetActor::HandleExitRequested);
 }
 
 void APBBetActor::HandleBetSelected(int32 SelectedIndex, int32 BetGold)
@@ -181,6 +185,11 @@ APBBetActor::APBBetActor()
 }
 
 void APBBetActor::HandleBetResultAnimationsFinished()
+{
+	FinishBet();
+}
+
+void APBBetActor::HandleExitRequested()
 {
 	FinishBet();
 }

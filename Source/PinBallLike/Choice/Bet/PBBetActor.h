@@ -49,6 +49,9 @@ private:
 	UFUNCTION()
 	void HandleBetSelected(int32 SelectedIndex, int32 BetGold);
 
+	UFUNCTION()
+	void HandleExitRequested();
+
 	FPBBettingResult ResolveBet(int32 SelectedIndex);
 	void ApplyBetGoldResult(bool IsWin, int32 BetGold);
 
