@@ -13,6 +13,8 @@ class UPBBallDeckSubsystem;
 class UPBBallStatusWidget;
 class UPanelWidget;
 class UTexture2D;
+class UWidget;
+class AActor;
 enum class EPBBattleLevelPhase : uint8;
 struct FPBBattlePhaseChangedMessage;
 
@@ -36,6 +38,7 @@ private:
 	static constexpr int32 MaxBallPanelCount = 3;
 
 	void CacheBallPanels();
+	void UnbindDisplayedBallEvents();
 	void CacheDeckSubsystem();
 	void CachePartyController();
 	void BindDeckEvents();
@@ -48,7 +51,9 @@ private:
 	void ScheduleRefreshBallPanels();
 	void RefreshDeckOverview();
 	void SetBallPanel(int32 PanelIndex, APBBallBase* Ball);
+	void SetBallPanelSlotVisibility(int32 PanelIndex, bool bVisible);
 	UPBBallStatusWidget* GetBallPanel(int32 PanelIndex) const;
+	UWidget* GetBallPanelInputIndicator(int32 PanelIndex) const;
 	UTexture2D* GetBallIcon(APBBallBase* Ball) const;
 
 	UFUNCTION()
@@ -56,6 +61,9 @@ private:
 
 	UFUNCTION()
 	void HandleDeploymentChanged();
+
+	UFUNCTION()
+	void HandleDisplayedBallDestroyed(AActor* DestroyedActor);
 
 	void HandleBattlePhaseChangedMessage(FGameplayTag Channel, const FPBBattlePhaseChangedMessage& Message);
 
@@ -67,6 +75,11 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBBallStatusWidget>> BallPanels;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UWidget>> BallPanelInputIndicators;
+
+	TArray<TWeakObjectPtr<APBBallBase>> DisplayedBalls;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallDeckSubsystem> DeckSubsystem;
