@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include  "PinBallLike/Choice/UI/PBBettingWidget.h"
 #include  "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 
 void APBBetActor::OpenAbility()
 {
@@ -36,6 +37,17 @@ void APBBetActor::OpenAbility()
 	PC->bEnableMouseOverEvents = true;
 	
 	BindWidget(BetWidget);
+
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UPBPlayerDataSubsystem* PlayerDataSubsystem =
+			GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
+		{
+			BetWidget->SetAvailableGold(
+				PlayerDataSubsystem->GetCurrentGold());
+		}
+	}
+
 	BetWidget->PlayIntroAnimation();
 }
 
@@ -77,10 +89,11 @@ void APBBetActor::BindWidget(UPBBettingWidget* InWidget)
 		&APBBetActor::HandleBetResultAnimationsFinished);
 }
 
-void APBBetActor::HandleBetSelected(int32 SelectedIndex)
+void APBBetActor::HandleBetSelected(int32 SelectedIndex, int32 BetGold)
 {
 	const FPBBettingResult Result =
 		ResolveBet(SelectedIndex);
+	ApplyBetGoldResult(Result.bWin, BetGold);
 
 	UE_LOG(
 		LogTemp,
@@ -113,6 +126,35 @@ FPBBettingResult APBBetActor::ResolveBet(int32 SelectedIndex)
 		Result.SelectedIndex == Result.WinnerIndex;
 
 	return Result;
+}
+
+void APBBetActor::ApplyBetGoldResult(bool IsWin, int32 BetGold)
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	UPBPlayerDataSubsystem* PlayerDataSubsystem =
+		GameInstance->GetSubsystem<UPBPlayerDataSubsystem>();
+	if (!PlayerDataSubsystem)
+	{
+		return;
+	}
+
+	const int32 EarnedGold = IsWin ? BetGold : -BetGold;
+	const int32 CurrentGold = PlayerDataSubsystem->GetCurrentGold();
+
+	PlayerDataSubsystem->GainGold(EarnedGold);
+
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("[Bet] CurrentGold=%d EarnedGold=%d GoldAfter=%d"),
+		CurrentGold,
+		EarnedGold,
+		PlayerDataSubsystem->GetCurrentGold());
 }
 
 void APBBetActor::FinishBet()

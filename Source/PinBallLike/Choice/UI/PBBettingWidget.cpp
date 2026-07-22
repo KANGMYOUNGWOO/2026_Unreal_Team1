@@ -2,10 +2,35 @@
 #include  "PinBallLike/Struct/Choice/PBBettingResult.h"
 #include "Animation/WidgetAnimation.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
+#include "Components/TextBlock.h"
 
 void UPBBettingWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	TotalBetGold = 0;
+	RefreshTotalBetGoldText();
+	SetBetGoldControlsOpacity(0.0f);
+
+	if (OverBetGoldText)
+	{
+		OverBetGoldText->SetText(
+			NSLOCTEXT(
+				"PBBetting",
+				"OverBetGold",
+				"보유 골드를 초과하여 배팅할 수 없습니다."));
+		OverBetGoldText->SetRenderOpacity(0.0f);
+		OverBetGoldText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	if (WinnerImage)
+	{
+		WinnerImage->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	SetNationButtonsEnabled(false);
+	SetBetGoldButtonsEnabled(false);
 
 	if (NationButton1)
 	{
@@ -19,6 +44,38 @@ void UPBBettingWidget::NativeConstruct()
 		NationButton2->OnClicked.AddUniqueDynamic(
 			this,
 			&UPBBettingWidget::OnNationButton2Clicked);
+	}
+
+	if (BetGoldButton10)
+	{
+		BetGoldButton10->OnClicked.AddUniqueDynamic(
+			this,
+			&UPBBettingWidget::OnBetGoldButton10Clicked);
+	}
+
+	if (BetGoldButton50)
+	{
+		BetGoldButton50->OnClicked.AddUniqueDynamic(
+			this,
+			&UPBBettingWidget::OnBetGoldButton50Clicked);
+	}
+
+	if (BetGoldButton100)
+	{
+		BetGoldButton100->OnClicked.AddUniqueDynamic(
+			this,
+			&UPBBettingWidget::OnBetGoldButton100Clicked);
+	}
+
+	IntroAnimationFinishedEvent.BindDynamic(
+		this,
+		&UPBBettingWidget::OnIntroAnimationFinished);
+
+	if (IntroAnim)
+	{
+		BindToAnimationFinished(
+			IntroAnim,
+			IntroAnimationFinishedEvent);
 	}
 
 	/*
@@ -81,6 +138,14 @@ void UPBBettingWidget::NativeConstruct()
 
 void UPBBettingWidget::NativeDestruct()
 {
+	IsOverBetGoldMessagePlaying = false;
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(
+			FinalResultDisplayTimerHandle);
+	}
+
 	if (BetResultLeftWin)
 	{
 		UnbindFromAnimationFinished(
@@ -109,21 +174,64 @@ void UPBBettingWidget::NativeDestruct()
 			FinalAnimationFinishedEvent);
 	}
 
+	if (IntroAnim)
+	{
+		UnbindFromAnimationFinished(
+			IntroAnim,
+			IntroAnimationFinishedEvent);
+	}
+
 	Super::NativeDestruct();
+}
+
+void UPBBettingWidget::NativeTick(
+	const FGeometry& MyGeometry,
+	float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	UpdateOverBetGoldMessage(InDeltaTime);
+	UpdateBetGoldControlsFadeIn(InDeltaTime);
 }
 
 void UPBBettingWidget::OnNationButton1Clicked()
 {
-	SetBetButtonsEnabled(false);
+	if (TotalBetGold <= 0)
+	{
+		return;
+	}
 
-	OnBetSelected.Broadcast(0);
+	SetNationButtonsEnabled(false);
+	SetBetGoldButtonsEnabled(false);
+
+	OnBetSelected.Broadcast(0, TotalBetGold);
 }
 
 void UPBBettingWidget::OnNationButton2Clicked()
 {
-	SetBetButtonsEnabled(false);
+	if (TotalBetGold <= 0)
+	{
+		return;
+	}
 
-	OnBetSelected.Broadcast(1);
+	SetNationButtonsEnabled(false);
+	SetBetGoldButtonsEnabled(false);
+
+	OnBetSelected.Broadcast(1, TotalBetGold);
+}
+
+void UPBBettingWidget::OnBetGoldButton10Clicked()
+{
+	AddBetGold(10);
+}
+
+void UPBBettingWidget::OnBetGoldButton50Clicked()
+{
+	AddBetGold(50);
+}
+
+void UPBBettingWidget::OnBetGoldButton100Clicked()
+{
+	AddBetGold(100);
 }
 
 void UPBBettingWidget::OnProgressAnimationFinished()
@@ -152,6 +260,7 @@ void UPBBettingWidget::PlayIntroAnimation()
 {
 	if (!IntroAnim)
 	{
+		OnIntroAnimationFinished();
 		return;
 	}
 
@@ -163,11 +272,18 @@ void UPBBettingWidget::PlayIntroAnimation()
 		1.f);
 }
 
+void UPBBettingWidget::OnIntroAnimationFinished()
+{
+	SetBetGoldButtonsEnabled(true);
+	StartBetGoldControlsFadeIn();
+}
+
 void UPBBettingWidget::PlayBetResultAnimations(
 	const FPBBettingResult& Result)
 {
 	CachedResult = Result;
-	bPlayerWon = Result.bWin;
+	IsPlayerWon = Result.bWin;
+	SetBetGoldControlsVisibility(ESlateVisibility::Collapsed);
 
 	if (BetResultProgress)
 	{
@@ -180,14 +296,22 @@ void UPBBettingWidget::PlayBetResultAnimations(
 	OnProgressAnimationFinished();
 }
 
+void UPBBettingWidget::SetAvailableGold(int32 NewAvailableGold)
+{
+	AvailableGold = FMath::Max(NewAvailableGold, 0);
+	RefreshCurrentGoldText();
+}
+
 void UPBBettingWidget::OnWinnerAnimationFinished()
 {
+	ShowWinnerImage();
+
 	/*
 	 * 왼쪽/오른쪽 승리 표시가 끝난 뒤
 	 * 플레이어 개인의 승패 연출을 실행한다.
 	 */
 	UWidgetAnimation* FinalAnimation =
-		bPlayerWon ? BetWin : BetLose;
+		IsPlayerWon ? BetWin : BetLose;
 
 	if (!FinalAnimation)
 	{
@@ -198,24 +322,271 @@ void UPBBettingWidget::OnWinnerAnimationFinished()
 	PlayAnimation(FinalAnimation);
 }
 
+void UPBBettingWidget::ShowWinnerImage()
+{
+	if (!WinnerImage)
+	{
+		return;
+	}
+
+	const UImage* WinningFlag =
+		CachedResult.WinnerIndex == 0 ? Flag1.Get() : Flag2.Get();
+	if (!WinningFlag)
+	{
+		return;
+	}
+
+	WinnerImage->SetBrush(WinningFlag->GetBrush());
+	WinnerImage->SetVisibility(ESlateVisibility::HitTestInvisible);
+}
+
 void UPBBettingWidget::OnFinalResultAnimationFinished()
 {
-	/*
-	 * 여기서는 직접 RemoveFromParent 하지 않는다.
-	 * Actor에게 모든 연출이 끝났다고만 알린다.
-	 */
+	UWorld* World = GetWorld();
+	if (!World || FinalResultDisplayDuration <= 0.0f)
+	{
+		FinishResultDisplay();
+		return;
+	}
+
+	World->GetTimerManager().SetTimer(
+		FinalResultDisplayTimerHandle,
+		this,
+		&UPBBettingWidget::FinishResultDisplay,
+		FinalResultDisplayDuration,
+		false);
+}
+
+void UPBBettingWidget::FinishResultDisplay()
+{
 	OnBetResultAnimationsFinished.Broadcast();
 }
 
-void UPBBettingWidget::SetBetButtonsEnabled(bool bEnabled)
+void UPBBettingWidget::AddBetGold(int32 GoldAmount)
+{
+	const int32 RequestedBetGold = TotalBetGold + GoldAmount;
+	if (RequestedBetGold > AvailableGold)
+	{
+		PlayOverBetGoldMessage();
+		return;
+	}
+
+	TotalBetGold = RequestedBetGold;
+	RefreshTotalBetGoldText();
+	RefreshCurrentGoldText();
+	SetNationButtonsEnabled(TotalBetGold > 0);
+}
+
+void UPBBettingWidget::RefreshTotalBetGoldText()
+{
+	if (!TotalBetGoldText)
+	{
+		return;
+	}
+
+	TotalBetGoldText->SetText(
+		FText::Format(
+			NSLOCTEXT("PBBetting", "TotalBetGold", "총 배팅 금액 : {0}"),
+			FText::AsNumber(TotalBetGold)));
+}
+
+void UPBBettingWidget::RefreshCurrentGoldText()
+{
+	if (!CurrentGoldText)
+	{
+		return;
+	}
+
+	CurrentGoldText->SetText(
+		FText::Format(
+			NSLOCTEXT("PBBetting", "CurrentGold", "현재 골드 : {0}"),
+			FText::AsNumber(
+				FMath::Max(AvailableGold - TotalBetGold, 0))));
+}
+
+void UPBBettingWidget::PlayOverBetGoldMessage()
+{
+	if (!OverBetGoldText)
+	{
+		return;
+	}
+
+	OverBetGoldMessageElapsedTime = 0.0f;
+	IsOverBetGoldMessagePlaying = true;
+	OverBetGoldText->SetVisibility(ESlateVisibility::HitTestInvisible);
+	OverBetGoldText->SetRenderOpacity(0.0f);
+}
+
+void UPBBettingWidget::UpdateOverBetGoldMessage(float DeltaTime)
+{
+	if (!IsOverBetGoldMessagePlaying || !OverBetGoldText)
+	{
+		return;
+	}
+
+	OverBetGoldMessageElapsedTime += DeltaTime;
+
+	const float FadeInEndTime = OverBetGoldFadeInDuration;
+	const float DisplayEndTime = FadeInEndTime + OverBetGoldDisplayDuration;
+	const float FadeOutEndTime = DisplayEndTime + OverBetGoldFadeOutDuration;
+	float Opacity = 1.0f;
+
+	if (OverBetGoldMessageElapsedTime < FadeInEndTime)
+	{
+		Opacity = OverBetGoldFadeInDuration > 0.0f
+			? OverBetGoldMessageElapsedTime / OverBetGoldFadeInDuration
+			: 1.0f;
+	}
+	else if (OverBetGoldMessageElapsedTime > DisplayEndTime)
+	{
+		Opacity = OverBetGoldFadeOutDuration > 0.0f
+			? 1.0f - ((OverBetGoldMessageElapsedTime - DisplayEndTime) / OverBetGoldFadeOutDuration)
+			: 0.0f;
+	}
+
+	OverBetGoldText->SetRenderOpacity(FMath::Clamp(Opacity, 0.0f, 1.0f));
+
+	if (OverBetGoldMessageElapsedTime < FadeOutEndTime)
+	{
+		return;
+	}
+
+	IsOverBetGoldMessagePlaying = false;
+	OverBetGoldText->SetRenderOpacity(0.0f);
+	OverBetGoldText->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UPBBettingWidget::SetBetGoldControlsVisibility(
+	ESlateVisibility NewVisibility)
+{
+	if (BetGoldButton10)
+	{
+		BetGoldButton10->SetVisibility(NewVisibility);
+	}
+
+	if (BetGoldButton50)
+	{
+		BetGoldButton50->SetVisibility(NewVisibility);
+	}
+
+	if (BetGoldButton100)
+	{
+		BetGoldButton100->SetVisibility(NewVisibility);
+	}
+
+	if (TotalBetGoldText)
+	{
+		TotalBetGoldText->SetVisibility(NewVisibility);
+	}
+
+	if (CurrentGoldText)
+	{
+		CurrentGoldText->SetVisibility(NewVisibility);
+	}
+
+	if (BetText1)
+	{
+		BetText1->SetVisibility(NewVisibility);
+	}
+
+	if (BetText2)
+	{
+		BetText2->SetVisibility(NewVisibility);
+	}
+}
+
+void UPBBettingWidget::StartBetGoldControlsFadeIn()
+{
+	BetGoldControlsFadeInElapsedTime = 0.0f;
+	IsBetGoldControlsFadingIn = true;
+	SetBetGoldControlsOpacity(0.0f);
+}
+
+void UPBBettingWidget::UpdateBetGoldControlsFadeIn(float DeltaTime)
+{
+	if (!IsBetGoldControlsFadingIn)
+	{
+		return;
+	}
+
+	BetGoldControlsFadeInElapsedTime += DeltaTime;
+	const float Opacity = BetGoldControlsFadeInDuration > 0.0f
+		? BetGoldControlsFadeInElapsedTime / BetGoldControlsFadeInDuration
+		: 1.0f;
+
+	SetBetGoldControlsOpacity(FMath::Clamp(Opacity, 0.0f, 1.0f));
+
+	if (Opacity >= 1.0f)
+	{
+		IsBetGoldControlsFadingIn = false;
+	}
+}
+
+void UPBBettingWidget::SetBetGoldControlsOpacity(float Opacity)
+{
+	if (BetGoldButton10)
+	{
+		BetGoldButton10->SetRenderOpacity(Opacity);
+	}
+
+	if (BetGoldButton50)
+	{
+		BetGoldButton50->SetRenderOpacity(Opacity);
+	}
+
+	if (BetGoldButton100)
+	{
+		BetGoldButton100->SetRenderOpacity(Opacity);
+	}
+
+	if (TotalBetGoldText)
+	{
+		TotalBetGoldText->SetRenderOpacity(Opacity);
+	}
+
+	if (CurrentGoldText)
+	{
+		CurrentGoldText->SetRenderOpacity(Opacity);
+	}
+
+	if (BetText1)
+	{
+		BetText1->SetRenderOpacity(Opacity);
+	}
+
+	if (BetText2)
+	{
+		BetText2->SetRenderOpacity(Opacity);
+	}
+}
+
+void UPBBettingWidget::SetNationButtonsEnabled(bool IsEnabled)
 {
 	if (NationButton1)
 	{
-		NationButton1->SetIsEnabled(bEnabled);
+		NationButton1->SetIsEnabled(IsEnabled);
 	}
 
 	if (NationButton2)
 	{
-		NationButton2->SetIsEnabled(bEnabled);
+		NationButton2->SetIsEnabled(IsEnabled);
+	}
+}
+
+void UPBBettingWidget::SetBetGoldButtonsEnabled(bool IsEnabled)
+{
+	if (BetGoldButton10)
+	{
+		BetGoldButton10->SetIsEnabled(IsEnabled);
+	}
+
+	if (BetGoldButton50)
+	{
+		BetGoldButton50->SetIsEnabled(IsEnabled);
+	}
+
+	if (BetGoldButton100)
+	{
+		BetGoldButton100->SetIsEnabled(IsEnabled);
 	}
 }
