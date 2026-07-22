@@ -17,6 +17,8 @@ public:
 	virtual void NativeDestruct() override;
 
 	void HandleRelicsChanged();
+	void SetIconSize(float InIconSize);
+	void SetManagedByGlobalToolbar();
 	
 private:
 	void BindRelicEvents();
@@ -33,4 +35,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Relic|UI")
 	TSubclassOf<UPBRelicIconWidget> RelicIconWidgetClass;
+
+	UPROPERTY(EditAnywhere, Category = "Relic|UI", meta = (ClampMin = "16.0"))
+	float IconSize = 32.0f;
+
+	bool bManagedByGlobalToolbar = false;
 };

@@ -11,6 +11,8 @@ class UPBBallDeckSynergyService;
 class UPBDeckOverviewViewModel;
 class UPBDeckWidget;
 class UPBDeploymentWidget;
+class UPBUIManagerSubsystem;
+class UButton;
 
 UCLASS()
 class PINBALLLIKE_API UPBDeckOverviewWidget : public UUserWidget
@@ -40,6 +42,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DeckOverview|Animation")
 	void CloseDeck();
+
+	UFUNCTION(BlueprintCallable, Category = "DeckOverview|Animation")
+	void ToggleDeck();
 
 	UFUNCTION(BlueprintCallable, Category = "DeckOverview|Animation")
 	void OpenDeployment();
@@ -112,6 +117,11 @@ private:
 	void ScheduleRefreshSynergyPanels();
 	void EnsureViewModel();
 	bool ApplyViewModelToWidget();
+	void BindGlobalToolbarEvents();
+	void UnbindGlobalToolbarEvents();
+
+	UFUNCTION()
+	void HandleGlobalDeckToggleRequested();
 
 	UFUNCTION()
 	void HandleDeploymentSlotChanged(int32 SlotIndex, int32 BallInstanceId);
@@ -129,11 +139,17 @@ private:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UPBDeploymentWidget> DeploymentWidget;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> Button_Deck;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UPBBallDeckSubsystem> DeckSubsystem;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBDeckOverviewViewModel> ViewModel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPBUIManagerSubsystem> UIManagerSubsystem;
 
 	FDelegateHandle SynergyStatesChangedHandle;
 

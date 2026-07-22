@@ -1,6 +1,8 @@
 #include "PBBallStatusWidget.h"
 
 #include "PBBallStatusViewModel.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/Image.h"
 #include "Components/PanelWidget.h"
 #include "Engine/AssetManager.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
@@ -15,7 +17,11 @@ void UPBBallStatusWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
+	BallIconImage = WidgetTree
+		? Cast<UImage>(WidgetTree->FindWidget(TEXT("Image_BallIcon")))
+		: nullptr;
 	EnsureStatusViewModel();
+	RefreshBallIconState(nullptr);
 }
 
 void UPBBallStatusWidget::SetBall(APBBallBase* NewBall, UTexture2D* NewIconTexture)
@@ -32,6 +38,7 @@ void UPBBallStatusWidget::SetBall(APBBallBase* NewBall, UTexture2D* NewIconTextu
 	{
 		StatusViewModel->SetBall(NewBall, NewIconTexture);
 	}
+	RefreshBallIconState(NewIconTexture);
 
 	RefreshStatusEffectItems();
 }
@@ -43,6 +50,7 @@ void UPBBallStatusWidget::SetIconTexture(UTexture2D* NewIconTexture)
 	{
 		StatusViewModel->SetIconTexture(NewIconTexture);
 	}
+	RefreshBallIconState(NewIconTexture);
 }
 
 void UPBBallStatusWidget::ClearBall()
@@ -54,8 +62,17 @@ void UPBBallStatusWidget::ClearBall()
 	{
 		StatusViewModel->ClearBall();
 	}
+	RefreshBallIconState(nullptr);
 
 	RefreshStatusEffectItems();
+}
+
+void UPBBallStatusWidget::RefreshBallIconState(UTexture2D* IconTexture)
+{
+	if (BallIconImage)
+	{
+		BallIconImage->SetColorAndOpacity(IsValid(IconTexture) ? FLinearColor::White : EmptyBallIconColor);
+	}
 }
 
 void UPBBallStatusWidget::NativeDestruct()
