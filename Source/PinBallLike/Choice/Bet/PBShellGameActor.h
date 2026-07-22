@@ -149,7 +149,7 @@ private:
 
     UPROPERTY(EditAnywhere, Category = "Shell Game|Reward",
         meta = (ClampMin = "0"))
-    float GoldRewardBillboardScale = 0.25f;
+    float GoldRewardBillboardScale = 3.0f;
 
     UPROPERTY(EditAnywhere, Category = "Shell Game|Reward",
         meta = (ClampMin = "0"))
