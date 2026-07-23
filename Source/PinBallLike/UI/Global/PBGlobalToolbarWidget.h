@@ -9,10 +9,8 @@ class UPBRelicInventoryWidget;
 class UButton;
 class UCanvasPanel;
 class UHorizontalBox;
-class USizeBox;
 class UTextBlock;
 class UTexture2D;
-class UWidget;
 
 UCLASS()
 class PINBALLLIKE_API UPBGlobalToolbarWidget : public UUserWidget
@@ -48,17 +46,14 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UCanvasPanel> RootCanvas;
 
-	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<USizeBox> OptionButtonSizeBox;
-
-	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<UWidget> OptionButtonWidget;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Toolbar|Deck")
 	TSoftObjectPtr<UTexture2D> DeckButtonIcon;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Toolbar|Deck", meta = (ClampMin = "24.0"))
 	float DeckButtonSize = 34.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Toolbar|Option")
+	TSoftObjectPtr<UTexture2D> OptionButtonIcon;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Toolbar|Relic")
 	TSoftClassPtr<UPBRelicInventoryWidget> RelicInventoryWidgetClass;
@@ -68,7 +63,7 @@ protected:
 
 private:
 	void EnsureAnchoredToolbarContent();
-	void EnsureRightControls();
+	void EnsureToolbarButtons();
 	void EnsureRelicInventory();
 
 	UFUNCTION()
@@ -79,9 +74,6 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBPlayerDataSubsystem> PlayerDataSubsystem;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UHorizontalBox> RightControls;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPBRelicInventoryWidget> RelicInventoryWidget;

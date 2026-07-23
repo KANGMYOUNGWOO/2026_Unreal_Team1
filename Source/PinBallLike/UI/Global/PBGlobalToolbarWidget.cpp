@@ -7,7 +7,6 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
-#include "Components/ScaleBox.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Engine/GameInstance.h"
@@ -23,9 +22,32 @@
 #include "Widgets/SNullWidget.h"
 #include "Widgets/SOverlay.h"
 
+namespace
+{
+void ApplyToolbarButtonStyle(UButton* Button)
+{
+	if (!IsValid(Button))
+	{
+		return;
+	}
+
+	FButtonStyle Style = Button->GetStyle();
+	Style.Normal.TintColor = FSlateColor(FLinearColor(0.10f, 0.16f, 0.19f, 0.96f));
+	Style.Hovered.TintColor = FSlateColor(FLinearColor(0.18f, 0.31f, 0.36f, 1.0f));
+	Style.Pressed.TintColor = FSlateColor(FLinearColor(0.07f, 0.12f, 0.15f, 1.0f));
+	Style.SetNormalPadding(FMargin(0.0f));
+	Style.SetPressedPadding(FMargin(1.0f));
+	Button->SetStyle(Style);
+	Button->SetBackgroundColor(FLinearColor::White);
+}
+}
+
 UPBGlobalToolbarWidget::UPBGlobalToolbarWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-	, DeckButtonIcon(FSoftObjectPath(TEXT("/Game/Resources/Deck/Deck.Deck")))
+	, DeckButtonIcon(FSoftObjectPath(
+		TEXT("/Game/Resources/UI/Toolbar/T_UI_ToolbarDeck.T_UI_ToolbarDeck")))
+	, OptionButtonIcon(FSoftObjectPath(
+		TEXT("/Game/Resources/UI/Toolbar/T_UI_ToolbarOption.T_UI_ToolbarOption")))
 	, RelicInventoryWidgetClass(FSoftObjectPath(
 		TEXT("/Game/Blueprints/UI/Relic/WBP_PBRelicInventoryWidget.WBP_PBRelicInventoryWidget_C")))
 {
@@ -189,107 +211,153 @@ void UPBGlobalToolbarWidget::EnsureAnchoredToolbarContent()
 		return;
 	}
 
-	EnsureRightControls();
+	EnsureToolbarButtons();
 	EnsureRelicInventory();
 }
-
-void UPBGlobalToolbarWidget::EnsureRightControls()
+void UPBGlobalToolbarWidget::EnsureToolbarButtons()
 {
 	if (!RightSection)
 	{
 		RightSection = Cast<UHorizontalBox>(WidgetTree->FindWidget(TEXT("RightSection")));
 	}
-	if (!OptionButtonSizeBox)
+
+	if (USizeBox* OptionButtonSizeBox = Cast<USizeBox>(
+		WidgetTree->FindWidget(TEXT("OptionButtonSizeBox"))))
 	{
-		OptionButtonSizeBox = Cast<USizeBox>(WidgetTree->FindWidget(TEXT("OptionButtonSizeBox")));
-	}
-	if (!OptionButtonWidget)
-	{
-		OptionButtonWidget = WidgetTree->FindWidget(TEXT("OptionButtonWidget"));
-	}
-	if (!DeckButton)
-	{
-		DeckButton = Cast<UButton>(WidgetTree->FindWidget(TEXT("DeckButton")));
+		OptionButtonSizeBox->SetWidthOverride(DeckButtonSize);
+		OptionButtonSizeBox->SetHeightOverride(DeckButtonSize);
 	}
 
-	if (RightControls)
+	// The option widget is shared with the main menu, so override only the toolbar
+	// instance instead of replacing its shared source texture.
+	if (UUserWidget* OptionButtonWidget = Cast<UUserWidget>(
+		WidgetTree->FindWidget(TEXT("OptionButtonWidget"))))
+	{
+		if (UButton* OptionButton = Cast<UButton>(
+			OptionButtonWidget->GetWidgetFromName(TEXT("Button_33"))))
+		{
+			ApplyToolbarButtonStyle(OptionButton);
+		}
+		if (UImage* OptionIconImage = Cast<UImage>(
+			OptionButtonWidget->GetWidgetFromName(TEXT("Image_22"))))
+		{
+			if (UTexture2D* IconTexture = OptionButtonIcon.LoadSynchronous())
+			{
+				OptionIconImage->SetBrushFromTexture(IconTexture, true);
+			}
+			const float IconSize = FMath::Max(DeckButtonSize - 6.0f, 1.0f);
+			OptionIconImage->SetDesiredSizeOverride(FVector2D(IconSize));
+			OptionIconImage->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		}
+	}
+
+	bool bCreatedRightSection = false;
+	if (!RightSection)
+	{
+		RightSection = WidgetTree->ConstructWidget<UHorizontalBox>(
+			UHorizontalBox::StaticClass(),
+			TEXT("ToolbarRightControls"));
+		bCreatedRightSection = IsValid(RightSection);
+	}
+	if (!RightSection)
 	{
 		return;
 	}
 
-	RightControls = WidgetTree->ConstructWidget<UHorizontalBox>(
-		UHorizontalBox::StaticClass(),
-		TEXT("ToolbarRightControls"));
-	USizeBox* DeckButtonSizeBox = WidgetTree->ConstructWidget<USizeBox>(
-		USizeBox::StaticClass(),
-		TEXT("DeckButtonSizeBox"));
+	// Reuse the temporary designer slot in place. This intentionally preserves the
+	// Blueprint-authored anchors, child order, spacing, and horizontal-box slot data.
+	USizeBox* DeckButtonSizeBox = Cast<USizeBox>(
+		WidgetTree->FindWidget(TEXT("DeckButtonSizeBox_Temp")));
+
+	if (!DeckButton)
+	{
+		DeckButton = Cast<UButton>(WidgetTree->FindWidget(TEXT("DeckButton")));
+	}
+	if (!DeckButton && DeckButtonSizeBox)
+	{
+		DeckButton = Cast<UButton>(DeckButtonSizeBox->GetContent());
+	}
+	if (!DeckButton)
+	{
+		DeckButton = Cast<UButton>(WidgetTree->FindWidget(TEXT("Button_172")));
+	}
+	if (!DeckButtonSizeBox && DeckButton)
+	{
+		DeckButtonSizeBox = Cast<USizeBox>(DeckButton->GetParent());
+	}
 	if (!DeckButton)
 	{
 		DeckButton = WidgetTree->ConstructWidget<UButton>(
 			UButton::StaticClass(),
 			TEXT("DeckButton"));
 	}
-	UImage* DeckIconImage = WidgetTree->ConstructWidget<UImage>(
-		UImage::StaticClass(),
-		TEXT("DeckButtonIcon"));
-	UScaleBox* DeckIconScaleBox = WidgetTree->ConstructWidget<UScaleBox>(
-		UScaleBox::StaticClass(),
-		TEXT("DeckButtonIconScaleBox"));
+	if (!DeckButtonSizeBox)
+	{
+		DeckButtonSizeBox = WidgetTree->ConstructWidget<USizeBox>(
+			USizeBox::StaticClass(),
+			TEXT("ToolbarDeckButtonSizeBox"));
+	}
 
-	if (!RightControls || !DeckButtonSizeBox || !DeckButton || !DeckIconImage || !DeckIconScaleBox)
+	if (!DeckButtonSizeBox || !DeckButton)
 	{
 		DeckButton = nullptr;
-		RightControls = nullptr;
 		return;
 	}
 
 	DeckButtonSizeBox->SetWidthOverride(DeckButtonSize);
 	DeckButtonSizeBox->SetHeightOverride(DeckButtonSize);
 	DeckButton->SetToolTipText(NSLOCTEXT("PBGlobalToolbar", "DeckButtonTooltip", "덱 열기/닫기"));
+	ApplyToolbarButtonStyle(DeckButton);
 
-	if (UTexture2D* IconTexture = DeckButtonIcon.LoadSynchronous())
+	UImage* DeckIconImage = Cast<UImage>(
+		WidgetTree->FindWidget(TEXT("DeckButtonIcon")));
+	if (!DeckIconImage && !DeckButton->GetContent())
 	{
-		DeckIconImage->SetBrushFromTexture(IconTexture, true);
+		DeckIconImage = WidgetTree->ConstructWidget<UImage>(
+			UImage::StaticClass(),
+			TEXT("DeckButtonIcon"));
 	}
-	DeckIconImage->SetDesiredSizeOverride(FVector2D(DeckButtonSize - 8.0f));
-	DeckIconImage->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-	DeckIconScaleBox->SetStretch(EStretch::ScaleToFit);
-	DeckIconScaleBox->SetStretchDirection(EStretchDirection::Both);
-	DeckIconScaleBox->SetUserSpecifiedScale(1.0f);
-
-	DeckIconScaleBox->AddChild(DeckIconImage);
-	DeckButton->AddChild(DeckIconScaleBox);
-	DeckButtonSizeBox->AddChild(DeckButton);
-
-	UHorizontalBoxSlot* DeckButtonSlot = Cast<UHorizontalBoxSlot>(
-		RightControls->AddChild(DeckButtonSizeBox));
-	if (DeckButtonSlot)
+	if (DeckIconImage)
 	{
-		DeckButtonSlot->SetPadding(FMargin(0.0f, 0.0f, 4.0f, 0.0f));
-		DeckButtonSlot->SetHorizontalAlignment(HAlign_Center);
-		DeckButtonSlot->SetVerticalAlignment(VAlign_Center);
-	}
-
-	if (OptionButtonSizeBox)
-	{
-		OptionButtonSizeBox->RemoveFromParent();
-		OptionButtonSizeBox->SetWidthOverride(DeckButtonSize);
-		OptionButtonSizeBox->SetHeightOverride(DeckButtonSize);
-		if (UHorizontalBoxSlot* OptionSlot = Cast<UHorizontalBoxSlot>(
-			RightControls->AddChild(OptionButtonSizeBox)))
+		if (UTexture2D* IconTexture = DeckButtonIcon.LoadSynchronous())
 		{
-			OptionSlot->SetHorizontalAlignment(HAlign_Center);
-			OptionSlot->SetVerticalAlignment(VAlign_Center);
+			DeckIconImage->SetBrushFromTexture(IconTexture, true);
+		}
+		const float IconSize = FMath::Max(DeckButtonSize - 6.0f, 1.0f);
+		DeckIconImage->SetDesiredSizeOverride(FVector2D(IconSize));
+		DeckIconImage->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		if (!DeckIconImage->GetParent())
+		{
+			DeckButton->SetContent(DeckIconImage);
 		}
 	}
 
-	if (UCanvasPanelSlot* ControlsSlot = Cast<UCanvasPanelSlot>(
-		RootCanvas->AddChild(RightControls)))
+	if (DeckButtonSizeBox->GetContent() != DeckButton)
 	{
-		ControlsSlot->SetAnchors(FAnchors(1.0f, 0.0f));
-		ControlsSlot->SetAlignment(FVector2D(1.0f, 0.0f));
-		ControlsSlot->SetAutoSize(true);
-		ControlsSlot->SetPosition(FVector2D(-4.0f, 4.0f));
+		DeckButtonSizeBox->SetContent(DeckButton);
+	}
+	if (DeckButtonSizeBox->GetParent() != RightSection)
+	{
+		UHorizontalBoxSlot* DeckSlot = Cast<UHorizontalBoxSlot>(
+			RightSection->AddChild(DeckButtonSizeBox));
+		if (DeckSlot)
+		{
+			DeckSlot->SetPadding(FMargin(0.0f, 0.0f, 4.0f, 0.0f));
+			DeckSlot->SetHorizontalAlignment(HAlign_Center);
+			DeckSlot->SetVerticalAlignment(VAlign_Center);
+		}
+	}
+
+	if (bCreatedRightSection)
+	{
+		if (UCanvasPanelSlot* ControlsSlot = Cast<UCanvasPanelSlot>(
+			RootCanvas->AddChild(RightSection)))
+		{
+			ControlsSlot->SetAnchors(FAnchors(1.0f, 0.0f));
+			ControlsSlot->SetAlignment(FVector2D(1.0f, 0.0f));
+			ControlsSlot->SetAutoSize(true);
+			ControlsSlot->SetPosition(FVector2D(-4.0f, 4.0f));
+		}
 	}
 }
 
