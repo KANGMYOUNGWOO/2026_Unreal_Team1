@@ -3,6 +3,7 @@
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Actor/Ball/Component/PBBallEffectRuntimeComponent.h"
 #include "PinBallLike/Interface/BossInterface.h"
+#include "PinBallLike/Interface/Comboable.h"
 #include "PinBallLike/Interface/Damageable.h"
 #include "PinBallLike/Utils/PBInterfaceUtils.h"
 
@@ -80,6 +81,31 @@ bool UPBDamageComponentBase::ApplyDamage(AActor* Target, const int32 DamageAmoun
 		Damageable->TakeDamage(FinalDamageAmount);
 	}
 
+	AddComboForSkillDamage();
 	OnDamageApplied.Broadcast(Target, FinalDamageAmount);
 	return true;
+}
+
+void UPBDamageComponentBase::AddComboForSkillDamage() const
+{
+	TSet<TWeakObjectPtr<AActor>> VisitedActors;
+	AActor* SourceActor = GetOwner();
+	while (IsValid(SourceActor))
+	{
+		const TWeakObjectPtr<AActor> SourceActorKey(SourceActor);
+		if (VisitedActors.Contains(SourceActorKey))
+		{
+			return;
+		}
+		VisitedActors.Add(SourceActorKey);
+
+		if (IComboable* Comboable =
+			PBInterfaceUtils::FindInterface<IComboable>(SourceActor))
+		{
+			Comboable->AddCombo(1);
+			return;
+		}
+
+		SourceActor = SourceActor->GetOwner();
+	}
 }
