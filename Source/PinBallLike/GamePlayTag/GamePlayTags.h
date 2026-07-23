@@ -22,6 +22,7 @@ namespace GameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Dash_Requested);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Dash_Approved);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Skill_Use_Requested);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Skill_Activated);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Bumper_Triggered);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Ball_Damaged);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Battle_Boss_Intro_Completed);

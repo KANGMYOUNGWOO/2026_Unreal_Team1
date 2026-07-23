@@ -9,6 +9,7 @@
 
 struct FInputActionValue;
 struct FPBBallDamagedMessage;
+struct FPBBallSkillActivatedMessage;
 class APBCombatPartyController;
 class AFlipper;
 class UCameraShakeBase;
@@ -78,6 +79,9 @@ private:
 	void RegisterMessageListeners();
 	void UnregisterMessageListeners();
 	void HandleBallDamagedMessage(FGameplayTag Channel, const FPBBallDamagedMessage& Message);
+	void HandleBallSkillActivatedMessage(
+		FGameplayTag Channel,
+		const FPBBallSkillActivatedMessage& Message);
 	void AddInputMappingContext();
 	void RemoveInputMappingContext();
 	void UpFlippers(const FInputActionValue& Value);
@@ -89,5 +93,6 @@ private:
 	void RequestDash(const FInputActionValue& Value);
 
 	FGameplayMessageListenerHandle BallDamagedListenerHandle;
+	FGameplayMessageListenerHandle BallSkillActivatedListenerHandle;
 	double LastBallDamageShakeTime = -1.0;
 };

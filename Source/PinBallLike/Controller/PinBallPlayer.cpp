@@ -10,9 +10,12 @@
 #include "InputActionValue.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerController.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Flipper/Flipper.h"
+#include "PinBallLike/Controller/Component/PBCombatCameraTrackingComponent.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PinBallLike/Struct/Battle/PBBallDamagedMessage.h"
+#include "PinBallLike/Struct/Battle/PBBallSkillActivatedMessage.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 
 APinBallPlayer::APinBallPlayer()
@@ -133,6 +136,11 @@ void APinBallPlayer::RegisterMessageListeners()
 			GameplayTags::Event_Battle_Ball_Damaged,
 			this,
 			&APinBallPlayer::HandleBallDamagedMessage);
+	BallSkillActivatedListenerHandle =
+		UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBallSkillActivatedMessage>(
+			GameplayTags::Event_Battle_Skill_Activated,
+			this,
+			&APinBallPlayer::HandleBallSkillActivatedMessage);
 }
 
 void APinBallPlayer::UnregisterMessageListeners()
@@ -141,6 +149,11 @@ void APinBallPlayer::UnregisterMessageListeners()
 	{
 		BallDamagedListenerHandle.Unregister();
 		BallDamagedListenerHandle = FGameplayMessageListenerHandle();
+	}
+	if (BallSkillActivatedListenerHandle.IsValid())
+	{
+		BallSkillActivatedListenerHandle.Unregister();
+		BallSkillActivatedListenerHandle = FGameplayMessageListenerHandle();
 	}
 }
 
@@ -191,6 +204,28 @@ void APinBallPlayer::HandleBallDamagedMessage(
 		Message.AppliedDamage,
 		ShakeScale,
 		*GetNameSafe(BallDamageCameraShakeClass.Get()));
+}
+
+void APinBallPlayer::HandleBallSkillActivatedMessage(
+	FGameplayTag Channel,
+	const FPBBallSkillActivatedMessage& Message)
+{
+	(void)Channel;
+
+	APBBallBase* SkillOwnerBall = Cast<APBBallBase>(Message.SkillOwnerBall);
+	UPBCombatCameraTrackingComponent* CameraTrackingComponent =
+		FindComponentByClass<UPBCombatCameraTrackingComponent>();
+	if (!IsValid(SkillOwnerBall) || !CameraTrackingComponent)
+	{
+		return;
+	}
+
+	if (CameraTrackingComponent->PlaySkillFocus(SkillOwnerBall))
+	{
+		UE_LOG(LogTemp, Log,
+			TEXT("[BallSkillCameraFocus] Started. Ball=%s"),
+			*GetNameSafe(SkillOwnerBall));
+	}
 }
 
 void APinBallPlayer::AddInputMappingContext()
