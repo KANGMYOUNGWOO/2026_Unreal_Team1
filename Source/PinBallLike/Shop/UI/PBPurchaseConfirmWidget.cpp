@@ -180,8 +180,10 @@ void UPBPurchaseConfirmWidget::SetInfo(
 	//------------------------------------------------------
 
 	
+	
 	if (Data.RaceDataList.IsValidIndex(0))
 	{
+		
 		if (SynergyIcon3)
 		{
 			SynergyIcon3->SetBrushFromTexture(
@@ -220,11 +222,13 @@ void UPBPurchaseConfirmWidget::SetInfo(
 	{
 		if (SynergyIcon3)
 		{
+			SynergyIcon3->SetVisibility(ESlateVisibility::Hidden);
 			SynergyIcon3->SetBrushFromTexture(nullptr);
 		}
 
 		if (SynergyText3)
 		{
+			SynergyText3->SetVisibility(ESlateVisibility::Hidden);
 			SynergyText3->SetText(FText::GetEmpty());
 		}
 	}
