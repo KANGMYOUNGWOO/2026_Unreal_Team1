@@ -552,7 +552,7 @@ void APBBattleGameMode::LoadBoss()
 
 	const FGuid RequestId = FoundBossSpawner->LoadBossDataAssetAsync(
 		FStreamableDelegate::CreateUObject(this, &APBBattleGameMode::HandleBossDataLoaded));
-	if (!RequestId.IsValid())
+	if (!RequestId.IsValid() && !bBossDataLoaded)
 	{
 		MarkDataLoaded(EPBBattlePreparationType::Boss, false);
 	}
