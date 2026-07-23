@@ -212,7 +212,7 @@ const FPBBossPatternTelegraphData* UPBOctopusTentacleSlamPattern::FindSlamTelegr
 
 void UPBOctopusTentacleSlamPattern::StartDamageWindow()
 {
-	if (!ActiveTentacle || DamageWindowDuration <= 0.0f || SlamDamage <= 0)
+	if (!ActiveTentacle || DamageWindowDuration <= 0.0f || DamageAmount <= 0)
 	{
 		return;
 	}
@@ -314,10 +314,10 @@ void UPBOctopusTentacleSlamPattern::HandleTentacleHit(
 		return;
 	}
 
-	Damageable->TakeDamage(SlamDamage);
+	Damageable->TakeDamage(DamageAmount);
 	UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
 		*GetNameSafe(this),
-		SlamDamage,
+		DamageAmount,
 		*GetNameSafe(OtherActor));
 	IsDamageApplied = true;
 }

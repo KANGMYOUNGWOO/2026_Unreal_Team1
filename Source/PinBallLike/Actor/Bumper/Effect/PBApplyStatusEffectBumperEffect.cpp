@@ -12,6 +12,7 @@ void UPBApplyStatusEffectBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
 	AActor* InteractionActor)
 {
+	InteractionActor = ResolveBallEffectTargetOrSource(InteractionActor);
 	if (!IsValid(Bumper) || !IsValid(InteractionActor))
 	{
 		UE_LOG(LogTemp, Warning,

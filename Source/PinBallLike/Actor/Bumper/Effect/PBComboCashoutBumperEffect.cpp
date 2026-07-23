@@ -14,6 +14,7 @@ void UPBComboCashoutBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
 	AActor* InteractionActor)
 {
+	InteractionActor = ResolveBallEffectTargetOrSource(InteractionActor);
 	IComboable* Comboable = PBInterfaceUtils::FindInterface<IComboable>(InteractionActor);
 	AActor* BossTarget = FindBossTarget(Bumper);
 	if (!Comboable

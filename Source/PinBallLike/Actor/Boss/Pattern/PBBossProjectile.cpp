@@ -37,6 +37,11 @@ void APBBossProjectile::SetSourcePatternName(FName NewSourcePatternName)
 	SourcePatternName = NewSourcePatternName;
 }
 
+void APBBossProjectile::SetDamageAmount(const int32 NewDamageAmount)
+{
+	DamageAmount = FMath::Max(NewDamageAmount, 0);
+}
+
 void APBBossProjectile::BeginPlay()
 {
 	Super::BeginPlay();

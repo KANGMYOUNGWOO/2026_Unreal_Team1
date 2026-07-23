@@ -11,6 +11,7 @@ void UPBCounterShieldBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
 	AActor* InteractionActor)
 {
+	InteractionActor = ResolveBallEffectTargetOrSource(InteractionActor);
 	UPBBaseResourceComponent* ResourceComponent = IsValid(InteractionActor)
 		? InteractionActor->FindComponentByClass<UPBBaseResourceComponent>()
 		: nullptr;

@@ -13,8 +13,10 @@ class UPBPartyDeathComponent;
 class UPBPartyDeploymentComponent;
 class UPBPartyLauncherComponent;
 class UPBSnakeFormationComponent;
+class UPBBallVoiceDataAsset;
 class UParticleSystem;
 class UPBRelicCalculator;
+class USoundBase;
 
 UCLASS()
 class PINBALLLIKE_API APBCombatPartyController : public AActor
@@ -61,6 +63,7 @@ protected:
 	
 private:
 	APBBallBase* FindPartyBallByInstanceId(int32 BallInstanceId) const;
+	USoundBase* ResolveBallDeathSound(const APBBallBase* DeadBall) const;
 
 	UPROPERTY(VisibleAnywhere, Category = "Party|Launch")
 	TObjectPtr<UPBPartyLauncherComponent> PartyLauncherComponent;
@@ -82,6 +85,9 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = "Party|Death")
 	TObjectPtr<UParticleSystem> BallDeathEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Party|Death")
+	TObjectPtr<UPBBallVoiceDataAsset> BallVoiceData = nullptr;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<APBBallBase>> PartyBalls;

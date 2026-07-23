@@ -55,6 +55,12 @@ namespace
 void UPBBumperEquipUI::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
+	if (IsValid(DetailIconFrameBorder))
+	{
+		DetailIconFrameBorder->SetBrush(PBBumperEquipUIBuilder::MakeIconFrameBrush());
+		DetailIconFrameBorder->SetBrushColor(FLinearColor::White);
+		DetailIconFrameBorder->SetClipping(EWidgetClipping::ClipToBounds);
+	}
 
 	BindBoardSlotButtons();
 	BindRedesignedControls();

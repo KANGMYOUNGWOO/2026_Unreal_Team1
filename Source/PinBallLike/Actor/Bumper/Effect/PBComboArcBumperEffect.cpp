@@ -9,6 +9,7 @@ void UPBComboArcBumperEffect::ActivateEffectForActor(
 	APBModularBumperBase* Bumper,
 	AActor* InteractionActor)
 {
+	InteractionActor = ResolveBallEffectTargetOrSource(InteractionActor);
 	static const TArray<FName> RequiredParameters =
 	{
 		TEXT("ComboInterval"),

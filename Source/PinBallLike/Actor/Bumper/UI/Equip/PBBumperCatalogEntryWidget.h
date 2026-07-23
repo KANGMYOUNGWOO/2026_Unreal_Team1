@@ -6,6 +6,7 @@
 #include "PBBumperCatalogEntryWidget.generated.h"
 
 class UDragDropOperation;
+class UBorder;
 class UTextBlock;
 class UPBBumperListItemObject;
 
@@ -17,6 +18,7 @@ class PINBALLLIKE_API UPBBumperCatalogEntryWidget
 	GENERATED_BODY()
 
 protected:
+	virtual void NativeOnInitialized() override;
 	virtual void NativeOnListItemObjectSet(UObject* ListItemObject) override;
 	virtual FReply NativeOnPreviewMouseButtonDown(
 		const FGeometry& InGeometry,
@@ -28,6 +30,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Bumper|ListItem", meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> BumperName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Bumper|ListItem", meta = (BindWidgetOptional))
+	TObjectPtr<UBorder> CatalogIconFrameBorder;
 
 private:
 	UPROPERTY(Transient)

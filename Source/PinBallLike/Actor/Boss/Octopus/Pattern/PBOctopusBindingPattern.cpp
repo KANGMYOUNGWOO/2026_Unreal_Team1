@@ -47,7 +47,7 @@ void UPBOctopusBindingPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 		ZoneRadius,
 		ZoneDuration,
 		BindDuration,
-		BindDamage,
+		DamageAmount,
 		ZoneEffectScale);
 	BindingZone->FinishSpawning(ZoneTransform);
 

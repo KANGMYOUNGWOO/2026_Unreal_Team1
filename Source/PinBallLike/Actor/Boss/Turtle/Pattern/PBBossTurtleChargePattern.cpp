@@ -374,7 +374,7 @@ void UPBBossTurtleChargePattern::HandleChargeBeginOverlap(
 
 void UPBBossTurtleChargePattern::ApplyChargeHit(APBBallBase* Ball)
 {
-	if (!Ball || ChargeDamage <= 0)
+	if (!Ball || DamageAmount <= 0)
 	{
 		return;
 	}
@@ -390,10 +390,10 @@ void UPBBossTurtleChargePattern::ApplyChargeHit(APBBallBase* Ball)
 	{
 		if (!Damageable->IsDead())
 		{
-			Damageable->TakeDamage(ChargeDamage);
+			Damageable->TakeDamage(DamageAmount);
 			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
 			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
-				*SourcePatternName.ToString(), ChargeDamage, *GetNameSafe(Ball));
+				*SourcePatternName.ToString(), DamageAmount, *GetNameSafe(Ball));
 		}
 	}
 }
