@@ -51,7 +51,7 @@ APBShopItemActor::APBShopItemActor()
 		FVector(0.f, 0.f, 60.f));
 
 	Billboard->SetUsingAbsoluteScale(true);
-	Billboard->SetWorldScale3D(FVector(25.f));
+	Billboard->SetWorldScale3D(FVector(15.f));
 
 	Billboard->SetVisibility(true);
 	Billboard->SetHiddenInGame(false);
