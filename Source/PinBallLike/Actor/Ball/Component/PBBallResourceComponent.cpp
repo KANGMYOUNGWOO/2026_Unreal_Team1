@@ -1,20 +1,32 @@
 #include "PBBallResourceComponent.h"
 
+#include "PBBallComboComponent.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBallDamagedMessage.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 #include "PinBallLike/Table/StatusEffect/PBStatusEffectAssetIds.h"
 
 void UPBBallResourceComponent::TakeDamage(const int32 Damage)
 {
+	TakeDamageInternal(Damage, true);
+}
+
+void UPBBallResourceComponent::TakeSelfCollisionDamage(const int32 Damage)
+{
+	TakeDamageInternal(Damage, false);
+}
+
+void UPBBallResourceComponent::TakeDamageInternal(const int32 Damage, const bool bResetComboOnAppliedDamage)
+{
 	if (Damage <= 0)
 	{
 		return;
 	}
 
-	const AActor* OwnerActor = GetOwner();
+	AActor* OwnerActor = GetOwner();
 	const UPBStatusEffectComponent* StatusEffectComponent = IsValid(OwnerActor)
 		? OwnerActor->FindComponentByClass<UPBStatusEffectComponent>()
 		: nullptr;
@@ -50,8 +62,19 @@ void UPBBallResourceComponent::TakeDamage(const int32 Damage)
 	ApplyResourceDelta(PBResourceNames::Health, -RemainingDamage);
 	const float CurrentHealth = GetResourceCurrent(PBResourceNames::Health);
 	const int32 AppliedDamage = FMath::RoundToInt(PreviousHealth - CurrentHealth);
+	if (AppliedDamage > 0 && bResetComboOnAppliedDamage)
+	{
+		ResetComboAfterAppliedDamage();
+	}
+
 	if (AppliedDamage > 0 && UGameplayMessageSubsystem::HasInstance(this))
 	{
+		FPBBallDamagedMessage BallDamagedMessage;
+		BallDamagedMessage.AppliedDamage = AppliedDamage;
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_Battle_Ball_Damaged,
+			BallDamagedMessage);
+
 		FPBDamageLogMessage Message;
 		Message.Style = EPBDamageLogStyle::EnemyAttack;
 		Message.DamageAmount = AppliedDamage;
@@ -69,6 +92,20 @@ void UPBBallResourceComponent::TakeDamage(const int32 Damage)
 	}
 
 	TryApplyPostDamageHeal(PBResourceNames::Health, PreviousHealth);
+}
+
+void UPBBallResourceComponent::ResetComboAfterAppliedDamage() const
+{
+	const AActor* OwnerActor = GetOwner();
+	UPBBallComboComponent* ComboComponent = IsValid(OwnerActor)
+		? OwnerActor->FindComponentByClass<UPBBallComboComponent>()
+		: nullptr;
+	if (!ComboComponent)
+	{
+		return;
+	}
+
+	ComboComponent->ResetCombo();
 }
 
 void UPBBallResourceComponent::AddDamageIgnoreCount(const FName ResourceName, const int32 Count)

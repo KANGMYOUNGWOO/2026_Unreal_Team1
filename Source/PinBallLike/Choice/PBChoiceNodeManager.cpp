@@ -185,10 +185,10 @@ void APBChoiceNodeManager::GenerateRandomNodeTypes(USplineComponent* LeftSpline,
     GenerateRandomNodeTypesForRoute(RightSpline, RightNodeTypes);
 }
 
-void APBChoiceNodeManager::GenerateRandomNodeTypesForRoute(USplineComponent* TargetSpline,
+void APBChoiceNodeManager::GenerateRandomNodeTypesForRoute(
+    USplineComponent* TargetSpline,
     TMap<int32, EPBChoiceNodeType>& OutNodeTypes)
 {
-    
     OutNodeTypes.Empty();
 
     if (!TargetSpline)
@@ -205,61 +205,64 @@ void APBChoiceNodeManager::GenerateRandomNodeTypesForRoute(USplineComponent* Tar
 
     const int32 LastPointIndex = PointCount - 1;
 
-    // 모든 포인트 기본값은 None
+    // -------------------------------------------------
+    // 0번은 시작점이므로 제외
+    // 모든 노드를 None으로 초기화
+    // -------------------------------------------------
     for (int32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
         OutNodeTypes.Add(PointIndex, EPBChoiceNodeType::None);
     }
 
-    // 마지막 포인트는 무조건 Boss
+    // -------------------------------------------------
+    // 규칙 1 : 마지막은 반드시 Boss
+    // -------------------------------------------------
     OutNodeTypes[LastPointIndex] = EPBChoiceNodeType::Boss;
 
-    // 예: 포인트 10개면 노드 4개, None 6개
-    const int32 ActiveNodeCount = FMath::Max(1, PointCount - 6);
+    // 활성 노드 개수
+    const int32 ActiveNodeCount = FMath::Max(2, PointCount - 6);
+    int32 RemainingNodeCount = ActiveNodeCount - 2;   // Boss + Shop 제외
 
-    // Boss 1개는 이미 배치했으므로 추가 배치할 개수
-    int32 RemainingNodeCount = ActiveNodeCount - 1;
+    // -------------------------------------------------
+    // Shop을 놓을 후보
+    // (시작 제외, 마지막 Boss 제외)
+    // -------------------------------------------------
+    TArray<int32> CandidateIndices;
 
-    if (RemainingNodeCount <= 0)
+    for (int32 PointIndex = 1; PointIndex < LastPointIndex; ++PointIndex)
+    {
+        CandidateIndices.Add(PointIndex);
+    }
+
+    if (CandidateIndices.Num() == 0)
     {
         return;
     }
 
-    TArray<int32> CandidatePointIndices;
-
-    // 0번은 시작점이라 제외, 마지막은 Boss라 제외
-    for (int32 PointIndex = 1; PointIndex < LastPointIndex; ++PointIndex)
-    {
-        CandidatePointIndices.Add(PointIndex);
-    }
-
-    // 랜덤 섞기
-    for (int32 i = CandidatePointIndices.Num() - 1; i > 0; --i)
+    // 랜덤 셔플
+    for (int32 i = CandidateIndices.Num() - 1; i > 0; --i)
     {
         const int32 SwapIndex = FMath::RandRange(0, i);
-        CandidatePointIndices.Swap(i, SwapIndex);
+        CandidateIndices.Swap(i, SwapIndex);
     }
 
-    bool bShopPlaced = false;
+    // -------------------------------------------------
+    // 규칙 2 : Shop은 반드시 하나
+    // -------------------------------------------------
+    const int32 ShopPointIndex = CandidateIndices[0];
+    OutNodeTypes[ShopPointIndex] = EPBChoiceNodeType::Shop;
 
-    for (int32 i = 0; i < CandidatePointIndices.Num() && RemainingNodeCount > 0; ++i)
+    // -------------------------------------------------
+    // 나머지 노드 배치
+    // -------------------------------------------------
+    for (int32 i = 1;
+         i < CandidateIndices.Num() && RemainingNodeCount > 0;
+         ++i)
     {
-        const int32 PointIndex = CandidatePointIndices[i];
+        const int32 PointIndex = CandidateIndices[i];
 
-        EPBChoiceNodeType NodeType = EPBChoiceNodeType::None;
+        OutNodeTypes[PointIndex] = GetRandomNormalNodeType();
 
-        // Shop은 최대 1개
-        if (!bShopPlaced && FMath::RandBool())
-        {
-            NodeType = EPBChoiceNodeType::Shop;
-            bShopPlaced = true;
-        }
-        else
-        {
-            NodeType = GetRandomNormalNodeType();
-        }
-
-        OutNodeTypes[PointIndex] = NodeType;
         --RemainingNodeCount;
     }
 }

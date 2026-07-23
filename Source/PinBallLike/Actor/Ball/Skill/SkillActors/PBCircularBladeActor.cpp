@@ -3,6 +3,7 @@
 #include "PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Ball/Skill/Component/PBTimedAreaDamageComponent.h"
+#include "PinBallLike/Actor/Party/PBCombatPartyController.h"
 #include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
 
@@ -50,7 +51,7 @@ void APBCircularBladeActor::EnterActiveState()
 		return;
 	}
 
-	BallPhysicsComponent = OwnerBall->FindComponentByClass<UPBBallPhysicsComponent>();
+	LeaderPhysicsComponent = ResolveLeaderPhysicsComponent();
 	TargetActor = FindTarget();
 	ApplyTargetAcceleration();
 	Super::EnterActiveState();
@@ -76,12 +77,42 @@ void APBCircularBladeActor::DeactivateBlade()
 	}
 
 	TargetActor.Reset();
-	BallPhysicsComponent.Reset();
+	LeaderPhysicsComponent.Reset();
 }
 
 void APBCircularBladeActor::ApplyTargetAcceleration()
 {
 	const AActor* Target = TargetActor.Get();
+	if (!IsValid(OwnerBall) || !IsValid(Target) || !LeaderPhysicsComponent.IsValid())
+	{
+		return;
+	}
+
 	const FVector Direction = (Target->GetActorLocation() - OwnerBall->GetActorLocation()).GetSafeNormal2D();
-	BallPhysicsComponent->AddVelocity(Direction * TargetAcceleration);
+	LeaderPhysicsComponent->AddVelocity(Direction * TargetAcceleration);
+}
+
+APBBallBase* APBCircularBladeActor::ResolveLeaderBall() const
+{
+	if (!IsValid(OwnerBall))
+	{
+		return nullptr;
+	}
+
+	if (OwnerBall->GetCombatRole() == EPBBallPartyRole::Leader)
+	{
+		return OwnerBall;
+	}
+
+	const APBCombatPartyController* PartyController =
+		Cast<APBCombatPartyController>(OwnerBall->GetOwner());
+	return IsValid(PartyController) ? PartyController->GetLeaderBall() : nullptr;
+}
+
+UPBBallPhysicsComponent* APBCircularBladeActor::ResolveLeaderPhysicsComponent() const
+{
+	APBBallBase* LeaderBall = ResolveLeaderBall();
+	return IsValid(LeaderBall)
+		? LeaderBall->FindComponentByClass<UPBBallPhysicsComponent>()
+		: nullptr;
 }

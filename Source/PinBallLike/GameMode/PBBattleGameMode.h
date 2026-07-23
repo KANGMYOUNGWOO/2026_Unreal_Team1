@@ -10,6 +10,7 @@
 
 class APBBossSpawner;
 class APBBumperSpawner;
+class UPBUserWidget;
 enum class EPBBattlePreparationType : uint8;
 struct FPBBattleBossDeadMessage;
 struct FPBBattleBossIntroCompletedMessage;
@@ -45,6 +46,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Battle|Flow")
 	void ReturnToMainMenu();
 
+	UFUNCTION(BlueprintCallable, Category = "Battle|Defeat")
+	void ConfirmDefeat();
+
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Battle|Flow")
 	void OnBossIntroEntered();
@@ -68,6 +72,8 @@ private:
 	void EnterBattle();
 	void EnterBossDead();
 	void EnterReward();
+	void ShowDefeatWidget();
+	void ReturnToMainMenuAfterDefeat();
 	void HandleRewardPopupClosed(bool bConfirmed);
 	void ApplyActiveSynergyEffectsForBattle();
 	void TriggerPartySwitchEffects();
@@ -108,6 +114,10 @@ private:
 		TEXT("Turtle"),
 		TEXT("Octopus")
 	};
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Battle|Defeat",
+		meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UPBUserWidget> DefeatWidgetClass;
 
 #pragma endregion 
 	
@@ -160,6 +170,7 @@ private:
 	TObjectPtr<APBBossSpawner> BossSpawner;
 
 	bool bRewardSequenceStarted = false;
+	bool bDefeatSequenceStarted = false;
 	bool bStartPlayCompleted = false;
 	bool IsFinalBossDefeated = false;
 };

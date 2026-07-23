@@ -30,6 +30,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Boss|Damage")
 	bool IsPinballCollisionDamageBlocked() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Damage")
+	void SetInvincible(bool IsInvincible);
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Damage")
+	bool IsInvincible() const;
+
 	void ConfigureDamageSettings(FName NewDefaultHitPointName, float NewDamageCooldownSeconds);
 
 	FPBBossDamageSourceHitAppliedSignature OnDamageSourceHitApplied;
@@ -40,6 +46,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Damage")
 	bool IsPinballCollisionDamageBlockedValue = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Damage")
+	bool IsInvincibleValue = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Damage", meta = (ClampMin = "0"))
 	int32 MaxDamageCountPerFrame = 1;

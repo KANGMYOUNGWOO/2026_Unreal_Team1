@@ -56,7 +56,6 @@ void UPBBossTurtleChargePattern::ExecutePattern_Implementation(APBBossBase* Boss
 	ChargeRotation.Roll = 0.0f;
 	TurtleBoss->SetActorRotation(ChargeRotation);
 	TurtleBoss->PlayTurtleAnimation(ChargeAnimation, true);
-	TurtleBoss->SetPinballCollisionDamageBlocked(true);
 
 	FTimerManager& TimerManager = TurtleBoss->GetWorldTimerManager();
 	TimerManager.SetTimer(
@@ -88,6 +87,7 @@ void UPBBossTurtleChargePattern::StartCharge()
 		return;
 	}
 
+	Boss->SetPinballCollisionDamageBlocked(true);
 	CreateChargeHitCollision(Boss);
 
 	Boss->GetWorldTimerManager().SetTimer(
@@ -144,6 +144,7 @@ void UPBBossTurtleChargePattern::StopCharge()
 	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
 		Boss->GetWorldTimerManager().ClearTimer(ChargeUpdateTimerHandle);
+		Boss->SetPinballCollisionDamageBlocked(false);
 	}
 
 	DestroyChargeHitCollision();

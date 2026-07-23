@@ -396,6 +396,19 @@ bool APBBossBase::IsPinballCollisionDamageBlocked() const
 	return BossDamageComponent && BossDamageComponent->IsPinballCollisionDamageBlocked();
 }
 
+void APBBossBase::SetInvincible(bool IsInvincible)
+{
+	if (BossDamageComponent)
+	{
+		BossDamageComponent->SetInvincible(IsInvincible);
+	}
+}
+
+bool APBBossBase::IsInvincible() const
+{
+	return BossDamageComponent && BossDamageComponent->IsInvincible();
+}
+
 void APBBossBase::NotifyBossDamaged(FName HitPointName, int32 DamageAmount)
 {
 	if (BossHitEffectComponent)

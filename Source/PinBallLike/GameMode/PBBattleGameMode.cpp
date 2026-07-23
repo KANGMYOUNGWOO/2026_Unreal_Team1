@@ -22,6 +22,7 @@
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "TimerManager.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
+#include "PinBallLike/UI/PBUserWidget.h"
 
 #pragma region Lifecycle
 
@@ -79,6 +80,17 @@ void APBBattleGameMode::ReturnToMainMenu()
 	}
 
 	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/LV_EndingCredit")));
+}
+
+void APBBattleGameMode::ConfirmDefeat()
+{
+	if (!bDefeatSequenceStarted)
+	{
+		return;
+	}
+
+	bDefeatSequenceStarted = false;
+	ReturnToMainMenuAfterDefeat();
 }
 
 APBBattleGameState* APBBattleGameMode::GetBattleGameState() const
@@ -294,6 +306,57 @@ void APBBattleGameMode::EnterReward()
 			TEXT("[BattleFlow] Failed to create the reward popup. Continue to BattleExit."));
 		HandleRewardPopupClosed(false);
 	}
+}
+
+void APBBattleGameMode::ShowDefeatWidget()
+{
+	if (bDefeatSequenceStarted)
+	{
+		return;
+	}
+
+	bDefeatSequenceStarted = true;
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UPBUIManagerSubsystem* UIManagerSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+		: nullptr;
+	if (!DefeatWidgetClass || !UIManagerSubsystem)
+	{
+		UE_LOG(LogTemp, Error,
+			TEXT("[BattleFlow] Failed to show defeat widget. WidgetClass=%s UIManager=%s"),
+			*GetNameSafe(DefeatWidgetClass.Get()),
+			*GetNameSafe(UIManagerSubsystem));
+		ConfirmDefeat();
+		return;
+	}
+
+	if (!UIManagerSubsystem->PushWidget(DefeatWidgetClass, 100))
+	{
+		UE_LOG(LogTemp, Error,
+			TEXT("[BattleFlow] Failed to push defeat widget. WidgetClass=%s"),
+			*GetNameSafe(DefeatWidgetClass.Get()));
+		ConfirmDefeat();
+	}
+}
+
+void APBBattleGameMode::ReturnToMainMenuAfterDefeat()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (UPBUIManagerSubsystem* UIManagerSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBUIManagerSubsystem>() : nullptr)
+	{
+		UIManagerSubsystem->PopAllWidgets();
+	}
+
+	if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr)
+	{
+		GameDataLoadSubsystem->UnloadPrimaryAssets();
+	}
+
+	UAsyncLoadingScreenLibrary::SetEnableLoadingScreen(true);
+	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/Lv_MainMenu")));
 }
 
 void APBBattleGameMode::HandleRewardPopupClosed(const bool bConfirmed)
@@ -590,6 +653,7 @@ void APBBattleGameMode::ResetBattlePreparationState()
 	bBumperPrepared = false;
 	bBossPrepared = false;
 	bStartPlayCompleted = false;
+	bDefeatSequenceStarted = false;
 	IsBattleDataLoadFailureHandled = false;
 }
 
@@ -902,6 +966,7 @@ void APBBattleGameMode::HandlePartyAllBallsDeadMessage(
 	{
 		FoundBumperSpawner->LogBattleTelemetrySummary();
 	}
+	ShowDefeatWidget();
 }
 
 void APBBattleGameMode::HandlePartyShiftRequestedMessage(

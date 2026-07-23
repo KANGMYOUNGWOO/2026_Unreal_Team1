@@ -95,6 +95,11 @@ UPBUserWidget* UPBUIManagerSubsystem::PushWidget(
 	if (UPBUserWidget* TopWidget = GetTopWidget();
 		IsValid(TopWidget) && TopWidget->IsA(WidgetClass))
 	{
+		if (!TopWidget->IsInViewport())
+		{
+			TopWidget->AddToViewport(ZOrder);
+		}
+
 		return TopWidget;
 	}
 

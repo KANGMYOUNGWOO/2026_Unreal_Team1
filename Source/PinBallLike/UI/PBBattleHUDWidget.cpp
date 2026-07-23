@@ -37,18 +37,19 @@ void UPBBattleHUDWidget::NativeConstruct()
 	EnsureDeckOverviewWidget();
 	if (DeckOverviewWidget)
 	{
-		DeckOverviewWidget->SetDeploymentPinnedOpen(true);
+		DeckOverviewWidget->SetDeploymentPinnedOpen(false);
 	}
 	RegisterBattleMessageListeners();
 	BindComboEvents();
 	ScheduleRefreshBallPanels(true);
 	RefreshDeckOverview();
 	RefreshComboText();
+	RefreshLaunchCountText();
 
 	if (BattleGameState)
 	{
 		const EPBBattleLevelPhase CurrentPhase = BattleGameState->GetBattleLevelPhase();
-		ApplyBattlePhaseToDeckOverview(CurrentPhase);
+		ApplyBattlePhaseToDeckOverview(EPBBattleLevelPhase::DataLoading, CurrentPhase);
 		ApplyBattlePhaseToLoadingScreen(CurrentPhase);
 	}
 }
@@ -159,7 +160,9 @@ void UPBBattleHUDWidget::EnsureDeckOverviewWidget()
 	UE_LOG(LogTemp, Warning, TEXT("[BattleHUD] DeckOverviewWidget is not bound."));
 }
 
-void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(const EPBBattleLevelPhase NewPhase)
+void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(
+	const EPBBattleLevelPhase PreviousPhase,
+	const EPBBattleLevelPhase NewPhase)
 {
 	EnsureDeckOverviewWidget();
 	if (!DeckOverviewWidget)
@@ -170,12 +173,21 @@ void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(const EPBBattleLevelPhas
 	if (NewPhase == EPBBattleLevelPhase::BallDeployment)
 	{
 		RefreshDeckOverview();
-		DeckOverviewWidget->OpenDeployment();
+		if (PreviousPhase == EPBBattleLevelPhase::Combat)
+		{
+			DeckOverviewWidget->SetDeploymentPinnedOpen(true);
+			DeckOverviewWidget->CloseDeck();
+			DeckOverviewWidget->OpenDeployment();
+			return;
+		}
+
+		DeckOverviewWidget->SetDeploymentPinnedOpen(false);
+		DeckOverviewWidget->OpenAll();
 	}
 	else if (NewPhase == EPBBattleLevelPhase::Combat)
 	{
-		DeckOverviewWidget->CloseDeck();
-		DeckOverviewWidget->OpenDeployment();
+		DeckOverviewWidget->SetDeploymentPinnedOpen(false);
+		DeckOverviewWidget->CloseAll();
 	}
 }
 
@@ -340,8 +352,11 @@ void UPBBattleHUDWidget::BindComboEvents()
 	}
 
 	BattleGameState->OnBattleComboChanged.AddUniqueDynamic(this, &UPBBattleHUDWidget::HandleBattleComboChanged);
+	BattleGameState->OnBattleLaunchCountChanged.AddUniqueDynamic(this, &UPBBattleHUDWidget::HandleBattleLaunchCountChanged);
 	bComboEventsBound = true;
+	bLaunchCountEventsBound = true;
 	RefreshComboText();
+	RefreshLaunchCountText();
 }
 
 void UPBBattleHUDWidget::UnbindComboEvents()
@@ -352,6 +367,11 @@ void UPBBattleHUDWidget::UnbindComboEvents()
 	}
 
 	BattleGameState->OnBattleComboChanged.RemoveDynamic(this, &UPBBattleHUDWidget::HandleBattleComboChanged);
+	if (bLaunchCountEventsBound)
+	{
+		BattleGameState->OnBattleLaunchCountChanged.RemoveDynamic(this, &UPBBattleHUDWidget::HandleBattleLaunchCountChanged);
+		bLaunchCountEventsBound = false;
+	}
 	bComboEventsBound = false;
 	BattleGameState = nullptr;
 }
@@ -408,6 +428,31 @@ void UPBBattleHUDWidget::ApplyComboText(const int32 CurrentCombo)
 	{
 		ResetComboVisualState();
 	}
+}
+
+void UPBBattleHUDWidget::RefreshLaunchCountText()
+{
+	if (!Text_LaunchCount)
+	{
+		return;
+	}
+
+	CacheBattleGameState();
+	const int32 RemainingLaunchCount = BattleGameState ? BattleGameState->GetRemainingBattleLaunchCount() : 0;
+	ApplyLaunchCountText(RemainingLaunchCount);
+}
+
+void UPBBattleHUDWidget::ApplyLaunchCountText(const int32 RemainingLaunchCount)
+{
+	if (!Text_LaunchCount)
+	{
+		return;
+	}
+
+	Text_LaunchCount->SetText(FText::Format(
+		NSLOCTEXT("BattleHUD", "LaunchCountTextFormat", "남은 출격: {0}"),
+		FText::AsNumber(FMath::Max(0, RemainingLaunchCount))));
+	Text_LaunchCount->SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
 void UPBBattleHUDWidget::StartComboPulse(const bool bMilestone)
@@ -585,12 +630,18 @@ void UPBBattleHUDWidget::HandleBattleComboChanged(const int32 CurrentCombo)
 	ApplyComboText(CurrentCombo);
 }
 
+void UPBBattleHUDWidget::HandleBattleLaunchCountChanged(const int32 PreviousCount, const int32 NewCount)
+{
+	(void)PreviousCount;
+	ApplyLaunchCountText(NewCount);
+}
+
 void UPBBattleHUDWidget::HandleBattlePhaseChangedMessage(
 	FGameplayTag Channel,
 	const FPBBattlePhaseChangedMessage& Message)
 {
 	(void)Channel;
 	UE_LOG(LogTemp, Log, TEXT("[BattleHUD] Battle phase changed. NewPhase=%d"), static_cast<int32>(Message.NewPhase));
-	ApplyBattlePhaseToDeckOverview(Message.NewPhase);
+	ApplyBattlePhaseToDeckOverview(Message.PreviousPhase, Message.NewPhase);
 	ApplyBattlePhaseToLoadingScreen(Message.NewPhase);
 }
