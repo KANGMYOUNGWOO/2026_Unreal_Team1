@@ -134,11 +134,22 @@ void UPBRelicInventoryWidget::RefreshRelicIcons()
 	{
 		UPBRelicIconWidget* IconWidget =
 			CreateWidget<UPBRelicIconWidget>(
-				GetOwningPlayer(),
-				RelicIconWidgetClass);
+		GetWorld(),
+			RelicIconWidgetClass);
 
 		if (!IconWidget)
 		{
+			UE_LOG(LogTemp, Error,
+	   TEXT("CreateWidget FAILED"));
+
+			UE_LOG(LogTemp, Error,
+				TEXT("Player=%s"),
+				*GetNameSafe(GetOwningPlayer()));
+
+			UE_LOG(LogTemp, Error,
+				TEXT("Class=%s"),
+				*GetNameSafe(RelicIconWidgetClass));
+			
 			continue;
 		}
 
