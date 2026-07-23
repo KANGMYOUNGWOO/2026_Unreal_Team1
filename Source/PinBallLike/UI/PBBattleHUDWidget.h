@@ -35,6 +35,7 @@ public:
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
 	static constexpr int32 MaxBallPanelCount = 3;
@@ -56,6 +57,9 @@ private:
 	void ScheduleBindComboEvents();
 	void RefreshComboText();
 	void ApplyComboText(int32 CurrentCombo);
+	void StartComboPulse(bool bMilestone);
+	void UpdateComboPulse(float DeltaTime);
+	void ResetComboVisualState();
 	void ScheduleRefreshBallPanels(bool bResetRetryCount = false);
 	void RefreshDeckOverview();
 	APBBallBase* FindPartyBallForDeploymentSlot(int32 SlotIndex) const;
@@ -109,6 +113,33 @@ private:
 
 	bool bDeckEventsBound = false;
 	bool bComboEventsBound = false;
+	bool bComboPulseActive = false;
+	float ComboPulseElapsed = 0.0f;
+	float ActiveComboPulseScale = 0.0f;
+	float ActiveComboPulseLift = 0.0f;
+	int32 DisplayedCombo = 0;
+	FLinearColor ActiveComboPulseColor = FLinearColor::White;
+
+	UPROPERTY(EditDefaultsOnly, Category = "BattleHUD|Combo Animation", meta = (ClampMin = "0.05"))
+	float ComboPulseDuration = 0.3f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "BattleHUD|Combo Animation", meta = (ClampMin = "0.0"))
+	float ComboPulseScale = 0.24f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "BattleHUD|Combo Animation", meta = (ClampMin = "0.0"))
+	float ComboPulseLift = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "BattleHUD|Combo Animation")
+	FLinearColor ComboPulseColor = FLinearColor(0.25f, 0.85f, 1.0f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, Category = "BattleHUD|Combo Animation", meta = (ClampMin = "1"))
+	int32 ComboMilestoneInterval = 10;
+
+	UPROPERTY(EditDefaultsOnly, Category = "BattleHUD|Combo Animation", meta = (ClampMin = "1.0"))
+	float ComboMilestoneScaleMultiplier = 1.45f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "BattleHUD|Combo Animation")
+	FLinearColor ComboMilestoneColor = FLinearColor(1.0f, 0.65f, 0.08f, 1.0f);
 
 	static constexpr int32 MaxBallPanelRefreshRetryCount = 30;
 };

@@ -36,8 +36,10 @@ void UPBBallStatusViewModel::ClearBall()
 
 	UE_MVVM_SET_PROPERTY_VALUE(IconTexture, nullptr);
 	RefreshBallName();
-	SetResourceValue(PBResourceNames::Health, 0.0f, 1.0f);
-	SetResourceValue(PBResourceNames::Mana, 0.0f, 1.0f);
+	UE_MVVM_SET_PROPERTY_VALUE(HPPercent, 0.0f);
+	UE_MVVM_SET_PROPERTY_VALUE(HPText, FText::GetEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(ManaPercent, 0.0f);
+	UE_MVVM_SET_PROPERTY_VALUE(ManaText, FText::GetEmpty());
 }
 
 void UPBBallStatusViewModel::BeginDestroy()

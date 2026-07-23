@@ -134,7 +134,7 @@ void UPBDeckOverviewWidget::OpenDeployment()
 
 void UPBDeckOverviewWidget::CloseDeployment()
 {
-	if (!bIsDeploymentOpen || bIsDeploymentAnimationPlaying)
+	if (bDeploymentPinnedOpen || !bIsDeploymentOpen || bIsDeploymentAnimationPlaying)
 	{
 		return;
 	}
@@ -152,8 +152,20 @@ void UPBDeckOverviewWidget::OpenAll()
 
 void UPBDeckOverviewWidget::CloseAll()
 {
-	CloseDeployment();
 	CloseDeck();
+	if (!bDeploymentPinnedOpen)
+	{
+		CloseDeployment();
+	}
+}
+
+void UPBDeckOverviewWidget::SetDeploymentPinnedOpen(const bool bPinnedOpen)
+{
+	bDeploymentPinnedOpen = bPinnedOpen;
+	if (bDeploymentPinnedOpen && !bIsDeploymentAnimationPlaying)
+	{
+		OpenDeployment();
+	}
 }
 
 void UPBDeckOverviewWidget::NotifyDeckAnimationFinished()
@@ -164,6 +176,10 @@ void UPBDeckOverviewWidget::NotifyDeckAnimationFinished()
 void UPBDeckOverviewWidget::NotifyDeploymentAnimationFinished()
 {
 	bIsDeploymentAnimationPlaying = false;
+	if (bDeploymentPinnedOpen && !bIsDeploymentOpen)
+	{
+		OpenDeployment();
+	}
 }
 
 void UPBDeckOverviewWidget::RefreshSynergyPanels()
@@ -368,6 +384,12 @@ void UPBDeckOverviewWidget::UnbindGlobalToolbarEvents()
 
 void UPBDeckOverviewWidget::HandleGlobalDeckToggleRequested()
 {
+	if (bDeploymentPinnedOpen)
+	{
+		ToggleDeck();
+		return;
+	}
+
 	if (bIsDeckAnimationPlaying || bIsDeploymentAnimationPlaying)
 	{
 		return;

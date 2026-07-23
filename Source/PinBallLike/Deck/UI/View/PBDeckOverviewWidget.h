@@ -58,6 +58,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DeckOverview|Animation")
 	void CloseAll();
 
+	UFUNCTION(BlueprintCallable, Category = "DeckOverview|Deployment")
+	void SetDeploymentPinnedOpen(bool bPinnedOpen);
+
 	UFUNCTION(BlueprintCallable, Category = "DeckOverview|Animation")
 	void NotifyDeckAnimationFinished();
 
@@ -75,6 +78,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "DeckOverview|Animation")
 	bool IsDeploymentAnimationPlaying() const { return bIsDeploymentAnimationPlaying; }
+
+	UFUNCTION(BlueprintPure, Category = "DeckOverview|Deployment")
+	bool IsDeploymentPinnedOpen() const { return bDeploymentPinnedOpen; }
 
 protected:
 	virtual void NativeConstruct() override;
@@ -155,4 +161,5 @@ private:
 
 	bool bDeckEventsBound = false;
 	bool bSynergyEventsBound = false;
+	bool bDeploymentPinnedOpen = false;
 };
