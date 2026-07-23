@@ -226,6 +226,39 @@ bool UPBBallDeckSubsystem::AddNewBallToDeck(FName BallId, int32 StarLevel)
 	return SetBenchSlot(EmptyBenchSlotIndex, NewBallInstanceId);
 }
 
+void UPBBallDeckSubsystem::ResetRunDeckData()
+{
+	TArray<FName> OwnedBallIds;
+	OwnedBallIds.Reserve(OwnedBallDataMap.Num());
+	for (const TPair<int32, FPBDeckOwnedBallData>& OwnedBallDataPair : OwnedBallDataMap)
+	{
+		if (!OwnedBallDataPair.Value.BallId.IsNone())
+		{
+			OwnedBallIds.AddUnique(OwnedBallDataPair.Value.BallId);
+		}
+	}
+
+	UnloadPlacedBallGameplayAssets();
+	UnloadPlacedBallUIAssets();
+	if (AssetLoadService)
+	{
+		for (const FName& OwnedBallId : OwnedBallIds)
+		{
+			AssetLoadService->UnloadOwnedBallIcon(OwnedBallId);
+		}
+	}
+
+	OwnedBallDataMap.Reset();
+	NextBallInstanceId = 1;
+	InitializeDeckSlots();
+
+	OnDeploymentSlotsReordered.Broadcast();
+	OnBenchSlotsSwapped.Broadcast();
+
+	UE_LOG(LogTemp, Log, TEXT("[BallDeckSubsystem] Run deck data reset. RemovedBallTypes=%d"),
+		OwnedBallIds.Num());
+}
+
 bool UPBBallDeckSubsystem::HasEmptyDeckSlot() const
 {
 	return

@@ -49,6 +49,7 @@ protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
+	void ResetRunDataForMainMenu() const;
 	void BuildArtLayer();
 	void HideLegacySkyImage() const;
 	UImage* AddArtImage(

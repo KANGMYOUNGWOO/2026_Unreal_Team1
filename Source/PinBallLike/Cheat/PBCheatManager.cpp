@@ -24,6 +24,7 @@
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
+#include "PinBallLike/Subsystem/Relic/PBRelicSubsystem.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 #include "PinBallLike/Table/Ball/PBBallAssetIds.h"
 
@@ -297,6 +298,28 @@ void UPBCheatManager::GoScene(const int32 SceneIndex)
 	UE_LOG(LogTemp, Log, TEXT("[Cheat] Open scene. Index=%d Map=%s"),
 		SceneIndex,
 		*MapPath.ToString());
+
+	if (SceneIndex == 1)
+	{
+		if (UGameInstance* GameInstance = World->GetGameInstance())
+		{
+			if (UPBBallDeckSubsystem* BallDeckSubsystem = GameInstance->GetSubsystem<UPBBallDeckSubsystem>())
+			{
+				BallDeckSubsystem->ResetRunDeckData();
+			}
+
+			if (UPBRelicSubsystem* RelicSubsystem = GameInstance->GetSubsystem<UPBRelicSubsystem>())
+			{
+				RelicSubsystem->ResetRunRelicData();
+			}
+
+			if (UPBPlayerDataSubsystem* PlayerDataSubsystem = GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
+			{
+				PlayerDataSubsystem->ResetRunData();
+			}
+		}
+	}
+
 	UGameplayStatics::OpenLevel(World, MapPath);
 }
 

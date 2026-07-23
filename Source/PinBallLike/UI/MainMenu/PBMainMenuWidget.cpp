@@ -6,8 +6,12 @@
 #include "Components/Image.h"
 #include "Components/ScaleBox.h"
 #include "Components/SizeBox.h"
+#include "Engine/GameInstance.h"
 #include "Engine/Texture2D.h"
 #include "GameFramework/PlayerController.h"
+#include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
+#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
+#include "PinBallLike/Subsystem/Relic/PBRelicSubsystem.h"
 #include "UObject/ConstructorHelpers.h"
 
 namespace PBMainMenu
@@ -74,7 +78,32 @@ UPBMainMenuWidget::UPBMainMenuWidget(const FObjectInitializer& ObjectInitializer
 void UPBMainMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	ResetRunDataForMainMenu();
 	BuildArtLayer();
+}
+
+void UPBMainMenuWidget::ResetRunDataForMainMenu() const
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	if (UPBBallDeckSubsystem* BallDeckSubsystem = GameInstance->GetSubsystem<UPBBallDeckSubsystem>())
+	{
+		BallDeckSubsystem->ResetRunDeckData();
+	}
+
+	if (UPBRelicSubsystem* RelicSubsystem = GameInstance->GetSubsystem<UPBRelicSubsystem>())
+	{
+		RelicSubsystem->ResetRunRelicData();
+	}
+
+	if (UPBPlayerDataSubsystem* PlayerDataSubsystem = GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
+	{
+		PlayerDataSubsystem->ResetRunData();
+	}
 }
 
 void UPBMainMenuWidget::NativeTick(const FGeometry& MyGeometry, const float InDeltaTime)

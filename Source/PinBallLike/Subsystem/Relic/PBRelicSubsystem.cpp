@@ -188,6 +188,25 @@ bool UPBRelicSubsystem::RemoveRelic(
 	return true;
 }
 
+void UPBRelicSubsystem::ResetRunRelicData()
+{
+	if (OwnedRelicIds.IsEmpty())
+	{
+		return;
+	}
+
+	const int32 RemovedCount = OwnedRelicIds.Num();
+	OwnedRelicIds.Reset();
+
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("[RelicSubsystem] Run relic data reset. RemovedCount=%d"),
+		RemovedCount);
+
+	OnRelicsChanged.Broadcast();
+}
+
 bool UPBRelicSubsystem::HasRelic(
 	const FName RelicId) const
 {

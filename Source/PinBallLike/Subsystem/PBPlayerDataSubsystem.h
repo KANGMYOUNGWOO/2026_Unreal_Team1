@@ -35,6 +35,9 @@ public:
 	bool SetCurrentBossIndex(int32 NewBossIndex, int32 BossCount);
 
 	void AdvanceBossProgress(int32 BossCount);
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerData|Run")
+	void ResetRunData();
 #pragma endregion
 
 #pragma region Bumper
@@ -112,6 +115,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 Gold = 1000;
+
+	UPROPERTY(Transient)
+	int32 InitialGold = 0;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 InitialBattleLaunchCount = 5;

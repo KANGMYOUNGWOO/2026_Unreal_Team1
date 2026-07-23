@@ -19,6 +19,7 @@
 #include "PinBallLike/Subsystem/PBEffectSubsystem.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
+#include "PinBallLike/Subsystem/Relic/PBRelicSubsystem.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "TimerManager.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
@@ -72,6 +73,8 @@ bool APBBattleGameMode::CanLaunchBattleParty() const
 
 void APBBattleGameMode::ReturnToMainMenu()
 {
+	ResetRunDataBeforeLeavingBattle();
+
 	UGameInstance* GameInstance = GetGameInstance();
 	if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
 		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr)
@@ -340,6 +343,30 @@ void APBBattleGameMode::ShowDefeatWidget()
 	}
 }
 
+void APBBattleGameMode::ResetRunDataBeforeLeavingBattle()
+{
+	UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
+	{
+		return;
+	}
+
+	if (UPBBallDeckSubsystem* BallDeckSubsystem = GameInstance->GetSubsystem<UPBBallDeckSubsystem>())
+	{
+		BallDeckSubsystem->ResetRunDeckData();
+	}
+
+	if (UPBRelicSubsystem* RelicSubsystem = GameInstance->GetSubsystem<UPBRelicSubsystem>())
+	{
+		RelicSubsystem->ResetRunRelicData();
+	}
+
+	if (UPBPlayerDataSubsystem* PlayerDataSubsystem = GameInstance->GetSubsystem<UPBPlayerDataSubsystem>())
+	{
+		PlayerDataSubsystem->ResetRunData();
+	}
+}
+
 void APBBattleGameMode::ReturnToMainMenuAfterDefeat()
 {
 	UGameInstance* GameInstance = GetGameInstance();
@@ -348,6 +375,8 @@ void APBBattleGameMode::ReturnToMainMenuAfterDefeat()
 	{
 		UIManagerSubsystem->PopAllWidgets();
 	}
+
+	ResetRunDataBeforeLeavingBattle();
 
 	if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
 		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr)

@@ -20,6 +20,7 @@ void UPBPlayerDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 
 	Collection.InitializeDependency(UPBTableDataSubsystem::StaticClass());
+	InitialGold = Gold;
 
 	const bool bLoadedBumperLoadout = LoadBumperLoadout();
 	if (!bLoadedBumperLoadout)
@@ -82,6 +83,23 @@ void UPBPlayerDataSubsystem::AdvanceBossProgress(const int32 BossCount)
 	{
 		++CurrentBossIndex;
 	}
+}
+
+void UPBPlayerDataSubsystem::ResetRunData()
+{
+	const int32 PreviousGold = Gold;
+
+	Gold = FMath::Max(InitialGold, 0);
+	CurrentBossIndex = 0;
+
+	if (Gold != PreviousGold)
+	{
+		OnGoldChanged.Broadcast(Gold);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[PlayerData] Run data reset. Gold=%d BossIndex=%d"),
+		Gold,
+		CurrentBossIndex);
 }
 
 bool UPBPlayerDataSubsystem::EquipBumper(const EPBBumperSlotType SlotType, const FName BumperRowId)

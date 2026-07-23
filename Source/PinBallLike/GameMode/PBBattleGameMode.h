@@ -73,6 +73,7 @@ private:
 	void EnterBossDead();
 	void EnterReward();
 	void ShowDefeatWidget();
+	void ResetRunDataBeforeLeavingBattle();
 	void ReturnToMainMenuAfterDefeat();
 	void HandleRewardPopupClosed(bool bConfirmed);
 	void ApplyActiveSynergyEffectsForBattle();

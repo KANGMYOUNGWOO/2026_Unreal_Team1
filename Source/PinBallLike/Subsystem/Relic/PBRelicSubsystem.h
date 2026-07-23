@@ -34,6 +34,8 @@ public:
 
 	bool RemoveRelic(FName RelicId);
 
+	void ResetRunRelicData();
+
 	bool HasRelic(FName RelicId) const;
 
 	const TArray<FName>& GetOwnedRelicIds() const;
