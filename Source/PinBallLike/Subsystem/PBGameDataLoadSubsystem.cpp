@@ -129,7 +129,21 @@ void UPBGameDataLoadSubsystem::UnloadPrimaryAssets()
 	LoadedPrimaryAssets.Empty();
 	LoadedPrimaryAssetIdsByBundle.Empty();
 	ActivePrimaryAssetLoadRequests.Empty();
+	CompletedPrimaryAssetLoadRequestIds.Empty();
 	bIsPrimaryAssetsReady = false;
+
+	for (TPair<FName, TArray<TSharedPtr<FStreamableHandle>>>& BundleHandlePair : LoadedPrimaryAssetLoadHandlesByBundle)
+	{
+		for (TSharedPtr<FStreamableHandle>& Handle : BundleHandlePair.Value)
+		{
+			if (Handle.IsValid())
+			{
+				Handle->ReleaseHandle();
+				Handle.Reset();
+			}
+		}
+	}
+	LoadedPrimaryAssetLoadHandlesByBundle.Empty();
 
 	// 핸들을 해제하면 Subsystem이 유지하던 스트리밍 참조가 정리된다.
 	for (TPair<FGuid, TSharedPtr<FStreamableHandle>>& HandlePair : ActivePrimaryAssetLoadHandles)
@@ -176,6 +190,20 @@ void UPBGameDataLoadSubsystem::UnloadPrimaryAssetBundle(const FName BundleName)
 		}
 
 		ActivePrimaryAssetLoadRequests.Remove(RequestId);
+		CompletedPrimaryAssetLoadRequestIds.Remove(RequestId);
+	}
+
+	TArray<TSharedPtr<FStreamableHandle>> LoadedHandles;
+	if (LoadedPrimaryAssetLoadHandlesByBundle.RemoveAndCopyValue(BundleName, LoadedHandles))
+	{
+		for (TSharedPtr<FStreamableHandle>& Handle : LoadedHandles)
+		{
+			if (Handle.IsValid())
+			{
+				Handle->ReleaseHandle();
+				Handle.Reset();
+			}
+		}
 	}
 
 	RemoveLoadedPrimaryAssetsForBundle(BundleName);
@@ -255,7 +283,10 @@ void UPBGameDataLoadSubsystem::StartPrimaryAssetLoadRequest(const FPBPrimaryAsse
 	{
 		FPBPrimaryAssetLoadRequest RemovedRequest;
 		ActivePrimaryAssetLoadRequests.RemoveAndCopyValue(Request.RequestId, RemovedRequest);
-		CompletePrimaryAssetLoad(Request, TArray<FPrimaryAssetId>());
+
+		TArray<FPrimaryAssetId> LoadedAssetIds;
+		CachePrimaryAssetsFromManager(Request.AssetIds, LoadedAssetIds);
+		CompletePrimaryAssetLoad(Request, LoadedAssetIds);
 		return;
 	}
 
@@ -270,14 +301,22 @@ void UPBGameDataLoadSubsystem::OnPrimaryAssetsLoadedInternal(const FGuid Request
 	const FPBPrimaryAssetLoadRequest* Request = ActivePrimaryAssetLoadRequests.Find(RequestId);
 	if (!Request)
 	{
+		if (CompletedPrimaryAssetLoadRequestIds.Contains(RequestId))
+		{
+			UE_LOG(LogTemp, Verbose, TEXT("[GameDataLoad] Duplicate primary asset load completion ignored. RequestId=%s"),
+				*RequestId.ToString());
+			return;
+		}
+
 		UE_LOG(LogTemp, Warning, TEXT("[GameDataLoad] Unknown primary asset load completed. RequestId=%s"),
 			*RequestId.ToString());
 		return;
 	}
 
+	const FPBPrimaryAssetLoadRequest CompletedRequest = *Request;
 	TArray<FPrimaryAssetId> LoadedAssetIds;
-	CachePrimaryAssetsFromManager(Request->AssetIds, LoadedAssetIds);
-	CompletePrimaryAssetLoad(*Request, LoadedAssetIds);
+	CachePrimaryAssetsFromManager(CompletedRequest.AssetIds, LoadedAssetIds);
+	CompletePrimaryAssetLoad(CompletedRequest, LoadedAssetIds);
 }
 
 void UPBGameDataLoadSubsystem::CachePrimaryAssetsFromManager(
@@ -287,10 +326,30 @@ void UPBGameDataLoadSubsystem::CachePrimaryAssetsFromManager(
 	UAssetManager& AssetManager = UAssetManager::Get();
 	for (const FPrimaryAssetId& AssetId : AssetIds)
 	{
+		if (const TObjectPtr<UObject>* CachedAsset = LoadedPrimaryAssets.Find(AssetId))
+		{
+			if (IsValid(CachedAsset->Get()))
+			{
+				OutLoadedAssetIds.AddUnique(AssetId);
+				continue;
+			}
+		}
+
 		if (UObject* LoadedAsset = AssetManager.GetPrimaryAssetObject(AssetId))
 		{
 			LoadedPrimaryAssets.Add(AssetId, LoadedAsset);
-			OutLoadedAssetIds.Add(AssetId);
+			OutLoadedAssetIds.AddUnique(AssetId);
+			continue;
+		}
+
+		const FSoftObjectPath AssetPath = AssetManager.GetPrimaryAssetPath(AssetId);
+		if (AssetPath.IsValid())
+		{
+			if (UObject* LoadedAsset = AssetPath.TryLoad())
+			{
+				LoadedPrimaryAssets.Add(AssetId, LoadedAsset);
+				OutLoadedAssetIds.AddUnique(AssetId);
+			}
 		}
 	}
 }
@@ -299,6 +358,14 @@ void UPBGameDataLoadSubsystem::CompletePrimaryAssetLoad(
 	const FPBPrimaryAssetLoadRequest& Request,
 	const TArray<FPrimaryAssetId>& LoadedAssetIds)
 {
+	TSharedPtr<FStreamableHandle> LoadHandle;
+	if (ActivePrimaryAssetLoadHandles.RemoveAndCopyValue(Request.RequestId, LoadHandle) && LoadHandle.IsValid())
+	{
+		LoadedPrimaryAssetLoadHandlesByBundle.FindOrAdd(Request.BundleKey).Add(LoadHandle);
+	}
+	ActivePrimaryAssetLoadRequests.Remove(Request.RequestId);
+	CompletedPrimaryAssetLoadRequestIds.Add(Request.RequestId);
+
 	if (!LoadedAssetIds.IsEmpty())
 	{
 		TArray<FPrimaryAssetId>& BundleAssetIds = LoadedPrimaryAssetIdsByBundle.FindOrAdd(Request.BundleKey);

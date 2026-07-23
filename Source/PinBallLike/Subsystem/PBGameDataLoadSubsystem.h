@@ -137,8 +137,10 @@ private:
 	// 핸들을 유지해야 비동기 로드 결과가 GC/해제되지 않는다.
 	TSharedPtr<FStreamableHandle> SoftReferenceLoadHandle;
 	TMap<FName, TArray<FPrimaryAssetId>> LoadedPrimaryAssetIdsByBundle;
+	TMap<FName, TArray<TSharedPtr<FStreamableHandle>>> LoadedPrimaryAssetLoadHandlesByBundle;
 	TMap<FGuid, TSharedPtr<FStreamableHandle>> ActivePrimaryAssetLoadHandles;
 	TMap<FGuid, FPBPrimaryAssetLoadRequest> ActivePrimaryAssetLoadRequests;
+	TSet<FGuid> CompletedPrimaryAssetLoadRequestIds;
 
 	UPROPERTY()
 	TMap<FPrimaryAssetId, TObjectPtr<UObject>> LoadedPrimaryAssets;

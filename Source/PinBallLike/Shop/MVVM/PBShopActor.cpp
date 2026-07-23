@@ -109,8 +109,8 @@ void APBShopActor::RefreshShopDisplay(
 		return;
 	}
 
-	// 비동기 로딩 완료 후 어떤 BallId를 표시해야 하는지 기억한다.
-	PendingShopItemBallIds = ShopItemBallIds;
+	// 비동기 로드 콜백이 뒤늦게 도착해도 최신 요청만 화면에 반영한다.
+	const int32 RequestSerial = ++ShopDisplayRequestSerial;
 
 	TArray<FPrimaryAssetId> AssetIds;
 	AssetIds.Reserve(ShopItemBallIds.Num());
@@ -131,7 +131,7 @@ void APBShopActor::RefreshShopDisplay(
 	// 표시할 상품이 없는 경우
 	if (AssetIds.IsEmpty())
 	{
-		HandleShopBallAssetsLoaded();
+		HandleShopBallAssetsLoaded(ShopItemBallIds, RequestSerial);
 		return;
 	}
 	
@@ -143,7 +143,9 @@ void APBShopActor::RefreshShopDisplay(
 			},
 			FStreamableDelegate::CreateUObject(
 				this,
-				&APBShopActor::HandleShopBallAssetsLoaded));
+				&APBShopActor::HandleShopBallAssetsLoaded,
+				ShopItemBallIds,
+				RequestSerial));
 }
 
 void APBShopActor::HandleRerollRequested()
@@ -165,6 +167,8 @@ void APBShopActor::HandleRerollRequested()
 
 void APBShopActor::CloseShop()
 {
+	++ShopDisplayRequestSerial;
+
 	if (ShopWidget)
 	{
 		ShopWidget->RemoveFromParent();
@@ -347,8 +351,18 @@ void APBShopActor::HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Messa
 	if (Message.Exit == 0) CloseShop();
 }
 
-void APBShopActor::HandleShopBallAssetsLoaded()
+void APBShopActor::HandleShopBallAssetsLoaded(
+	TArray<FName> LoadedShopItemBallIds,
+	const int32 RequestSerial)
 {
+	if (RequestSerial != ShopDisplayRequestSerial)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[ShopActor] Ignore stale shop asset load. RequestSerial=%d Current=%d"),
+			RequestSerial,
+			ShopDisplayRequestSerial);
+		return;
+	}
+
     UGameInstance* GameInstance = GetGameInstance();
     if (!GameInstance)
     {
@@ -367,14 +381,14 @@ void APBShopActor::HandleShopBallAssetsLoaded()
     }
 
     TArray<UTexture2D*> BallSprites;
-    BallSprites.Reserve(PendingShopItemBallIds.Num());
+    BallSprites.Reserve(LoadedShopItemBallIds.Num());
 
     for (int32 SlotIndex = 0;
-         SlotIndex < PendingShopItemBallIds.Num();
+         SlotIndex < LoadedShopItemBallIds.Num();
          ++SlotIndex)
     {
         const FName BallId =
-            PendingShopItemBallIds[SlotIndex];
+            LoadedShopItemBallIds[SlotIndex];
 
         UTexture2D* BallSprite = nullptr;
         UTexture2D* BallIcon = nullptr;
@@ -486,7 +500,7 @@ void APBShopActor::HandleShopBallAssetsLoaded()
 	{
 		const TArray<FVector> UIWorldLocations =
 			ShopDisplayActor->DisplayItems(
-				PendingShopItemBallIds,
+				LoadedShopItemBallIds,
 				BallSprites,
 				ShopPurchaseHandler);
 

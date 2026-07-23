@@ -75,12 +75,10 @@ private:
 
 	FGameplayMessageListenerHandle ExitStartHandle;
 	
-	void HandleShopBallAssetsLoaded();
-
-	UPROPERTY()
-	TArray<FName> PendingShopItemBallIds;
+	void HandleShopBallAssetsLoaded(TArray<FName> LoadedShopItemBallIds, int32 RequestSerial);
 
 	FGuid ShopAssetLoadRequestId;
+	int32 ShopDisplayRequestSerial = 0;
 	
 private:
 	bool bPendingUpdateSlotPositions = false;
