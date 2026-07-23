@@ -13,7 +13,11 @@ void UPBShopSlotWidget::SetSlotInfo(FText NameText, int32 Price, FText SynergyTe
 	
 	if (PriceTextBlock)
 	{
-		PriceTextBlock->SetText(FText::AsNumber(Price));
+		FText ItemPrice = FText::Format(
+		FText::FromString(TEXT("{0} Gold")),
+		FText::AsNumber(Price)
+		);
+		PriceTextBlock->SetText(ItemPrice);
 	}
 	
 	if (SynergyTextBlock)
