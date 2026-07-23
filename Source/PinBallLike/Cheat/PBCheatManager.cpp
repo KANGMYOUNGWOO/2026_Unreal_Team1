@@ -234,7 +234,7 @@ FName GetCheatSceneMapPath(const int32 SceneIndex)
 void UPBCheatManager::AddDefaultBall()
 {
 	//AddBenchBall(PBBallAssetIds::Ball::Test01);
-	AddBenchBall("Ball_Test01");
+	AddBenchBall("Ball_Eclair");
 }
 
 void UPBCheatManager::AddBenchBall(FName BallId)
