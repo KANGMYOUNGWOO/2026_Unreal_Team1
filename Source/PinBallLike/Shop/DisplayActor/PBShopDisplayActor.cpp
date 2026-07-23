@@ -28,7 +28,7 @@ APBShopDisplayActor::APBShopDisplayActor()
 		const int32 Row = i / 4;
 		const int32 Col = i % 4;
 		
-		Slot->SetRelativeLocation(FVector(0.f, Col * 200.0f, Row * 200.0f));
+		Slot->SetRelativeLocation(FVector(Row * 300.0f, -210.0f + Col * 140.0f, 0.f));
 		
 		ShopSlots.Add(Slot);
 	}

@@ -14,9 +14,8 @@ void UPBShopSlotWidget::SetSlotInfo(FText NameText, int32 Price, FText SynergyTe
 	if (PriceTextBlock)
 	{
 		FText ItemPrice = FText::Format(
-		FText::FromString(TEXT("{0} Gold")),
-		FText::AsNumber(Price)
-		);
+			NSLOCTEXT("Shop", "SlotPrice", "{0} 골드"),
+			FText::AsNumber(Price));
 		PriceTextBlock->SetText(ItemPrice);
 	}
 	

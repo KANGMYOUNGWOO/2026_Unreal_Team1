@@ -102,7 +102,7 @@ void UPBPurchaseConfirmWidget::SetInfo(
     if (PriceText)
     {
         PriceText->SetText(FText::Format(
-            NSLOCTEXT("Shop", "Price", "{0} Gold"),
+            NSLOCTEXT("Shop", "Price", "{0} 골드"),
             FText::AsNumber(Data.Price)));
     }
 

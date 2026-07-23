@@ -17,7 +17,7 @@ APBShopItemActor::APBShopItemActor()
 	SetRootComponent(ClickCollision);
 
 	ClickCollision->SetBoxExtent(
-		FVector(80.f, 80.f, 80.f));
+		FVector(60.f, 60.f, 80.f));
 
 	ClickCollision->SetCollisionEnabled(
 		ECollisionEnabled::QueryOnly);
@@ -51,7 +51,7 @@ APBShopItemActor::APBShopItemActor()
 		FVector(0.f, 0.f, 60.f));
 
 	Billboard->SetUsingAbsoluteScale(true);
-	Billboard->SetWorldScale3D(FVector(15.f));
+	Billboard->SetWorldScale3D(FVector(10.f));
 
 	Billboard->SetVisibility(true);
 	Billboard->SetHiddenInGame(false);
