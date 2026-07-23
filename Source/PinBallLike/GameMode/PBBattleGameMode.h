@@ -74,6 +74,7 @@ private:
 	void EnterReward();
 	void ShowDefeatWidget();
 	void ResetRunDataBeforeLeavingBattle();
+	void OpenMainMenu();
 	void ReturnToMainMenuAfterDefeat();
 	void HandleRewardPopupClosed(bool bConfirmed);
 	void ApplyActiveSynergyEffectsForBattle();

@@ -82,6 +82,7 @@ void APBBattleGameMode::ReturnToMainMenu()
 		GameDataLoadSubsystem->UnloadPrimaryAssets();
 	}
 
+	UAsyncLoadingScreenLibrary::SetEnableLoadingScreen(true);
 	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/LV_EndingCredit")));
 }
 
@@ -367,6 +368,21 @@ void APBBattleGameMode::ResetRunDataBeforeLeavingBattle()
 	}
 }
 
+void APBBattleGameMode::OpenMainMenu()
+{
+	ResetRunDataBeforeLeavingBattle();
+
+	UGameInstance* GameInstance = GetGameInstance();
+	if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr)
+	{
+		GameDataLoadSubsystem->UnloadPrimaryAssets();
+	}
+
+	UAsyncLoadingScreenLibrary::SetEnableLoadingScreen(true);
+	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/Lv_MainMenu")));
+}
+
 void APBBattleGameMode::ReturnToMainMenuAfterDefeat()
 {
 	UGameInstance* GameInstance = GetGameInstance();
@@ -376,16 +392,7 @@ void APBBattleGameMode::ReturnToMainMenuAfterDefeat()
 		UIManagerSubsystem->PopAllWidgets();
 	}
 
-	ResetRunDataBeforeLeavingBattle();
-
-	if (UPBGameDataLoadSubsystem* GameDataLoadSubsystem =
-		GameInstance ? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>() : nullptr)
-	{
-		GameDataLoadSubsystem->UnloadPrimaryAssets();
-	}
-
-	UAsyncLoadingScreenLibrary::SetEnableLoadingScreen(true);
-	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Map/Lv_MainMenu")));
+	OpenMainMenu();
 }
 
 void APBBattleGameMode::HandleRewardPopupClosed(const bool bConfirmed)
@@ -488,7 +495,7 @@ void APBBattleGameMode::LoadBumpers()
 
 	const FGuid RequestId = FoundBumperSpawner->LoadEquippedBumperDataAssetAsync(
 		FStreamableDelegate::CreateUObject(this, &APBBattleGameMode::HandleBumperDataLoaded));
-	if (!RequestId.IsValid())
+	if (!RequestId.IsValid() && !bBumperDataLoaded)
 	{
 		MarkDataLoaded(EPBBattlePreparationType::Bumper, false);
 	}
@@ -661,7 +668,7 @@ void APBBattleGameMode::HandleBattleDataLoadFailure(const EPBBattlePreparationTy
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().SetTimerForNextTick(
-			FTimerDelegate::CreateUObject(this, &APBBattleGameMode::ReturnToMainMenu));
+			FTimerDelegate::CreateUObject(this, &APBBattleGameMode::OpenMainMenu));
 	}
 }
 

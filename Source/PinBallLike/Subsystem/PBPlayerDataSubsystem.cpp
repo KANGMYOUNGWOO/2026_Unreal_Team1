@@ -88,14 +88,14 @@ void UPBPlayerDataSubsystem::AdvanceBossProgress(const int32 BossCount)
 void UPBPlayerDataSubsystem::ResetRunData()
 {
 	const int32 PreviousGold = Gold;
-
 	Gold = FMath::Max(InitialGold, 0);
-	CurrentBossIndex = 0;
-
 	if (Gold != PreviousGold)
 	{
 		OnGoldChanged.Broadcast(Gold);
 	}
+
+	CurrentBossIndex = 0;
+	SetCurrentBossIndex(0, 4);
 
 	UE_LOG(LogTemp, Log, TEXT("[PlayerData] Run data reset. Gold=%d BossIndex=%d"),
 		Gold,
