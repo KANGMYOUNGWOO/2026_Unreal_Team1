@@ -9,6 +9,7 @@
 #include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
 #include "PinBallLike/Table/PBAssetBundleNames.h"
+#include "PinBallLike/Table/Relic/PBRelicAssetIds.h"
 #include "PinBallLike/Table/Synergy/PBSynergyAssetIds.h"
 
 namespace
@@ -85,6 +86,7 @@ void UPBCollectionSubsystem::RequestCatalogUIAssetsAsync()
 	const TArray<FPrimaryAssetType> AssetTypes = {
 		PBBallAssetIds::Type::BallData,
 		PBSynergyAssetIds::Type::SynergyData,
+		PBRelicAssetIds::Type::RelicData,
 		PBBumperAssetIds::Type::BumperData,
 		PBBossAssetIds::Type::BossData
 	};

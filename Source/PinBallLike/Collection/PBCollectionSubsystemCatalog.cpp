@@ -22,6 +22,8 @@
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTableRow.h"
 #include "PinBallLike/Table/Bumper/Struct/PBBumperTriggerRow.h"
 #include "PinBallLike/Table/Collection/Struct/PBCollectionTableRow.h"
+#include "PinBallLike/Table/Relic/DataAsset/PBRelicDataAsset.h"
+#include "PinBallLike/Table/Relic/PBRelicAssetIds.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicModifierRow.h"
 #include "PinBallLike/Table/Relic/Struct/PBRelicTableRow.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTableRow.h"
@@ -337,7 +339,9 @@ TArray<FPBCollectionSynergyDisplayData> UPBCollectionSubsystem::GetSynergyCatalo
 			EPBCollectionCategory::Synergy,
 			SynergyRowName,
 			SynergyRow.DisplayName,
-			FText::GetEmpty(),
+			SynergyRow.DescriptionKey.IsNone()
+				? FText::GetEmpty()
+				: FText::FromName(SynergyRow.DescriptionKey),
 			SynergyRow.SortOrder);
 		if (const UPBSynergyDataAsset* SynergyDataAsset = ResolveLoadedPrimaryDataAsset<UPBSynergyDataAsset>(
 			GameDataLoad,
@@ -358,12 +362,11 @@ TArray<FPBCollectionSynergyDisplayData> UPBCollectionSubsystem::GetSynergyCatalo
 			TierData.RequiredCount = TierRow.RequiredCount;
 			TierData.EffectSetId = TierRow.EffectSetId;
 			TierData.EffectId = TierRow.EffectSetId;
-			TierData.TierDescription = FText::Format(
-				LOCTEXT("SynergyTierCount", "{0}개 구성"),
-				FText::AsNumber(TierRow.RequiredCount));
-
 			const FPBCollectionEffectSetProjection Projection =
 				FPBCollectionEffectSetProjector::Build(*TableData, TierRow.EffectSetId);
+			TierData.TierDescription = TierRow.TierDescriptionKey.IsNone()
+				? Projection.EffectSummary
+				: FText::FromName(TierRow.TierDescriptionKey);
 			TierData.EffectSummary = Projection.EffectSummary;
 			TierData.ModifierSummary = Projection.ParameterSummary;
 			TierData.TriggerSummary = Projection.TargetSummary;
@@ -388,6 +391,9 @@ TArray<FPBCollectionRelicDisplayData> UPBCollectionSubsystem::GetRelicCatalogEnt
 	const UPBTableDataSubsystem* TableData = GameInstance
 		? GameInstance->GetSubsystem<UPBTableDataSubsystem>()
 		: nullptr;
+	const UPBGameDataLoadSubsystem* GameDataLoad = GameInstance
+		? GameInstance->GetSubsystem<UPBGameDataLoadSubsystem>()
+		: nullptr;
 	if (!IsValid(TableData))
 	{
 		return Result;
@@ -411,6 +417,13 @@ TArray<FPBCollectionRelicDisplayData> UPBCollectionSubsystem::GetRelicCatalogEnt
 			RelicRow.Description);
 		DisplayData.RarityText = GetEnumDisplayText(RelicRow.Rarity);
 		DisplayData.Summary.Subtitle = DisplayData.RarityText;
+		if (const UPBRelicDataAsset* RelicDataAsset = ResolveLoadedPrimaryDataAsset<UPBRelicDataAsset>(
+			GameDataLoad,
+			PBRelicAssetIds::Type::RelicData,
+			RelicId))
+		{
+			DisplayData.Summary.IconTexture = RelicDataAsset->RelicIcon.Get();
+		}
 
 		TArray<FPBRelicModifierRow> ModifierRows;
 		TableData->GetRelicModifierRows(RelicId, ModifierRows);
@@ -424,7 +437,9 @@ TArray<FPBCollectionRelicDisplayData> UPBCollectionSubsystem::GetRelicCatalogEnt
 				*GetEnumDisplayText(Modifier.ModifyType).ToString(),
 				Modifier.Value));
 		}
-		DisplayData.ModifierSummary = JoinLines(ModifierLines);
+		DisplayData.ModifierSummary = ModifierLines.IsEmpty()
+			? RelicRow.Description
+			: JoinLines(ModifierLines);
 	}
 
 	Result.Sort([](const FPBCollectionRelicDisplayData& Left, const FPBCollectionRelicDisplayData& Right)

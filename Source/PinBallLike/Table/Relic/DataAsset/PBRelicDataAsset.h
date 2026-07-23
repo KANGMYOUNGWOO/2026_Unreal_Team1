@@ -16,7 +16,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Relic")
 	FName RowName = NAME_None;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Relic")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Relic", meta = (AssetBundles = "UI"))
 	TSoftObjectPtr<UTexture2D> RelicIcon;
 
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override;

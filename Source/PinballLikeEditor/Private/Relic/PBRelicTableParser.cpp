@@ -47,8 +47,9 @@ bool UPBRelicTableParser::ParseRow(
 		ParseEnumValue(
 			RowData.FindRef(TEXT("Rarity")),
 			EPBRelicRarity::Common);
+	NewRow.EffectId = ParseNameValue(RowData.FindRef(TEXT("EffectId")));
 
-	(void)SetupRelicDataAsset(RowName, NewRow);
+	NewRow.RelicDataAsset = SetupRelicDataAsset(RowName, NewRow);
 
 	TargetTable->AddRow(RowName, NewRow);
 

@@ -164,13 +164,15 @@ void UPBCollectionSynergyTabWidget::ShowDetails(const int32 DataIndex) const
 	TArray<FText> EffectLines;
 	for (const FPBCollectionSynergyTierDisplayData& Tier : Data.Tiers)
 	{
-		TierLines.Add(Tier.TierDescription);
+		const FText TierCountText = FText::Format(
+			LOCTEXT("SynergyTierCount", "{0}개 구성"),
+			FText::AsNumber(Tier.RequiredCount));
+		TierLines.Add(TierCountText);
 		EffectLines.Add(FText::Format(
-			LOCTEXT("SynergyTierDetail", "[{0}]\n{1}\n{2}\n{3}"),
-			Tier.TierDescription,
-			Tier.EffectSummary,
-			Tier.ModifierSummary,
-			Tier.TriggerSummary));
+			LOCTEXT("SynergyTierDetail", "[{0}]\n{1}\n{2}"),
+			TierCountText,
+			Data.Summary.Description,
+			Tier.TierDescription));
 	}
 	SetText(TierListText, JoinTexts(TierLines));
 	SetText(
