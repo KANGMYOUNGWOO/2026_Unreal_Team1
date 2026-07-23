@@ -4,6 +4,7 @@
 #include "PBBallHitReactionComponent.h"
 
 #include "PBBallComboComponent.h"
+#include "PBBallResourceComponent.h"
 #include "PBBallPhysicsComponent.h"
 #include "PBBallEffectRuntimeComponent.h"
 #include "EngineUtils.h"
@@ -124,7 +125,14 @@ bool UPBBallHitReactionComponent::ProcessBossContact(
 
 	if (bDamageOwner && OwnerDamageable && !OwnerDamageable->IsDead())
 	{
-		OwnerDamageable->TakeDamage(1);
+		if (UPBBallResourceComponent* BallResourceComponent = Owner->FindComponentByClass<UPBBallResourceComponent>())
+		{
+			BallResourceComponent->TakeSelfCollisionDamage(1);
+		}
+		else
+		{
+			OwnerDamageable->TakeDamage(1);
+		}
 	}
 
 	return true;

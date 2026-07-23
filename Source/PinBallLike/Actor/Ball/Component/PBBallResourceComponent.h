@@ -42,6 +42,8 @@ public:
 
 	virtual void TakeDamage(int32 Damage) override;
 
+	void TakeSelfCollisionDamage(int32 Damage);
+
 	UFUNCTION(BlueprintCallable, Category="Ball|Resource|Damage")
 	void AddDamageIgnoreCount(FName ResourceName, int32 Count);
 
@@ -55,6 +57,8 @@ public:
 	void AddPostDamageHealCount(FName ResourceName, int32 Count, float HealValue);
 
 private:
+	void TakeDamageInternal(int32 Damage, bool bResetComboOnAppliedDamage);
+	void ResetComboAfterAppliedDamage() const;
 	void AddResourceDamageRule(EPBBallResourceDamageRuleKind Kind, FName ResourceName, int32 Count, float Value);
 	FPBBallResourceDamageRule* FindResourceDamageRule(EPBBallResourceDamageRuleKind Kind, FName ResourceName);
 	const FPBBallResourceDamageRule* FindResourceDamageRule(EPBBallResourceDamageRuleKind Kind, FName ResourceName) const;
