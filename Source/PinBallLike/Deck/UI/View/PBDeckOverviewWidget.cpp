@@ -2,11 +2,14 @@
 
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Components/Button.h"
 #include "PBDeckWidget.h"
 #include "PBDeploymentWidget.h"
 #include "PinBallLike/Deck/UI/ViewModel/PBDeckOverviewViewModel.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSynergyService.h"
+#include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
+#include "PinBallLike/UI/Global/PBGlobalToolbarWidget.h"
 #include "TimerManager.h"
 #include "View/MVVMView.h"
 
@@ -15,10 +18,20 @@ void UPBDeckOverviewWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	InitializeOverview();
+	BindGlobalToolbarEvents();
+	const UPBGlobalToolbarWidget* GlobalToolbar = UIManagerSubsystem
+		? UIManagerSubsystem->GetGlobalToolbarWidget()
+		: nullptr;
+	if (Button_Deck && IsValid(GlobalToolbar) && GlobalToolbar->HasDeckButton())
+	{
+		Button_Deck->SetIsEnabled(false);
+		Button_Deck->SetVisibility(ESlateVisibility::Collapsed);
+	}
 }
 
 void UPBDeckOverviewWidget::NativeDestruct()
 {
+	UnbindGlobalToolbarEvents();
 	ShutdownOverview();
 
 	Super::NativeDestruct();
@@ -89,6 +102,22 @@ void UPBDeckOverviewWidget::CloseDeck()
 	bIsDeckOpen = false;
 	bIsDeckAnimationPlaying = true;
 	BP_PlayDeckCloseAnimation();
+}
+
+void UPBDeckOverviewWidget::ToggleDeck()
+{
+	if (bIsDeckAnimationPlaying)
+	{
+		return;
+	}
+
+	if (bIsDeckOpen)
+	{
+		CloseDeck();
+		return;
+	}
+
+	OpenDeck();
 }
 
 void UPBDeckOverviewWidget::OpenDeployment()
@@ -305,6 +334,52 @@ bool UPBDeckOverviewWidget::ApplyViewModelToWidget()
 			*GetNameSafe(ViewModel));
 	}
 	return bResult;
+}
+
+void UPBDeckOverviewWidget::BindGlobalToolbarEvents()
+{
+	if (UIManagerSubsystem)
+	{
+		return;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	UIManagerSubsystem = IsValid(GameInstance)
+		? GameInstance->GetSubsystem<UPBUIManagerSubsystem>()
+		: nullptr;
+	if (UIManagerSubsystem)
+	{
+		UIManagerSubsystem->OnGlobalDeckToggleRequested.AddUniqueDynamic(
+			this,
+			&UPBDeckOverviewWidget::HandleGlobalDeckToggleRequested);
+	}
+}
+
+void UPBDeckOverviewWidget::UnbindGlobalToolbarEvents()
+{
+	if (UIManagerSubsystem)
+	{
+		UIManagerSubsystem->OnGlobalDeckToggleRequested.RemoveDynamic(
+			this,
+			&UPBDeckOverviewWidget::HandleGlobalDeckToggleRequested);
+	}
+	UIManagerSubsystem = nullptr;
+}
+
+void UPBDeckOverviewWidget::HandleGlobalDeckToggleRequested()
+{
+	if (bIsDeckAnimationPlaying || bIsDeploymentAnimationPlaying)
+	{
+		return;
+	}
+
+	if (bIsDeckOpen)
+	{
+		CloseAll();
+		return;
+	}
+
+	OpenAll();
 }
 
 void UPBDeckOverviewWidget::HandleDeploymentSlotChanged(const int32 SlotIndex, const int32 BallInstanceId)

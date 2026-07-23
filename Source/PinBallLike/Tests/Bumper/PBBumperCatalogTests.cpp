@@ -13,11 +13,14 @@
 #include "PinBallLike/Actor/Bumper/Effect/PBBloodOverdriveBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBComboArcBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBComboBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBComboCashoutBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBCounterShieldBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBDirectRewardBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBGateAccelerationBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBGateSupportFieldBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBKineticShellBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBPartyManaBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBPercentShieldBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBSummonBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBTimedAttackBoostBumperEffect.h"
@@ -142,15 +145,15 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 		{PBBumperAssetIds::Bumper::Rebound_BloodOverdrive, 8},
 		{PBBumperAssetIds::Bumper::Rebound_GroggyHammer, 8},
 		{PBBumperAssetIds::Bumper::Side_ShieldCharge, 6},
-		{PBBumperAssetIds::Bumper::Side_ManaCharge, 7},
+		{PBBumperAssetIds::Bumper::Side_ManaCharge, 6},
 		{PBBumperAssetIds::Bumper::Side_RepairPickup, 6},
-		{PBBumperAssetIds::Bumper::Side_CounterShield, 7},
-		{PBBumperAssetIds::Bumper::Side_StrengthCharge, 7},
-		{PBBumperAssetIds::Bumper::Top_ComboArc, 4},
+		{PBBumperAssetIds::Bumper::Side_CounterShield, 6},
+		{PBBumperAssetIds::Bumper::Side_StrengthCharge, 6},
+		{PBBumperAssetIds::Bumper::Top_ComboArc, 5},
 		{PBBumperAssetIds::Bumper::Top_GroggyStrike, 5},
 		{PBBumperAssetIds::Bumper::Top_DirectStrike, 5},
 		{PBBumperAssetIds::Bumper::Top_ComboCashout, 5},
-		{PBBumperAssetIds::Bumper::Top_VulnerabilityShell, 4},
+		{PBBumperAssetIds::Bumper::Top_VulnerabilityShell, 5},
 		{PBBumperAssetIds::Bumper::Gate_SpeedUp, 3},
 		{PBBumperAssetIds::Bumper::Gate_RecoveryField, 3},
 		{PBBumperAssetIds::Bumper::Gate_ReactiveRepair, 3},
@@ -490,12 +493,18 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 		{PBBumperAssetIds::Bumper::Rebound_KineticShell, EPBBumperRoleType::Attack,
 			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::Immediate,
 			3.0f, UPBKineticShellBumperEffect::StaticClass(), TEXT("속도")},
+		{PBBumperAssetIds::Bumper::Rebound_ComboPulse, EPBBumperRoleType::Support,
+			EPBBumperEffectType::Instant, EPBBumperEffectExecutionPolicy::Immediate,
+			5.0f, UPBComboBumperEffect::StaticClass(), TEXT("콤보")},
 		{PBBumperAssetIds::Bumper::Rebound_GroggyHammer, EPBBumperRoleType::Attack,
 			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::Immediate,
 			10.0f, UPBBossGroggyBumperEffect::StaticClass(), TEXT("명중")},
 		{PBBumperAssetIds::Bumper::Side_ShieldCharge, EPBBumperRoleType::Support,
 			EPBBumperEffectType::Buff, EPBBumperEffectExecutionPolicy::Immediate,
 			1.0f, UPBPercentShieldBumperEffect::StaticClass(), TEXT("최대 체력")},
+		{PBBumperAssetIds::Bumper::Side_ManaCharge, EPBBumperRoleType::Support,
+			EPBBumperEffectType::Buff, EPBBumperEffectExecutionPolicy::Immediate,
+			5.0f, UPBPartyManaBumperEffect::StaticClass(), TEXT("마나")},
 		{PBBumperAssetIds::Bumper::Side_StrengthCharge, EPBBumperRoleType::Support,
 			EPBBumperEffectType::Buff, EPBBumperEffectExecutionPolicy::Immediate,
 			15.0f, UPBTimedAttackBoostBumperEffect::StaticClass(), TEXT("5초")},
@@ -523,6 +532,12 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 		{PBBumperAssetIds::Bumper::Top_ComboArc, EPBBumperRoleType::Attack,
 			EPBBumperEffectType::Buff, EPBBumperEffectExecutionPolicy::Immediate,
 			2.0f, UPBComboArcBumperEffect::StaticClass(), TEXT("콤보")},
+		{PBBumperAssetIds::Bumper::Gate_SpeedUp, EPBBumperRoleType::Zone,
+			EPBBumperEffectType::Area, EPBBumperEffectExecutionPolicy::QueueIfBusy,
+			25.0f, UPBGateAccelerationBumperEffect::StaticClass(), TEXT("가속")},
+		{PBBumperAssetIds::Bumper::Gate_RecoveryField, EPBBumperRoleType::Zone,
+			EPBBumperEffectType::Area, EPBBumperEffectExecutionPolicy::QueueIfBusy,
+			5.0f, UPBGateSupportFieldBumperEffect::StaticClass(), TEXT("체력")},
 		{PBBumperAssetIds::Bumper::Gate_ReactiveRepair, EPBBumperRoleType::Zone,
 			EPBBumperEffectType::Area, EPBBumperEffectExecutionPolicy::QueueIfBusy,
 			1.0f, UPBGateSupportFieldBumperEffect::StaticClass(), TEXT("피격")},
@@ -533,10 +548,20 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 			EPBBumperEffectType::Summon, EPBBumperEffectExecutionPolicy::QueueIfBusy,
 			5.0f, UPBTurretSummonBumperEffect::StaticClass(), TEXT("포탑")}
 	};
+	TestEqual(
+		TEXT("Every catalog Bumper has one delivery expectation"),
+		static_cast<int32>(UE_ARRAY_COUNT(DeliveryExpectations)),
+		static_cast<int32>(UE_ARRAY_COUNT(ExpectedRows)));
+
+	TSet<FName> CoveredDeliveryBumperIds;
 
 	for (const FDeliveryExpectation& Expectation : DeliveryExpectations)
 	{
 		const FString Context = Expectation.BumperId.ToString();
+		TestFalse(
+			*FString::Printf(TEXT("Delivery expectation is unique: %s"), *Context),
+			CoveredDeliveryBumperIds.Contains(Expectation.BumperId));
+		CoveredDeliveryBumperIds.Add(Expectation.BumperId);
 		const FPBBumperTableRow* BumperRow = BumperTable->FindRow<FPBBumperTableRow>(
 			Expectation.BumperId,
 			Context,
@@ -596,6 +621,13 @@ bool FPBBumperCatalogTest::RunTest(const FString& Parameters)
 					static_cast<uint8>(EPBBumperSummonAnchorType::Turret));
 			}
 		}
+	}
+
+	for (const FName ExpectedRow : ExpectedRows)
+	{
+		TestTrue(
+			*FString::Printf(TEXT("Delivery expectation covers catalog row: %s"), *ExpectedRow.ToString()),
+			CoveredDeliveryBumperIds.Contains(ExpectedRow));
 	}
 
 	for (const TPair<FName, uint8*>& TriggerPair : TriggerTable->GetRowMap())

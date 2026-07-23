@@ -478,12 +478,12 @@ void UPBGolemFistLaunchPattern::ApplyPunchHit(APBBallBase* Ball)
 
 	if (IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball))
 	{
-		if (!Damageable->IsDead() && PunchDamage > 0)
+		if (!Damageable->IsDead() && DamageAmount > 0)
 		{
-			Damageable->TakeDamage(PunchDamage);
+			Damageable->TakeDamage(DamageAmount);
 			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
 			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
-				*SourcePatternName.ToString(), PunchDamage, *GetNameSafe(Ball));
+				*SourcePatternName.ToString(), DamageAmount, *GetNameSafe(Ball));
 		}
 	}
 

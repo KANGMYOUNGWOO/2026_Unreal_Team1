@@ -16,11 +16,14 @@
 #include "Materials/MaterialInterface.h"
 #include "TimerManager.h"
 #include "Tests/AutomationCommon.h"
+#include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Ball/Component/PBBallPhysicsComponent.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Bumper/Component/PBBumperCounterShieldComponent.h"
 #include "PinBallLike/Actor/Bumper/Component/PBTurretFireComponent.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBBumperEffectBase.h"
 #include "PinBallLike/Actor/Bumper/Effect/PBGateAccelerationBumperEffect.h"
+#include "PinBallLike/Actor/Bumper/Effect/PBPercentShieldBumperEffect.h"
 #include "PinBallLike/Actor/Bumper/Modular/PBModularBumperBase.h"
 #include "PinBallLike/Actor/Bumper/PBBumperSpawner.h"
 #include "PinBallLike/Actor/Bumper/Summon/PBGateAccelerationField.h"
@@ -32,6 +35,7 @@
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/DeveloperSettings/PBGameDataSettings.h"
 #include "PinBallLike/Interface/Movable.h"
+#include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
 #include "PinBallLike/Table/Bumper/DataAsset/PBBumperDataAsset.h"
 #include "PinBallLike/Table/Bumper/PBBumperAssetIds.h"
@@ -153,6 +157,99 @@ namespace
 		});
 		return Result;
 	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBBumperBallOwnedActorEffectTargetTest,
+	"PinBallLike.Bumper.Runtime.BallOwnedActorEffectTarget",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBBumperBallOwnedActorEffectTargetTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	FTestWorldWrapper TestWorld;
+	if (!TestTrue(TEXT("A temporary Ball-owned interaction world can be created"),
+		TestWorld.CreateTestWorld(EWorldType::Game)))
+	{
+		return false;
+	}
+
+	UWorld* World = TestWorld.GetTestWorld();
+	UClass* BumperClass = LoadClass<APBModularBumperBase>(
+		nullptr,
+		TEXT("/Game/Blueprints/Bumper/BP_ModularBumper.BP_ModularBumper_C"));
+	APBBallBase* OwnerBall = IsValid(World)
+		? World->SpawnActor<APBBallBase>(APBBallBase::StaticClass(), FTransform::Identity)
+		: nullptr;
+	AActor* BallOwnedMovable = SpawnMovableRuntimeTestActor(World, false);
+	AActor* GenericMovable = SpawnMovableRuntimeTestActor(World, false);
+	if (!TestNotNull(TEXT("The production modular Bumper Blueprint resolves"), BumperClass)
+		|| !TestNotNull(TEXT("An owner Ball can be spawned"), OwnerBall)
+		|| !TestNotNull(TEXT("A Ball-owned IMovable can be spawned"), BallOwnedMovable)
+		|| !TestNotNull(TEXT("An unrelated IMovable can be spawned"), GenericMovable))
+	{
+		return false;
+	}
+
+	BallOwnedMovable->SetOwner(OwnerBall);
+	TestEqual(
+		TEXT("A direct Ball remains its own Ball effect target"),
+		UPBBumperEffectBase::ResolveBallEffectTargetOrSource(OwnerBall),
+		static_cast<AActor*>(OwnerBall));
+	TestEqual(
+		TEXT("A Ball-owned IMovable resolves its owner Ball as the effect target"),
+		UPBBumperEffectBase::ResolveBallEffectTargetOrSource(BallOwnedMovable),
+		static_cast<AActor*>(OwnerBall));
+	TestEqual(
+		TEXT("An unrelated IMovable remains the effect target"),
+		UPBBumperEffectBase::ResolveBallEffectTargetOrSource(GenericMovable),
+		GenericMovable);
+
+	UPBBaseResourceComponent* ResourceComponent = OwnerBall->GetResourceComponent();
+	if (!TestNotNull(TEXT("The owner Ball exposes its resource component"), ResourceComponent))
+	{
+		return false;
+	}
+	ResourceComponent->SetResource(PBResourceNames::Health, 100.0f, 100.0f);
+
+	FPBBumperEffectRow EffectRow;
+	EffectRow.Power = 10.0f;
+	APBModularBumperBase* Bumper = SpawnRuntimeTestBumper(
+		World,
+		BumperClass,
+		APBCollisionBumperTriggerActor::StaticClass(),
+		{EPBBumperPositionId::SideLeft},
+		1,
+		UPBPercentShieldBumperEffect::StaticClass(),
+		EffectRow);
+	if (!TestNotNull(TEXT("A shield Bumper can be spawned"), Bumper))
+	{
+		return false;
+	}
+
+	Bumper->DispatchBeginPlay();
+	const TArray<APBBumperTriggerActorBase*> Triggers =
+		FindOwnedRuntimeTestTriggers(World, Bumper);
+	if (!TestEqual(TEXT("The shield Bumper creates one Trigger"), Triggers.Num(), 1))
+	{
+		return false;
+	}
+
+	Bumper->HandleTriggerActorActivated(Triggers[0], BallOwnedMovable, FHitResult());
+	TestEqual(
+		TEXT("The Ball-owned interaction applies shield to the owner Ball"),
+		ResourceComponent->GetResourceCurrent(PBResourceNames::Shield),
+		10.0f);
+	TestEqual(TEXT("The interaction records one meaningful contact"),
+		Bumper->GetMeaningfulContactCount(), 1);
+	TestEqual(TEXT("The interaction is not counted as a direct Ball contact"),
+		Bumper->GetDirectBallContactCount(), 0);
+	TestEqual(TEXT("The interaction is counted as a Ball-owned Actor contact"),
+		Bumper->GetBallOwnedActorContactCount(), 1);
+	TestEqual(TEXT("The interaction is not counted as another Movable contact"),
+		Bumper->GetOtherMovableContactCount(), 0);
+	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

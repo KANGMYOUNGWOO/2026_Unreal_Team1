@@ -2,9 +2,11 @@
 
 #include "Components/SplineComponent.h"
 #include "Components/SplineMeshComponent.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "Kismet/GameplayStatics.h"
+#include "Widgets/Layout/SBorder.h"
 
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "PBChoiceBallActor.h"
@@ -12,6 +14,12 @@
 #include "Blueprint/UserWidget.h"
 #include "PinBallLike/Shop/MVVM/PBShopActor.h"
 #include "UI/PBChoiceWidget.h"
+
+namespace
+{
+    // Keep route fades above normal screens and below the persistent toolbar.
+    constexpr int32 ChoiceScreenFadeZOrder = 9999;
+}
 
 APBChoiceRouteActor::APBChoiceRouteActor()
 {
@@ -60,6 +68,12 @@ void APBChoiceRouteActor::BeginPlay()
         MessageSubsystem.RegisterListener<FPBChoiceType>(GameplayTags::Event_UI_Choice_Exit,
             this,
             &APBChoiceRouteActor::HandleExitStart);
+}
+
+void APBChoiceRouteActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    RemoveChoiceScreenFadeOverlay();
+    Super::EndPlay(EndPlayReason);
 }
 
 void APBChoiceRouteActor::ChooseLeft()
@@ -276,6 +290,8 @@ void APBChoiceRouteActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    UpdateChoiceScreenFade(DeltaTime);
+
     if (!bMoving || !CurrentSpline || !ChoiceBallActor)
     {
         return;
@@ -413,20 +429,11 @@ void APBChoiceRouteActor::FadeToNodeDestination(EPBChoiceNodeType NodeType)
         return;
     }
 
-    PC->PlayerCameraManager->StartCameraFade(
-        0.f,
-        1.f,
+    StartChoiceScreenFade(
+        0.0f,
+        1.0f,
         FadeOutTime,
-        FLinearColor::Black,
-        false,
-        true);
-
-    GetWorld()->GetTimerManager().SetTimer(
-        FadeToDestinationTimerHandle,
-        this,
-        &APBChoiceRouteActor::OnFadeToDestinationFinished,
-        FadeOutTime,
-        false);
+        FSimpleDelegate::CreateUObject(this, &APBChoiceRouteActor::OnFadeToDestinationFinished));
 }
 
 void APBChoiceRouteActor::OnFadeToDestinationFinished()
@@ -457,13 +464,7 @@ void APBChoiceRouteActor::OnFadeToDestinationFinished()
         }
     }
 
-    PC->PlayerCameraManager->StartCameraFade(
-        1.f,
-        0.f,
-        FadeInTime,
-        FLinearColor::Black,
-        false,
-        false);
+    StartChoiceScreenFade(1.0f, 0.0f, FadeInTime, FSimpleDelegate());
 }
 
 void APBChoiceRouteActor::HandleExitStart(FGameplayTag Exit, const FPBChoiceType& Message)
@@ -480,20 +481,11 @@ void APBChoiceRouteActor::FadeBackToBallAndMove()
         return;
     }
 
-    PC->PlayerCameraManager->StartCameraFade(
-        0.f,
-        1.f,
+    StartChoiceScreenFade(
+        0.0f,
+        1.0f,
         FadeOutTime,
-        FLinearColor::Black,
-        false,
-        true);
-
-    GetWorld()->GetTimerManager().SetTimer(
-        FadeBackTimerHandle,
-        this,
-        &APBChoiceRouteActor::OnFadeBackToBallFinished,
-        FadeOutTime,
-        false);
+        FSimpleDelegate::CreateUObject(this, &APBChoiceRouteActor::OnFadeBackToBallFinished));
 }
 
 void APBChoiceRouteActor::OnFadeBackToBallFinished()
@@ -510,13 +502,115 @@ void APBChoiceRouteActor::OnFadeBackToBallFinished()
         PC->SetViewTarget(ChoiceBallActor);
     }
 
-    PC->PlayerCameraManager->StartCameraFade(
-        1.f,
-        0.f,
-        FadeInTime,
-        FLinearColor::Black,
-        false,
-        false);
+    StartChoiceScreenFade(1.0f, 0.0f, FadeInTime, FSimpleDelegate());
 
     MoveToNextPoint();
+}
+
+void APBChoiceRouteActor::StartChoiceScreenFade(
+    const float FromOpacity,
+    const float ToOpacity,
+    const float Duration,
+    FSimpleDelegate CompletionDelegate)
+{
+    EnsureChoiceScreenFadeOverlay();
+
+    ChoiceScreenFadeFromOpacity = FMath::Clamp(FromOpacity, 0.0f, 1.0f);
+    ChoiceScreenFadeToOpacity = FMath::Clamp(ToOpacity, 0.0f, 1.0f);
+    ChoiceScreenFadeDuration = FMath::Max(0.0f, Duration);
+    ChoiceScreenFadeElapsedTime = 0.0f;
+    ChoiceScreenFadeCompletionDelegate = MoveTemp(CompletionDelegate);
+    bChoiceScreenFadeActive = true;
+
+    SetChoiceScreenFadeOpacity(ChoiceScreenFadeFromOpacity);
+
+    if (ChoiceScreenFadeDuration <= 0.0f)
+    {
+        UpdateChoiceScreenFade(0.0f);
+    }
+}
+
+void APBChoiceRouteActor::UpdateChoiceScreenFade(const float DeltaTime)
+{
+    if (!bChoiceScreenFadeActive)
+    {
+        return;
+    }
+
+    ChoiceScreenFadeElapsedTime += FMath::Max(0.0f, DeltaTime);
+    const float Alpha = ChoiceScreenFadeDuration > 0.0f
+        ? FMath::Clamp(ChoiceScreenFadeElapsedTime / ChoiceScreenFadeDuration, 0.0f, 1.0f)
+        : 1.0f;
+
+    SetChoiceScreenFadeOpacity(FMath::Lerp(ChoiceScreenFadeFromOpacity, ChoiceScreenFadeToOpacity, Alpha));
+
+    if (Alpha < 1.0f)
+    {
+        return;
+    }
+
+    bChoiceScreenFadeActive = false;
+
+    FSimpleDelegate CompletionDelegate = MoveTemp(ChoiceScreenFadeCompletionDelegate);
+    ChoiceScreenFadeCompletionDelegate.Unbind();
+
+    if (ChoiceScreenFadeToOpacity <= 0.0f)
+    {
+        RemoveChoiceScreenFadeOverlay();
+    }
+
+    CompletionDelegate.ExecuteIfBound();
+}
+
+void APBChoiceRouteActor::EnsureChoiceScreenFadeOverlay()
+{
+    if (ChoiceScreenFadeOverlay.IsValid())
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!IsValid(World) || !World->GetGameViewport())
+    {
+        return;
+    }
+
+    ChoiceScreenFadeOverlay =
+        SNew(SBorder)
+        .BorderBackgroundColor(FLinearColor::Black)
+        .Visibility(EVisibility::HitTestInvisible);
+
+    World->GetGameViewport()->AddViewportWidgetContent(
+        ChoiceScreenFadeOverlay.ToSharedRef(),
+        ChoiceScreenFadeZOrder);
+}
+
+void APBChoiceRouteActor::RemoveChoiceScreenFadeOverlay()
+{
+    bChoiceScreenFadeActive = false;
+    ChoiceScreenFadeCompletionDelegate.Unbind();
+
+    if (!ChoiceScreenFadeOverlay.IsValid())
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (IsValid(World))
+    {
+        if (UGameViewportClient* GameViewport = World->GetGameViewport())
+        {
+            GameViewport->RemoveViewportWidgetContent(ChoiceScreenFadeOverlay.ToSharedRef());
+        }
+    }
+
+    ChoiceScreenFadeOverlay.Reset();
+}
+
+void APBChoiceRouteActor::SetChoiceScreenFadeOpacity(const float Opacity) const
+{
+    if (ChoiceScreenFadeOverlay.IsValid())
+    {
+        ChoiceScreenFadeOverlay->SetRenderOpacity(FMath::Clamp(Opacity, 0.0f, 1.0f));
+    }
 }

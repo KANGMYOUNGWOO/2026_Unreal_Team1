@@ -18,6 +18,7 @@ class APBChoiceBallActor;
 class APBChoiceNodeManager;
 class APBShopActor;
 class UPBChoiceWidget;
+class SBorder;
 
 USTRUCT(BlueprintType)
 struct FPBChoiceNodeDestination
@@ -48,6 +49,7 @@ public:
 protected:
     virtual void OnConstruction(const FTransform& Transform) override;
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void Tick(float DeltaTime) override;
 
 private:
@@ -79,6 +81,11 @@ private:
 
     void FadeBackToBallAndMove();
     void OnFadeBackToBallFinished();
+    void StartChoiceScreenFade(float FromOpacity, float ToOpacity, float Duration, FSimpleDelegate CompletionDelegate);
+    void UpdateChoiceScreenFade(float DeltaTime);
+    void EnsureChoiceScreenFadeOverlay();
+    void RemoveChoiceScreenFadeOverlay();
+    void SetChoiceScreenFadeOpacity(float Opacity) const;
 
 private:
     UPROPERTY(VisibleAnywhere)
@@ -177,6 +184,11 @@ private:
 
     FGameplayMessageListenerHandle ExitStartHandle;
 
-    FTimerHandle FadeToDestinationTimerHandle;
-    FTimerHandle FadeBackTimerHandle;
+    TSharedPtr<SBorder> ChoiceScreenFadeOverlay;
+    FSimpleDelegate ChoiceScreenFadeCompletionDelegate;
+    float ChoiceScreenFadeFromOpacity = 0.0f;
+    float ChoiceScreenFadeToOpacity = 0.0f;
+    float ChoiceScreenFadeDuration = 0.0f;
+    float ChoiceScreenFadeElapsedTime = 0.0f;
+    bool bChoiceScreenFadeActive = false;
 };

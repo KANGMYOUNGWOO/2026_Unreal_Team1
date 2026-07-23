@@ -10,6 +10,8 @@ class UPBGlobalToolbarWidget;
 class UWorld;
 class UPBBallRewardPopupWidget;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPBGlobalDeckToggleRequested);
+
 UCLASS()
 class PINBALLLIKE_API UPBUIManagerSubsystem : public UGameInstanceSubsystem
 {
@@ -30,6 +32,7 @@ public:
 		int32 ZOrder = 100);
 
 	UPBBallRewardPopupWidget* ShowBallRewardPopup(
+		TSubclassOf<UPBBallRewardPopupWidget> PopupClass,
 		const FText& Message,
 		FName BallId,
 		int32 StarLevel,
@@ -62,6 +65,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "UI|Global Toolbar")
 	UPBGlobalToolbarWidget* GetGlobalToolbarWidget() const { return GlobalToolbarWidget; }
 
+	UFUNCTION(BlueprintCallable, Category = "UI|Global Toolbar")
+	void RequestGlobalDeckToggle();
+
+	UPROPERTY(BlueprintAssignable, Category = "UI|Global Toolbar")
+	FPBGlobalDeckToggleRequested OnGlobalDeckToggleRequested;
+
 private:
 	UPBSimplePopupWidget* PushSimplePopup(
 		TSubclassOf<UPBSimplePopupWidget> PopupClass,
@@ -79,9 +88,6 @@ private:
 
 	UPROPERTY()
 	TSubclassOf<UPBSimplePopupWidget> DefaultSimplePopupClass;
-
-	UPROPERTY()
-	TSoftClassPtr<UPBBallRewardPopupWidget> DefaultBallRewardPopupClass;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBUserWidget>> WidgetStack;

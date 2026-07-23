@@ -65,7 +65,7 @@ APBBallSkillActorBase* UPBBallSkillComponent::ActivateSkillActor()
 {
 	if (IsValid(ActiveSkillActor))
 	{
-		return ActiveSkillActor;
+		return nullptr;
 	}
 
 	APBBallBase* OwnerBall = Cast<APBBallBase>(GetOwner());

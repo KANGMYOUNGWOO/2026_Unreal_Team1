@@ -621,12 +621,12 @@ void UPBBossSnakeChargePattern::ApplyChargeHit(APBBallBase* Ball)
 
 	if (IDamageable* Damageable = PBInterfaceUtils::FindInterface<IDamageable>(Ball))
 	{
-		if (!Damageable->IsDead() && ChargeDamage > 0)
+		if (!Damageable->IsDead() && DamageAmount > 0)
 		{
-			Damageable->TakeDamage(ChargeDamage);
+			Damageable->TakeDamage(DamageAmount);
 			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
 			UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
-				*SourcePatternName.ToString(), ChargeDamage, *GetNameSafe(Ball));
+				*SourcePatternName.ToString(), DamageAmount, *GetNameSafe(Ball));
 		}
 	}
 

@@ -40,6 +40,7 @@ void UPBBossTurtleFallingRockPattern::ExecutePattern_Implementation(APBBossBase*
 			const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
 			FallingRock->SetSourcePatternName(SourcePatternName);
 			FallingRock->SetFallingSpeed(FallingSpeed);
+			FallingRock->SetDamageAmount(DamageAmount);
 			FallingRock->SetHitSFX(HitSFXToUse);
 			UGameplayStatics::FinishSpawningActor(FallingRock, SpawnTransform);
 		}

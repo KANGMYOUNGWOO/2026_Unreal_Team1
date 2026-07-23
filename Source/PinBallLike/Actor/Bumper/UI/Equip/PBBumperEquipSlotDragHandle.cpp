@@ -2,6 +2,7 @@
 
 #include "PBBumperDragDropOperation.h"
 #include "PBBumperEquipUI.h"
+#include "PBBumperEquipUIBuilder.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -52,7 +53,9 @@ TSharedRef<SWidget> UPBBumperEquipSlotDragHandle::RebuildWidget()
 		RootSizeBox->AddChild(IconFrame);
 
 		IconFrame->SetPadding(FMargin(2.0f));
+		IconFrame->SetBrush(PBBumperEquipUIBuilder::MakeIconFrameBrush());
 		IconFrame->SetBrushColor(FLinearColor::White);
+		IconFrame->SetClipping(EWidgetClipping::ClipToBounds);
 		IconFrame->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 		IconFrame->AddChild(IconImage);
 

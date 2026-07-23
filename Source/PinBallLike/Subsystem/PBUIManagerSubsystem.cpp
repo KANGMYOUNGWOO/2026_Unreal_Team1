@@ -8,11 +8,11 @@
 #include "PinBallLike/UI/Popup/PBBallRewardPopupWidget.h"
 #include "PinBallLike/UI/Popup/PBSimplePopupWidget.h"
 #include "UObject/ConstructorHelpers.h"
-#include "UObject/UObjectGlobals.h"
 
 namespace
 {
-	constexpr int32 GlobalToolbarZOrder = MAX_int32 - 1;
+	// AddToViewport adds an internal Z-order offset, so values near MAX_int32 can overflow.
+	constexpr int32 GlobalToolbarZOrder = 10000;
 }
 
 UPBUIManagerSubsystem::UPBUIManagerSubsystem()
@@ -24,27 +24,22 @@ UPBUIManagerSubsystem::UPBUIManagerSubsystem()
 		DefaultSimplePopupClass = PopupClassFinder.Class;
 	}
 
-	DefaultBallRewardPopupClass = TSoftClassPtr<UPBBallRewardPopupWidget>(
-		FSoftObjectPath(
-			TEXT("/Game/Blueprints/UI/Popup/WBP_Ball_Reward.WBP_Ball_Reward_C")));
 }
 
 UPBBallRewardPopupWidget* UPBUIManagerSubsystem::ShowBallRewardPopup(
+	const TSubclassOf<UPBBallRewardPopupWidget> PopupClass,
 	const FText& Message,
 	const FName BallId,
 	const int32 StarLevel,
 	FPBSimplePopupClosedDelegate ClosedCallback,
 	const int32 ZOrder)
 {
-	const TSubclassOf<UPBBallRewardPopupWidget> PopupClass =
-		DefaultBallRewardPopupClass.LoadSynchronous();
 	if (!PopupClass)
 	{
 		UE_LOG(
 			LogTemp,
 			Error,
-			TEXT("Failed to load Ball reward popup class. Path=%s"),
-			*DefaultBallRewardPopupClass.ToSoftObjectPath().ToString());
+			TEXT("Ball reward popup class is not assigned."));
 		return nullptr;
 	}
 
@@ -94,6 +89,13 @@ UPBUserWidget* UPBUIManagerSubsystem::PushWidget(
 	if (!WidgetClass)
 	{
 		return nullptr;
+	}
+
+	CleanInvalidWidgetsFromStack();
+	if (UPBUserWidget* TopWidget = GetTopWidget();
+		IsValid(TopWidget) && TopWidget->IsA(WidgetClass))
+	{
+		return TopWidget;
 	}
 
 	UGameInstance* GameInstance = GetGameInstance();
@@ -206,6 +208,11 @@ void UPBUIManagerSubsystem::SetGlobalToolbarSuppressedForLoading(const bool bSup
 
 	bGlobalToolbarSuppressedForLoading = bSuppressed;
 	RefreshGlobalToolbarVisibility();
+}
+
+void UPBUIManagerSubsystem::RequestGlobalDeckToggle()
+{
+	OnGlobalDeckToggleRequested.Broadcast();
 }
 
 void UPBUIManagerSubsystem::HandlePostLoadMap(UWorld* LoadedWorld)
