@@ -22,6 +22,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Binding")
 	TSubclassOf<APBOctopusBindingZone> BindingZoneClass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Binding", meta = (ClampMin = "1"))
+	int32 BindingZoneCount = 1;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Octopus Pattern|Binding", meta = (ClampMin = "0.0"))
 	float ZoneRadius = 100.0f;
 
