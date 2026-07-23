@@ -31,5 +31,7 @@ public:
 	FPBDamageAppliedSignature OnDamageApplied;
 
 private:
+	void AddComboForSkillDamage() const;
+
 	int32 GroggyAmount = 0;
 };
