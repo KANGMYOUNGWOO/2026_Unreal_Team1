@@ -14,9 +14,12 @@ APBShopDisplayActor::APBShopDisplayActor()
 	Root = CreateDefaultSubobject<USceneComponent>("Root");
 	SetRootComponent(Root);
 	
-	constexpr int32 Slotcount = 8;
+	constexpr int32 SlotsPerRow = 4;
+	constexpr int32 SlotCount = 8;
+	constexpr float RowSpacing = 235.0f;
+	constexpr float ColumnSpacing = 325.0f / (SlotsPerRow - 1);
 	
-	for(int32 i = 0; i < Slotcount; ++i)
+	for(int32 i = 0; i < SlotCount; ++i)
 	{
 		const FString SlotName = FString::Printf(TEXT("ShopSlot_%d"), i);
 		
@@ -25,10 +28,10 @@ APBShopDisplayActor::APBShopDisplayActor()
 		
 		Slot->SetupAttachment(Root);
 		
-		const int32 Row = i / 4;
-		const int32 Col = i % 4;
+		const int32 Row = i / SlotsPerRow;
+		const int32 Col = i % SlotsPerRow;
 		
-		Slot->SetRelativeLocation(FVector(0.f, Col * 200.0f, Row * 200.0f));
+		Slot->SetRelativeLocation(FVector(-Row * RowSpacing, Col * ColumnSpacing, 0.0f));
 		
 		ShopSlots.Add(Slot);
 	}
