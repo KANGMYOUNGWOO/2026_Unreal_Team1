@@ -38,8 +38,6 @@ private:
 	void HandleBenchSlotsSwapped();
 
 	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
-	TObjectPtr<UButton> Button_Exit;
-	UPROPERTY(meta = (BindWidget, AllowPrivateAccess = true))
 	TObjectPtr<UUniformGridPanel> GridPanel_BallList;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "BallDeck", meta = (AllowPrivateAccess = "true"))
