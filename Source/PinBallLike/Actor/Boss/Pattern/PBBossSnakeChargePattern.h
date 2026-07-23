@@ -63,7 +63,7 @@ protected:
 	float ChargeBounceVelocity = 5000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge|Hit|Debug")
-	bool IsDrawChargeHitRange = true;
+	bool IsDrawChargeHitRange = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Charge", meta = (AllowPrivateAccess = "true"))
 	EPBBossSnakeChargePatternState ChargePatternState = EPBBossSnakeChargePatternState::None;

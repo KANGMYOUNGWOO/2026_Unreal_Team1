@@ -52,11 +52,21 @@ void UPBBossTurtleSpinPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 
 void UPBBossTurtleSpinPattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
 {
+	if (Boss)
+	{
+		Boss->SetActorRotation(OriginalBossRotation);
+	}
+
 	CleanupSpin();
 }
 
 bool UPBBossTurtleSpinPattern::PausePatternForExternalGroggy(APBBossBase* Boss)
 {
+	if (Boss)
+	{
+		Boss->SetActorRotation(OriginalBossRotation);
+	}
+
 	CleanupSpin();
 	return true;
 }

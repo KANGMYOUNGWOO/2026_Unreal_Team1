@@ -40,10 +40,6 @@ void UPBBossSnakeProjectilePattern::ExecutePattern_Implementation(APBBossBase* B
 			}
 		}
 
-		if (FiredProjectileCount < ProjectileCount && GetOwnerBoss())
-		{
-			FinishPattern();
-		}
 		return;
 	}
 

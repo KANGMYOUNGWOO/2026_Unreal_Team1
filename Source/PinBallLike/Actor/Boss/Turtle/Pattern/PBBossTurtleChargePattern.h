@@ -43,6 +43,7 @@ protected:
 	void DestroyChargeHitCollision();
 	void ApplyChargeHit(APBBallBase* Ball);
 	void CleanupCharge();
+	void RestoreInitialBossRotation(APBTurtleBoss* Boss);
 	bool FindChargeEndLocation(const APBTurtleBoss* Boss, FVector& OutChargeEndLocation) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Charge")
@@ -79,7 +80,7 @@ protected:
 	float ReturnAcceptanceRadius = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Charge|Debug")
-	bool IsDrawChargeDamageRange = true;
+	bool IsDrawChargeDamageRange = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Turtle|Charge|Debug", meta = (ClampMin = "0.0"))
 	float ChargeDamageRangeLineThickness = 5.0f;
@@ -92,7 +93,9 @@ private:
 	FVector ChargeDirection = FVector::ForwardVector;
 	FVector ChargeEndLocation = FVector::ZeroVector;
 	FVector ReturnTargetLocation = FVector::ZeroVector;
+	FRotator InitialBossRotation = FRotator::ZeroRotator;
 	bool IsChargeEndLocationValid = false;
+	bool IsInitialBossRotationCached = false;
 	FTimerHandle ChargeStartTimerHandle;
 	FTimerHandle ChargeUpdateTimerHandle;
 	FTimerHandle ChargeStopTimerHandle;
