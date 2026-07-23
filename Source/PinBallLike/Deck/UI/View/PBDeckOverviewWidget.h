@@ -125,6 +125,8 @@ private:
 	bool ApplyViewModelToWidget();
 	void BindGlobalToolbarEvents();
 	void UnbindGlobalToolbarEvents();
+	bool ShouldCloseDeckOnlyForGlobalRequest() const;
+	bool ShouldIgnoreGlobalRequestForBattlePhase() const;
 
 	UFUNCTION()
 	void HandleGlobalDeckToggleRequested();

@@ -6,6 +6,7 @@
 #include "PBDeckWidget.h"
 #include "PBDeploymentWidget.h"
 #include "PinBallLike/Deck/UI/ViewModel/PBDeckOverviewViewModel.h"
+#include "PinBallLike/GameState/PBBattleGameState.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSynergyService.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
@@ -19,14 +20,6 @@ void UPBDeckOverviewWidget::NativeConstruct()
 
 	InitializeOverview();
 	BindGlobalToolbarEvents();
-	const UPBGlobalToolbarWidget* GlobalToolbar = UIManagerSubsystem
-		? UIManagerSubsystem->GetGlobalToolbarWidget()
-		: nullptr;
-	if (Button_Deck && IsValid(GlobalToolbar) && GlobalToolbar->HasDeckButton())
-	{
-		Button_Deck->SetIsEnabled(false);
-		Button_Deck->SetVisibility(ESlateVisibility::Collapsed);
-	}
 }
 
 void UPBDeckOverviewWidget::NativeDestruct()
@@ -382,21 +375,42 @@ void UPBDeckOverviewWidget::UnbindGlobalToolbarEvents()
 	UIManagerSubsystem = nullptr;
 }
 
+bool UPBDeckOverviewWidget::ShouldCloseDeckOnlyForGlobalRequest() const
+{
+	const UWorld* World = GetWorld();
+	return World && World->GetGameState<APBBattleGameState>();
+}
+
+bool UPBDeckOverviewWidget::ShouldIgnoreGlobalRequestForBattlePhase() const
+{
+	const UWorld* World = GetWorld();
+	const APBBattleGameState* BattleGameState = World
+		? World->GetGameState<APBBattleGameState>()
+		: nullptr;
+	return BattleGameState
+		&& BattleGameState->GetBattleLevelPhase() == EPBBattleLevelPhase::Combat;
+}
+
 void UPBDeckOverviewWidget::HandleGlobalDeckToggleRequested()
 {
-	if (bDeploymentPinnedOpen)
+	if (bIsDeckAnimationPlaying || bIsDeploymentAnimationPlaying)
 	{
-		ToggleDeck();
 		return;
 	}
 
-	if (bIsDeckAnimationPlaying || bIsDeploymentAnimationPlaying)
+	if (ShouldIgnoreGlobalRequestForBattlePhase())
 	{
 		return;
 	}
 
 	if (bIsDeckOpen)
 	{
+		if (bDeploymentPinnedOpen || ShouldCloseDeckOnlyForGlobalRequest())
+		{
+			CloseDeck();
+			return;
+		}
+
 		CloseAll();
 		return;
 	}
