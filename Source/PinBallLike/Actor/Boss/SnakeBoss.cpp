@@ -336,8 +336,22 @@ void ASnakeBoss::UpdateSnakeAnimationData(float DeltaTime, const FVector& NextLo
 void ASnakeBoss::ResetSnakePath()
 {
 	SnakePathSamples.Reset();
-	SnakePathTotalDistance = 0.0f;
-	RecordSnakePathLocation(GetActorLocation());
+
+	const FVector HeadLocation = GetActorLocation();
+	const float InitialPathLength = FMath::Max(SnakeSplineLength, 1.0f);
+	const FVector TailLocation = HeadLocation - CurrentMoveDirection * InitialPathLength;
+
+	FPBSnakePathSample TailSample;
+	TailSample.Location = TailLocation;
+	TailSample.Distance = 0.0f;
+	SnakePathSamples.Add(TailSample);
+
+	FPBSnakePathSample HeadSample;
+	HeadSample.Location = HeadLocation;
+	HeadSample.Distance = InitialPathLength;
+	SnakePathSamples.Add(HeadSample);
+
+	SnakePathTotalDistance = InitialPathLength;
 	UpdateSnakeSplinePoints();
 }
 
