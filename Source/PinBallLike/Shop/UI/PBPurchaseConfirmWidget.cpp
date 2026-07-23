@@ -179,10 +179,13 @@ void UPBPurchaseConfirmWidget::SetInfo(
 	// Race (첫 번째만 표시)
 	//------------------------------------------------------
 
-	
+	SynergyIcon3->SetVisibility(ESlateVisibility::Hidden);
+	SynergyText3->SetVisibility(ESlateVisibility::Hidden);
 	
 	if (Data.RaceDataList.IsValidIndex(0))
 	{
+		SynergyIcon3->SetVisibility(ESlateVisibility::Visible);
+		SynergyText3->SetVisibility(ESlateVisibility::Visible);
 		
 		if (SynergyIcon3)
 		{
@@ -218,21 +221,7 @@ void UPBPurchaseConfirmWidget::SetInfo(
 		
 	}
 	
-	else
-	{
-		if (SynergyIcon3)
-		{
-			SynergyIcon3->SetVisibility(ESlateVisibility::Hidden);
-			SynergyIcon3->SetBrushFromTexture(nullptr);
-		}
-
-		if (SynergyText3)
-		{
-			SynergyText3->SetVisibility(ESlateVisibility::Hidden);
-			SynergyText3->SetText(FText::GetEmpty());
-		}
-	}
-
+	
     if (SkillNameText)
     {
         SkillNameText->SetText(Data.SkillNameText);
