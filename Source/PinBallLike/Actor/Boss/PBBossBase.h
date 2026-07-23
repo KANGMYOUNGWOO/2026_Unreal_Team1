@@ -137,6 +137,12 @@ public:
 	// 현재 핀볼 충돌 데미지가 차단되어 있는지 반환합니다.
 	bool IsPinballCollisionDamageBlocked() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Boss|Base Damage")
+	void SetInvincible(bool IsInvincible);
+
+	UFUNCTION(BlueprintPure, Category = "Boss|Base Damage")
+	bool IsInvincible() const;
+
 	// 보스가 데미지를 받았음을 내부 시스템과 블루프린트에 알립니다.
 	void NotifyBossDamaged(FName HitPointName, int32 DamageAmount);
 
