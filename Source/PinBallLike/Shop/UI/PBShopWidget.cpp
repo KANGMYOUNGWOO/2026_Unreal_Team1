@@ -252,6 +252,14 @@ void UPBShopWidget::SetPurchaseConfirmInfo(const FPBPurchaseConfirmData& Data)
 	ConfirmWidget->SetVisibility(ESlateVisibility::Visible);
 }
 
+void UPBShopWidget::HidePurchaseConfirmInfo()
+{
+	if (ConfirmWidget)
+	{
+		ConfirmWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
 void UPBShopWidget::SetSlotWidgetLocation(const TArray<FVector>& InWorldLocations)
 {
 	ShopSlotWorldLocations = InWorldLocations;
@@ -271,6 +279,7 @@ void UPBShopWidget::OnExitButtonClicked()
 
 void UPBShopWidget::OnRerollButtonClicked()
 {
+	HidePurchaseConfirmInfo();
 	OnRerollRequested.Broadcast();
 }
 

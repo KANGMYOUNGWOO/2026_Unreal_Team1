@@ -106,6 +106,8 @@ public:
 	void RefuseWidgetSpawn();
 	
 	void SetPurchaseConfirmInfo(const FPBPurchaseConfirmData& Data);
+
+	void HidePurchaseConfirmInfo();
 	
 	void SetSlotWidgetLocation(const TArray<FVector>& InWorldLocations);
 	
