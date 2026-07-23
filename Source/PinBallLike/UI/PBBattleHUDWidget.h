@@ -57,6 +57,8 @@ private:
 	void ScheduleBindComboEvents();
 	void RefreshComboText();
 	void ApplyComboText(int32 CurrentCombo);
+	void RefreshLaunchCountText();
+	void ApplyLaunchCountText(int32 RemainingLaunchCount);
 	void StartComboPulse(bool bMilestone);
 	void UpdateComboPulse(float DeltaTime);
 	void ResetComboVisualState();
@@ -79,6 +81,9 @@ private:
 	UFUNCTION()
 	void HandleBattleComboChanged(int32 CurrentCombo);
 
+	UFUNCTION()
+	void HandleBattleLaunchCountChanged(int32 PreviousCount, int32 NewCount);
+
 	void HandleBattlePhaseChangedMessage(FGameplayTag Channel, const FPBBattlePhaseChangedMessage& Message);
 
 	UPROPERTY(meta = (BindWidgetOptional))
@@ -89,6 +94,9 @@ private:
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> Text_Combo;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Text_LaunchCount;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPBBallStatusWidget>> BallPanels;
@@ -113,6 +121,7 @@ private:
 
 	bool bDeckEventsBound = false;
 	bool bComboEventsBound = false;
+	bool bLaunchCountEventsBound = false;
 	bool bComboPulseActive = false;
 	float ComboPulseElapsed = 0.0f;
 	float ActiveComboPulseScale = 0.0f;
