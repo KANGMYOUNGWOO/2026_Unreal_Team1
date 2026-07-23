@@ -184,7 +184,9 @@ void AFlipper::ApplyForceToMovableActors(const float DeltaTime, const float Moti
 		}
 
 		const float DistanceMultiplier = FMath::Lerp(1.0f, TipPowerMultiplier, DistanceAlpha);
-		const float FinalPower = LaunchPower * MotionAlpha * DistanceMultiplier;
+		float MinimumMotion = FMath::Clamp(MotionAlpha,0.75f,1.0f);
+		float MinDistanceMultiplier = FMath::Clamp(DistanceMultiplier,0.5f,1.0f);
+		const float FinalPower = LaunchPower * MinimumMotion * MinDistanceMultiplier;
 		const FVector VelocityToAdd = ForceDirection * FinalPower * DeltaTime;
 
 		Movable->AddVelocity(VelocityToAdd);
