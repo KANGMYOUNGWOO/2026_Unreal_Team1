@@ -47,13 +47,13 @@ protected:
 	TObjectPtr<UCanvasPanel> RootCanvas;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Toolbar|Deck")
-	TSoftObjectPtr<UTexture2D> DeckButtonIcon;
+	TObjectPtr<UTexture2D> DeckButtonIcon;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Toolbar|Deck", meta = (ClampMin = "24.0"))
 	float DeckButtonSize = 34.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Toolbar|Option")
-	TSoftObjectPtr<UTexture2D> OptionButtonIcon;
+	TObjectPtr<UTexture2D> OptionButtonIcon;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Global Toolbar|Relic")
 	TSoftClassPtr<UPBRelicInventoryWidget> RelicInventoryWidgetClass;

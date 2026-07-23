@@ -16,6 +16,7 @@
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBUIManagerSubsystem.h"
 #include "Styling/CoreStyle.h"
+#include "UObject/ConstructorHelpers.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
@@ -44,13 +45,16 @@ void ApplyToolbarButtonStyle(UButton* Button)
 
 UPBGlobalToolbarWidget::UPBGlobalToolbarWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-	, DeckButtonIcon(FSoftObjectPath(
-		TEXT("/Game/Resources/UI/Toolbar/T_UI_ToolbarDeck.T_UI_ToolbarDeck")))
-	, OptionButtonIcon(FSoftObjectPath(
-		TEXT("/Game/Resources/UI/Toolbar/T_UI_ToolbarOption.T_UI_ToolbarOption")))
 	, RelicInventoryWidgetClass(FSoftObjectPath(
 		TEXT("/Game/Blueprints/UI/Relic/WBP_PBRelicInventoryWidget.WBP_PBRelicInventoryWidget_C")))
 {
+	static ConstructorHelpers::FObjectFinder<UTexture2D> DeckButtonIconFinder(
+		TEXT("/Game/Resources/UI/Toolbar/T_UI_ToolbarDeck.T_UI_ToolbarDeck"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> OptionButtonIconFinder(
+		TEXT("/Game/Resources/UI/Toolbar/T_UI_ToolbarOption.T_UI_ToolbarOption"));
+
+	DeckButtonIcon = DeckButtonIconFinder.Object;
+	OptionButtonIcon = OptionButtonIconFinder.Object;
 }
 
 void UPBGlobalToolbarWidget::NativeConstruct()
@@ -241,9 +245,9 @@ void UPBGlobalToolbarWidget::EnsureToolbarButtons()
 		if (UImage* OptionIconImage = Cast<UImage>(
 			OptionButtonWidget->GetWidgetFromName(TEXT("Image_22"))))
 		{
-			if (UTexture2D* IconTexture = OptionButtonIcon.LoadSynchronous())
+			if (OptionButtonIcon)
 			{
-				OptionIconImage->SetBrushFromTexture(IconTexture, true);
+				OptionIconImage->SetBrushFromTexture(OptionButtonIcon, true);
 			}
 			const float IconSize = FMath::Max(DeckButtonSize - 6.0f, 1.0f);
 			OptionIconImage->SetDesiredSizeOverride(FVector2D(IconSize));
@@ -319,9 +323,9 @@ void UPBGlobalToolbarWidget::EnsureToolbarButtons()
 	}
 	if (DeckIconImage)
 	{
-		if (UTexture2D* IconTexture = DeckButtonIcon.LoadSynchronous())
+		if (DeckButtonIcon)
 		{
-			DeckIconImage->SetBrushFromTexture(IconTexture, true);
+			DeckIconImage->SetBrushFromTexture(DeckButtonIcon, true);
 		}
 		const float IconSize = FMath::Max(DeckButtonSize - 6.0f, 1.0f);
 		DeckIconImage->SetDesiredSizeOverride(FVector2D(IconSize));
