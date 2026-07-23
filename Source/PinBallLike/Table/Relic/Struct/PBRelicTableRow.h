@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "PinBallLike/Struct/Relic/PBRelicTypes.h"
+#include "PinBallLike/Table/Relic/DataAsset/PBRelicDataAsset.h"
 #include "PBRelicTableRow.generated.h"
 
 USTRUCT(BlueprintType)
@@ -22,4 +23,7 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Relic")
 	FName EffectId = NAME_None;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Relic")
+	TSoftObjectPtr<UPBRelicDataAsset> RelicDataAsset;
 };
