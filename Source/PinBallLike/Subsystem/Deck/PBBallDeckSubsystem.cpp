@@ -8,6 +8,7 @@
 #include "PBBallDeckSynergyService.h"
 
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
+#include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
 #include "PinBallLike/Table/Ball/DataAsset/PBBallDataAsset.h"
 
 void UPBBallDeckSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -444,8 +445,26 @@ int32 UPBBallDeckSubsystem::GetSellPrice(int32 BallInstanceId)
 	}
 
 	UGameInstance* GameInstance = GetGameInstance();
-	
-	return 0;
+	const UPBTableDataSubsystem* TableDataSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBTableDataSubsystem>() : nullptr;
+	if (!TableDataSubsystem)
+	{
+		return 0;
+	}
+
+	FPBBallTableRow BallRow;
+	if (!TableDataSubsystem->FindBallRow(BallInstanceData->BallId, BallRow) || BallRow.ShopId.IsNone())
+	{
+		return 0;
+	}
+
+	FPBShopTableRow ShopRow;
+	if (!TableDataSubsystem->FindShopRow(BallRow.ShopId, ShopRow))
+	{
+		return 0;
+	}
+
+	return FMath::Max(ShopRow.SellPrice, 0);
 }
 
 bool UPBBallDeckSubsystem::SellBall(int32 BallInstanceId, int32& OutSellPrice)
@@ -468,6 +487,12 @@ bool UPBBallDeckSubsystem::SellBall(int32 BallInstanceId, int32& OutSellPrice)
 	{
 		OutSellPrice = 0;
 		return false;
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	if (UPBPlayerDataSubsystem* PlayerDataSubsystem = GameInstance ? GameInstance->GetSubsystem<UPBPlayerDataSubsystem>() : nullptr)
+	{
+		PlayerDataSubsystem->GainGold(OutSellPrice);
 	}
 
 	OnBallSold.Broadcast(BallInstanceId, BallId, OutSellPrice);

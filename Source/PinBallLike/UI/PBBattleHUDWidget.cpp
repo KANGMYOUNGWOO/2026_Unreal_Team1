@@ -44,6 +44,7 @@ void UPBBattleHUDWidget::NativeConstruct()
 	ScheduleRefreshBallPanels(true);
 	RefreshDeckOverview();
 	RefreshComboText();
+	RefreshLaunchCountText();
 
 	if (BattleGameState)
 	{
@@ -340,8 +341,11 @@ void UPBBattleHUDWidget::BindComboEvents()
 	}
 
 	BattleGameState->OnBattleComboChanged.AddUniqueDynamic(this, &UPBBattleHUDWidget::HandleBattleComboChanged);
+	BattleGameState->OnBattleLaunchCountChanged.AddUniqueDynamic(this, &UPBBattleHUDWidget::HandleBattleLaunchCountChanged);
 	bComboEventsBound = true;
+	bLaunchCountEventsBound = true;
 	RefreshComboText();
+	RefreshLaunchCountText();
 }
 
 void UPBBattleHUDWidget::UnbindComboEvents()
@@ -352,6 +356,11 @@ void UPBBattleHUDWidget::UnbindComboEvents()
 	}
 
 	BattleGameState->OnBattleComboChanged.RemoveDynamic(this, &UPBBattleHUDWidget::HandleBattleComboChanged);
+	if (bLaunchCountEventsBound)
+	{
+		BattleGameState->OnBattleLaunchCountChanged.RemoveDynamic(this, &UPBBattleHUDWidget::HandleBattleLaunchCountChanged);
+		bLaunchCountEventsBound = false;
+	}
 	bComboEventsBound = false;
 	BattleGameState = nullptr;
 }
@@ -408,6 +417,31 @@ void UPBBattleHUDWidget::ApplyComboText(const int32 CurrentCombo)
 	{
 		ResetComboVisualState();
 	}
+}
+
+void UPBBattleHUDWidget::RefreshLaunchCountText()
+{
+	if (!Text_LaunchCount)
+	{
+		return;
+	}
+
+	CacheBattleGameState();
+	const int32 RemainingLaunchCount = BattleGameState ? BattleGameState->GetRemainingBattleLaunchCount() : 0;
+	ApplyLaunchCountText(RemainingLaunchCount);
+}
+
+void UPBBattleHUDWidget::ApplyLaunchCountText(const int32 RemainingLaunchCount)
+{
+	if (!Text_LaunchCount)
+	{
+		return;
+	}
+
+	Text_LaunchCount->SetText(FText::Format(
+		NSLOCTEXT("BattleHUD", "LaunchCountTextFormat", "남은 출격: {0}"),
+		FText::AsNumber(FMath::Max(0, RemainingLaunchCount))));
+	Text_LaunchCount->SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
 void UPBBattleHUDWidget::StartComboPulse(const bool bMilestone)
@@ -583,6 +617,12 @@ void UPBBattleHUDWidget::HandleDisplayedBallDestroyed(AActor* DestroyedActor)
 void UPBBattleHUDWidget::HandleBattleComboChanged(const int32 CurrentCombo)
 {
 	ApplyComboText(CurrentCombo);
+}
+
+void UPBBattleHUDWidget::HandleBattleLaunchCountChanged(const int32 PreviousCount, const int32 NewCount)
+{
+	(void)PreviousCount;
+	ApplyLaunchCountText(NewCount);
 }
 
 void UPBBattleHUDWidget::HandleBattlePhaseChangedMessage(
