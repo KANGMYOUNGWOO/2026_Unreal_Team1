@@ -37,7 +37,7 @@ void UPBBattleHUDWidget::NativeConstruct()
 	EnsureDeckOverviewWidget();
 	if (DeckOverviewWidget)
 	{
-		DeckOverviewWidget->SetDeploymentPinnedOpen(true);
+		DeckOverviewWidget->SetDeploymentPinnedOpen(false);
 	}
 	RegisterBattleMessageListeners();
 	BindComboEvents();
@@ -49,7 +49,7 @@ void UPBBattleHUDWidget::NativeConstruct()
 	if (BattleGameState)
 	{
 		const EPBBattleLevelPhase CurrentPhase = BattleGameState->GetBattleLevelPhase();
-		ApplyBattlePhaseToDeckOverview(CurrentPhase);
+		ApplyBattlePhaseToDeckOverview(EPBBattleLevelPhase::DataLoading, CurrentPhase);
 		ApplyBattlePhaseToLoadingScreen(CurrentPhase);
 	}
 }
@@ -160,7 +160,9 @@ void UPBBattleHUDWidget::EnsureDeckOverviewWidget()
 	UE_LOG(LogTemp, Warning, TEXT("[BattleHUD] DeckOverviewWidget is not bound."));
 }
 
-void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(const EPBBattleLevelPhase NewPhase)
+void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(
+	const EPBBattleLevelPhase PreviousPhase,
+	const EPBBattleLevelPhase NewPhase)
 {
 	EnsureDeckOverviewWidget();
 	if (!DeckOverviewWidget)
@@ -171,12 +173,21 @@ void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(const EPBBattleLevelPhas
 	if (NewPhase == EPBBattleLevelPhase::BallDeployment)
 	{
 		RefreshDeckOverview();
-		DeckOverviewWidget->OpenDeployment();
+		if (PreviousPhase == EPBBattleLevelPhase::Combat)
+		{
+			DeckOverviewWidget->SetDeploymentPinnedOpen(true);
+			DeckOverviewWidget->CloseDeck();
+			DeckOverviewWidget->OpenDeployment();
+			return;
+		}
+
+		DeckOverviewWidget->SetDeploymentPinnedOpen(false);
+		DeckOverviewWidget->OpenAll();
 	}
 	else if (NewPhase == EPBBattleLevelPhase::Combat)
 	{
-		DeckOverviewWidget->CloseDeck();
-		DeckOverviewWidget->OpenDeployment();
+		DeckOverviewWidget->SetDeploymentPinnedOpen(false);
+		DeckOverviewWidget->CloseAll();
 	}
 }
 
@@ -631,6 +642,6 @@ void UPBBattleHUDWidget::HandleBattlePhaseChangedMessage(
 {
 	(void)Channel;
 	UE_LOG(LogTemp, Log, TEXT("[BattleHUD] Battle phase changed. NewPhase=%d"), static_cast<int32>(Message.NewPhase));
-	ApplyBattlePhaseToDeckOverview(Message.NewPhase);
+	ApplyBattlePhaseToDeckOverview(Message.PreviousPhase, Message.NewPhase);
 	ApplyBattlePhaseToLoadingScreen(Message.NewPhase);
 }

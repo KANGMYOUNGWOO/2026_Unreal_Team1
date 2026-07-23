@@ -47,7 +47,7 @@ private:
 	void BindDeckEvents();
 	void UnbindDeckEvents();
 	void EnsureDeckOverviewWidget();
-	void ApplyBattlePhaseToDeckOverview(EPBBattleLevelPhase NewPhase);
+	void ApplyBattlePhaseToDeckOverview(EPBBattleLevelPhase PreviousPhase, EPBBattleLevelPhase NewPhase);
 	void ApplyBattlePhaseToLoadingScreen(EPBBattleLevelPhase NewPhase);
 	void RegisterBattleMessageListeners();
 	void UnregisterBattleMessageListeners();
