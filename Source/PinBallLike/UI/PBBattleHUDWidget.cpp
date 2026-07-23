@@ -26,6 +26,8 @@ void UPBBattleHUDWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	DisplayedCombo = 0;
+	ResetComboVisualState();
 	LoadingScreenController = MakeUnique<FPBLoadingScreenController>();
 	LoadingScreenController->Show(GetWorld());
 	CacheBallPanels();
@@ -33,6 +35,10 @@ void UPBBattleHUDWidget::NativeConstruct()
 	CachePartyController();
 	BindDeckEvents();
 	EnsureDeckOverviewWidget();
+	if (DeckOverviewWidget)
+	{
+		DeckOverviewWidget->SetDeploymentPinnedOpen(true);
+	}
 	RegisterBattleMessageListeners();
 	BindComboEvents();
 	ScheduleRefreshBallPanels(true);
@@ -49,6 +55,8 @@ void UPBBattleHUDWidget::NativeConstruct()
 
 void UPBBattleHUDWidget::NativeDestruct()
 {
+	ResetComboVisualState();
+
 	if (LoadingScreenController)
 	{
 		LoadingScreenController->Shutdown();
@@ -80,6 +88,12 @@ void UPBBattleHUDWidget::NativeDestruct()
 	}
 
 	Super::NativeDestruct();
+}
+
+void UPBBattleHUDWidget::NativeTick(const FGeometry& MyGeometry, const float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	UpdateComboPulse(InDeltaTime);
 }
 
 void UPBBattleHUDWidget::ApplyBattlePhaseToLoadingScreen(const EPBBattleLevelPhase NewPhase)
@@ -160,7 +174,8 @@ void UPBBattleHUDWidget::ApplyBattlePhaseToDeckOverview(const EPBBattleLevelPhas
 	}
 	else if (NewPhase == EPBBattleLevelPhase::Combat)
 	{
-		DeckOverviewWidget->CloseAll();
+		DeckOverviewWidget->CloseDeck();
+		DeckOverviewWidget->OpenDeployment();
 	}
 }
 
@@ -369,8 +384,86 @@ void UPBBattleHUDWidget::ApplyComboText(const int32 CurrentCombo)
 		return;
 	}
 
-	Text_Combo->SetVisibility(CurrentCombo > 0 ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-	Text_Combo->SetText(FText::Format(FText::FromString(TEXT("Combo {0}")), CurrentCombo));
+	const int32 PreviousCombo = DisplayedCombo;
+	DisplayedCombo = FMath::Max(0, CurrentCombo);
+	Text_Combo->SetText(FText::Format(
+		NSLOCTEXT("BattleHUD", "ComboTextFormat", "COMBO {0}"),
+		DisplayedCombo));
+
+	if (DisplayedCombo <= 0)
+	{
+		ResetComboVisualState();
+		Text_Combo->SetVisibility(ESlateVisibility::Collapsed);
+		return;
+	}
+
+	Text_Combo->SetVisibility(ESlateVisibility::HitTestInvisible);
+	if (DisplayedCombo > PreviousCombo)
+	{
+		const bool bCrossedMilestone = ComboMilestoneInterval > 0
+			&& DisplayedCombo / ComboMilestoneInterval > PreviousCombo / ComboMilestoneInterval;
+		StartComboPulse(bCrossedMilestone);
+	}
+	else if (DisplayedCombo < PreviousCombo)
+	{
+		ResetComboVisualState();
+	}
+}
+
+void UPBBattleHUDWidget::StartComboPulse(const bool bMilestone)
+{
+	if (!Text_Combo)
+	{
+		return;
+	}
+
+	bComboPulseActive = true;
+	ComboPulseElapsed = 0.0f;
+	ActiveComboPulseScale = ComboPulseScale * (bMilestone ? ComboMilestoneScaleMultiplier : 1.0f);
+	ActiveComboPulseLift = ComboPulseLift * (bMilestone ? ComboMilestoneScaleMultiplier : 1.0f);
+	ActiveComboPulseColor = bMilestone ? ComboMilestoneColor : ComboPulseColor;
+	UpdateComboPulse(0.0f);
+}
+
+void UPBBattleHUDWidget::UpdateComboPulse(const float DeltaTime)
+{
+	if (!bComboPulseActive || !Text_Combo)
+	{
+		return;
+	}
+
+	ComboPulseElapsed += FMath::Max(0.0f, DeltaTime);
+	const float Duration = FMath::Max(ComboPulseDuration, UE_SMALL_NUMBER);
+	const float Alpha = FMath::Clamp(ComboPulseElapsed / Duration, 0.0f, 1.0f);
+	const float SettledAlpha = FMath::InterpEaseOut(0.0f, 1.0f, Alpha, 3.0f);
+	const float Scale = FMath::Lerp(1.0f + ActiveComboPulseScale, 1.0f, SettledAlpha);
+
+	Text_Combo->SetRenderScale(FVector2D(Scale));
+	Text_Combo->SetRenderTranslation(FVector2D(0.0f, FMath::Lerp(ActiveComboPulseLift, 0.0f, SettledAlpha)));
+	Text_Combo->SetRenderOpacity(FMath::Lerp(0.45f, 1.0f, SettledAlpha));
+	Text_Combo->SetColorAndOpacity(FSlateColor(FMath::Lerp(ActiveComboPulseColor, FLinearColor::White, SettledAlpha)));
+
+	if (Alpha >= 1.0f)
+	{
+		ResetComboVisualState();
+	}
+}
+
+void UPBBattleHUDWidget::ResetComboVisualState()
+{
+	bComboPulseActive = false;
+	ComboPulseElapsed = 0.0f;
+	ActiveComboPulseScale = 0.0f;
+	ActiveComboPulseLift = 0.0f;
+	ActiveComboPulseColor = FLinearColor::White;
+
+	if (Text_Combo)
+	{
+		Text_Combo->SetRenderScale(FVector2D(1.0f));
+		Text_Combo->SetRenderTranslation(FVector2D::ZeroVector);
+		Text_Combo->SetRenderOpacity(1.0f);
+		Text_Combo->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+	}
 }
 
 void UPBBattleHUDWidget::ScheduleRefreshBallPanels(const bool bResetRetryCount)

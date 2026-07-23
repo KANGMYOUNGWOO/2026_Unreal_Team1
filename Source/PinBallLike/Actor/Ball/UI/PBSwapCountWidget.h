@@ -40,4 +40,7 @@ private:
 
 	FTimerHandle BindRetryTimerHandle;
 	bool bBattleGameStateBound = false;
+	int32 BindRetryCount = 0;
+
+	static constexpr int32 MaxBindRetryCount = 120;
 };

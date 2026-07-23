@@ -11,6 +11,8 @@ void UPBSwapCountWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	BindRetryCount = 0;
+	SetVisibility(ESlateVisibility::Collapsed);
 	BindBattleGameState();
 	RefreshSwapCountText();
 }
@@ -44,6 +46,7 @@ void UPBSwapCountWidget::BindBattleGameState()
 
 	BattleGameState->OnBattleShiftCountChanged.AddUniqueDynamic(this, &UPBSwapCountWidget::HandleBattleShiftCountChanged);
 	bBattleGameStateBound = true;
+	SetVisibility(ESlateVisibility::HitTestInvisible);
 	RefreshSwapCountText();
 }
 
@@ -61,6 +64,12 @@ void UPBSwapCountWidget::UnbindBattleGameState()
 
 void UPBSwapCountWidget::ScheduleBindBattleGameState()
 {
+	if (BindRetryCount >= MaxBindRetryCount)
+	{
+		return;
+	}
+	++BindRetryCount;
+
 	if (UWorld* World = GetWorld())
 	{
 		BindRetryTimerHandle = World->GetTimerManager().SetTimerForNextTick(
@@ -83,7 +92,7 @@ void UPBSwapCountWidget::ApplySwapCountText(const int32 RemainingCount)
 
 	const int32 BattleShiftLimit = FMath::Max(GetBattleShiftLimit(), RemainingCount);
 	Text_SwapCount->SetText(FText::Format(
-		NSLOCTEXT("SwapCountWidget", "SwapCountFormat", "교체\n{0}/{1}"),
+		NSLOCTEXT("SwapCountWidget", "SwapCountFormat", "{0} / {1}"),
 		RemainingCount,
 		BattleShiftLimit));
 }

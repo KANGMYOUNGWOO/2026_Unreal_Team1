@@ -7,6 +7,7 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
+#include "Components/ScaleBox.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Engine/GameInstance.h"
@@ -231,8 +232,11 @@ void UPBGlobalToolbarWidget::EnsureRightControls()
 	UImage* DeckIconImage = WidgetTree->ConstructWidget<UImage>(
 		UImage::StaticClass(),
 		TEXT("DeckButtonIcon"));
+	UScaleBox* DeckIconScaleBox = WidgetTree->ConstructWidget<UScaleBox>(
+		UScaleBox::StaticClass(),
+		TEXT("DeckButtonIconScaleBox"));
 
-	if (!RightControls || !DeckButtonSizeBox || !DeckButton || !DeckIconImage)
+	if (!RightControls || !DeckButtonSizeBox || !DeckButton || !DeckIconImage || !DeckIconScaleBox)
 	{
 		DeckButton = nullptr;
 		RightControls = nullptr;
@@ -249,8 +253,12 @@ void UPBGlobalToolbarWidget::EnsureRightControls()
 	}
 	DeckIconImage->SetDesiredSizeOverride(FVector2D(DeckButtonSize - 8.0f));
 	DeckIconImage->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	DeckIconScaleBox->SetStretch(EStretch::ScaleToFit);
+	DeckIconScaleBox->SetStretchDirection(EStretchDirection::Both);
+	DeckIconScaleBox->SetUserSpecifiedScale(1.0f);
 
-	DeckButton->AddChild(DeckIconImage);
+	DeckIconScaleBox->AddChild(DeckIconImage);
+	DeckButton->AddChild(DeckIconScaleBox);
 	DeckButtonSizeBox->AddChild(DeckButton);
 
 	UHorizontalBoxSlot* DeckButtonSlot = Cast<UHorizontalBoxSlot>(
