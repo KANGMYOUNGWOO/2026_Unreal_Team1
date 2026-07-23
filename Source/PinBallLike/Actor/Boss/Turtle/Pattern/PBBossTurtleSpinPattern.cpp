@@ -42,6 +42,7 @@ void UPBBossTurtleSpinPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 		return;
 	}
 
+	OriginalBossRotation = TurtleBoss->GetActorRotation();
 	TurtleBoss->PlayTurtleAnimation(HideAnimation);
 	FTimerManager& TimerManager = TurtleBoss->GetWorldTimerManager();
 	TimerManager.SetTimer(SpinStartTimerHandle, this, &UPBBossTurtleSpinPattern::StartSpin, 1.12f, false);
@@ -52,6 +53,23 @@ void UPBBossTurtleSpinPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 void UPBBossTurtleSpinPattern::CancelPatternInternal_Implementation(APBBossBase* Boss)
 {
 	CleanupSpin();
+}
+
+bool UPBBossTurtleSpinPattern::PausePatternForExternalGroggy(APBBossBase* Boss)
+{
+	CleanupSpin();
+	return true;
+}
+
+bool UPBBossTurtleSpinPattern::ResumePatternAfterExternalGroggy(APBBossBase* Boss)
+{
+	if (Boss)
+	{
+		Boss->SetActorRotation(OriginalBossRotation);
+	}
+
+	FinishPattern();
+	return true;
 }
 
 void UPBBossTurtleSpinPattern::StartSpin()
@@ -135,9 +153,7 @@ void UPBBossTurtleSpinPattern::CompletePattern()
 {
 	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
-		FRotator BossRotation = Boss->GetActorRotation();
-		BossRotation.Yaw = 0.0f;
-		Boss->SetActorRotation(BossRotation);
+		Boss->SetActorRotation(OriginalBossRotation);
 	}
 
 	CleanupSpin();

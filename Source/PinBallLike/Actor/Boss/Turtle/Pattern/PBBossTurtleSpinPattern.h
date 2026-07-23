@@ -24,6 +24,8 @@ protected:
 	virtual bool CanExecute_Implementation(APBBossBase* Boss) const override;
 	virtual void ExecutePattern_Implementation(APBBossBase* Boss) override;
 	virtual void CancelPatternInternal_Implementation(APBBossBase* Boss) override;
+	virtual bool PausePatternForExternalGroggy(APBBossBase* Boss) override;
+	virtual bool ResumePatternAfterExternalGroggy(APBBossBase* Boss) override;
 
 	UFUNCTION()
 	void HandleSpinBeginOverlap(
@@ -88,4 +90,5 @@ private:
 	FTimerHandle SpinUpdateTimerHandle;
 	FTimerHandle SpinStopTimerHandle;
 	FTimerHandle PatternCompleteTimerHandle;
+	FRotator OriginalBossRotation = FRotator::ZeroRotator;
 };
