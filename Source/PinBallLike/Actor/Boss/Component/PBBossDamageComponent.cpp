@@ -47,6 +47,16 @@ bool UPBBossDamageComponent::IsPinballCollisionDamageBlocked() const
 	return IsPinballCollisionDamageBlockedValue;
 }
 
+void UPBBossDamageComponent::SetInvincible(bool IsInvincible)
+{
+	IsInvincibleValue = IsInvincible;
+}
+
+bool UPBBossDamageComponent::IsInvincible() const
+{
+	return IsInvincibleValue;
+}
+
 void UPBBossDamageComponent::ConfigureDamageSettings(FName NewDefaultHitPointName, float NewDamageCooldownSeconds)
 {
 	DefaultHitPointName = NewDefaultHitPointName.IsNone() ? TEXT("Normal") : NewDefaultHitPointName;
@@ -55,7 +65,11 @@ void UPBBossDamageComponent::ConfigureDamageSettings(FName NewDefaultHitPointNam
 
 bool UPBBossDamageComponent::CanApplyDamage(FName HitPointName, int32 DamageAmount) const
 {
-	return OwnerBoss && DamageAmount > 0 && !OwnerBoss->IsDead() && HitPointName != NAME_None;
+	return OwnerBoss
+		&& !IsInvincibleValue
+		&& DamageAmount > 0
+		&& !OwnerBoss->IsDead()
+		&& HitPointName != NAME_None;
 }
 
 void UPBBossDamageComponent::HandleHitPartComponentHit(
