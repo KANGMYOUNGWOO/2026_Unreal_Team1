@@ -4,7 +4,7 @@
 #include "PBShopSlotWidget.h"
 #include "Components/TextBlock.h"
 
-void UPBShopSlotWidget::SetSlotInfo(FText NameText, int32 Price, FText SynergyText)
+void UPBShopSlotWidget::SetSlotInfo(FText NameText, int32 Price, FText /*SynergyText*/)
 {
 	if (NameTextBlock)
 	{
@@ -21,7 +21,8 @@ void UPBShopSlotWidget::SetSlotInfo(FText NameText, int32 Price, FText SynergyTe
 	
 	if (SynergyTextBlock)
 	{
-		SynergyTextBlock->SetText(SynergyText);
+		SynergyTextBlock->SetText(FText::GetEmpty());
+		SynergyTextBlock->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	
 	
