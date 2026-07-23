@@ -4,11 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "PinBallLike/Actor/Ball/UI/PBBallDetailTooltipWidget.h"
 #include "PinBallLike/Struct/Shop/PBPurchaseConfirmData.h"
 #include "PBPurchaseConfirmWidget.generated.h"
 
-struct FPBBallDetailTooltipViewData;
+class UPBBallDetailInfoRowWidget;
+class UPBBallDetailTagListRowWidget;
 class UTextBlock;
 class UImage;
 class UWidgetAnimation;
@@ -64,29 +64,14 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> ManaRegenText;
 	
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UImage> SynergyIcon1;
-	
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> SynergyText1;
-	
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UImage> SynergyIcon2;
-	
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> SynergyText2;
-	
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UImage> SynergyIcon3;
-	
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> SynergyText3;
-	
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UImage> SynergyIcon4;
-	
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> SynergyText4;
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UPBBallDetailInfoRowWidget> Tag_Type;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UPBBallDetailInfoRowWidget> Tag_Job;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UPBBallDetailTagListRowWidget> TagListRow_Race;
 	
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> OpenAnim;

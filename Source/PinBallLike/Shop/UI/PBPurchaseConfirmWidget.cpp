@@ -10,6 +10,8 @@
 #include  "PinBallLike/Choice/UI/PBBettingWidget.h"
 #include  "PinBallLike/Struct/Shop/PBPurChaseMessaage.h"
 #include  "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Actor/Ball/UI/PBBallDetailInfoRowWidget.h"
+#include "PinBallLike/Actor/Ball/UI/PBBallDetailTagListRowWidget.h"
 #include "Kismet/GameplayStatics.h"
 void UPBPurchaseConfirmWidget::NativeConstruct()
 {
@@ -139,87 +141,25 @@ void UPBPurchaseConfirmWidget::SetInfo(
         ManaRegenText->SetText(Data.ManaRegenRow.ValueText);
     }
 
-    //------------------------------------
-    // 시너지(최대 3개)
-    //------------------------------------
-
-	//------------------------------------------------------
-	// PowerFlip
-	//------------------------------------------------------
-
-	if (SynergyIcon1)
+	if (Tag_Type)
 	{
-		SynergyIcon1->SetBrushFromTexture(
-			Data.PowerFlipData.IconTexture);
+		Tag_Type->SetIconTextRow(NSLOCTEXT("PurchaseConfirm", "TypeLabel", "타입"), Data.PowerFlipData);
 	}
 
-	if (SynergyText1)
+	if (Tag_Job)
 	{
-		SynergyText1->SetText(
-			Data.PowerFlipData.Text);
+		Tag_Job->SetIconTextRow(NSLOCTEXT("PurchaseConfirm", "JobLabel", "직업"), Data.ClassData);
 	}
 
-	//------------------------------------------------------
-	// Class
-	//------------------------------------------------------
-
-	if (SynergyIcon2)
+	if (TagListRow_Race)
 	{
-		SynergyIcon2->SetBrushFromTexture(
-			Data.ClassData.IconTexture);
+		TagListRow_Race->SetTagList(NSLOCTEXT("PurchaseConfirm", "RaceLabel", "종족"), Data.RaceDataList);
 	}
 
-	if (SynergyText2)
-	{
-		SynergyText2->SetText(
-			Data.ClassData.Text);
-	}
-
-	//------------------------------------------------------
-	// Race (첫 번째만 표시)
-	//------------------------------------------------------
-
-	SynergyIcon3->SetVisibility(ESlateVisibility::Hidden);
-	SynergyText3->SetVisibility(ESlateVisibility::Hidden);
+	//------------------------------------
+	// 태그
+	//------------------------------------
 	
-	if (Data.RaceDataList.IsValidIndex(0))
-	{
-		SynergyIcon3->SetVisibility(ESlateVisibility::Visible);
-		SynergyText3->SetVisibility(ESlateVisibility::Visible);
-		
-		if (SynergyIcon3)
-		{
-			SynergyIcon3->SetBrushFromTexture(
-				Data.RaceDataList[0].IconTexture);
-		}
-
-		if (SynergyText3)
-		{
-			SynergyText3->SetText(
-				Data.RaceDataList[0].Text);
-		}
-	}
-	
-	SynergyIcon4->SetVisibility(ESlateVisibility::Hidden);
-	SynergyText4->SetVisibility(ESlateVisibility::Hidden);
-	
-	if (Data.RaceDataList.IsValidIndex(1))
-	{
-		SynergyIcon4->SetVisibility(ESlateVisibility::Visible);
-		SynergyText4->SetVisibility(ESlateVisibility::Visible);
-		if (SynergyIcon4)
-		{
-			SynergyIcon4->SetBrushFromTexture(
-				Data.RaceDataList[1].IconTexture);
-		}
-
-		if (SynergyText4)
-		{
-			SynergyText4->SetText(
-				Data.RaceDataList[1].Text);
-		}
-		
-	}
 	
 	
     if (SkillNameText)
