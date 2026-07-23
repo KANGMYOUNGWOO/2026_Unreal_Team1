@@ -11,6 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "../UI/PBShopWidget.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
+#include "Engine/AssetManager.h"
 #include "Engine/GameInstance.h"
 #include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Subsystem/PBGameDataLoadSubsystem.h"
@@ -457,13 +458,21 @@ void APBShopActor::HandleShopBallAssetsLoaded(
                 LoadSubsystem->GetLoadedPrimaryAsset(
                     BallAssetId));
 
+        if (!BallDataAsset)
+        {
+            const FSoftObjectPath BallDataAssetPath =
+                UAssetManager::Get().GetPrimaryAssetPath(BallAssetId);
+            BallDataAsset = Cast<UPBBallDataAsset>(
+                BallDataAssetPath.TryLoad());
+        }
+
         if (BallDataAsset)
         {
             BallSprite =
             	BallDataAsset->BallSprite.LoadSynchronous();
 
             BallIcon =
-                BallDataAsset->BallIcon.Get();
+                BallDataAsset->BallIcon.LoadSynchronous();
         }
         else
         {

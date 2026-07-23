@@ -83,7 +83,7 @@ void UPBCollectionCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListIte
 		NameText->SetAutoWrapText(false);
 		NameText->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
 		NameText->SetClipping(EWidgetClipping::ClipToBounds);
-		NameText->SetToolTipText(Item->Summary.DisplayName);
+		NameText->SetToolTipText(FText::GetEmpty());
 	}
 	if (SubtitleText)
 	{
@@ -91,7 +91,7 @@ void UPBCollectionCatalogEntryWidget::NativeOnListItemObjectSet(UObject* ListIte
 		SubtitleText->SetAutoWrapText(false);
 		SubtitleText->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
 		SubtitleText->SetClipping(EWidgetClipping::ClipToBounds);
-		SubtitleText->SetToolTipText(Item->Summary.Subtitle);
+		SubtitleText->SetToolTipText(FText::GetEmpty());
 		SubtitleText->SetVisibility(Item->Summary.Subtitle.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 	}
 	if (AccentBorder)

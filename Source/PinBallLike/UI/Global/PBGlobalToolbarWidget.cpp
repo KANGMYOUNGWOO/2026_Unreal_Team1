@@ -313,9 +313,13 @@ void UPBGlobalToolbarWidget::EnsureToolbarButtons()
 	DeckButton->SetToolTipText(NSLOCTEXT("PBGlobalToolbar", "DeckButtonTooltip", "덱 열기/닫기"));
 	ApplyToolbarButtonStyle(DeckButton);
 
-	UImage* DeckIconImage = Cast<UImage>(
-		WidgetTree->FindWidget(TEXT("DeckButtonIcon")));
-	if (!DeckIconImage && !DeckButton->GetContent())
+	UImage* DeckIconImage = Cast<UImage>(DeckButton->GetContent());
+	if (!DeckIconImage)
+	{
+		DeckIconImage = Cast<UImage>(
+			WidgetTree->FindWidget(TEXT("DeckButtonIcon")));
+	}
+	if (!DeckIconImage)
 	{
 		DeckIconImage = WidgetTree->ConstructWidget<UImage>(
 			UImage::StaticClass(),
@@ -329,9 +333,16 @@ void UPBGlobalToolbarWidget::EnsureToolbarButtons()
 		}
 		const float IconSize = FMath::Max(DeckButtonSize - 6.0f, 1.0f);
 		DeckIconImage->SetDesiredSizeOverride(FVector2D(IconSize));
+		DeckIconImage->SetColorAndOpacity(FLinearColor::White);
 		DeckIconImage->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-		if (!DeckIconImage->GetParent())
+		if (DeckIconImage->GetParent()
+			&& DeckIconImage->GetParent() != DeckButton)
 		{
+			DeckIconImage->RemoveFromParent();
+		}
+		if (DeckButton->GetContent() != DeckIconImage)
+		{
+			DeckButton->ClearChildren();
 			DeckButton->SetContent(DeckIconImage);
 		}
 	}
