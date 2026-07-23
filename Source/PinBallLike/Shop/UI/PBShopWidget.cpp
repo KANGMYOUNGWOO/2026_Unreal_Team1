@@ -9,6 +9,7 @@
 #include "Components//Button.h"
 #include "Components/CanvasPanelSlot.h"
 #include "PBShopSlotWidget.h"
+#include "PinBallLike/Deck/UI/View/PBDeckOverviewWidget.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 
@@ -188,6 +189,11 @@ void UPBShopWidget::NativeConstruct()
 	if (Button_Reroll)
 	{
 		Button_Reroll->OnClicked.AddDynamic(this, &UPBShopWidget::OnRerollButtonClicked);
+	}
+
+	if (DeckWidget)
+	{
+		DeckWidget->OpenAll();
 	}
 	
 	UpdateSlotWidgetPositionsOnce();
