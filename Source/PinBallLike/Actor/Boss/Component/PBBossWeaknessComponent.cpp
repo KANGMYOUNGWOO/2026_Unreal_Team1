@@ -1,5 +1,6 @@
 #include "PBBossWeaknessComponent.h"
 
+#include "Components/CapsuleComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Actor.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossHitPartComponent.h"
@@ -104,8 +105,15 @@ void UPBBossWeaknessComponent::ApplyCollisionState(UPrimitiveComponent* Primitiv
 		WeaknessCollisionEnabledMap.Add(PrimitiveComponentKey, PrimitiveComponent->GetCollisionEnabled());
 	}
 
-	PrimitiveComponent->SetHiddenInGame(!IsEnabled, true);
-	PrimitiveComponent->SetVisibility(IsEnabled, true);
+	if (PrimitiveComponent->IsA<UCapsuleComponent>())
+	{
+		PrimitiveComponent->SetHiddenInGame(true);
+	}
+	else
+	{
+		PrimitiveComponent->SetHiddenInGame(!IsEnabled);
+		PrimitiveComponent->SetVisibility(IsEnabled);
+	}
 
 	if (IsEnabled)
 	{
