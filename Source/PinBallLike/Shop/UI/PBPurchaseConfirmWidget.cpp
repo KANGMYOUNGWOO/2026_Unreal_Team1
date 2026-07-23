@@ -82,126 +82,170 @@ void UPBPurchaseConfirmWidget::SetButtonsEnabled(bool bEnabled)
 }
 
 void UPBPurchaseConfirmWidget::SetInfo(
-	const FPBPurchaseConfirmData& Data)
+    const FPBPurchaseConfirmData& Data)
 {
-	SlotIndex = Data.SlotIndex;
+    SlotIndex = Data.SlotIndex;
 
-	//--------------------------------------------------
-	// 이름
-	//--------------------------------------------------
+    //------------------------------------
+    // 이름
+    //------------------------------------
 
-	if (ItemNameText)
-	{
-		ItemNameText->SetText(Data.BallName);
-	}
+    if (ItemNameText)
+    {
+        ItemNameText->SetText(Data.BallNameText);
+    }
 
-	//--------------------------------------------------
-	// 가격
-	//--------------------------------------------------
+    //------------------------------------
+    // 가격
+    //------------------------------------
 
-	if (PriceText)
-	{
-		PriceText->SetText(
-			FText::Format(
-				FText::FromString(TEXT("아이템 가격 : {0} Gold")),
-				FText::AsNumber(Data.Price)));
-	}
+    if (PriceText)
+    {
+        PriceText->SetText(FText::Format(
+            NSLOCTEXT("Shop", "Price", "{0} Gold"),
+            FText::AsNumber(Data.Price)));
+    }
 
-	//--------------------------------------------------
-	// 시너지
-	//--------------------------------------------------
+    //------------------------------------
+    // 아이콘
+    //------------------------------------
 
-	
-	//--------------------------------------------------
-	// 아이콘
-	//--------------------------------------------------
+    if (ItemIcon)
+    {
+        ItemIcon->SetBrushFromTexture(Data.BallIconTexture);
+    }
 
-	if (ItemIcon)
-	{
-		ItemIcon->SetBrushFromTexture(Data.BallIcon);
-	}
+    //------------------------------------
+    // 능력치
+    //------------------------------------
 
-	//--------------------------------------------------
-	// HP
-	//--------------------------------------------------
+    if (HPText)
+    {
+        HPText->SetText(Data.HpRow.ValueText);
+    }
 
-	if (HPText)
-	{
-		HPText->SetText(FText::AsNumber(Data.HP));
-	}
+    if (MPText)
+    {
+        MPText->SetText(Data.MpRow.ValueText);
+    }
 
-	//--------------------------------------------------
-	// MP
-	//--------------------------------------------------
+    if (AttackText)
+    {
+        AttackText->SetText(Data.AttackRow.ValueText);
+    }
 
-	if (MPText)
-	{
-		MPText->SetText(FText::AsNumber(Data.MP));
-	}
+    if (ManaRegenText)
+    {
+        ManaRegenText->SetText(Data.ManaRegenRow.ValueText);
+    }
 
-	//--------------------------------------------------
-	// Attack
-	//--------------------------------------------------
+    //------------------------------------
+    // 시너지(최대 3개)
+    //------------------------------------
 
-	if (AttackText)
-	{
-		AttackText->SetText(FText::AsNumber(Data.Attack));
-	}
+	//------------------------------------------------------
+	// PowerFlip
+	//------------------------------------------------------
 
-	//--------------------------------------------------
-	// Mana Regen
-	//--------------------------------------------------
-
-	if (ManaRegenText)
-	{
-		ManaRegenText->SetText(
-			FText::AsNumber(Data.ManaRegen));
-	}
-
-	//--------------------------------------------------
-	// 애니메이션
-	//--------------------------------------------------
-
-	
-	SynergyIcon1->SetVisibility(ESlateVisibility::Hidden);
-	SynergyIcon2->SetVisibility(ESlateVisibility::Hidden);
-	SynergyIcon3->SetVisibility(ESlateVisibility::Hidden);
-	SynergyText1->SetVisibility(ESlateVisibility::Hidden);
-	SynergyText2->SetVisibility(ESlateVisibility::Hidden);
-	SynergyText3->SetVisibility(ESlateVisibility::Hidden);
-	if(Data.Synergies.Num() > 0)
+	if (SynergyIcon1)
 	{
 		SynergyIcon1->SetBrushFromTexture(
-			Data.Synergies[0].Icon);
-		SynergyIcon1->SetVisibility(ESlateVisibility::Visible);
-		SynergyText1->SetText(
-	 Data.Synergies[0].SynergyName);
-		
-		SynergyText1->SetVisibility(ESlateVisibility::Visible);
+			Data.PowerFlipData.IconTexture);
 	}
 
-	if(Data.Synergies.Num() > 1)
+	if (SynergyText1)
+	{
+		SynergyText1->SetText(
+			Data.PowerFlipData.Text);
+	}
+
+	//------------------------------------------------------
+	// Class
+	//------------------------------------------------------
+
+	if (SynergyIcon2)
 	{
 		SynergyIcon2->SetBrushFromTexture(
-			Data.Synergies[1].Icon);
-		SynergyIcon2->SetVisibility(ESlateVisibility::Visible);
-		SynergyText2->SetText(
-	  Data.Synergies[1].SynergyName);
-		SynergyText2->SetVisibility(ESlateVisibility::Visible);
+			Data.ClassData.IconTexture);
 	}
-	
-	if(Data.Synergies.Num() > 2)
+
+	if (SynergyText2)
 	{
-		SynergyIcon3->SetBrushFromTexture(
-			Data.Synergies[2].Icon);
-		SynergyIcon3->SetVisibility(ESlateVisibility::Visible);
-		SynergyText3->SetText(
-	  Data.Synergies[2].SynergyName);
-		SynergyText3->SetVisibility(ESlateVisibility::Visible);
+		SynergyText2->SetText(
+			Data.ClassData.Text);
+	}
+
+	//------------------------------------------------------
+	// Race (첫 번째만 표시)
+	//------------------------------------------------------
+
+	
+	if (Data.RaceDataList.IsValidIndex(0))
+	{
+		if (SynergyIcon3)
+		{
+			SynergyIcon3->SetBrushFromTexture(
+				Data.RaceDataList[0].IconTexture);
+		}
+
+		if (SynergyText3)
+		{
+			SynergyText3->SetText(
+				Data.RaceDataList[0].Text);
+		}
 	}
 	
-	PlayOpenAnimation();
+	SynergyIcon4->SetVisibility(ESlateVisibility::Hidden);
+	SynergyText4->SetVisibility(ESlateVisibility::Hidden);
+	
+	if (Data.RaceDataList.IsValidIndex(1))
+	{
+		SynergyIcon4->SetVisibility(ESlateVisibility::Visible);
+		SynergyText4->SetVisibility(ESlateVisibility::Visible);
+		if (SynergyIcon4)
+		{
+			SynergyIcon4->SetBrushFromTexture(
+				Data.RaceDataList[1].IconTexture);
+		}
+
+		if (SynergyText4)
+		{
+			SynergyText4->SetText(
+				Data.RaceDataList[1].Text);
+		}
+		
+	}
+	
+	else
+	{
+		if (SynergyIcon3)
+		{
+			SynergyIcon3->SetBrushFromTexture(nullptr);
+		}
+
+		if (SynergyText3)
+		{
+			SynergyText3->SetText(FText::GetEmpty());
+		}
+	}
+
+    if (SkillNameText)
+    {
+        SkillNameText->SetText(Data.SkillNameText);
+    }
+	
+	if (SkillExplainText)
+	{
+		SkillExplainText->SetText(Data.SkillDescriptionText);
+	}
+
+    if (SkillIcon)
+    {
+        SkillIcon->SetBrushFromTexture(Data.SkillIconTexture);
+    }
 }
+
+
 void UPBPurchaseConfirmWidget::PlayOpenAnimation()
 {
 	SetButtonsEnabled(false);

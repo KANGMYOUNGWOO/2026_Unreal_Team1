@@ -17,7 +17,7 @@ APBShopItemActor::APBShopItemActor()
 	SetRootComponent(ClickCollision);
 
 	ClickCollision->SetBoxExtent(
-		FVector(100.f, 100.f, 100.f));
+		FVector(80.f, 80.f, 80.f));
 
 	ClickCollision->SetCollisionEnabled(
 		ECollisionEnabled::QueryOnly);

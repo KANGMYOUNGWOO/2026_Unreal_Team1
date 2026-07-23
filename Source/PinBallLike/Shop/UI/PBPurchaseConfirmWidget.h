@@ -4,9 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "PinBallLike/Actor/Ball/UI/PBBallDetailTooltipWidget.h"
 #include "PinBallLike/Struct/Shop/PBPurchaseConfirmData.h"
 #include "PBPurchaseConfirmWidget.generated.h"
 
+struct FPBBallDetailTooltipViewData;
 class UTextBlock;
 class UImage;
 class UWidgetAnimation;
@@ -39,7 +41,6 @@ protected:
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> PriceText;
-	
 	
 	
 	UPROPERTY(meta = (BindWidget))
@@ -81,8 +82,23 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> SynergyText3;
 	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> SynergyIcon4;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> SynergyText4;
+	
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> OpenAnim;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> SkillNameText;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> SkillExplainText;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UImage> SkillIcon;
 	
 private:
 	

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PinBallLike/Struct/Ball/PBBallDetailTooltipViewData.h"
 #include "PinBallLike/Struct/Synergy/PBSynergyViewData.h"
 #include "PBPurchaseConfirmData.generated.h"
 
@@ -17,29 +18,50 @@ struct PINBALLLIKE_API FPBPurchaseConfirmData
 	int32 SlotIndex = INDEX_NONE;
 
 	UPROPERTY(BlueprintReadOnly)
-	FText BallName = FText::GetEmpty();
-
-	UPROPERTY(BlueprintReadOnly)
-	FText Description = FText::GetEmpty();
-
-	UPROPERTY(BlueprintReadOnly)
 	int32 Price = 0;
 
 	UPROPERTY(BlueprintReadOnly)
-	TObjectPtr<UTexture2D> BallIcon = nullptr;
+	bool bHasBall = false;
 
 	UPROPERTY(BlueprintReadOnly)
-	TArray<FPBSynergyViewData> Synergies;
+	FName BallId = NAME_None;
 
 	UPROPERTY(BlueprintReadOnly)
-	int32 HP = 0;
+	TObjectPtr<UTexture2D> BallIconTexture = nullptr;
 
 	UPROPERTY(BlueprintReadOnly)
-	int32 MP = 0;
+	FText BallNameText;
 
 	UPROPERTY(BlueprintReadOnly)
-	int32 Attack = 0;
+	FText BallDescriptionText;
 
 	UPROPERTY(BlueprintReadOnly)
-	int32 ManaRegen = 0;
+	FPBBallDetailInfoRowViewData HpRow;
+
+	UPROPERTY(BlueprintReadOnly)
+	FPBBallDetailInfoRowViewData MpRow;
+
+	UPROPERTY(BlueprintReadOnly)
+	FPBBallDetailInfoRowViewData AttackRow;
+
+	UPROPERTY(BlueprintReadOnly)
+	FPBBallDetailInfoRowViewData ManaRegenRow;
+
+	UPROPERTY(BlueprintReadOnly)
+	FPBBallDetailIconTextViewData PowerFlipData;
+
+	UPROPERTY(BlueprintReadOnly)
+	FPBBallDetailIconTextViewData ClassData;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FPBBallDetailIconTextViewData> RaceDataList;
+
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UTexture2D> SkillIconTexture = nullptr;
+
+	UPROPERTY(BlueprintReadOnly)
+	FText SkillNameText;
+
+	UPROPERTY(BlueprintReadOnly)
+	FText SkillDescriptionText;
 };

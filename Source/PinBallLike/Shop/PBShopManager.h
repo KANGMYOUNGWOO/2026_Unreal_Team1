@@ -9,6 +9,7 @@
 #include  "PinBallLike/Struct/Shop/PBPurchaseConfirmData.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Subsystem/PBPlayerDataSubsystem.h"
+#include "PinBallLike/Struct/Ball/PBBallDetailTooltipViewData.h"
 #include "PBShopManager.generated.h"
 
 
@@ -38,7 +39,9 @@ public :
 	
 	bool BuildPurchaseConfirmData(
 		int32 SlotIndex,
-		FPBPurchaseConfirmData& OutData) const override;
+		FPBPurchaseConfirmData& OutData) const;
+	
+
 	
 	void Initialize(UPBTableDataSubsystem* InTableDataSubsystem, UPBPlayerDataSubsystem* InPlayerDataSubSystem);
 	
@@ -66,6 +69,13 @@ private :
 	UPROPERTY()
 	TObjectPtr<UPBPlayerDataSubsystem> PlayerDataSubsystem;
 private:
+	
+	FPBBallDetailInfoRowViewData MakeInfoRow(const FText& LabelText, int32 Value) const;
+	FPBBallDetailIconTextViewData MakeIconText(UTexture2D* IconTexture, const FText& Text) const;
+	int32 FindMapValue(const TMap<FName, int32>& Values, FName Key) const;
+	FText GetEnumDisplayText(const UEnum* Enum, int64 Value) const;
+	FName GetEnumValueName(const UEnum* Enum, int64 Value) const;
+	
 	// ShopTable에서 상품을 무작위로 뽑아 현재 상점 목록을 재구성한다.
 	bool GenerateShopItems(int32 SlotCount);
 	IIShopActorHandler* ShopActorHandler;
