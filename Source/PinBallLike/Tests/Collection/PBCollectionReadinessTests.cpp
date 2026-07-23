@@ -13,7 +13,27 @@
 #include "PinBallLike/Table/Effect/Struct/PBEffectParamRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectSetRow.h"
 #include "PinBallLike/Table/Effect/Struct/PBEffectTableRow.h"
+#include "PinBallLike/Table/Relic/DataAsset/PBRelicDataAsset.h"
+#include "PinBallLike/Table/Relic/PBRelicAssetIds.h"
 #include "PinBallLike/Table/Synergy/Struct/PBSynergyTierRow.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FPBCollectionRelicPrimaryAssetIdTest,
+	"PinBallLike.Collection.Catalog.RelicPrimaryAssetId",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FPBCollectionRelicPrimaryAssetIdTest::RunTest(const FString& Parameters)
+{
+	static_cast<void>(Parameters);
+
+	UPBRelicDataAsset* RelicData = NewObject<UPBRelicDataAsset>();
+	RelicData->RowName = TEXT("Relic_Test");
+	const FPrimaryAssetId PrimaryAssetId = RelicData->GetPrimaryAssetId();
+
+	TestEqual(TEXT("Relic primary asset type is stable"), PrimaryAssetId.PrimaryAssetType, PBRelicAssetIds::Type::RelicData);
+	TestEqual(TEXT("Relic primary asset name uses the source RowName"), PrimaryAssetId.PrimaryAssetName, RelicData->RowName);
+	return true;
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FPBCollectionCatalogReadinessTest,

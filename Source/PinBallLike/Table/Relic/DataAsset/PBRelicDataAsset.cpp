@@ -7,7 +7,6 @@
 
 FPrimaryAssetId UPBRelicDataAsset::GetPrimaryAssetId() const
 {
-	return FPrimaryAssetId(
-		PBRelicAssetIds::Type::RelicData,
-		GetFName());
+	const FName AssetName = RowName.IsNone() ? GetFName() : RowName;
+	return FPrimaryAssetId(PBRelicAssetIds::Type::RelicData, AssetName);
 }
