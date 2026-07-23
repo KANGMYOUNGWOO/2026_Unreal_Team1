@@ -10,7 +10,7 @@
 #include "UObject/SavePackage.h"
 #include "UObject/UObjectIterator.h"
 
-namespace
+namespace PBSynergyDataSyncPrivate
 {
 	constexpr double SheetFetchTimeoutSeconds = 60.0;
 	constexpr const TCHAR* SynergyLoaderPath = TEXT("/Game/Data/Loaders/Synergy/GSC_Synergy");
@@ -226,13 +226,17 @@ int32 UPBSynergyDataSyncCommandlet::Main(const FString& Params)
 {
 	static_cast<void>(Params);
 
-	UGoogleSheetConfig* SynergyConfig = ConfigureLoader(SynergyLoaderPath, TEXT("F1000"));
-	UGoogleSheetConfig* TierConfig = ConfigureLoader(SynergyTierLoaderPath, TEXT("E1000"));
+	UGoogleSheetConfig* SynergyConfig = PBSynergyDataSyncPrivate::ConfigureLoader(
+		PBSynergyDataSyncPrivate::SynergyLoaderPath,
+		TEXT("F1000"));
+	UGoogleSheetConfig* TierConfig = PBSynergyDataSyncPrivate::ConfigureLoader(
+		PBSynergyDataSyncPrivate::SynergyTierLoaderPath,
+		TEXT("E1000"));
 	if (!SynergyConfig || !TierConfig
-		|| !FetchAndWait(SynergyConfig)
-		|| !FetchAndWait(TierConfig)
-		|| !ValidateSynergyTables()
-		|| !SaveApprovedDirtyPackages())
+		|| !PBSynergyDataSyncPrivate::FetchAndWait(SynergyConfig)
+		|| !PBSynergyDataSyncPrivate::FetchAndWait(TierConfig)
+		|| !PBSynergyDataSyncPrivate::ValidateSynergyTables()
+		|| !PBSynergyDataSyncPrivate::SaveApprovedDirtyPackages())
 	{
 		return 1;
 	}
