@@ -1,5 +1,6 @@
 #include "PBGolemBossHand.h"
 
+#include "Components/PrimitiveComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "PinBallLike/Actor/Boss/Component/PBBossHitEffectComponent.h"
@@ -420,6 +421,17 @@ void APBGolemBossHand::SetHandActive(bool IsActive)
 
 	HandMesh->SetVisibility(IsActive, true);
 	HandMesh->SetCollisionEnabled(IsActive ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+
+	TArray<USceneComponent*> ChildComponents;
+	HandMesh->GetChildrenComponents(true, ChildComponents);
+	for (USceneComponent* ChildComponent : ChildComponents)
+	{
+		if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(ChildComponent))
+		{
+			PrimitiveComponent->SetCollisionEnabled(
+				IsActive ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+		}
+	}
 }
 
 FVector APBGolemBossHand::CalculateActorTargetLocationForTelegraphStart(FVector TargetWorldLocation) const
