@@ -196,9 +196,22 @@ void ASnakeBoss::UpdateSnakeChargeMovement(
 	const FVector& PreviousLocation,
 	const FVector& NextLocation)
 {
+	FVector MoveDirection = NextLocation - PreviousLocation;
+	MoveDirection.Z = 0.0f;
+	if (MoveDirection.Normalize())
+	{
+		CurrentMoveDirection = MoveDirection;
+	}
+
 	UpdateSnakeAnimationData(DeltaTime, NextLocation, PreviousLocation);
 	RecordSnakePathLocation(NextLocation);
 	UpdateSnakeSplinePoints();
+}
+
+void ASnakeBoss::ResetSnakeMovementPath()
+{
+	InitializeMoveDirection();
+	ResetSnakePath();
 }
 
 float ASnakeBoss::GetSnakeAnimationSpeed() const

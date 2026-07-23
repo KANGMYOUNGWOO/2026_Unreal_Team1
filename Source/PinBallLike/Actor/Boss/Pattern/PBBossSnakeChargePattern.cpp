@@ -72,7 +72,6 @@ void UPBBossSnakeChargePattern::CancelPatternInternal_Implementation(APBBossBase
 
 	if (IsChargeMovementStarted && Boss)
 	{
-		const FVector PreviousLocation = Boss->GetActorLocation();
 		Boss->SetActorLocationAndRotation(
 			ChargeStartLocation,
 			ChargeStartRotation,
@@ -82,10 +81,7 @@ void UPBBossSnakeChargePattern::CancelPatternInternal_Implementation(APBBossBase
 
 		if (ASnakeBoss* SnakeBoss = Cast<ASnakeBoss>(Boss))
 		{
-			SnakeBoss->UpdateSnakeChargeMovement(
-				UpdateIntervalSeconds,
-				PreviousLocation,
-				ChargeStartLocation);
+			SnakeBoss->ResetSnakeMovementPath();
 		}
 	}
 

@@ -15,6 +15,7 @@ bool UPBOctopusBindingPattern::CanExecute_Implementation(APBBossBase* Boss) cons
 {
 	return Super::CanExecute_Implementation(Boss)
 		&& BindingZoneClass
+		&& BindingZoneCount > 0
 		&& FindNearestMoveArea(Boss);
 }
 
@@ -28,28 +29,30 @@ void UPBOctopusBindingPattern::ExecutePattern_Implementation(APBBossBase* Boss)
 		return;
 	}
 
-	const FTransform ZoneTransform(FRotator::ZeroRotator, SelectZoneLocation(MoveArea));
-	APBOctopusBindingZone* BindingZone = World->SpawnActorDeferred<APBOctopusBindingZone>(
-		BindingZoneClass,
-		ZoneTransform,
-		Boss,
-		nullptr,
-		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-	if (!BindingZone)
+	for (int32 ZoneIndex = 0; ZoneIndex < BindingZoneCount; ++ZoneIndex)
 	{
-		FinishPattern();
-		return;
+		const FTransform ZoneTransform(FRotator::ZeroRotator, SelectZoneLocation(MoveArea));
+		APBOctopusBindingZone* BindingZone = World->SpawnActorDeferred<APBOctopusBindingZone>(
+			BindingZoneClass,
+			ZoneTransform,
+			Boss,
+			nullptr,
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		if (!BindingZone)
+		{
+			continue;
+		}
+
+		BindingZone->OnBallBound.AddUniqueDynamic(this, &UPBOctopusBindingPattern::HandleBallBound);
+
+		BindingZone->InitializeZone(
+			ZoneRadius,
+			ZoneDuration,
+			BindDuration,
+			DamageAmount,
+			ZoneEffectScale);
+		BindingZone->FinishSpawning(ZoneTransform);
 	}
-
-	BindingZone->OnBallBound.AddUniqueDynamic(this, &UPBOctopusBindingPattern::HandleBallBound);
-
-	BindingZone->InitializeZone(
-		ZoneRadius,
-		ZoneDuration,
-		BindDuration,
-		DamageAmount,
-		ZoneEffectScale);
-	BindingZone->FinishSpawning(ZoneTransform);
 
 	FinishPattern();
 }

@@ -17,10 +17,11 @@ bool UPBBossSnakeProjectilePattern::CanExecute_Implementation(APBBossBase* Boss)
 void UPBBossSnakeProjectilePattern::ExecutePattern_Implementation(APBBossBase* Boss)
 {
 	FiredProjectileCount = 0;
+	CacheInitialBossRotation(Boss);
 
 	if (!GetOwnerBoss() || !ProjectileClass || ProjectileCount <= 0)
 	{
-		FinishPattern();
+		FinishProjectilePattern();
 		return;
 	}
 
@@ -39,10 +40,6 @@ void UPBBossSnakeProjectilePattern::ExecutePattern_Implementation(APBBossBase* B
 			}
 		}
 
-		if (FiredProjectileCount < ProjectileCount && GetOwnerBoss())
-		{
-			FinishPattern();
-		}
 		return;
 	}
 
@@ -63,6 +60,7 @@ void UPBBossSnakeProjectilePattern::CancelPatternInternal_Implementation(APBBoss
 {
 	ClearPatternTimers();
 	ApplySnakeProjectilePose(Boss, 0.0f);
+	RestoreInitialBossRotation(Boss);
 	FiredProjectileCount = 0;
 }
 
@@ -75,11 +73,31 @@ void UPBBossSnakeProjectilePattern::ApplySnakeProjectilePose(APBBossBase* Boss, 
 	}
 }
 
+void UPBBossSnakeProjectilePattern::CacheInitialBossRotation(APBBossBase* Boss)
+{
+	IsInitialBossRotationCached = IsValid(Boss);
+	if (IsInitialBossRotationCached)
+	{
+		InitialBossRotation = Boss->GetActorRotation();
+	}
+}
+
+void UPBBossSnakeProjectilePattern::RestoreInitialBossRotation(APBBossBase* Boss)
+{
+	if (IsInitialBossRotationCached && IsValid(Boss))
+	{
+		Boss->SetActorRotation(InitialBossRotation);
+	}
+
+	IsInitialBossRotationCached = false;
+}
+
 void UPBBossSnakeProjectilePattern::FinishProjectilePattern()
 {
 	APBBossBase* Boss = GetOwnerBoss();
 	ClearPatternTimers();
 	ApplySnakeProjectilePose(Boss, 0.0f);
+	RestoreInitialBossRotation(Boss);
 	FinishPattern();
 }
 
@@ -88,18 +106,14 @@ void UPBBossSnakeProjectilePattern::FireProjectile()
 	APBBossBase* Boss = GetOwnerBoss();
 	if (!Boss || !ProjectileClass || FiredProjectileCount >= ProjectileCount)
 	{
-		ClearPatternTimers();
-		ApplySnakeProjectilePose(Boss, 0.0f);
-		FinishPattern();
+		FinishProjectilePattern();
 		return;
 	}
 
 	UWorld* World = Boss->GetWorld();
 	if (!World)
 	{
-		ClearPatternTimers();
-		ApplySnakeProjectilePose(Boss, 0.0f);
-		FinishPattern();
+		FinishProjectilePattern();
 		return;
 	}
 

@@ -38,6 +38,8 @@ protected:
 
 private:
 	void ApplySnakeProjectilePose(APBBossBase* Boss, float Alpha) const;
+	void CacheInitialBossRotation(APBBossBase* Boss);
+	void RestoreInitialBossRotation(APBBossBase* Boss);
 	void FinishProjectilePattern();
 
 	// 설정된 위치와 방향으로 투사체 하나를 발사합니다.
@@ -53,5 +55,7 @@ private:
 	FVector SpawnOffset = FVector::ZeroVector;
 
 	int32 FiredProjectileCount = 0;
+	FRotator InitialBossRotation = FRotator::ZeroRotator;
+	bool IsInitialBossRotationCached = false;
 	FTimerHandle FireTimerHandle;
 };

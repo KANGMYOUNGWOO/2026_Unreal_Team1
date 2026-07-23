@@ -49,6 +49,8 @@ void UPBBossTurtleChargePattern::ExecutePattern_Implementation(APBBossBase* Boss
 	}
 
 	ChargeDirection = Direction;
+	InitialBossRotation = TurtleBoss->GetActorRotation();
+	IsInitialBossRotationCached = true;
 	IsChargeEndLocationValid = FindChargeEndLocation(TurtleBoss, ChargeEndLocation);
 	FRotator ChargeRotation = ChargeDirection.Rotation();
 	ChargeRotation.Pitch = 0.0f;
@@ -205,7 +207,7 @@ void UPBBossTurtleChargePattern::CompleteChargePattern()
 {
 	if (APBTurtleBoss* Boss = GetTurtleBoss())
 	{
-		Boss->SetActorRotation(FRotator::ZeroRotator);
+		RestoreInitialBossRotation(Boss);
 		Boss->SetPinballCollisionDamageBlocked(false);
 	}
 
@@ -217,7 +219,7 @@ void UPBBossTurtleChargePattern::CancelPatternInternal_Implementation(APBBossBas
 {
 	if (APBTurtleBoss* Turtle = GetTurtleBoss())
 	{
-		Turtle->SetActorRotation(FRotator::ZeroRotator);
+		RestoreInitialBossRotation(Turtle);
 		Turtle->SetPinballCollisionDamageBlocked(false);
 		Turtle->RestoreTurtleAnimationMode();
 	}
@@ -239,6 +241,16 @@ void UPBBossTurtleChargePattern::CleanupCharge()
 
 	DestroyChargeHitCollision();
 	IsChargeEndLocationValid = false;
+}
+
+void UPBBossTurtleChargePattern::RestoreInitialBossRotation(APBTurtleBoss* Boss)
+{
+	if (IsInitialBossRotationCached && IsValid(Boss))
+	{
+		Boss->SetActorRotation(InitialBossRotation);
+	}
+
+	IsInitialBossRotationCached = false;
 }
 
 APBTurtleBoss* UPBBossTurtleChargePattern::GetTurtleBoss() const
