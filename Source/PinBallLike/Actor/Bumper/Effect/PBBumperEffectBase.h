@@ -38,6 +38,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Bumper|Effect")
 	FPBBumperEffectRow GetEffectData() const;
 
+	UFUNCTION(BlueprintPure, Category = "Bumper|Effect")
+	static AActor* ResolveBallEffectTargetOrSource(AActor* InteractionActor);
+
 protected:
 	void PlayDeliveryVfx(AActor* TargetActor, float Duration = 0.55f) const;
 	void PlayImpactVfx(AActor* TargetActor) const;

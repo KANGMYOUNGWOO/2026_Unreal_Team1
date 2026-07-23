@@ -272,7 +272,7 @@ void UPBGolemHandSlamPattern::SpawnSlamEffect() const
 void UPBGolemHandSlamPattern::ApplySlamDamage() const
 {
 	AActor* PinballActor = FindPinballActor();
-	if (!PinballActor || SlamRadius <= 0.0f || SlamDamage <= 0)
+	if (!PinballActor || SlamRadius <= 0.0f || DamageAmount <= 0)
 	{
 		return;
 	}
@@ -290,11 +290,11 @@ void UPBGolemHandSlamPattern::ApplySlamDamage() const
 		return;
 	}
 
-	Damageable->TakeDamage(SlamDamage);
+	Damageable->TakeDamage(DamageAmount);
 	const FName SourcePatternName = PatternName.IsNone() ? GetClass()->GetFName() : PatternName;
 	UE_LOG(LogTemp, Log, TEXT("[BossPatternDamage] Pattern=%s Damage=%d Target=%s"),
 		*SourcePatternName.ToString(),
-		SlamDamage,
+		DamageAmount,
 		*GetNameSafe(PinballActor));
 }
 

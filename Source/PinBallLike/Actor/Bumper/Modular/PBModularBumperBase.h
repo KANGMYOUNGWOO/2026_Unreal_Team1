@@ -82,6 +82,15 @@ public:
 	int32 GetMeaningfulContactCount() const { return RuntimeState.MeaningfulContactCount; }
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|Telemetry")
+	int32 GetDirectBallContactCount() const { return RuntimeState.DirectBallContactCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Telemetry")
+	int32 GetBallOwnedActorContactCount() const { return RuntimeState.BallOwnedActorContactCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Telemetry")
+	int32 GetOtherMovableContactCount() const { return RuntimeState.OtherMovableContactCount; }
+
+	UFUNCTION(BlueprintPure, Category = "Bumper|Telemetry")
 	int32 GetActivationCount() const { return RuntimeState.ActivationCount; }
 
 	UFUNCTION(BlueprintPure, Category = "Bumper|Trigger")

@@ -27,6 +27,7 @@ public:
 	void SetProjectileDirection(const FVector& NewProjectileDirection);
 
 	void SetSourcePatternName(FName NewSourcePatternName);
+	void SetDamageAmount(int32 NewDamageAmount);
 
 protected:
 	// 게임 시작 시 충돌 설정과 초기 겹침 검사를 수행합니다.

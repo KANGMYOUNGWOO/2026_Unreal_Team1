@@ -50,6 +50,29 @@ FPBBumperEffectRow UPBBumperEffectBase::GetEffectData() const
 	return EffectData;
 }
 
+AActor* UPBBumperEffectBase::ResolveBallEffectTargetOrSource(AActor* InteractionActor)
+{
+	if (!IsValid(InteractionActor))
+	{
+		return nullptr;
+	}
+
+	TSet<const AActor*> VisitedActors;
+	AActor* Candidate = InteractionActor;
+	while (IsValid(Candidate) && !VisitedActors.Contains(Candidate))
+	{
+		if (APBBallBase* Ball = Cast<APBBallBase>(Candidate))
+		{
+			return Ball;
+		}
+
+		VisitedActors.Add(Candidate);
+		Candidate = Candidate->GetOwner();
+	}
+
+	return InteractionActor;
+}
+
 void UPBBumperEffectBase::PlayDeliveryVfx(AActor* TargetActor, const float Duration) const
 {
 	if (!OwnerBumper.IsValid() || !IsValid(TargetActor))

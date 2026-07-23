@@ -15,6 +15,43 @@
 #include "PinBallLike/Actor/Bumper/Modular/PBBumperPositionAnchor.h"
 #include "PinBallLike/Actor/Bumper/Trigger/PBBumperTriggerActorBase.h"
 
+namespace
+{
+	enum class EPBBumperContactSourceType : uint8
+	{
+		DirectBall,
+		BallOwnedActor,
+		OtherMovable
+	};
+
+	EPBBumperContactSourceType GetBumperContactSourceType(AActor* InteractionActor)
+	{
+		if (Cast<APBBallBase>(InteractionActor))
+		{
+			return EPBBumperContactSourceType::DirectBall;
+		}
+
+		AActor* EffectTarget =
+			UPBBumperEffectBase::ResolveBallEffectTargetOrSource(InteractionActor);
+		return EffectTarget != InteractionActor && Cast<APBBallBase>(EffectTarget)
+			? EPBBumperContactSourceType::BallOwnedActor
+			: EPBBumperContactSourceType::OtherMovable;
+	}
+
+	const TCHAR* LexToString(const EPBBumperContactSourceType SourceType)
+	{
+		switch (SourceType)
+		{
+		case EPBBumperContactSourceType::DirectBall:
+			return TEXT("DirectBall");
+		case EPBBumperContactSourceType::BallOwnedActor:
+			return TEXT("BallOwnedActor");
+		default:
+			return TEXT("OtherMovable");
+		}
+	}
+}
+
 APBModularBumperBase::APBModularBumperBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -269,6 +306,9 @@ void APBModularBumperBase::InitializeBumper(
 	BumperRowId = InBumperRowId;
 	BumperData = InBumperData;
 	RuntimeState.MeaningfulContactCount = 0;
+	RuntimeState.DirectBallContactCount = 0;
+	RuntimeState.BallOwnedActorContactCount = 0;
+	RuntimeState.OtherMovableContactCount = 0;
 	RuntimeState.ActivationCount = 0;
 	TriggerSpawnInfos = InTriggerSpawnInfos;
 	EffectData = InEffectData;
@@ -299,10 +339,27 @@ void APBModularBumperBase::AddTriggerCount(
 	if (TriggerActor->GetCurrentTriggerCount() > PreviousTriggerCount)
 	{
 		++RuntimeState.MeaningfulContactCount;
+		const EPBBumperContactSourceType SourceType =
+			GetBumperContactSourceType(InteractionActor);
+		if (SourceType == EPBBumperContactSourceType::DirectBall)
+		{
+			++RuntimeState.DirectBallContactCount;
+		}
+		else if (SourceType == EPBBumperContactSourceType::BallOwnedActor)
+		{
+			++RuntimeState.BallOwnedActorContactCount;
+		}
+		else
+		{
+			++RuntimeState.OtherMovableContactCount;
+		}
 		UE_LOG(LogTemp, Log,
-			TEXT("[BumperTelemetry] MeaningfulContact RowName=%s Position=%s Contacts=%d Progress=%d/%d"),
+			TEXT("[BumperTelemetry] MeaningfulContact RowName=%s Position=%s SourceType=%s Source=%s SourceClass=%s Contacts=%d Progress=%d/%d"),
 			*BumperRowId.ToString(),
 			*UEnum::GetValueAsString(TriggerActor->GetPositionId()),
+			LexToString(SourceType),
+			*GetNameSafe(InteractionActor),
+			*GetNameSafe(InteractionActor->GetClass()),
 			RuntimeState.MeaningfulContactCount,
 			TriggerActor->GetCurrentTriggerCount(),
 			TriggerActor->GetRequiredTriggerCount());
@@ -498,12 +555,17 @@ void APBModularBumperBase::ExecuteActivation(AActor* InteractionActor)
 	}
 
 	const EPBBumperPositionId ActivationPositionId = ActiveTriggerActor->GetPositionId();
+	AActor* ResolvedBallTarget =
+		UPBBumperEffectBase::ResolveBallEffectTargetOrSource(InteractionActor);
 	SetBumperState(EPBBumperState::Activated);
 	++RuntimeState.ActivationCount;
 	UE_LOG(LogTemp, Log,
-		TEXT("[BumperTelemetry] Activation RowName=%s Position=%s Activations=%d Contacts=%d"),
+		TEXT("[BumperTelemetry] Activation RowName=%s Position=%s SourceType=%s Source=%s EffectTarget=%s Activations=%d Contacts=%d"),
 		*BumperRowId.ToString(),
 		*UEnum::GetValueAsString(ActivationPositionId),
+		LexToString(GetBumperContactSourceType(InteractionActor)),
+		*GetNameSafe(InteractionActor),
+		*GetNameSafe(ResolvedBallTarget),
 		RuntimeState.ActivationCount,
 		RuntimeState.MeaningfulContactCount);
 	SpawnActivationVfx();

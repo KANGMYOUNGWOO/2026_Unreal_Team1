@@ -21,7 +21,10 @@
 #include "PinBallLike/Struct/Effect/PBEffectContext.h"
 #include "PinBallLike/Subsystem/Deck/PBBallDeckSubsystem.h"
 #include "PinBallLike/Subsystem/PBEffectSubsystem.h"
+#include "PinBallLike/Subsystem/PBSoundSubsystem.h"
+#include "PinBallLike/Subsystem/PBTableDataSubsystem.h"
 #include "PinBallLike/Subsystem/Relic/PBRelicSubsystem.h"
+#include "PinBallLike/Table/Ball/DataAsset/PBBallVoiceDataAsset.h"
 #include "PinBallLike/Relic/PBRelicCalculator.h"
 
 APBCombatPartyController::APBCombatPartyController()
@@ -276,16 +279,51 @@ void APBCombatPartyController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void APBCombatPartyController::SpawnBallDeathEffect(APBBallBase* DeadBall) const
 {
-	if (!BallDeathEffect || !IsValid(DeadBall))
+	if (!IsValid(DeadBall))
 	{
 		return;
 	}
 
-	UGameplayStatics::SpawnEmitterAtLocation(
-		this,
-		BallDeathEffect,
-		DeadBall->GetActorLocation(),
-		DeadBall->GetActorRotation());
+	if (BallDeathEffect)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(
+			this,
+			BallDeathEffect,
+			DeadBall->GetActorLocation(),
+			DeadBall->GetActorRotation());
+	}
+
+	if (USoundBase* BallDeathSound = ResolveBallDeathSound(DeadBall))
+	{
+		if (UPBSoundSubsystem* SoundSubsystem = UPBSoundSubsystem::Get(this))
+		{
+			SoundSubsystem->PlaySFX(BallDeathSound, BallVoiceData->DeathSoundVolume);
+		}
+	}
+}
+
+USoundBase* APBCombatPartyController::ResolveBallDeathSound(const APBBallBase* DeadBall) const
+{
+	if (!IsValid(DeadBall) || !BallVoiceData)
+	{
+		return nullptr;
+	}
+
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UPBTableDataSubsystem* TableDataSubsystem =
+		GameInstance ? GameInstance->GetSubsystem<UPBTableDataSubsystem>() : nullptr;
+	if (!TableDataSubsystem)
+	{
+		return nullptr;
+	}
+
+	FPBBallTableRow BallRow;
+	if (!TableDataSubsystem->FindBallRow(DeadBall->GetBallId(), BallRow))
+	{
+		return nullptr;
+	}
+
+	return BallVoiceData->GetRandomDeathSound(BallRow.VoiceType);
 }
 
 void APBCombatPartyController::BroadcastPartyAllBallsDead()

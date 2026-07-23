@@ -119,6 +119,7 @@ void UPBBossSnakeProjectilePattern::FireProjectile()
 		Projectile->SetProjectileDirection(ProjectileDirection);
 		Projectile->SetProjectileSpeed(ProjectileSpeed);
 		Projectile->SetSourcePatternName(PatternName.IsNone() ? GetClass()->GetFName() : PatternName);
+		Projectile->SetDamageAmount(DamageAmount);
 		Projectile->FinishSpawning(FTransform(SpawnRotation, SpawnLocation));
 		PlayPatternSFX(Boss);
 	}

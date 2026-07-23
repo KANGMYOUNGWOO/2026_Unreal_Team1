@@ -19,6 +19,7 @@ public:
 
 	void SetFallingSpeed(float NewFallingSpeed);
 	void SetSourcePatternName(FName NewSourcePatternName);
+	void SetDamageAmount(int32 NewDamageAmount);
 	void SetHitSFX(USoundBase* NewHitSFX);
 
 protected:

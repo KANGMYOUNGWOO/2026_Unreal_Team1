@@ -6,6 +6,7 @@
 #include "Engine/DataTable.h"
 #include "PinBallLike/Struct/Ball/PBBallClassType.h"
 #include "PinBallLike/Struct/Ball/PBBallRaceType.h"
+#include "PinBallLike/Struct/Ball/PBBallVoiceType.h"
 #include "PinBallLike/Struct/Ball/PBPowerFlipType.h"
 #include "PBBallTableRow.generated.h"
 
@@ -34,7 +35,7 @@ struct PINBALLLIKE_API FPBBallTableRow : public FTableRowBase
 	TArray<FName> DefaultSkillIds;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
-	FName StarLevelId = NAME_None;
+	EPBBallVoiceType VoiceType = EPBBallVoiceType::Girl;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ball|Table")
 	FName ShopId = NAME_None;
