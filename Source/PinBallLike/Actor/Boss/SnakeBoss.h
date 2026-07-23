@@ -35,6 +35,7 @@ public:
 		float DeltaTime,
 		const FVector& PreviousLocation,
 		const FVector& NextLocation);
+	void ResetSnakeMovementPath();
 
 	UFUNCTION(BlueprintPure, Category = "Boss|Snake Animation")
 	float GetSnakeAnimationSpeed() const;
@@ -107,7 +108,7 @@ protected:
 	bool IsDrawDebugSnake = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake Path", meta = (ClampMin = "2"))
-	int32 SnakeSplinePointCount = 8;
+	int32 SnakeSplinePointCount = 16;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Snake Path", meta = (ClampMin = "1.0"))
 	float SnakeSplineLength = 1300.0f;
