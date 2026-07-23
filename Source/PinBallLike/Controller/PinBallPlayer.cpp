@@ -5,17 +5,31 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Engine/World.h"
 #include "InputAction.h"
 #include "InputActionValue.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "PinBallLike/Actor/Flipper/Flipper.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBallDamagedMessage.h"
 #include "PinBallLike/Struct/Battle/PBBattlePhaseMessage.h"
 
 APinBallPlayer::APinBallPlayer()
 {
 	PrimaryActorTick.bCanEverTick = false;
+}
+
+void APinBallPlayer::BeginPlay()
+{
+	Super::BeginPlay();
+	RegisterMessageListeners();
+}
+
+void APinBallPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UnregisterMessageListeners();
+	Super::EndPlay(EndPlayReason);
 }
 
 void APinBallPlayer::PawnClientRestart()
@@ -105,6 +119,78 @@ void APinBallPlayer::UnPossessed()
 	SetFlippersRaised(false);
 	RemoveInputMappingContext();
 	Super::UnPossessed();
+}
+
+void APinBallPlayer::RegisterMessageListeners()
+{
+	if (!UGameplayMessageSubsystem::HasInstance(this))
+	{
+		return;
+	}
+
+	BallDamagedListenerHandle =
+		UGameplayMessageSubsystem::Get(this).RegisterListener<FPBBallDamagedMessage>(
+			GameplayTags::Event_Battle_Ball_Damaged,
+			this,
+			&APinBallPlayer::HandleBallDamagedMessage);
+}
+
+void APinBallPlayer::UnregisterMessageListeners()
+{
+	if (BallDamagedListenerHandle.IsValid())
+	{
+		BallDamagedListenerHandle.Unregister();
+		BallDamagedListenerHandle = FGameplayMessageListenerHandle();
+	}
+}
+
+void APinBallPlayer::HandleBallDamagedMessage(
+	FGameplayTag Channel,
+	const FPBBallDamagedMessage& Message)
+{
+	(void)Channel;
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	UWorld* World = GetWorld();
+	if (!BallDamageCameraShakeClass
+		|| Message.AppliedDamage <= 0
+		|| !PlayerController
+		|| !PlayerController->IsLocalController()
+		|| !World)
+	{
+		return;
+	}
+
+	const double CurrentTime = World->GetTimeSeconds();
+	if (LastBallDamageShakeTime >= 0.0
+		&& CurrentTime - LastBallDamageShakeTime < FMath::Max(MinimumDamageShakeInterval, 0.0f))
+	{
+		return;
+	}
+
+	const int32 MaximumDamage = FMath::Max(DamageForMaximumShake, 1);
+	const float DamageAlpha = MaximumDamage <= 1
+		? 1.0f
+		: FMath::GetRangePct(
+			1.0f,
+			static_cast<float>(MaximumDamage),
+			static_cast<float>(FMath::Clamp(Message.AppliedDamage, 1, MaximumDamage)));
+	const float MinimumScale = FMath::Max(MinimumDamageShakeScale, 0.0f);
+	const float MaximumScale = FMath::Max(MaximumDamageShakeScale, MinimumScale);
+	const float ShakeScale = FMath::Lerp(MinimumScale, MaximumScale, DamageAlpha);
+	if (ShakeScale <= 0.0f)
+	{
+		return;
+	}
+
+	PlayerController->ClientStartCameraShake(BallDamageCameraShakeClass, ShakeScale);
+	LastBallDamageShakeTime = CurrentTime;
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[BallDamageCameraShake] Played. Damage=%d Scale=%.2f ShakeClass=%s"),
+		Message.AppliedDamage,
+		ShakeScale,
+		*GetNameSafe(BallDamageCameraShakeClass.Get()));
 }
 
 void APinBallPlayer::AddInputMappingContext()

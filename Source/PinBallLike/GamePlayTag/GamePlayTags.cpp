@@ -21,6 +21,7 @@ namespace GameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Dash_Approved, "Event.Battle.Dash.Approved");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Skill_Use_Requested, "Event.Battle.Skill.Use.Requested");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Bumper_Triggered, "Event.Battle.Bumper.Triggered");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Ball_Damaged, "Event.Battle.Ball.Damaged");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Boss_Intro_Completed, "Event.Battle.Boss.Intro.Completed");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Battle_Boss_Dead, "Event.Battle.Boss.Dead");
 	UE_DEFINE_GAMEPLAY_TAG(Event_UI_Choice_Exit, "Event.UI.Choice.Exit");

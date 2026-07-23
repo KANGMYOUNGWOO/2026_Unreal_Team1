@@ -4,11 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallPlayer.generated.h"
 
 struct FInputActionValue;
+struct FPBBallDamagedMessage;
 class APBCombatPartyController;
 class AFlipper;
+class UCameraShakeBase;
 class UInputComponent;
 class UInputAction;
 class UInputMappingContext;
@@ -21,6 +24,8 @@ class PINBALLLIKE_API APinBallPlayer : public APawn
 public:
 	APinBallPlayer();
 
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void PawnClientRestart() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void UnPossessed() override;
@@ -49,8 +54,30 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PinBall|Launch")
 	TObjectPtr<APBCombatPartyController> CombatPartyActor;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PinBall|Damage Feedback")
+	TSubclassOf<UCameraShakeBase> BallDamageCameraShakeClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PinBall|Damage Feedback",
+		meta = (ClampMin = "1"))
+	int32 DamageForMaximumShake = 10;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PinBall|Damage Feedback",
+		meta = (ClampMin = "0.0"))
+	float MinimumDamageShakeScale = 0.25f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PinBall|Damage Feedback",
+		meta = (ClampMin = "0.0"))
+	float MaximumDamageShakeScale = 1.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PinBall|Damage Feedback",
+		meta = (ClampMin = "0.0", Units = "s"))
+	float MinimumDamageShakeInterval = 0.08f;
 	
 private:
+	void RegisterMessageListeners();
+	void UnregisterMessageListeners();
+	void HandleBallDamagedMessage(FGameplayTag Channel, const FPBBallDamagedMessage& Message);
 	void AddInputMappingContext();
 	void RemoveInputMappingContext();
 	void UpFlippers(const FInputActionValue& Value);
@@ -61,4 +88,6 @@ private:
 	void RequestUseSkill(const FInputActionValue& Value);
 	void RequestDash(const FInputActionValue& Value);
 
+	FGameplayMessageListenerHandle BallDamagedListenerHandle;
+	double LastBallDamageShakeTime = -1.0;
 };
