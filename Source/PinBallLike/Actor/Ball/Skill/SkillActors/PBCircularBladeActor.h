@@ -42,7 +42,9 @@ protected:
 private:
 	void DeactivateBlade();
 	void ApplyTargetAcceleration();
+	APBBallBase* ResolveLeaderBall() const;
+	UPBBallPhysicsComponent* ResolveLeaderPhysicsComponent() const;
 
-	TWeakObjectPtr<UPBBallPhysicsComponent> BallPhysicsComponent;
+	TWeakObjectPtr<UPBBallPhysicsComponent> LeaderPhysicsComponent;
 	TWeakObjectPtr<AActor> TargetActor;
 };

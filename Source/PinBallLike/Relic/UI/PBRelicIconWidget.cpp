@@ -58,6 +58,14 @@ FPBRelicViewData UPBRelicIconWidget::BuildRelicViewData(FName InRelicId) const
 		return NewViewData;
 	}
 
+	if (!RelicRow.RelicDataAsset.IsNull())
+	{
+		if (UPBRelicDataAsset* DataAsset = RelicRow.RelicDataAsset.LoadSynchronous())
+		{
+			NewViewData.IconTexture = DataAsset->RelicIcon.LoadSynchronous();
+		}
+	}
+	
 	NewViewData.DisplayName = RelicRow.DisplayName.IsEmpty() ? FText::FromName(InRelicId) : RelicRow.DisplayName;
 	NewViewData.Description = RelicRow.Description;
 	NewViewData.Rarity = RelicRow.Rarity;

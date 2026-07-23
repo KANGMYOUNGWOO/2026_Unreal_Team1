@@ -7,6 +7,7 @@
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Common/Component/Stat/PBBaseStatComponent.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBallSkillActivatedMessage.h"
 #include "PinBallLike/Struct/Common/PBStatTypes.h"
 #include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 #include "EngineUtils.h"
@@ -125,6 +126,15 @@ void APBBallSkillActorBase::PrepareSkill_Implementation()
 
 void APBBallSkillActorBase::EnterPreparingState()
 {
+	if (IsValid(OwnerBall) && UGameplayMessageSubsystem::HasInstance(this))
+	{
+		FPBBallSkillActivatedMessage Message;
+		Message.SkillOwnerBall = OwnerBall;
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_Battle_Skill_Activated,
+			Message);
+	}
+
 	if (SkillFeedbackComponent)
 	{
 		SkillFeedbackComponent->PlayCastFeedback();

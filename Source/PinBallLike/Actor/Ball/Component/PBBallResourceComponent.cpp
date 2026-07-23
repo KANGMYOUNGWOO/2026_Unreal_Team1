@@ -4,6 +4,7 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "PinBallLike/Actor/StatusEffect/Component/PBStatusEffectComponent.h"
 #include "PinBallLike/GamePlayTag/GamePlayTags.h"
+#include "PinBallLike/Struct/Battle/PBBallDamagedMessage.h"
 #include "PinBallLike/Struct/Common/PBResourceTypes.h"
 #include "PinBallLike/Struct/UI/PBDamageLogMessage.h"
 #include "PinBallLike/Table/StatusEffect/PBStatusEffectAssetIds.h"
@@ -25,7 +26,7 @@ void UPBBallResourceComponent::TakeDamageInternal(const int32 Damage, const bool
 		return;
 	}
 
-	const AActor* OwnerActor = GetOwner();
+	AActor* OwnerActor = GetOwner();
 	const UPBStatusEffectComponent* StatusEffectComponent = IsValid(OwnerActor)
 		? OwnerActor->FindComponentByClass<UPBStatusEffectComponent>()
 		: nullptr;
@@ -68,6 +69,12 @@ void UPBBallResourceComponent::TakeDamageInternal(const int32 Damage, const bool
 
 	if (AppliedDamage > 0 && UGameplayMessageSubsystem::HasInstance(this))
 	{
+		FPBBallDamagedMessage BallDamagedMessage;
+		BallDamagedMessage.AppliedDamage = AppliedDamage;
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(
+			GameplayTags::Event_Battle_Ball_Damaged,
+			BallDamagedMessage);
+
 		FPBDamageLogMessage Message;
 		Message.Style = EPBDamageLogStyle::EnemyAttack;
 		Message.DamageAmount = AppliedDamage;

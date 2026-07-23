@@ -134,14 +134,11 @@ void APBShopActor::RefreshShopDisplay(
 		HandleShopBallAssetsLoaded();
 		return;
 	}
-
-	// BallSprite는 Gameplay 번들,
-	// BallIcon은 UI 번들에 들어 있으므로 둘 다 요청한다.
+	
 	ShopAssetLoadRequestId =
 		LoadSubsystem->LoadPrimaryAssetsByIdsAsync(
 			AssetIds,
 			{
-				PBAssetBundleNames::Gameplay,
 				PBAssetBundleNames::UI
 			},
 			FStreamableDelegate::CreateUObject(

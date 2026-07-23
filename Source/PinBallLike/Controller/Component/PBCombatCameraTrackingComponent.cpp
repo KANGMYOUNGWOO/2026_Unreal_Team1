@@ -1,6 +1,8 @@
 #include "PBCombatCameraTrackingComponent.h"
 
+#include "Camera/CameraComponent.h"
 #include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
 #include "PinBallLike/Actor/Ball/PBBallBase.h"
 #include "PinBallLike/Actor/Boss/PBBossBase.h"
 #include "PinBallLike/Actor/Party/PBCombatPartyController.h"
@@ -26,10 +28,11 @@ void UPBCombatCameraTrackingComponent::BeginPlay()
 
 	NormalizeConfiguration();
 
-	if (const AActor* Owner = GetOwner())
+	if (AActor* Owner = GetOwner())
 	{
 		TrackingOrigin = Owner->GetActorLocation();
 		TrackingOriginCoordinate = FVector::DotProduct(TrackingOrigin, NormalizedTrackingAxis);
+		CachedCameraComponent = Owner->FindComponentByClass<UCameraComponent>();
 	}
 
 	if (bTrackingEnabled)
@@ -49,6 +52,12 @@ void UPBCombatCameraTrackingComponent::BeginPlay()
 		MaximumFollowSpeed);
 }
 
+void UPBCombatCameraTrackingComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	EndSkillFocus();
+	Super::EndPlay(EndPlayReason);
+}
+
 void UPBCombatCameraTrackingComponent::TickComponent(
 	const float DeltaTime,
 	const ELevelTick TickType,
@@ -61,6 +70,8 @@ void UPBCombatCameraTrackingComponent::TickComponent(
 	{
 		return;
 	}
+
+	UpdateSkillFocus();
 
 	SourceRefreshElapsedTime += DeltaTime;
 	if (SourceRefreshElapsedTime >= SourceRefreshInterval)
@@ -84,7 +95,9 @@ void UPBCombatCameraTrackingComponent::TickComponent(
 	const float DistanceToTarget = DesiredCoordinate - CurrentCoordinate;
 	const bool bIsLaunchReady =
 		NewTrackingMode == EPBCombatCameraTrackingMode::LaunchReady;
-	if (!bIsLaunchReady && FMath::Abs(DistanceToTarget) <= TrackingDeadZone)
+	const bool bIsSkillFocus = bSkillFocusActive && SkillFocusBall.IsValid();
+	const float EffectiveDeadZone = bIsSkillFocus ? 0.0f : TrackingDeadZone;
+	if (!bIsLaunchReady && FMath::Abs(DistanceToTarget) <= EffectiveDeadZone)
 	{
 		return;
 	}
@@ -99,13 +112,19 @@ void UPBCombatCameraTrackingComponent::TickComponent(
 
 	const float InterpolationTarget = bIsLaunchReady
 		? DesiredCoordinate
-		: DesiredCoordinate - FMath::Sign(DistanceToTarget) * TrackingDeadZone;
+		: DesiredCoordinate - FMath::Sign(DistanceToTarget) * EffectiveDeadZone;
+	const float EffectiveFollowInterpSpeed = bIsSkillFocus
+		? FMath::Max(SkillFocusSettings.FollowInterpSpeed, 0.0f)
+		: FollowInterpSpeed;
 	const float InterpolatedCoordinate = FMath::FInterpTo(
 		CurrentCoordinate,
 		InterpolationTarget,
 		DeltaTime,
-		FollowInterpSpeed);
-	const float MaximumStep = MaximumFollowSpeed * DeltaTime;
+		EffectiveFollowInterpSpeed);
+	const float EffectiveMaximumFollowSpeed = bIsSkillFocus
+		? FMath::Max(SkillFocusSettings.MaximumFollowSpeed, 0.0f)
+		: MaximumFollowSpeed;
+	const float MaximumStep = EffectiveMaximumFollowSpeed * DeltaTime;
 	const float LimitedStep = FMath::Clamp(
 		InterpolatedCoordinate - CurrentCoordinate,
 		-MaximumStep,
@@ -125,8 +144,57 @@ void UPBCombatCameraTrackingComponent::TickComponent(
 	ApplyTrackingCoordinate(NewCoordinate);
 }
 
+bool UPBCombatCameraTrackingComponent::PlaySkillFocus(APBBallBase* TargetBall)
+{
+	if (!bTrackingEnabled || !IsTrackableBall(TargetBall))
+	{
+		return false;
+	}
+
+	if (!CachedCameraComponent.IsValid())
+	{
+		if (AActor* Owner = GetOwner())
+		{
+			CachedCameraComponent = Owner->FindComponentByClass<UCameraComponent>();
+		}
+	}
+	if (!CachedCameraComponent.IsValid())
+	{
+		return false;
+	}
+
+	SkillFocusBall = TargetBall;
+	if (const UWorld* World = GetWorld())
+	{
+		LastSkillFocusRealTime = World->GetRealTimeSeconds();
+	}
+	if (bSkillFocusActive)
+	{
+		SkillFocusElapsedTime = FMath::Max(
+			SkillFocusSettings.BlendInDuration,
+			0.0f);
+	}
+	else
+	{
+		SkillFocusBaseFieldOfView = CachedCameraComponent->FieldOfView;
+		SkillFocusElapsedTime = 0.0f;
+		bSkillFocusActive = true;
+	}
+
+	UE_LOG(LogPBCombatCamera, Log,
+		TEXT("Skill focus started. Ball=%s BaseFOV=%.2f"),
+		*GetNameSafe(TargetBall),
+		SkillFocusBaseFieldOfView);
+	return true;
+}
+
 void UPBCombatCameraTrackingComponent::SetTrackingEnabled(const bool bEnabled)
 {
+	if (!bEnabled)
+	{
+		EndSkillFocus();
+	}
+
 	bTrackingEnabled = bEnabled;
 	SetComponentTickEnabled(bTrackingEnabled);
 
@@ -225,6 +293,15 @@ void UPBCombatCameraTrackingComponent::ResolveDesiredCoordinate(
 	float& OutCoordinate,
 	EPBCombatCameraTrackingMode& OutMode) const
 {
+	if (bSkillFocusActive && IsTrackableBall(SkillFocusBall.Get()))
+	{
+		OutCoordinate = FVector::DotProduct(
+			SkillFocusBall->GetActorLocation(),
+			NormalizedTrackingAxis);
+		OutMode = EPBCombatCameraTrackingMode::Ball;
+		return;
+	}
+
 	const APBBallBase* Ball = GetTrackableBall();
 	if (!Ball)
 	{
@@ -291,6 +368,135 @@ void UPBCombatCameraTrackingComponent::ApplyTrackingCoordinate(const float NewCo
 	const FVector NewLocation = TrackingOrigin
 		+ NormalizedTrackingAxis * (NewCoordinate - TrackingOriginCoordinate);
 	Owner->SetActorLocation(NewLocation, false, nullptr, ETeleportType::None);
+}
+
+void UPBCombatCameraTrackingComponent::UpdateSkillFocus()
+{
+	if (!bSkillFocusActive)
+	{
+		return;
+	}
+
+	if (!IsTrackableBall(SkillFocusBall.Get()) || !CachedCameraComponent.IsValid())
+	{
+		EndSkillFocus();
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		EndSkillFocus();
+		return;
+	}
+
+	const double CurrentRealTime = World->GetRealTimeSeconds();
+	const double RealDeltaTime = LastSkillFocusRealTime >= 0.0
+		? FMath::Max(CurrentRealTime - LastSkillFocusRealTime, 0.0)
+		: 0.0;
+	LastSkillFocusRealTime = CurrentRealTime;
+	SkillFocusElapsedTime += static_cast<float>(RealDeltaTime);
+
+	const float BlendInDuration = FMath::Max(
+		SkillFocusSettings.BlendInDuration,
+		0.0f);
+	const float HoldDuration = FMath::Max(
+		SkillFocusSettings.HoldDuration,
+		0.0f);
+	const float BlendOutDuration = FMath::Max(
+		SkillFocusSettings.BlendOutDuration,
+		0.0f);
+	const float BlendOutStartTime = BlendInDuration + HoldDuration;
+	const float TotalDuration = BlendOutStartTime + BlendOutDuration;
+
+	if (!bSkillFocusSlowMotionActive
+		&& HoldDuration > 0.0f
+		&& SkillFocusElapsedTime >= BlendInDuration
+		&& SkillFocusElapsedTime < BlendOutStartTime)
+	{
+		BeginSkillFocusSlowMotion();
+	}
+	else if (bSkillFocusSlowMotionActive
+		&& SkillFocusElapsedTime >= BlendOutStartTime)
+	{
+		EndSkillFocusSlowMotion();
+	}
+
+	if (SkillFocusElapsedTime >= TotalDuration)
+	{
+		EndSkillFocus();
+		return;
+	}
+
+	float FocusAlpha = 1.0f;
+	if (BlendInDuration > 0.0f
+		&& SkillFocusElapsedTime < BlendInDuration)
+	{
+		FocusAlpha = SkillFocusElapsedTime / BlendInDuration;
+	}
+	else if (BlendOutDuration > 0.0f
+		&& SkillFocusElapsedTime > BlendOutStartTime)
+	{
+		FocusAlpha = 1.0f
+			- (SkillFocusElapsedTime - BlendOutStartTime) / BlendOutDuration;
+	}
+
+	FocusAlpha = FMath::SmoothStep(0.0f, 1.0f, FocusAlpha);
+	CachedCameraComponent->SetFieldOfView(
+		SkillFocusBaseFieldOfView
+		- FMath::Max(SkillFocusSettings.FieldOfViewOffset, 0.0f) * FocusAlpha);
+}
+
+void UPBCombatCameraTrackingComponent::BeginSkillFocusSlowMotion()
+{
+	if (bSkillFocusSlowMotionActive)
+	{
+		return;
+	}
+
+	SkillFocusPreviousGlobalTimeDilation =
+		UGameplayStatics::GetGlobalTimeDilation(this);
+	const float AppliedTimeDilation = FMath::Min(
+		SkillFocusPreviousGlobalTimeDilation,
+		FMath::Clamp(SkillFocusSettings.GlobalTimeDilation, 0.01f, 1.0f));
+	UGameplayStatics::SetGlobalTimeDilation(this, AppliedTimeDilation);
+	bSkillFocusSlowMotionActive = true;
+
+	UE_LOG(LogPBCombatCamera, Log,
+		TEXT("Skill focus slow motion started. TimeDilation=%.2f"),
+		AppliedTimeDilation);
+}
+
+void UPBCombatCameraTrackingComponent::EndSkillFocusSlowMotion()
+{
+	if (!bSkillFocusSlowMotionActive)
+	{
+		return;
+	}
+
+	UGameplayStatics::SetGlobalTimeDilation(
+		this,
+		SkillFocusPreviousGlobalTimeDilation);
+	bSkillFocusSlowMotionActive = false;
+
+	UE_LOG(LogPBCombatCamera, Log,
+		TEXT("Skill focus slow motion ended. RestoredTimeDilation=%.2f"),
+		SkillFocusPreviousGlobalTimeDilation);
+}
+
+void UPBCombatCameraTrackingComponent::EndSkillFocus()
+{
+	EndSkillFocusSlowMotion();
+
+	if (bSkillFocusActive && CachedCameraComponent.IsValid())
+	{
+		CachedCameraComponent->SetFieldOfView(SkillFocusBaseFieldOfView);
+	}
+
+	bSkillFocusActive = false;
+	SkillFocusBall.Reset();
+	SkillFocusElapsedTime = 0.0f;
+	LastSkillFocusRealTime = -1.0;
 }
 
 void UPBCombatCameraTrackingComponent::NormalizeConfiguration()

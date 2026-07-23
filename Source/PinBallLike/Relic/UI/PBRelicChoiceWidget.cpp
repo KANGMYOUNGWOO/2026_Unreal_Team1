@@ -90,6 +90,14 @@ FPBRelicViewData UPBRelicChoiceWidget::BuildRelicViewData(const FName RelicId) c
 		return ViewData;
 	}
 
+	if (!RelicRow.RelicDataAsset.IsNull())
+	{
+		if (UPBRelicDataAsset* DataAsset = RelicRow.RelicDataAsset.LoadSynchronous())
+		{
+			ViewData.IconTexture = DataAsset->RelicIcon.LoadSynchronous();
+		}
+	}
+	
 	ViewData.DisplayName = RelicRow.DisplayName.IsEmpty() ? FText::FromName(RelicId) : RelicRow.DisplayName;
 	ViewData.Description = RelicRow.Description;
 	ViewData.Rarity = RelicRow.Rarity;
