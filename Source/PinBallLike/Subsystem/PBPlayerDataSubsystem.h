@@ -120,7 +120,7 @@ private:
 	int32 InitialGold = 0;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
-	int32 InitialBattleLaunchCount = 5;
+	int32 InitialBattleLaunchCount = 3;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData|Battle", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
 	int32 InitialBattleShiftCount = 3;
