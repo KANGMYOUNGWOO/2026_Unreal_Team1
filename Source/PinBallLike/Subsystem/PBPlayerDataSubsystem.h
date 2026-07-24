@@ -114,7 +114,7 @@ private:
 #endif
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerData", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
-	int32 Gold = 1000;
+	int32 Gold = 300;
 
 	UPROPERTY(Transient)
 	int32 InitialGold = 0;

@@ -286,7 +286,7 @@ void APBBattleGameMode::EnterReward()
 	}
 
 	// TODO: 임시 골드 보상. 추후 보상 데이터로 교체한다.
-	constexpr int32 RewardGold = 1000;
+	int32 RewardGold = ClearGold;
 	PlayerDataSubsystem->GainGold(RewardGold);
 	if (!UIManagerSubsystem)
 	{

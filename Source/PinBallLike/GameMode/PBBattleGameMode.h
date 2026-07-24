@@ -164,6 +164,9 @@ private:
 
 #pragma endregion
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
+	int32 ClearGold = 300;
+	
 private:
 	UPROPERTY()
 	TObjectPtr<APBBumperSpawner> BumperSpawner;
