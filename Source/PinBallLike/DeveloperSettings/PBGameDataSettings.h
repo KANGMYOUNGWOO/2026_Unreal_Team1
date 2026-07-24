@@ -129,5 +129,8 @@ public:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
 	TSoftObjectPtr<UDataTable> SynergyTierTable;
 
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Synergy|Table")
+	TSoftObjectPtr<UDataTable> SynergyRichTextTable;
+
 #pragma endregion
 };

@@ -122,7 +122,9 @@ FText UPBDeckOverviewViewModel::BuildSynergyCountListText(const FName SynergyId,
 	for (const FPBSynergyTierRow& TierRow : TierRows)
 	{
 		const TCHAR* StyleTag = CurrentCount >= TierRow.RequiredCount ? TEXT("Active") : TEXT("InActive");
-		TierTexts.Add(FString::Printf(TEXT("<%s>%d</>"), StyleTag, TierRow.RequiredCount));
+		//TODO : 스타일이 작성이 잘 안됨.
+		//TierTexts.Add(FString::Printf(TEXT("<%s>%d</>"), StyleTag, TierRow.RequiredCount));
+		TierTexts.Add(FString::Printf(TEXT("<%s> %d  </>"), StyleTag, TierRow.RequiredCount));
 	}
 
 	return FText::FromString(FString::Join(TierTexts, TEXT(" ")));
